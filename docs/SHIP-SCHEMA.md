@@ -1,0 +1,180 @@
+# Arkflight Ship Schema — Design Authority
+
+## Purpose
+
+The ship document describes **what a vessel is and what it currently has**. Voyage, Combat, Crew/Faction, and Progression systems describe **what the vessel does**.
+
+The ship schema must not contain encounter state machines, replay logs, planning history, Focus, refit-pressure bureaucracy, or duplicated derived values.
+
+## Four rules
+
+1. **One source of truth.** Persistent values are stored once.
+2. **Installed content contributes data, not custom runtime.** Components use tags, effects, capabilities, and unlocks.
+3. **Derived values are calculated.** `deriveShip(ship, catalogs)` is authoritative for calculated stats.
+4. **Pressure is encounter state; damage is ship state.** Pressure does not live on the persistent ship document.
+
+## Component families
+
+Arkflight keeps these component types distinct:
+
+- **Hull** — chassis and hull pattern.
+- **Arkengine** — engine chassis and engine pattern.
+- **Arkengine Mods** — installed only in Arkengine Mod capacity; change engine behavior.
+- **Rooms** — physical spaces and infrastructure; consume room capacity when they are expansion rooms.
+- **Ship Mods** — vessel-wide modifications; distinct from Arkengine Mods.
+- **Weapons** — mounted combat equipment.
+- **Crew** — station assignments and specialists.
+
+## Major ship systems
+
+Every ship exposes a stable set of system keys so all gameplay pillars speak the same language:
+
+- `hull`
+- `arkengine`
+- `lifeveil`
+- `helm`
+- `rigging`
+- `command`
+- `weapons`
+
+Each system has a state of `functional`, `damaged`, `disabled`, or `destroyed`.
+
+## Persistent ship shape
+
+```js
+{
+  schemaVersion: 1,
+  identity: {
+    name, registry, callsign, owner, origin, builder, motto, notes
+  },
+  traits: [],
+  hull: { chassisId, patternId },
+  arkengine: { chassisId, patternId, modIds: [] },
+  rooms: [],
+  shipMods: [],
+  weapons: [],
+  crew: {
+    stations: { captain, engineer, navigator, watchmaster, veilwarden },
+    specialists: []
+  },
+  cargo: { used, notes },
+  resources: {
+    hull: { value, max },
+    lifeveil: { value, max },
+    strain: { value, max },
+    supplies: { value, max },
+    morale: { value, max }
+  },
+  systems: {
+    hull, arkengine, lifeveil, helm, rigging, command, weapons
+  },
+  conditions: []
+}
+```
+
+## Component contribution model
+
+Components may contribute four kinds of game data.
+
+### Effects
+
+Effects change a calculated number.
+
+```js
+{ target: "cargo.capacity", mode: "add", value: 10 }
+```
+
+Initial modes are intentionally limited to `add` and `set`. Do not add more modes until play requires them.
+
+### Capabilities
+
+Capabilities permit a ship to attempt or access something, such as `deep-void-navigation`, `emergency-docking`, `salvage-operation`, or `veil-cloaking`.
+
+Capabilities are better than numeric bonuses when the component fundamentally enables new behavior.
+
+### Unlocks
+
+Unlocks add player choices.
+
+```js
+unlocks: {
+  signatures: ["engineer.redline-the-core"],
+  actions: []
+}
+```
+
+Rooms, Ship Mods, Arkengine Mods, and specialists can all unlock Signature Abilities. They normally add **options**, not additional uses.
+
+### Tags
+
+Tags are semantic hooks used by encounters, UI, and future content.
+
+```js
+tags: ["arkengine", "overdrive", "pressure"]
+```
+
+Avoid component-name checks when a tag or capability can express the rule.
+
+## Signature Ability relationship
+
+A station's available Signature Ability pool is assembled from base station abilities plus functional Rooms, Ship Mods, Arkengine Mods, and Crew specialists.
+
+During encounter Planning, each station selects one available Signature Ability. The selected ability may normally be used once in that encounter.
+
+## Pressure vs persistent damage
+
+**Pressure** belongs to an encounter and tracks immediate escalation on ship systems.
+
+**Conditions** belong to the ship and survive the encounter until repaired or cleared.
+
+A breach or consequence may convert encounter Pressure into a persistent condition such as:
+
+```js
+{
+  id: "cracked-regulator",
+  system: "arkengine",
+  severity: 1,
+  state: "damaged",
+  source: "glassback-cinderwake"
+}
+```
+
+## Resources
+
+The initial persistent resources are Hull, Lifeveil, Strain, Supplies, and Morale. Momentum is not persistent ship data; it belongs to an encounter.
+
+Generic `supplies` is retained for Alpha, but the schema can later support additional named resources without restructuring the ship.
+
+## Morale and Momentum
+
+- **Momentum** = how well the crew is functioning together during the current encounter.
+- **Morale** = longer-term crew condition across the campaign.
+
+They must not be merged.
+
+## Removed donor concepts
+
+The rebuild intentionally does not carry these into the authoritative ship schema:
+
+- Focus and Focus state;
+- AP/RAP as universal ship fields;
+- station action history;
+- Voyage session history;
+- `refitPressure` and refit-pressure categories;
+- `majorRefitsCompleted`;
+- `requiresDrydock` flags generated by a pressure engine;
+- install provenance/history records;
+- duplicate `current`, `resources`, `derived`, and `derivedStats` copies;
+- string-based legacy installed-system fields;
+- persistent encounter Momentum or Pressure;
+- Arkengine `variant` as a second overlapping customization layer.
+
+If Ship Combat later proves that it needs AP/RAP, Combat may own that encounter state without putting it back into the base ship identity.
+
+## Naming lock
+
+- **Arkengine Mods** modify the Arkengine and use Arkengine Mod capacity.
+- **Ship Mods** modify the vessel and use Ship Mod capacity.
+- **Rooms** are physical spaces/infrastructure.
+
+These names are not interchangeable.
