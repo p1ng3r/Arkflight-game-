@@ -17,15 +17,19 @@ export function validateShip(ship, catalogs = {}) {
   }
 
   const derived = deriveShip(ship, catalogs);
-  if (derived.usage.rooms > (derived.stats.roomCapacity ?? 0)) {
-    errors.push(`Room capacity exceeded: ${derived.usage.rooms}/${derived.stats.roomCapacity}.`);
+  const districtScale = hull?.data?.districtScale === true;
+  const roomCapacity = derived.stats.roomCapacity;
+  const shipModCapacity = derived.stats.shipModCapacity;
+
+  if (!districtScale && Number.isFinite(roomCapacity) && derived.usage.rooms > roomCapacity) {
+    errors.push(`Room capacity exceeded: ${derived.usage.rooms}/${roomCapacity}.`);
   }
-  if (derived.usage.shipMods > (derived.stats.shipModCapacity ?? 0)) {
-    errors.push(`Ship Mod capacity exceeded: ${derived.usage.shipMods}/${derived.stats.shipModCapacity}.`);
+  if (!districtScale && Number.isFinite(shipModCapacity) && derived.usage.shipMods > shipModCapacity) {
+    errors.push(`Ship Mod capacity exceeded: ${derived.usage.shipMods}/${shipModCapacity}.`);
   }
 
   const engineCapacity = engine?.data?.modCapacity ?? derived.stats.arkengineModCapacity ?? 0;
-  if (derived.usage.arkengineMods > engineCapacity) {
+  if (Number.isFinite(engineCapacity) && derived.usage.arkengineMods > engineCapacity) {
     errors.push(`Arkengine Mod capacity exceeded: ${derived.usage.arkengineMods}/${engineCapacity}.`);
   }
 
