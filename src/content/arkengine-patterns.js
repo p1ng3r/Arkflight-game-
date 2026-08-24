@@ -1,0 +1,13 @@
+import { component, add, COMPONENT_TYPES } from "../ship/component-rules.js";
+const c=(id,name,description,tags,effects=[],donorModifiers={})=>component({id,name,type:COMPONENT_TYPES.ARKENGINE_PATTERN,description,tags,traits:tags,effects,data:{donorModifiers}});
+export const ARKENGINE_PATTERNS=Object.freeze(Object.fromEntries([
+ c("standard","Standard Pattern","Baseline arkengine configuration with factory-normal channeling and maintenance assumptions.",["baseline","general-purpose"]),
+ c("guild","Guild Pattern","Licensed guild configuration favoring predictable output, documented servicing, and regulated operation.",["licensed","regulated","serviceable"],[add("hardBurnStrainCost",1)],{overchargeRiskStep:-1,hardBurnStrainCost:1}),
+ c("military","Military Pattern","Hardened arkengine configuration emphasizing battle damage tolerance and aggressive pressure handling.",["hardened","martial","pressure-rated"],[],{strainModifier:1,lifeveilModifier:-2,overchargeRiskStep:1}),
+ c("experimental","Experimental Pattern","Prototype arkengine configuration that trades stability for unusual output curves and research access.",["prototype","volatile","research"],[add("voyageSpeedTravelHexDays",-1)],{travelHexDays:-1,overchargeRiskStep:2,strainModifier:1}),
+ c("smuggler","Smuggler Pattern","Concealed arkengine configuration adapted for quiet burn profiles and inspection evasion.",["concealed","quiet-burn","illegal"],[add("arkengineFuelSlots",-1)],{stealthBurnHexCost:-1,fuelSlots:-1,overchargeRiskStep:1}),
+ c("pilgrim","Pilgrim Pattern","Devotional arkengine configuration emphasizing life-support stability and ritual familiarity.",["devotional","lifeveil","ritual"],[add("voyageSpeedTravelHexDays",1)],{lifeveilModifier:5,travelHexDays:1}),
+ c("stormwake","Stormwake Pattern","High-discharge arkengine configuration tuned for turbulent wakes and storm-channel response.",["storm-tuned","high-discharge","volatile"],[add("combatSpeed",1),add("hardBurnStrainCost",-1)],{combatSpeed:1,hardBurnStrainCost:-1,overchargeRiskStep:1}),
+ c("deepveil","Deepveil Pattern","Shielded arkengine configuration suited to dim routes, pressure anomalies, and veil-dense regions.",["shielded","deep-route","veil-adapted"],[add("voyageSpeedTravelHexDays",1)],{lifeveilModifier:5,strainModifier:1,travelHexDays:1}),
+ c("longhaul","Longhaul Pattern","Endurance arkengine configuration optimized for steady routes, fuel discipline, and sustained voyages.",["endurance","efficient","route-optimized"],[add("arkengineFuelSlots",2),add("voyageSpeedTravelHexDays",1)],{fuelSlots:2,leanBurnHexCost:-1,travelHexDays:1})
+].map(x=>[x.id,x])));
