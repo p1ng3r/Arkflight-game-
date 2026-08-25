@@ -186,6 +186,22 @@ export class PlanningController {
         }
         next = advanceToNextRound(this.getEvent(), next);
         break;
+      case "mark-rewards-granted":
+        this.#requireGMUser(sourceUserId);
+        if (this.state.phase !== "event-complete" || !this.state.eventRewards) throw new Error("No completed Event rewards are available to mark as granted.");
+        next = {
+          ...this.state,
+          eventRewards: {
+            ...this.state.eventRewards,
+            granted: true,
+            grantedAt: Date.now(),
+            recipientActorId: command.actorId ?? null,
+            recipientActorName: command.actorName ?? null,
+            createdItemIds: [...(command.createdItemIds ?? [])],
+            createdItemNames: [...(command.createdItemNames ?? [])]
+          }
+        };
+        break;
       case "restart-event":
         this.#requireGMUser(sourceUserId);
         next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true });
