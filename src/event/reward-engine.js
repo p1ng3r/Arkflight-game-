@@ -16,8 +16,8 @@ export function rewardPackage({
   edgeCards = []
 } = {}) {
   const normalizedGold = Math.max(0, Number(gold) || 0);
-  for (const edgeId of edgeCards) {
-    if (!getCrewEdgeCard(edgeId)) throw new Error(`Unknown Crew Edge card: ${edgeId}`);
+  for (const tacticId of edgeCards) {
+    if (!getCrewEdgeCard(tacticId)) throw new Error(`Unknown Crew Tactic: ${tacticId}`);
   }
   return Object.freeze({
     gold: normalizedGold,
@@ -46,23 +46,23 @@ export function resolveEventEnding(event, finalBandId) {
   return ending;
 }
 
-function awardEdgeCards(state, edgeCards = []) {
+function awardTactics(state, tacticIds = []) {
   const currentHand = [...(state?.crewEdgeHand ?? [])].filter((id) => getCrewEdgeCard(id));
   const awardedEdgeCards = [];
   const overflowEdgeCards = [];
-  for (const edgeId of edgeCards) {
+  for (const tacticId of tacticIds) {
     if (currentHand.length < CREW_EDGE_HAND_MAX) {
-      currentHand.push(edgeId);
-      awardedEdgeCards.push(edgeId);
+      currentHand.push(tacticId);
+      awardedEdgeCards.push(tacticId);
     } else {
-      overflowEdgeCards.push(edgeId);
+      overflowEdgeCards.push(tacticId);
     }
   }
   return { crewEdgeHand: currentHand, awardedEdgeCards, overflowEdgeCards };
 }
 
 export function applyRoundRewardPackageToState(state, rewards, { roundId = null, bandId = null } = {}) {
-  const award = awardEdgeCards(state, rewards?.edgeCards ?? []);
+  const award = awardTactics(state, rewards?.edgeCards ?? []);
   return {
     ...state,
     crewEdgeHand: award.crewEdgeHand,
@@ -77,7 +77,7 @@ export function applyRoundRewardPackageToState(state, rewards, { roundId = null,
 }
 
 export function applyRewardPackageToState(state, rewards) {
-  const award = awardEdgeCards(state, rewards?.edgeCards ?? []);
+  const award = awardTactics(state, rewards?.edgeCards ?? []);
   return {
     ...state,
     crewEdgeHand: award.crewEdgeHand,
@@ -101,13 +101,13 @@ export function rewardRows(rewards) {
   for (const entry of rewards.faction ?? []) rows.push({ type: "faction", label: entry.name ?? "Faction Reward", detail: entry.description ?? "" });
   for (const entry of rewards.routeKnowledge ?? []) rows.push({ type: "route", label: entry.name ?? "Route Knowledge", detail: entry.description ?? "" });
   for (const entry of rewards.boons ?? []) rows.push({ type: "boon", label: entry.name ?? "Boon", detail: entry.description ?? "" });
-  for (const edgeId of rewards.awardedEdgeCards ?? rewards.edgeCards ?? []) {
-    const card = getCrewEdgeCard(edgeId);
-    if (card) rows.push({ type: "edge", label: `Crew Edge — ${card.name}`, detail: `${card.trigger} ${card.effect}` });
+  for (const tacticId of rewards.awardedEdgeCards ?? rewards.edgeCards ?? []) {
+    const tactic = getCrewEdgeCard(tacticId);
+    if (tactic) rows.push({ type: "edge", label: `Crew Tactic — ${tactic.name}`, detail: `${tactic.trigger} ${tactic.effect}` });
   }
-  for (const edgeId of rewards.overflowEdgeCards ?? []) {
-    const card = getCrewEdgeCard(edgeId);
-    if (card) rows.push({ type: "edge-overflow", label: `Crew Edge Overflow — ${card.name}`, detail: "Shared hand is full (3 cards); the GM must replace or discard a card before keeping this reward." });
+  for (const tacticId of rewards.overflowEdgeCards ?? []) {
+    const tactic = getCrewEdgeCard(tacticId);
+    if (tactic) rows.push({ type: "edge-overflow", label: `Crew Tactic Overflow — ${tactic.name}`, detail: "The shared Tactics pool is full (3); replace or discard a Tactic before keeping this reward." });
   }
   return rows;
 }
@@ -116,5 +116,7 @@ export function crewEdgeHandRows(state) {
   return [...(state?.crewEdgeHand ?? [])]
     .map((id) => getCrewEdgeCard(id))
     .filter(Boolean)
-    .map((card) => ({ ...card }));
+    .map((tactic) => ({ ...tactic }));
 }
+
+export const crewTacticRows = crewEdgeHandRows;
