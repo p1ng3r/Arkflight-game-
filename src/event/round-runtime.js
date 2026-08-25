@@ -16,31 +16,66 @@ function cloneEncounter(encounter) {
     checkBonusSources: cloneSourceMap(encounter?.checkBonusSources),
     dcAdjustmentSources: cloneSourceMap(encounter?.dcAdjustmentSources),
     degreeLiftSources: cloneSourceMap(encounter?.degreeLiftSources),
-    notes: [...(encounter?.notes ?? [])]
+    notes: [...(encounter?.notes ?? [])],
+    pressureGuards: { ...(encounter?.pressureGuards ?? {}) },
+    generalPressureGuard: Number(encounter?.generalPressureGuard ?? 0),
+    hazardGuard: Number(encounter?.hazardGuard ?? 0),
+    momentumLossGuard: Number(encounter?.momentumLossGuard ?? 0),
+    riskOverrides: { ...(encounter?.riskOverrides ?? {}) },
+    hazardShelters: { ...(encounter?.hazardShelters ?? {}) },
+    suppressedHazards: [...(encounter?.suppressedHazards ?? [])]
   };
 }
 
-function addPressure(encounter, system, value) { encounter.pressure[system] = Math.max(0, Number(encounter.pressure[system] ?? 0) + Number(value ?? 0)); }
-function addHazard(encounter, hazardId) { if (hazardId && !encounter.hazards.includes(hazardId)) encounter.hazards.push(hazardId); }
+function addPressure(encounter, system, value) {
+  let amount = Number(value ?? 0);
+  if (amount > 0) {
+    const systemGuard = Number(encounter.pressureGuards?.[system] ?? 0);
+    const blockedBySystem = Math.min(amount, systemGuard);
+    amount -= blockedBySystem;
+    encounter.pressureGuards[system] = Math.max(0, systemGuard - blockedBySystem);
+
+    const generalGuard = Number(encounter.generalPressureGuard ?? 0);
+    const blockedGenerally = Math.min(amount, generalGuard);
+    amount -= blockedGenerally;
+    encounter.generalPressureGuard = Math.max(0, generalGuard - blockedGenerally);
+  }
+  encounter.pressure[system] = Math.max(0, Number(encounter.pressure[system] ?? 0) + amount);
+}
+
+function addHazard(encounter, hazardId) {
+  if (!hazardId) return;
+  if (Number(encounter.hazardGuard ?? 0) > 0) {
+    encounter.hazardGuard = Math.max(0, Number(encounter.hazardGuard) - 1);
+    encounter.notes.push(`A prepared Arkflight defense prevented ${hazardId} from becoming active.`);
+    return;
+  }
+  if (!encounter.hazards.includes(hazardId)) encounter.hazards.push(hazardId);
+}
+
 function targetStation(state, riskBid) {
   const authored = riskBid?.parameters?.targetStationId;
   if (authored && state.order.includes(authored) && !state.results?.[authored]) return authored;
   return state.order.filter((id) => !state.results?.[id])[0] ?? null;
 }
+
 function nextEligibleStation(state, allowedStations = []) {
   const allowed = new Set(allowedStations);
   return state.order.find((stationId) => !state.results?.[stationId] && allowed.has(stationId)) ?? null;
 }
+
 function addSource(encounter, bucket, stationId, source) {
   if (!stationId || !source) return;
   encounter[bucket][stationId] ??= [];
   encounter[bucket][stationId].push(source);
 }
+
 function riskSource(chosen, effect) {
   return `${chosen.riskBenefit?.name ?? "Heroic benefit"} from ${chosen.stationId ?? "an earlier station"}: ${effect}`;
 }
 
 export function encounterFromEvent(event) { return cloneEncounter(event?.startingState ?? {}); }
+
 export function checkAdjustments(state, stationId) {
   const encounter = cloneEncounter(state?.encounter);
   return {
@@ -52,6 +87,7 @@ export function checkAdjustments(state, stationId) {
     degreeLiftSources: [...(encounter.degreeLiftSources?.[stationId] ?? [])]
   };
 }
+
 export function consumeCheckAdjustments(state, stationId) {
   const encounter = cloneEncounter(state?.encounter);
   delete encounter.checkBonuses[stationId];
@@ -60,6 +96,8 @@ export function consumeCheckAdjustments(state, stationId) {
   delete encounter.checkBonusSources[stationId];
   delete encounter.dcAdjustmentSources[stationId];
   delete encounter.degreeLiftSources[stationId];
+  delete encounter.hazardShelters[stationId];
+  delete encounter.riskOverrides[stationId];
   return { ...state, encounter };
 }
 
@@ -92,8 +130,14 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
     }
     case "order-followup":
       if (target) {
-        const activeIndex = Number(state.activeOrderIndex ?? 0); const currentTargetIndex = state.order.indexOf(target);
-        if (currentTargetIndex > activeIndex) { const order = [...state.order]; order.splice(currentTargetIndex, 1); order.splice(activeIndex, 0, target); state = { ...state, order }; }
+        const activeIndex = Number(state.activeOrderIndex ?? 0);
+        const currentTargetIndex = state.order.indexOf(target);
+        if (currentTargetIndex > activeIndex) {
+          const order = [...state.order];
+          order.splice(currentTargetIndex, 1);
+          order.splice(activeIndex, 0, target);
+          state = { ...state, order };
+        }
         const value = critical ? 3 : 2;
         addCheckBonus(target, value);
         if (critical) {
@@ -118,9 +162,23 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
       }
       break;
     case "order-swap":
-      if (target) { const activeIndex = Number(state.activeOrderIndex ?? 0); const currentTargetIndex = state.order.indexOf(target); if (currentTargetIndex > activeIndex) { const order = [...state.order]; order.splice(currentTargetIndex, 1); order.splice(activeIndex, 0, target); state = { ...state, order }; } }
+      if (target) {
+        const activeIndex = Number(state.activeOrderIndex ?? 0);
+        const currentTargetIndex = state.order.indexOf(target);
+        if (currentTargetIndex > activeIndex) {
+          const order = [...state.order];
+          order.splice(currentTargetIndex, 1);
+          order.splice(activeIndex, 0, target);
+          state = { ...state, order };
+        }
+      }
       break;
-    case "hazard-remove-1": { const hazardId = chosen.riskBid.parameters?.hazardId ?? encounter.hazards[0]; if (hazardId) encounter.hazards = encounter.hazards.filter((id) => id !== hazardId); if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); break; }
+    case "hazard-remove-1": {
+      const hazardId = chosen.riskBid.parameters?.hazardId ?? encounter.hazards[0];
+      if (hazardId) encounter.hazards = encounter.hazards.filter((id) => id !== hazardId);
+      if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1);
+      break;
+    }
     case "hazard-reveal-1": encounter.notes.push(critical ? "A hidden danger was revealed with an exploitable opening." : "A hidden danger was revealed before it struck."); break;
     default: encounter.notes.push(`${chosen.riskBenefit.name} was earned; its authored payoff remains available for GM adjudication.`); break;
   }
@@ -167,7 +225,12 @@ export function finalizeRound(event, state) {
   if (!outcome) throw new Error(`Missing authored round outcome for ${state.roundResult.bandId}.`);
   const encounter = cloneEncounter(state.encounter);
   const momentumBefore = Number(encounter.momentum ?? 0);
-  encounter.momentum = clampMomentum(momentumBefore + Number(state.roundResult.momentumDelta ?? 0));
+  let momentumDelta = Number(state.roundResult.momentumDelta ?? 0);
+  if (momentumDelta < 0 && encounter.momentumLossGuard > 0) {
+    momentumDelta = Math.min(0, momentumDelta + encounter.momentumLossGuard);
+    encounter.momentumLossGuard = 0;
+  }
+  encounter.momentum = clampMomentum(momentumBefore + momentumDelta);
   const momentumAfter = encounter.momentum;
   applyOutcomeEffects(encounter, outcome.effects ?? []);
   const roundNarrative = cinematicRoundNarrative({ round, bandId: state.roundResult.bandId, results: state.results, consequenceNarrative: outcome.narrative });
@@ -178,13 +241,11 @@ export function finalizeRound(event, state) {
     consequenceNarrative: outcome.narrative,
     consequenceApplied: true,
     roundMomentumBefore: momentumBefore,
-    roundMomentumAward: Number(state.roundResult.momentumDelta ?? 0),
+    roundMomentumAward: momentumDelta,
     roundMomentumAfter: momentumAfter,
     roundRewards: null
   };
-  if (outcome.rewards) {
-    next = applyRoundRewardPackageToState(next, outcome.rewards, { roundId: round.id, bandId: state.roundResult.bandId });
-  }
+  if (outcome.rewards) next = applyRoundRewardPackageToState(next, outcome.rewards, { roundId: round.id, bandId: state.roundResult.bandId });
   return next;
 }
 
@@ -198,8 +259,22 @@ export function advanceToNextRound(event, state) {
     next = applyRewardPackageToState(next, eventEnding.rewards);
     return next;
   }
+
+  const encounter = cloneEncounter(state.encounter);
+  for (const hazardId of encounter.suppressedHazards) {
+    if (!encounter.hazards.includes(hazardId)) encounter.hazards.push(hazardId);
+  }
+  encounter.suppressedHazards = [];
+  encounter.pressureGuards = {};
+  encounter.generalPressureGuard = 0;
+  encounter.hazardGuard = 0;
+  encounter.momentumLossGuard = 0;
+  encounter.riskOverrides = {};
+  encounter.hazardShelters = {};
+
   return {
     ...state,
+    encounter,
     roundIndex: nextIndex,
     roundId: nextRound.id,
     phase: "round-opening",
