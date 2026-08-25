@@ -49,6 +49,10 @@ export class ArkflightEventBoard extends HandlebarsApplication {
 
     const remaining = planningSecondsRemaining(state);
     const stationOptions = game.arkflight?.stationOptions ?? {};
+    const playerActors = game.actors.contents
+      .filter((actor) => actor.type === "character")
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     const stations = STATIONS.map((stationId, index) => {
       const selection = state.selections[stationId];
       const fallback = FALLBACK_ACTIONS[stationId];
@@ -71,6 +75,8 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       const signatures = (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId }));
       const componentAbilities = (configured.componentAbilities ?? []).map((item) => ({ ...item, selected: item.id === selection.componentAbilityId }));
       const result = state.results?.[stationId] ?? null;
+      const assignedActorId = state.assignments?.[stationId]?.actorId ?? null;
+      const assignedActor = assignedActorId ? game.actors.get(assignedActorId) : null;
 
       return {
         stationId,
@@ -79,7 +85,10 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         canMoveEarlier: state.order.indexOf(stationId) > 0,
         canMoveLater: state.order.indexOf(stationId) < state.order.length - 1,
         selection,
-        complete: Boolean(selection.actionId && selection.skillId),
+        complete: Boolean(assignedActorId && selection.actionId && selection.skillId),
+        assignedActorId,
+        assignedActorName: assignedActor?.name ?? null,
+        actorOptions: playerActors.map((actor) => ({ id: actor.id, name: actor.name, selected: actor.id === assignedActorId })),
         availableActions: availableActions.map((action) => ({ ...action, fallback: action.id === fallback.id, selected: action.id === selection.actionId })),
         selectedAction,
         skillChoices: (selectedAction?.skills ?? []).map((skill) => ({ ...skill, selected: skill.id === selection.skillId, heroic: (skill.riskBids?.length ?? 0) > 0 })),
@@ -104,6 +113,8 @@ export class ArkflightEventBoard extends HandlebarsApplication {
 
     const activeId = activeStationId(state);
     const chosen = activeId ? selectedResolution(event, state, activeId) : null;
+    const activeAssignedActorId = activeId ? state.assignments?.[activeId]?.actorId ?? null : null;
+    const activeAssignedActor = activeAssignedActorId ? game.actors.get(activeAssignedActorId) : null;
     const activeResolution = chosen ? {
       stationId: activeId,
       stationName: stationPresentation(activeId)?.displayName ?? titleCase(activeId),
@@ -114,7 +125,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       riskTier: chosen.riskBid?.tier ?? null,
       riskName: chosen.riskBenefit?.name ?? null,
       finalDc: chosen.finalDc,
-      selectedTokenName: canvas.tokens?.controlled?.[0]?.actor?.name ?? game.user.character?.name ?? null
+      assignedActorName: activeAssignedActor?.name ?? null
     } : null;
 
     const resultRows = state.order.map((stationId) => {
@@ -124,7 +135,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         stationId,
         stationName: stationPresentation(stationId)?.displayName ?? titleCase(stationId),
         ...result,
-        outcomeLabel: titleCase(result.outcome)
+        outcomeLabel: titleCase(result.degreeKey ?? result.outcome)
       };
     }).filter(Boolean);
 
@@ -168,7 +179,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
   }
 
   #bindActions() {
-    for (const element of this.element.querySelectorAll("[data-ark-action]")) {
+    for (const element of this.element.querySelectorAll("button[data-ark-action]")) {
       element.addEventListener("click", async (event) => {
         event.preventDefault();
         const button = event.currentTarget;
@@ -188,9 +199,26 @@ export class ArkflightEventBoard extends HandlebarsApplication {
             case "lock-plan": await this.controller.lockPlan(); break;
             case "begin-resolution": await this.controller.beginResolution(); break;
             case "resolve-active-station": await this.controller.resolveCurrentStation(); break;
+            case "restart-event": await this.controller.command({ type: "restart-event" }); break;
           }
         } catch (error) {
           console.error("Arkflight | Event board action failed", error);
+          ui.notifications?.warn(error.message);
+        }
+      });
+    }
+
+    for (const select of this.element.querySelectorAll("select[data-ark-action='assign-actor']")) {
+      select.addEventListener("change", async (event) => {
+        const element = event.currentTarget;
+        try {
+          await this.controller.command({
+            type: "assign-actor",
+            station: element.dataset.station,
+            actorId: element.value || null
+          });
+        } catch (error) {
+          console.error("Arkflight | Station actor assignment failed", error);
           ui.notifications?.warn(error.message);
         }
       });
