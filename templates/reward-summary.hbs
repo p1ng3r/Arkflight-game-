@@ -30,6 +30,26 @@
       {{#if edgeOverflow}}
         <div class="arkflight-reward-warning"><i class="fa-solid fa-triangle-exclamation"></i> The shared Crew Edge hand is full. Resolve the overflow before carrying rewards forward.</div>
       {{/if}}
+
+      {{#if isGM}}
+        {{#if rewardsGranted}}
+          <div class="arkflight-reward-granted"><i class="fa-solid fa-check"></i> PF2e rewards granted to <strong>{{rewardRecipientName}}</strong>.</div>
+        {{else}}
+          <div class="arkflight-reward-grant-controls">
+            <label>
+              <span>PF2e Reward Recipient</span>
+              <select data-ark-reward-recipient>
+                <option value="">Choose character / party / loot actor…</option>
+                {{#each recipients}}
+                  <option value="{{id}}">{{name}} · {{type}}</option>
+                {{/each}}
+              </select>
+            </label>
+            <button type="button" class="arkflight-primary" data-ark-action="grant-pf2e-rewards"><i class="fa-solid fa-box-open"></i> Grant PF2e Rewards</button>
+            <small>Gold becomes native PF2e Gold Pieces. Salvage and valuables become native PF2e treasure Items. Authored PF2e compendium items are cloned into the recipient inventory.</small>
+          </div>
+        {{/if}}
+      {{/if}}
     </section>
 
     <section class="arkflight-edge-hand">
@@ -50,7 +70,7 @@
     </section>
 
     <footer class="arkflight-reward-note">
-      Gold, PF2e items, salvage, ship components, faction rewards, route knowledge, and boons are authored by the Event. Automatic transfer to a specific character or party stash is intentionally not performed until a recipient is chosen.
+      Character treasure is granted through PF2e Item documents. Arkflight ship components, faction rewards, route knowledge, boons, and Crew Edge remain in their own Arkflight campaign layers.
     </footer>
   {{/if}}
 </section>
