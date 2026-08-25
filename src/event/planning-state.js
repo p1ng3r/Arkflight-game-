@@ -1,31 +1,13 @@
 import { STATIONS, PLANNING_SECONDS } from "./event-schema.js";
 
-function emptySelection() {
-  return { actionId: null, skillId: null, riskTier: null, componentAbilityId: null };
-}
+function emptySelection() { return { actionId: null, skillId: null, riskTier: null, componentAbilityId: null }; }
+function emptyAssignments() { return Object.fromEntries(STATIONS.map((station) => [station, { actorId: null }])); }
+function emptyMasterySelections() { return Object.fromEntries(STATIONS.map((station) => [station, null])); }
 
-function emptyAssignments() {
-  return Object.fromEntries(STATIONS.map((station) => [station, { actorId: null }]));
-}
-
-function emptyMasterySelections() {
-  return Object.fromEntries(STATIONS.map((station) => [station, null]));
-}
-
-export function createPlanningState({
-  eventId,
-  roundId,
-  roundIndex = 0,
-  now = Date.now(),
-  assignments = null,
-  masterySelections = null,
-  crewEdgeHand = []
-}) {
+export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Date.now(), assignments = null, masterySelections = null, crewEdgeHand = [] }) {
   return {
     version: 4,
-    eventId,
-    roundId,
-    roundIndex,
+    eventId, roundId, roundIndex,
     phase: "opening",
     createdAt: now,
     planningStartedAt: null,
@@ -36,6 +18,7 @@ export function createPlanningState({
     assignments: assignments ? structuredClone(assignments) : emptyAssignments(),
     masterySelections: masterySelections ? structuredClone(masterySelections) : emptyMasterySelections(),
     masteryUses: {},
+    reopenedStations: {},
     crewEdgeHand: [...crewEdgeHand],
     selections: Object.fromEntries(STATIONS.map((station) => [station, emptySelection()]))
   };
@@ -52,13 +35,7 @@ export function eventSetupReady(state) {
 export function startPlanning(state, now = Date.now()) {
   if (!state || !["opening", "round-opening"].includes(state.phase)) throw new Error("Planning may only start from an opening phase.");
   if (state.phase === "opening" && !eventSetupReady(state)) throw new Error("Assign a different PF2e officer to every station and ready one Mastery Technique for each station before Round 1 begins.");
-  return {
-    ...state,
-    setupLocked: state.phase === "opening" ? true : Boolean(state.setupLocked),
-    phase: "planning",
-    planningStartedAt: now,
-    planningEndsAt: now + (PLANNING_SECONDS * 1000)
-  };
+  return { ...state, setupLocked: state.phase === "opening" ? true : Boolean(state.setupLocked), phase: "planning", planningStartedAt: now, planningEndsAt: now + (PLANNING_SECONDS * 1000), reopenedStations: {} };
 }
 
 export function planningSecondsRemaining(state, now = Date.now()) {
@@ -82,10 +59,10 @@ export function selectMastery(state, station, masteryId) {
   return { ...state, masterySelections: { ...(state.masterySelections ?? emptyMasterySelections()), [station]: masteryId || null } };
 }
 
-export function selectAction(state, station, actionId) { assertPlanning(state); assertStation(station); return updateSelection(state, station, { actionId, skillId: null, riskTier: null }); }
-export function selectSkill(state, station, skillId) { assertPlanning(state); assertStation(station); if (!state.selections[station]?.actionId) throw new Error("Choose an action before choosing a skill."); return updateSelection(state, station, { skillId, riskTier: null }); }
-export function selectRiskTier(state, station, riskTier) { assertPlanning(state); assertStation(station); if (!state.selections[station]?.skillId) throw new Error("Choose a skill before choosing a Risk Bid."); const normalized = riskTier === null || riskTier === 0 ? null : Number(riskTier); if (normalized !== null && ![2,5,8].includes(normalized)) throw new Error(`Unsupported Risk Bid tier: ${riskTier}`); return updateSelection(state, station, { riskTier: normalized }); }
-export function selectComponentAbility(state, station, componentAbilityId) { assertPlanning(state); assertStation(station); return updateSelection(state, station, { componentAbilityId: componentAbilityId || null }); }
+export function selectAction(state, station, actionId) { assertStation(station); assertSelectionOpen(state, station); return updateSelection(state, station, { actionId, skillId: null, riskTier: null }); }
+export function selectSkill(state, station, skillId) { assertStation(station); assertSelectionOpen(state, station); if (!state.selections[station]?.actionId) throw new Error("Choose an action before choosing a skill."); return updateSelection(state, station, { skillId, riskTier: null }); }
+export function selectRiskTier(state, station, riskTier) { assertStation(station); assertSelectionOpen(state, station); if (!state.selections[station]?.skillId) throw new Error("Choose a skill before choosing a Risk Bid."); const normalized = riskTier === null || riskTier === 0 ? null : Number(riskTier); if (normalized !== null && ![2,5,8].includes(normalized)) throw new Error(`Unsupported Risk Bid tier: ${riskTier}`); return updateSelection(state, station, { riskTier: normalized }); }
+export function selectComponentAbility(state, station, componentAbilityId) { assertStation(station); assertSelectionOpen(state, station); return updateSelection(state, station, { componentAbilityId: componentAbilityId || null }); }
 
 export function moveOrder(state, station, direction) {
   assertPlanning(state); assertStation(station);
@@ -107,17 +84,14 @@ export function lockPlanning(state, now = Date.now()) {
 
 export function restartEvent(state, { roundId, preserveAssignments = true, preserveCrewEdgeHand = true, preserveMastery = true, now = Date.now() } = {}) {
   if (!state?.eventId) throw new Error("No Arkflight Event is active.");
-  return createPlanningState({
-    eventId: state.eventId,
-    roundId: roundId ?? state.roundId,
-    roundIndex: 0,
-    now,
-    assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null,
-    masterySelections: preserveMastery ? (state.masterySelections ?? emptyMasterySelections()) : null,
-    crewEdgeHand: preserveCrewEdgeHand ? (state.crewEdgeHand ?? []) : []
-  });
+  return createPlanningState({ eventId: state.eventId, roundId: roundId ?? state.roundId, roundIndex: 0, now, assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null, masterySelections: preserveMastery ? (state.masterySelections ?? emptyMasterySelections()) : null, crewEdgeHand: preserveCrewEdgeHand ? (state.crewEdgeHand ?? []) : [] });
 }
 
 function updateSelection(state, station, patch) { return { ...state, selections: { ...state.selections, [station]: { ...state.selections[station], ...patch } } }; }
+function assertSelectionOpen(state, station) {
+  if (state?.phase === "planning") return;
+  if (["locked", "resolution"].includes(state?.phase) && state?.reopenedStations?.[station] && !state?.results?.[station]) return;
+  throw new Error("Selections may only change during planning unless a Mastery Technique has reopened this station's plan.");
+}
 function assertPlanning(state) { if (!state || state.phase !== "planning") throw new Error("Selections may only change during planning."); }
 function assertStation(station) { if (!STATIONS.includes(station)) throw new Error(`Unknown station: ${station}`); }
