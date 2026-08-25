@@ -1,61 +1,51 @@
 .arkflight-heroic-icon{color:#f0c969;text-shadow:0 0 6px rgba(240,201,105,.28)}
-.arkflight-action-choice .arkflight-heroic-icon,.arkflight-skill-choice .arkflight-heroic-icon{margin-right:3px;font-size:9px}
-
-/* Keep the PF2e choice readable at a glance: name | DC | officer modifier. */
-.arkflight-skill-choice{grid-template-columns:minmax(0,1fr) auto auto!important;align-items:center;min-height:31px}
-.arkflight-skill-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.arkflight-skill-dc{white-space:nowrap}
-.arkflight-skill-mod{padding:2px 5px;border:1px solid #5c523d;background:#171613;color:#e7d39a;font-size:9px;font-weight:700;white-space:nowrap;border-radius:2px}
-/* The gold star already communicates this; do not spend a whole extra line saying it again. */
-.arkflight-skill-choice>small{display:none!important}
-
 .arkflight-explainable{cursor:help;border-bottom-color:#6e603f!important}
 .arkflight-explainable .fa-circle-info{color:#d8b65a;margin-right:4px}
 .arkflight-resolution-choice.benefit{background:rgba(107,88,42,.12);padding-left:7px;padding-right:7px}
 .arkflight-resolution-choice.heroic{background:rgba(122,86,28,.14);padding-left:7px;padding-right:7px}
 .arkflight-result-row small.arkflight-explainable{color:#d7c79f}
-.arkflight-risk-section>.arkflight-section-title .arkflight-heroic-icon{margin-right:3px}
 
-/* Progressive disclosure for Heroic / Risk choices.
-   Unselected tiers are compact scan-lines; only the chosen tier shows its payoff text. */
-.arkflight-risk-choice:not(.selected){min-height:34px!important;height:34px!important;padding:6px 8px!important;margin-bottom:4px!important;overflow:hidden!important}
-.arkflight-risk-choice:not(.selected)>div{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;align-items:center!important;column-gap:4px!important;height:100%}
-.arkflight-risk-choice:not(.selected)>div>*{white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis}
-.arkflight-risk-choice:not(.selected)>small{display:none!important}
-.arkflight-risk-choice.selected{min-height:64px!important;height:auto!important;border-color:#c49d43!important;background:#3a3120!important}
-.arkflight-risk-choice.selected>small{display:block!important}
-.arkflight-risk-clear{min-height:28px!important;height:28px!important;padding:4px 7px!important;margin-bottom:4px!important}
+/* Planning cards are summaries, not five simultaneous configuration forms. */
+.arkflight-compact-card{overflow:visible!important;max-height:none!important;background:#1a1916!important;border-color:#5b513e!important}
+.arkflight-compact-card.complete{border-color:#7b693d!important;background:#1c1b17!important;opacity:1!important}
+.arkflight-compact-card .arkflight-station-header{position:static!important}
+.arkflight-compact-card .arkflight-card-section{padding:7px 8px!important}
+.arkflight-compact-card .arkflight-section-title{margin-bottom:4px!important;font-size:8px!important;letter-spacing:.12em!important}
+.arkflight-compact-card .arkflight-action-description{display:none!important}
 
-/* Signature is optional and once-per-encounter, so it should not look like another mandatory wizard step. */
-.arkflight-loadout-section>.arkflight-section-title{font-size:0}
-.arkflight-loadout-section>.arkflight-section-title::after{content:"SIGNATURE — OPTIONAL / ONCE PER EVENT";font-size:9px;letter-spacing:.14em;color:#ac9d7a}
-.arkflight-loadout-choice{min-height:32px!important;height:auto!important;padding:6px 7px!important}
-.arkflight-loadout-choice strong{font-size:11px}
-.arkflight-loadout-choice small{display:none!important;margin-top:5px!important;padding-top:5px;border-top:1px solid #4b432f}
-.arkflight-loadout-choice.selected small,.arkflight-loadout-choice:focus small,.arkflight-loadout-choice:hover small{display:block!important}
-/* If a Heroic tier is selected, keep Signature compact so only one large detail area is open. */
-.arkflight-station-card:has(.arkflight-risk-choice.selected) .arkflight-loadout-choice small{display:none!important}
+.arkflight-plan-select{width:100%;height:31px;padding:3px 25px 3px 7px;border:1px solid #554c39;background:#171613;color:#e7ddc6;font-size:11px;font-weight:600;line-height:1.2;border-radius:2px;cursor:pointer;white-space:nowrap;text-overflow:ellipsis}
+.arkflight-plan-select:hover:not(:disabled),.arkflight-plan-select:focus{border-color:#a88743;outline:none;background:#201d17}
+.arkflight-plan-select:disabled{opacity:.72;cursor:default}
+.arkflight-action-select{color:#eadfca}
+.arkflight-skill-select{color:#f0dfad}
+.arkflight-risk-select{color:#e9c76c;border-color:#655532;background:#211d14}
+.arkflight-signature-select{color:#d6c59a;background:#1b1915}
 
-/* Quiet completed cards so unfinished stations pull the eye, while retaining full readability on hover. */
-.arkflight-station-card.complete{background:#191916;border-color:#625638;transition:opacity .12s ease,border-color .12s ease}
-.arkflight-station-card.complete:not(:hover){opacity:.88}
-.arkflight-station-card.complete:hover{opacity:1;border-color:#8a733e}
+/* Keep Heroic information to one compact selector plus one selected payoff summary. */
+.arkflight-compact-card .arkflight-risk-section{background:#181713!important}
+.arkflight-selected-risk-detail{margin-top:5px;padding:6px 7px;border-left:2px solid #b9923f;background:#211d15;color:#cfc3a7;font-size:9px;line-height:1.35}
+.arkflight-selected-risk-detail span{display:block}
+.arkflight-selected-risk-detail span+span{margin-top:2px}
 
-/* Keep a runaway expanded card from dominating the entire five-column board. */
-.arkflight-station-card{max-height:620px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#5d5035 #181713}
-.arkflight-station-header{position:sticky;top:0;z-index:2}
+/* Signature is optional and should read as a resource, not another required stage. */
+.arkflight-compact-card .arkflight-loadout-section>.arkflight-section-title{font-size:0!important}
+.arkflight-compact-card .arkflight-loadout-section>.arkflight-section-title::after{content:"SIGNATURE — OPTIONAL / ONCE PER EVENT";font-size:8px;letter-spacing:.12em;color:#a89877}
 
-/* Replace the generic NEEDS OFFICER / ACTION / SKILL footer with the actual missing step.
-   The card already carries all state needed for this in its selected/complete classes. */
-.arkflight-station-footer>span:first-child{font-size:0}
-.arkflight-station-footer>span:first-child i{display:none}
-.arkflight-station-footer>span:first-child::after{font-size:9px;letter-spacing:.04em}
-.arkflight-station-card.complete .arkflight-station-footer>span:first-child::after{content:"✓ READY";color:#b8cc92}
-.arkflight-station-card:not(.complete):not(:has(.arkflight-action-choice.selected)) .arkflight-station-footer>span:first-child::after{content:"○ NEEDS ACTION";color:#b9aa87}
-.arkflight-station-card:not(.complete):has(.arkflight-action-choice.selected):not(:has(.arkflight-skill-choice.selected)) .arkflight-station-footer>span:first-child::after{content:"○ NEEDS SKILL";color:#d2b16c}
-.arkflight-station-card:not(.complete):has(.arkflight-skill-choice.selected) .arkflight-station-footer>span:first-child::after{content:"○ NEEDS OFFICER";color:#d68c72}
+/* Officer assignment visually matches the other compact selectors. */
+.arkflight-compact-card .arkflight-actor-select{height:31px!important;padding:3px 25px 3px 7px!important;font-size:11px!important}
 
-/* Trim selected-action prose so it remains useful without becoming another paragraph block. */
-.arkflight-action-description{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin-top:4px!important;line-height:1.25!important}
+/* The footer is the strongest state indicator. */
+.arkflight-compact-card .arkflight-station-footer{min-height:28px;align-items:center;padding:6px 8px!important;border-top:1px solid #3a342a;color:#b9aa87}
+.arkflight-compact-card.complete .arkflight-station-footer{background:rgba(85,92,48,.11)}
+.arkflight-compact-card.complete .arkflight-station-footer>span:first-child{color:#b8cc92!important;font-weight:700}
 
-@media(max-width:1200px){.arkflight-station-card{max-height:none;overflow:visible}.arkflight-station-header{position:static}}
+/* Hide the old button-forest styling after JS upgrades those groups to selectors. */
+.arkflight-compact-card .arkflight-action-list,.arkflight-compact-card .arkflight-skill-list{display:block!important}
+.arkflight-compact-card .arkflight-action-choice,.arkflight-compact-card .arkflight-skill-choice,.arkflight-compact-card .arkflight-risk-choice,.arkflight-compact-card .arkflight-risk-clear,.arkflight-compact-card .arkflight-loadout-choice{display:none!important}
+
+/* Give all five cards a stable visual rhythm. */
+.arkflight-station-grid{align-items:start!important}
+.arkflight-compact-card .arkflight-station-identity h3{font-size:14px!important}
+.arkflight-compact-card .arkflight-station-glyph{width:30px;height:30px;flex-basis:30px;font-size:15px}
+
+@media(max-width:1200px){.arkflight-plan-select{font-size:10px}}
