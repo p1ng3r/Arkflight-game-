@@ -3,6 +3,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "captain-carry-the-deed",
       name: "Carry the Deed",
+      triggerLabel: "After a station earns a Heroic payoff",
       description: "After a station succeeds on a Heroic/Risk Bid, choose another unresolved station. That station receives the same earned Heroic benefit without taking the original Risk increase.",
       timing: "after-heroic-success",
       target: "unresolved-station",
@@ -11,6 +12,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "captain-set-the-pace",
       name: "Set the Pace",
+      triggerLabel: "Automatically when Round 1 begins",
       description: "When Round 1 planning begins, the crew starts the Event with +1 Momentum. This Mastery resolves automatically.",
       timing: "event-start",
       target: "none",
@@ -19,6 +21,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "captain-not-like-this",
       name: "Not Like This",
+      triggerLabel: "After a Failure or Critical Failure",
       description: "After a station rolls a Failure or Critical Failure, improve the result by one degree, to a maximum of Success.",
       timing: "after-failed-check",
       target: "latest-result",
@@ -29,6 +32,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "engineer-redline-the-arkengine",
       name: "Redline the Arkengine",
+      triggerLabel: "Before Engineer or Navigator rolls",
       description: "Before an Engineer or Navigator check, improve its final degree of success by one step, up to Critical Success. After the check, the Arkengine gains 1 Pressure.",
       timing: "before-engineer-or-navigator-check",
       target: "engineer-or-navigator",
@@ -37,6 +41,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "engineer-keep-her-breathing",
       name: "Keep Her Breathing",
+      triggerLabel: "When a ship system would be disabled",
       description: "When an Arkengine or ship system would become disabled, keep it operational through the end of the next station resolution before the disabling consequence takes hold.",
       timing: "system-disable",
       target: "ship-system",
@@ -45,6 +50,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "engineer-crosswire-the-systems",
       name: "Crosswire the Systems",
+      triggerLabel: "When a ship system would gain Pressure",
       description: "When a ship system would gain Pressure, redirect up to 2 of that Pressure to another ship system instead.",
       timing: "before-pressure",
       target: "pressure-redirect",
@@ -55,6 +61,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "navigator-impossible-passage",
       name: "Impossible Passage",
+      triggerLabel: "Before a station acts against an active Hazard",
       description: "Choose one unresolved station. For this round it may ignore one active Hazard restriction or authored restriction that would block an Action or Heroic/Risk option.",
       timing: "planning-or-before-check",
       target: "unresolved-station",
@@ -63,14 +70,16 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "navigator-find-another-way",
       name: "Find Another Way",
-      description: "After the plan is locked but before the chosen station rolls, reopen that station's Action, Skill, and Heroic/Risk choices for one final change.",
-      timing: "after-plan-lock",
+      triggerLabel: "Before an unresolved station rolls",
+      description: "Before an unresolved station makes its PF2e check, choose that station. It gains +3 to the check.",
+      timing: "before-check",
       target: "unresolved-station",
-      effect: Object.freeze({ kind: "reopen-station-plan" })
+      effect: Object.freeze({ kind: "check-bonus", value: 3 })
     }),
     Object.freeze({
       id: "navigator-read-the-current",
       name: "Read the Current",
+      triggerLabel: "After the resolution order is locked",
       description: "After the round order is locked, move one unresolved station anywhere in the remaining resolution order.",
       timing: "after-plan-lock",
       target: "move-unresolved-station",
@@ -81,6 +90,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "watchmaster-call-the-true-opening",
       name: "Call the True Opening",
+      triggerLabel: "Before a station attempts a Heroic Bid",
       description: "Before a Heroic/Risk check, reduce its Risk increase by one tier for this check: +2 becomes +0, +5 becomes +2, and +8 becomes +5. The original Heroic payoff is unchanged.",
       timing: "before-heroic-check",
       target: "active-station",
@@ -89,6 +99,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "watchmaster-nothing-surprises-me",
       name: "Nothing Surprises Me",
+      triggerLabel: "When a new threat appears after planning",
       description: "When a new Hazard or surprise complication is revealed after planning, the affected station may completely reselect its Action, Skill, and Heroic/Risk choice before rolling.",
       timing: "hazard-reveal",
       target: "affected-station",
@@ -97,6 +108,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "watchmaster-exploit-the-break",
       name: "Exploit the Break",
+      triggerLabel: "After any station critically succeeds",
       description: "After any station critically succeeds, choose one unresolved station and move it to the front of the remaining resolution order.",
       timing: "after-critical-success",
       target: "unresolved-station",
@@ -107,6 +119,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "veilwarden-stand-between",
       name: "Stand Between",
+      triggerLabel: "When Hull, Arkengine, or Rigging would gain Pressure",
       description: "When Hull, Arkengine, or Rigging would gain Pressure from one source, redirect all of that Pressure to Lifeveil instead.",
       timing: "before-pressure",
       target: "pressure-source-system",
@@ -115,6 +128,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "veilwarden-seal-the-impossible",
       name: "Seal the Impossible",
+      triggerLabel: "When a Hazard would escalate or be created",
       description: "When a Hazard would escalate, create a breach, or add another Hazard, cancel that escalation completely.",
       timing: "before-hazard-escalation",
       target: "none",
@@ -123,6 +137,7 @@ export const BASE_MASTERY = Object.freeze({
     Object.freeze({
       id: "veilwarden-sanctuary",
       name: "Sanctuary",
+      triggerLabel: "Before a station rolls while Hazards are active",
       description: "Before one unresolved station rolls, that station is treated as though no active Hazards affect its check or authored restrictions for that check.",
       timing: "before-check",
       target: "unresolved-station",
