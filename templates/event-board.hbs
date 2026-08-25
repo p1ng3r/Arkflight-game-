@@ -7,14 +7,17 @@
       <div class="arkflight-status-strip"><div class="arkflight-status-box"><span>Momentum</span><strong>{{momentum}} / 3</strong></div>{{#each pressure}}<div class="arkflight-status-box"><span>{{system}}</span><strong>{{value}}</strong></div>{{/each}}{{#if isGM}}<button type="button" class="arkflight-secondary" data-ark-action="restart-event" title="Restart this event from Round 1 and keep station assignments"><i class="fa-solid fa-rotate-left"></i> Restart Event</button>{{/if}}</div>
     </header>
 
-    {{#if hasHazards}}
-      <section class="arkflight-hazard-strip"><div class="arkflight-kicker">ACTIVE HAZARDS</div><div class="arkflight-hazard-list">{{#each hazards}}<span><i class="fa-solid fa-triangle-exclamation"></i> {{name}}</span>{{/each}}</div></section>
-    {{/if}}
+    {{#if hasHazards}}<section class="arkflight-hazard-strip"><div class="arkflight-kicker">ACTIVE HAZARDS</div><div class="arkflight-hazard-list">{{#each hazards}}<span><i class="fa-solid fa-triangle-exclamation"></i> {{name}}</span>{{/each}}</div></section>{{/if}}
 
     {{#if opening}}
       <div class="arkflight-opening-grid">
         <div class="arkflight-event-art"><img src="{{eventImage}}" alt="{{event.title}}" /><div class="arkflight-art-fallback">EVENT ART</div></div>
-        <article class="arkflight-vignette"><div class="arkflight-kicker">OPENING VIGNETTE</div><p>{{event.openingVignette}}</p>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-planning"><i class="fa-solid fa-hourglass-start"></i> Begin Crew Planning — 3:00</button>{{else}}<div class="arkflight-waiting">Waiting for the GM to begin crew planning.</div>{{/if}}</article>
+        <article class="arkflight-vignette"><div class="arkflight-kicker">EVENT OPENING VIGNETTE</div><h2>{{event.title}}</h2><p>{{event.openingVignette}}</p>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-planning"><i class="fa-solid fa-hourglass-start"></i> Begin Round 1 Crew Planning — 3:00</button>{{else}}<div class="arkflight-waiting">Waiting for the GM to begin crew planning.</div>{{/if}}</article>
+      </div>
+    {{else if roundOpening}}
+      <div class="arkflight-opening-grid arkflight-round-opening-grid">
+        <div class="arkflight-event-art"><img src="{{eventImage}}" alt="{{round.title}}" /><div class="arkflight-art-fallback">ROUND ART</div></div>
+        <article class="arkflight-vignette arkflight-round-opening-vignette"><div class="arkflight-kicker">ROUND {{roundNumber}} OPENING VIGNETTE</div><h2>{{round.title}}</h2><p>{{round.openingVignette}}</p><div class="arkflight-round-opening-state"><span>Momentum <strong>{{momentum}} / 3</strong></span>{{#each pressure}}<span>{{system}} <strong>{{value}}</strong></span>{{/each}}</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-planning"><i class="fa-solid fa-hourglass-start"></i> Begin Round {{roundNumber}} Crew Planning — 3:00</button>{{else}}<div class="arkflight-waiting">Waiting for the GM to begin Round {{roundNumber}} planning.</div>{{/if}}</article>
       </div>
     {{else}}
       <section class="arkflight-round-banner arkflight-round-banner-with-art">
@@ -28,53 +31,18 @@
 
       {{#if resolution}}
         <section class="arkflight-resolution-grid">
-          <article class="arkflight-resolution-focus">
-            <div class="arkflight-kicker">ACTIVE STATION</div>
-            <h2>{{activeResolution.stationName}}</h2>
-            <div class="arkflight-resolution-choice"><span>Assigned Officer</span><strong>{{#if activeResolution.assignedActorName}}{{activeResolution.assignedActorName}}{{else}}UNASSIGNED{{/if}}</strong></div>
-            <div class="arkflight-resolution-choice"><span>Action</span><strong>{{activeResolution.actionName}}</strong></div>
-            <div class="arkflight-resolution-choice"><span>PF2e Skill</span><strong>{{activeResolution.skillLabel}} ({{activeResolution.skillSlug}})</strong></div>
-            <div class="arkflight-resolution-choice"><span>Base DC</span><strong>{{activeResolution.baseDc}}</strong></div>
-            {{#if activeResolution.riskTier}}<div class="arkflight-resolution-choice heroic"><span>Heroic / Risk</span><strong>+{{activeResolution.riskTier}} — {{activeResolution.riskName}}</strong></div>{{/if}}
-            {{#if activeResolution.checkBonus}}<div class="arkflight-resolution-choice benefit"><span>Crew Advantage</span><strong>+{{activeResolution.checkBonus}} check equivalent</strong></div>{{/if}}
-            {{#if activeResolution.dcAdjustment}}<div class="arkflight-resolution-choice benefit"><span>DC Adjustment</span><strong>{{activeResolution.dcAdjustment}}</strong></div>{{/if}}
-            <div class="arkflight-resolution-final-dc"><span>FINAL DC</span><strong>{{activeResolution.finalDc}}</strong></div>
-            {{#if isGM}}
-              <p class="arkflight-resolution-help">Arkflight rolls this station with its assigned PF2e character and automatically applies earned crew advantages from earlier stations.</p>
-              <button type="button" class="arkflight-primary arkflight-roll-button" data-ark-action="resolve-active-station"><i class="fa-solid fa-dice-d20"></i> Roll {{activeResolution.skillLabel}} vs DC {{activeResolution.finalDc}}</button>
-            {{else}}<p class="arkflight-waiting">Waiting for the GM to resolve {{activeResolution.stationName}}.</p>{{/if}}
-          </article>
-          <aside class="arkflight-resolution-results">
-            <div class="arkflight-kicker">ROUND RESULTS</div>
-            {{#if resultRows.length}}
-              {{#each resultRows}}<div class="arkflight-result-row"><div><strong>{{stationName}}</strong><span>{{actionName}}</span></div><div class="arkflight-result-outcome">{{outcomeLabel}} <b>{{total}}</b></div>{{#if riskEarned}}<small><b>{{riskBenefitName}}:</b> {{riskText}}</small>{{/if}}</div>{{/each}}
-            {{else}}<p class="arkflight-muted">No station has resolved yet.</p>{{/if}}
-          </aside>
+          <article class="arkflight-resolution-focus"><div class="arkflight-kicker">ACTIVE STATION</div><h2>{{activeResolution.stationName}}</h2><div class="arkflight-resolution-choice"><span>Assigned Officer</span><strong>{{#if activeResolution.assignedActorName}}{{activeResolution.assignedActorName}}{{else}}UNASSIGNED{{/if}}</strong></div><div class="arkflight-resolution-choice"><span>Action</span><strong>{{activeResolution.actionName}}</strong></div><div class="arkflight-resolution-choice"><span>PF2e Skill</span><strong>{{activeResolution.skillLabel}} ({{activeResolution.skillSlug}})</strong></div><div class="arkflight-resolution-choice"><span>Base DC</span><strong>{{activeResolution.baseDc}}</strong></div>{{#if activeResolution.riskTier}}<div class="arkflight-resolution-choice heroic"><span>Heroic / Risk</span><strong>+{{activeResolution.riskTier}} — {{activeResolution.riskName}}</strong></div>{{/if}}{{#if activeResolution.checkBonus}}<div class="arkflight-resolution-choice benefit"><span>Crew Advantage</span><strong>+{{activeResolution.checkBonus}} check equivalent</strong></div>{{/if}}{{#if activeResolution.dcAdjustment}}<div class="arkflight-resolution-choice benefit"><span>DC Adjustment</span><strong>{{activeResolution.dcAdjustment}}</strong></div>{{/if}}<div class="arkflight-resolution-final-dc"><span>FINAL DC</span><strong>{{activeResolution.finalDc}}</strong></div>{{#if isGM}}<p class="arkflight-resolution-help">Arkflight rolls this station with its assigned PF2e character and automatically applies earned crew advantages from earlier stations.</p><button type="button" class="arkflight-primary arkflight-roll-button" data-ark-action="resolve-active-station"><i class="fa-solid fa-dice-d20"></i> Roll {{activeResolution.skillLabel}} vs DC {{activeResolution.finalDc}}</button>{{else}}<p class="arkflight-waiting">Waiting for the GM to resolve {{activeResolution.stationName}}.</p>{{/if}}</article>
+          <aside class="arkflight-resolution-results"><div class="arkflight-kicker">ROUND RESULTS</div>{{#if resultRows.length}}{{#each resultRows}}<div class="arkflight-result-row"><div><strong>{{stationName}}</strong><span>{{actionName}}</span></div><div class="arkflight-result-outcome">{{outcomeLabel}} <b>{{total}}</b></div>{{#if riskEarned}}<small><b>{{riskBenefitName}}:</b> {{riskText}}</small>{{/if}}</div>{{/each}}{{else}}<p class="arkflight-muted">No station has resolved yet.</p>{{/if}}</aside>
         </section>
       {{else if roundResultPhase}}
         <section class="arkflight-round-result-panel">
-          <div class="arkflight-kicker">ROUND RESULT</div>
-          <h2>{{roundResult.bandId}}</h2>
-          <div class="arkflight-round-score">Crew Score <strong>{{roundResult.score}}</strong></div>
-          <div class="arkflight-round-score">Momentum Change <strong>{{roundResult.momentumDelta}}</strong></div>
-
-          {{#if roundNarrative}}
-            <article class="arkflight-round-vignette"><div class="arkflight-kicker">CINEMATIC ROUND VIGNETTE</div><p>{{roundNarrative}}</p></article>
-          {{/if}}
-
-          <div class="arkflight-round-state-summary">
-            <div><span>Momentum Now</span><strong>{{momentum}} / 3</strong></div>
-            {{#each pressure}}<div><span>{{system}} Pressure</span><strong>{{value}}</strong></div>{{/each}}
-          </div>
+          <div class="arkflight-kicker">CINEMATIC ROUND REPORT</div><h2>{{round.title}} — {{roundResult.bandId}}</h2>
+          {{#if roundNarrative}}<article class="arkflight-round-vignette"><div class="arkflight-kicker">WHAT HAPPENED</div><p>{{roundNarrative}}</p></article>{{/if}}
+          <div class="arkflight-round-score">Crew Score <strong>{{roundResult.score}}</strong></div><div class="arkflight-round-score">Momentum Change <strong>{{roundResult.momentumDelta}}</strong></div>
+          <div class="arkflight-round-state-summary"><div><span>Momentum Now</span><strong>{{momentum}} / 3</strong></div>{{#each pressure}}<div><span>{{system}} Pressure</span><strong>{{value}}</strong></div>{{/each}}</div>
           {{#if hasHazards}}<div class="arkflight-round-hazards"><strong>Active Hazards:</strong> {{#each hazards}}<span>{{name}}</span>{{/each}}</div>{{/if}}
-
           <div class="arkflight-result-list">{{#each resultRows}}<div class="arkflight-result-row"><div><strong>{{stationName}}</strong><span>{{actionName}}</span></div><div class="arkflight-result-outcome">{{outcomeLabel}} <b>{{total}}</b></div>{{#if checkBonus}}<small>Crew advantage applied: +{{checkBonus}} equivalent.</small>{{/if}}{{#if riskEarned}}<small><b>{{riskBenefitName}}:</b> {{riskText}}</small>{{/if}}</div>{{/each}}</div>
-
-          {{#if isGM}}
-            <div class="arkflight-round-continue">
-              <button type="button" class="arkflight-primary" data-ark-action="next-round">{{#if finalRound}}Finish Event{{else}}Continue to Round {{nextRoundNumber}}{{/if}} <i class="fa-solid fa-arrow-right"></i></button>
-            </div>
-          {{/if}}
+          {{#if isGM}}<div class="arkflight-round-continue"><button type="button" class="arkflight-primary" data-ark-action="next-round">{{#if finalRound}}Finish Event{{else}}Continue to Round {{nextRoundNumber}}{{/if}} <i class="fa-solid fa-arrow-right"></i></button></div>{{/if}}
         </section>
       {{else if eventComplete}}
         <section class="arkflight-round-result-panel"><div class="arkflight-kicker">EVENT COMPLETE</div><h2>The Glassback is Behind You</h2><p class="arkflight-event-complete-copy">The event has reached its conclusion. Current Momentum, Pressure, and Hazards remain visible above for the GM to carry into the voyage state or adjudicate before closing the event.</p></section>
@@ -92,11 +60,7 @@
             </article>
           {{/each}}
         </div>
-
-        <footer class="arkflight-board-footer">
-          {{#if planning}}<div>{{#if readyToLock}}All five stations have an assigned officer, Action, and PF2e Skill.{{else}}Assign a PF2e character and choose an Action and PF2e Skill for every station before locking.{{/if}}</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="lock-plan" {{#unless readyToLock}}disabled{{/unless}}><i class="fa-solid fa-lock"></i> Lock Plan</button>{{/if}}{{/if}}
-          {{#if locked}}<div>The crew plan is locked and all station actors are assigned.</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-resolution"><i class="fa-solid fa-play"></i> Begin Resolution</button>{{/if}}{{/if}}
-        </footer>
+        <footer class="arkflight-board-footer">{{#if planning}}<div>{{#if readyToLock}}All five stations have an assigned officer, Action, and PF2e Skill.{{else}}Assign a PF2e character and choose an Action and PF2e Skill for every station before locking.{{/if}}</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="lock-plan" {{#unless readyToLock}}disabled{{/unless}}><i class="fa-solid fa-lock"></i> Lock Plan</button>{{/if}}{{/if}}{{#if locked}}<div>The crew plan is locked and all station actors are assigned.</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-resolution"><i class="fa-solid fa-play"></i> Begin Resolution</button>{{/if}}{{/if}}</footer>
       {{/if}}
     {{/if}}
   {{/if}}
