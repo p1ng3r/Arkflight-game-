@@ -1,4 +1,5 @@
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
+import { BASE_SIGNATURES } from "../content/base-signatures.js";
 import {
   createPlanningState,
   startPlanning,
@@ -8,9 +9,10 @@ import {
   selectSignature,
   selectComponentAbility,
   moveOrder,
-  lockPlanning,
-  beginResolution
+  lockPlanning
 } from "./planning-state.js";
+import { initializeResolution } from "./resolution-state.js";
+import { resolveActiveStation } from "./resolution-engine.js";
 
 const MODULE_ID = "arkflight-game";
 const SETTING_KEY = "activeEventPlanning";
@@ -64,7 +66,14 @@ export class PlanningController {
     const event = ARKFLIGHT_EVENTS[eventId];
     if (!event) throw new Error(`Unknown Arkflight Event: ${eventId}`);
     const round = event.rounds[0];
-    const next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0 });
+    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0 });
+    next = {
+      ...next,
+      selections: Object.fromEntries(Object.entries(next.selections).map(([station, selection]) => [
+        station,
+        { ...selection, signatureId: BASE_SIGNATURES[station]?.[0]?.id ?? null }
+      ]))
+    };
     await this.#persistAndBroadcast(next);
     return next;
   }
@@ -92,6 +101,17 @@ export class PlanningController {
   async beginResolution() {
     this.#requireGM();
     return this.command({ type: "begin-resolution" });
+  }
+
+  async resolveCurrentStation(actorId = null) {
+    this.#requireGM();
+    if (!this.state || this.state.phase !== "resolution") throw new Error("No station is waiting to resolve.");
+    const actor = actorId
+      ? game.actors.get(actorId)
+      : canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
+    if (!actor) throw new Error("Select a PF2e character token, or set a GM character, before resolving this station.");
+    const { nextState } = await resolveActiveStation({ event: this.getEvent(), state: this.state, actor });
+    return this.#persistAndBroadcast(nextState);
   }
 
   getEvent() {
@@ -135,7 +155,7 @@ export class PlanningController {
         break;
       case "begin-resolution":
         this.#requireGMUser(sourceUserId);
-        next = beginResolution(this.state);
+        next = initializeResolution(this.state);
         break;
       default:
         throw new Error(`Unknown planning command: ${command.type}`);
