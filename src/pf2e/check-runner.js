@@ -33,11 +33,39 @@ function readableDegree(...values) {
   return null;
 }
 
-export async function rollPf2eStatistic({ actor, statisticSlug, dc, label = "Arkflight Station Check", options = [] }) {
-  if (!actor) throw new Error("A PF2e actor is required.");
-  const statistic = actor.getStatistic?.(statisticSlug) ?? actor.skills?.[statisticSlug];
-  if (!statistic?.check?.roll) throw new Error(`PF2e statistic is unavailable: ${statisticSlug}`);
+function withArkflightModifier(statistic, bonus) {
+  const value = Number(bonus ?? 0);
+  if (!value) return statistic;
 
+  const Modifier = game.pf2e?.Modifier;
+  if (!Modifier || typeof statistic?.clone !== "function") {
+    throw new Error("PF2e Modifier API is unavailable; Arkflight cannot apply the crew bonus visibly.");
+  }
+
+  const modifier = new Modifier({
+    slug: "arkflight-crew-advantage",
+    label: "Arkflight Crew Advantage",
+    modifier: value,
+    type: "untyped",
+    source: "Arkflight Heroic / Risk Benefit"
+  });
+
+  return statistic.clone({ check: { modifiers: [modifier] } });
+}
+
+export async function rollPf2eStatistic({
+  actor,
+  statisticSlug,
+  dc,
+  label = "Arkflight Station Check",
+  options = [],
+  bonus = 0
+}) {
+  if (!actor) throw new Error("A PF2e actor is required.");
+  const baseStatistic = actor.getStatistic?.(statisticSlug) ?? actor.skills?.[statisticSlug];
+  if (!baseStatistic?.check?.roll) throw new Error(`PF2e statistic is unavailable: ${statisticSlug}`);
+
+  const statistic = withArkflightModifier(baseStatistic, bonus);
   let captured = null;
   const roll = await statistic.check.roll({
     dc: { value: Number(dc) },
