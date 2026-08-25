@@ -23,6 +23,9 @@ const MODULE_ID = "arkflight-game";
 const SETTING_KEY = "activeEventPlanning";
 const SOCKET = `module.${MODULE_ID}`;
 
+function ownerLevel() { return globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3; }
+function userOwnsActor(actor, user) { return Boolean(actor?.testUserPermission?.(user, ownerLevel())); }
+
 function defaultMasterySelections() {
   return Object.fromEntries(Object.entries(BASE_MASTERY).map(([stationId, rows]) => [stationId, rows?.[0]?.id ?? null]));
 }
@@ -283,12 +286,12 @@ export class PlanningController {
     const existingActorId = this.state.assignments?.[stationId]?.actorId ?? null;
     if (existingActorId) {
       const existingActor = game.actors.get(existingActorId);
-      if (!existingActor?.testUserPermission?.(user, "OWNER")) throw new Error("That Arkflight station has already been claimed by another player.");
+      if (!userOwnsActor(existingActor, user)) throw new Error("That Arkflight station has already been claimed by another player.");
     }
 
     if (!actorId) return;
     const actor = game.actors.get(actorId);
-    if (!actor || actor.type !== "character" || !actor.testUserPermission?.(user, "OWNER")) {
+    if (!actor || actor.type !== "character" || !userOwnsActor(actor, user)) {
       throw new Error("You may only claim an Arkflight station with a PF2e character you own.");
     }
   }
@@ -299,7 +302,7 @@ export class PlanningController {
     if (user.isGM) return;
     const actorId = this.state.assignments?.[stationId]?.actorId;
     const actor = actorId ? game.actors.get(actorId) : null;
-    if (!actor || !actor.testUserPermission?.(user, "OWNER")) {
+    if (!actor || !userOwnsActor(actor, user)) {
       throw new Error("You may only control the Arkflight station assigned to a PF2e character you own.");
     }
   }
