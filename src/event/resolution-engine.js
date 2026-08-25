@@ -3,12 +3,21 @@ import { getRiskBenefit } from "../content/risk-benefits.js";
 import { rollPf2eStatistic } from "../pf2e/check-runner.js";
 import { activeStationId, recordStationResult } from "./resolution-state.js";
 
+function normalizedOutcomeSlug(outcome) {
+  return String(outcome ?? "")
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .replaceAll("_", "-")
+    .replace(/\s+/g, "-")
+    .toLowerCase();
+}
+
 function normalizeOutcome(outcome) {
-  const slug = String(outcome ?? "").toLowerCase().replaceAll("_", "-");
-  if (slug === "critical-success") return "criticalSuccess";
+  const slug = normalizedOutcomeSlug(outcome);
+  if (slug === "critical-success" || slug === "criticalsuccess") return "criticalSuccess";
   if (slug === "success") return "success";
   if (slug === "failure") return "failure";
-  if (slug === "critical-failure") return "criticalFailure";
+  if (slug === "critical-failure" || slug === "criticalfailure") return "criticalFailure";
   throw new Error(`Unsupported PF2e outcome: ${outcome}`);
 }
 
