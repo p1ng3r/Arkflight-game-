@@ -1,11 +1,25 @@
 export const STATIONS = Object.freeze(["captain", "engineer", "navigator", "watchmaster", "veilwarden"]);
-export const DEGREE_SCORES = Object.freeze({ criticalSuccess: 2, success: 1, failure: 0, criticalFailure: -1 });
+
+// Station results now have equal weight in both directions. A Failure must hurt
+// the round score just as a Success helps it, while critical results are worth
+// two steps in either direction.
+export const DEGREE_SCORES = Object.freeze({
+  criticalSuccess: 2,
+  success: 1,
+  failure: -1,
+  criticalFailure: -2
+});
+
+// Keep the existing authored band ids for event-content compatibility, but move
+// the thresholds onto the new -10..+10 five-station scale. "mixed-success" is
+// the internal/content id for the player-facing Narrow Success band: score 0 is
+// still a pass, but only barely.
 export const ROUND_BANDS = Object.freeze([
-  { id: "extraordinary", min: 7, max: 10, momentum: 2 },
-  { id: "strong-success", min: 4, max: 6, momentum: 1 },
-  { id: "mixed-success", min: 2, max: 3, momentum: 0 },
-  { id: "failure", min: 0, max: 1, momentum: -1 },
-  { id: "disaster", min: -5, max: -1, momentum: -2 }
+  { id: "extraordinary", label: "Extraordinary", min: 7, max: 10, momentum: 2 },
+  { id: "strong-success", label: "Strong Success", min: 3, max: 6, momentum: 1 },
+  { id: "mixed-success", label: "Narrow Success", min: 0, max: 2, momentum: 0 },
+  { id: "failure", label: "Failure", min: -4, max: -1, momentum: -1 },
+  { id: "disaster", label: "Disaster", min: -10, max: -5, momentum: -2 }
 ]);
 export const RISK_TIERS = Object.freeze([2, 5, 8]);
 export const PLANNING_SECONDS = 180;
@@ -69,7 +83,7 @@ export function scoreRound(degrees) {
   }, 0);
   const band = ROUND_BANDS.find((entry) => score >= entry.min && score <= entry.max);
   if (!band) throw new Error(`No round band for score ${score}`);
-  return Object.freeze({ score, bandId: band.id, momentumDelta: band.momentum });
+  return Object.freeze({ score, bandId: band.id, bandLabel: band.label, momentumDelta: band.momentum });
 }
 
 export function clampMomentum(value) {
