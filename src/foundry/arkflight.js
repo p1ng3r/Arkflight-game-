@@ -1,11 +1,16 @@
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
 import { BASE_SIGNATURES } from "../content/base-signatures.js";
+import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
+import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
 
 const MODULE_ID = "arkflight-game";
 let controller = null;
 let board = null;
+let rewardSummary = null;
+let lastRoundRewardKey = null;
+let lastEventRewardKey = null;
 
 function ensureBoard() {
   if (!controller) return null;
@@ -18,11 +23,44 @@ function renderBoard() {
   if (app) app.render({ force: true });
 }
 
+function showRewardSummary() {
+  if (!controller) return;
+  if (!rewardSummary) rewardSummary = new ArkflightRewardSummary(controller);
+  rewardSummary.render({ force: true });
+}
+
 function baseStationOptions() {
   return Object.fromEntries(Object.entries(BASE_SIGNATURES).map(([stationId, signatures]) => [
     stationId,
     { signatures: [...signatures], componentAbilities: [] }
   ]));
+}
+
+function announceStateRewards(state) {
+  if (!state) return;
+
+  if (state.phase === "round-result" && state.consequenceApplied) {
+    const key = `${state.eventId}:${state.roundId}:${state.roundResult?.bandId}:${state.roundMomentumBefore}:${state.roundMomentumAfter}`;
+    if (key !== lastRoundRewardKey) {
+      lastRoundRewardKey = key;
+      const before = Number(state.roundMomentumBefore ?? state.encounter?.momentum ?? 0);
+      const award = Number(state.roundMomentumAward ?? state.roundResult?.momentumDelta ?? 0);
+      const after = Number(state.roundMomentumAfter ?? state.encounter?.momentum ?? 0);
+      const edgeNames = (state.roundRewards?.awardedEdgeCards ?? [])
+        .map((id) => getCrewEdgeCard(id)?.name)
+        .filter(Boolean);
+      const edgeText = edgeNames.length ? ` Crew Edge earned: ${edgeNames.join(", ")}.` : "";
+      ui.notifications?.info(`Arkflight Momentum: ${before} ${award >= 0 ? "+" : ""}${award} → ${after}.${edgeText}`);
+    }
+  }
+
+  if (state.phase === "event-complete" && state.eventEnding) {
+    const key = `${state.eventId}:${state.eventEnding.id ?? state.eventEnding.label}`;
+    if (key !== lastEventRewardKey) {
+      lastEventRewardKey = key;
+      showRewardSummary();
+    }
+  }
 }
 
 Hooks.once("init", () => {
@@ -35,6 +73,10 @@ Hooks.once("init", () => {
     openBoard() {
       renderBoard();
       return board;
+    },
+    openRewards() {
+      showRewardSummary();
+      return rewardSummary;
     },
     async openEvent(eventId = "glassback-cinderwake") {
       if (!controller) throw new Error("Arkflight is not ready yet.");
@@ -55,10 +97,16 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", () => {
   controller = new PlanningController({
-    onStateChange: () => renderBoard()
+    onStateChange: (state) => {
+      renderBoard();
+      announceStateRewards(state);
+    }
   });
   controller.activateSockets();
-  if (controller.state?.eventId) renderBoard();
+  if (controller.state?.eventId) {
+    renderBoard();
+    announceStateRewards(controller.state);
+  }
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
