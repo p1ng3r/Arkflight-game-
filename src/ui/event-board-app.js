@@ -154,6 +154,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       eventImage: moduleAssetPath(round.image || event.image),
       round,
       roundNumber: (state.roundIndex ?? 0) + 1,
+      nextRoundNumber: (state.roundIndex ?? 0) + 2,
       state,
       opening: state.phase === "opening",
       planning: state.phase === "planning",
