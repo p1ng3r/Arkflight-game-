@@ -13,7 +13,8 @@
     "styles/event-round.css",
     "styles/arkflight-enhancements.css",
     "styles/image-popout.css",
-    "styles/rewards.css"
+    "styles/rewards.css",
+    "styles/setup-mastery-fix.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js"
