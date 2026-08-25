@@ -35,6 +35,11 @@ function unresolved(state) {
 function assertTarget(state, stationId) {
   if (!stationId || !unresolved(state).includes(stationId)) throw new Error("Choose an unresolved station.");
 }
+function addCheckBonus(encounter, stationId, value, source) {
+  encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + Number(value ?? 0);
+  encounter.checkBonusSources[stationId] ??= [];
+  encounter.checkBonusSources[stationId].push(`${source}: +${Number(value ?? 0)} to the PF2e check`);
+}
 function addDegreeLift(encounter, stationId, value, source) {
   encounter.degreeLifts[stationId] = Math.max(Number(encounter.degreeLifts[stationId] ?? 0), Number(value ?? 0));
   encounter.degreeLiftSources[stationId] ??= [];
@@ -137,7 +142,8 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
       break;
     case "navigator-find-another-way":
       assertTarget(state, options.targetStationId);
-      next = { ...next, reopenedStations: { ...(state.reopenedStations ?? {}), [options.targetStationId]: true } };
+      addCheckBonus(encounter, options.targetStationId, 3, source);
+      encounter.notes.push(`${source} found a better line for ${options.targetStationId}: +3 to its next PF2e check.`);
       break;
     case "navigator-read-the-current":
       next = moveToFrontOfRemaining(state, options.targetStationId);
