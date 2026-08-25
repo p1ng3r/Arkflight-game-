@@ -2,6 +2,8 @@ import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
 import { STATIONS } from "../event/event-schema.js";
 import { planningReady, planningSecondsRemaining } from "../event/planning-state.js";
+import { activeStationId } from "../event/resolution-state.js";
+import { selectedResolution } from "../event/resolution-engine.js";
 import { stationPresentation } from "./station-presentation.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -27,17 +29,10 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     id: "arkflight-event-board",
     classes: ["arkflight", "arkflight-event-board"],
     position: { width: 1180, height: 820 },
-    window: {
-      title: "Arkflight Event",
-      icon: "fa-solid fa-compass"
-    }
+    window: { title: "Arkflight Event", icon: "fa-solid fa-compass" }
   };
 
-  static PARTS = {
-    board: {
-      template: "modules/arkflight-game/templates/event-board.hbs"
-    }
-  };
+  static PARTS = { board: { template: "modules/arkflight-game/templates/event-board.hbs" } };
 
   constructor(controller, options = {}) {
     super(options);
@@ -50,9 +45,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     const state = this.controller.state;
     const event = this.controller.getEvent();
     const round = this.controller.getRound();
-    if (!state || !event || !round) {
-      return { ...context, empty: true, isGM: game.user.isGM };
-    }
+    if (!state || !event || !round) return { ...context, empty: true, isGM: game.user.isGM };
 
     const remaining = planningSecondsRemaining(state);
     const stationOptions = game.arkflight?.stationOptions ?? {};
@@ -77,6 +70,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       const configured = stationOptions[stationId] ?? {};
       const signatures = (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId }));
       const componentAbilities = (configured.componentAbilities ?? []).map((item) => ({ ...item, selected: item.id === selection.componentAbilityId }));
+      const result = state.results?.[stationId] ?? null;
 
       return {
         stationId,
@@ -86,23 +80,16 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         canMoveLater: state.order.indexOf(stationId) < state.order.length - 1,
         selection,
         complete: Boolean(selection.actionId && selection.skillId),
-        availableActions: availableActions.map((action) => ({
-          ...action,
-          fallback: action.id === fallback.id,
-          selected: action.id === selection.actionId
-        })),
+        availableActions: availableActions.map((action) => ({ ...action, fallback: action.id === fallback.id, selected: action.id === selection.actionId })),
         selectedAction,
-        skillChoices: (selectedAction?.skills ?? []).map((skill) => ({
-          ...skill,
-          selected: skill.id === selection.skillId,
-          heroic: (skill.riskBids?.length ?? 0) > 0
-        })),
+        skillChoices: (selectedAction?.skills ?? []).map((skill) => ({ ...skill, selected: skill.id === selection.skillId, heroic: (skill.riskBids?.length ?? 0) > 0 })),
         selectedSkill,
         riskChoices,
         hasRiskChoices: riskChoices.length > 0,
         signatures,
         componentAbilities,
         hasEncounterAbilities: signatures.length > 0 || componentAbilities.length > 0,
+        result,
         index
       };
     });
@@ -110,15 +97,43 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     const order = state.order.map((stationId, index) => ({
       stationId,
       position: index + 1,
-      name: stationPresentation(stationId)?.displayName ?? titleCase(stationId)
+      name: stationPresentation(stationId)?.displayName ?? titleCase(stationId),
+      resolved: Boolean(state.results?.[stationId]),
+      active: state.phase === "resolution" && activeStationId(state) === stationId
     }));
+
+    const activeId = activeStationId(state);
+    const chosen = activeId ? selectedResolution(event, state, activeId) : null;
+    const activeResolution = chosen ? {
+      stationId: activeId,
+      stationName: stationPresentation(activeId)?.displayName ?? titleCase(activeId),
+      actionName: chosen.action.name,
+      skillLabel: chosen.skill.label,
+      skillSlug: chosen.skill.skill,
+      baseDc: chosen.skill.dc,
+      riskTier: chosen.riskBid?.tier ?? null,
+      riskName: chosen.riskBenefit?.name ?? null,
+      finalDc: chosen.finalDc,
+      selectedTokenName: canvas.tokens?.controlled?.[0]?.actor?.name ?? game.user.character?.name ?? null
+    } : null;
+
+    const resultRows = state.order.map((stationId) => {
+      const result = state.results?.[stationId];
+      if (!result) return null;
+      return {
+        stationId,
+        stationName: stationPresentation(stationId)?.displayName ?? titleCase(stationId),
+        ...result,
+        outcomeLabel: titleCase(result.outcome)
+      };
+    }).filter(Boolean);
 
     return {
       ...context,
       empty: false,
       isGM: game.user.isGM,
       event,
-      eventImage: moduleAssetPath(event.image),
+      eventImage: moduleAssetPath(round.image || event.image),
       round,
       roundNumber: (state.roundIndex ?? 0) + 1,
       state,
@@ -126,13 +141,17 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       planning: state.phase === "planning",
       locked: state.phase === "locked",
       resolution: state.phase === "resolution",
+      roundResultPhase: state.phase === "round-result",
       readyToLock: planningReady(state),
       timerExpired: remaining <= 0,
       timerText: formatTimer(remaining),
       momentum: event.startingState?.momentum ?? 0,
       pressure: Object.entries(event.startingState?.pressure ?? {}).map(([system, value]) => ({ system: titleCase(system), value })),
       stations,
-      order
+      order,
+      activeResolution,
+      resultRows,
+      roundResult: state.roundResult ?? null
     };
   }
 
@@ -157,39 +176,18 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         const station = button.dataset.station;
         try {
           switch (action) {
-            case "begin-planning":
-              await this.controller.beginPlanning();
-              break;
-            case "choose-action":
-              await this.controller.command({ type: "select-action", station, actionId: button.dataset.actionId });
-              break;
-            case "choose-skill":
-              await this.controller.command({ type: "select-skill", station, skillId: button.dataset.skillId });
-              break;
-            case "choose-risk":
-              await this.controller.command({ type: "select-risk", station, riskTier: Number(button.dataset.riskTier) });
-              break;
-            case "clear-risk":
-              await this.controller.command({ type: "select-risk", station, riskTier: null });
-              break;
-            case "move-earlier":
-              await this.controller.command({ type: "move-order", station, direction: "earlier" });
-              break;
-            case "move-later":
-              await this.controller.command({ type: "move-order", station, direction: "later" });
-              break;
-            case "choose-signature":
-              await this.controller.command({ type: "select-signature", station, signatureId: button.dataset.signatureId });
-              break;
-            case "choose-component-ability":
-              await this.controller.command({ type: "select-component-ability", station, componentAbilityId: button.dataset.abilityId });
-              break;
-            case "lock-plan":
-              await this.controller.lockPlan();
-              break;
-            case "begin-resolution":
-              await this.controller.beginResolution();
-              break;
+            case "begin-planning": await this.controller.beginPlanning(); break;
+            case "choose-action": await this.controller.command({ type: "select-action", station, actionId: button.dataset.actionId }); break;
+            case "choose-skill": await this.controller.command({ type: "select-skill", station, skillId: button.dataset.skillId }); break;
+            case "choose-risk": await this.controller.command({ type: "select-risk", station, riskTier: Number(button.dataset.riskTier) }); break;
+            case "clear-risk": await this.controller.command({ type: "select-risk", station, riskTier: null }); break;
+            case "move-earlier": await this.controller.command({ type: "move-order", station, direction: "earlier" }); break;
+            case "move-later": await this.controller.command({ type: "move-order", station, direction: "later" }); break;
+            case "choose-signature": await this.controller.command({ type: "select-signature", station, signatureId: button.dataset.signatureId }); break;
+            case "choose-component-ability": await this.controller.command({ type: "select-component-ability", station, componentAbilityId: button.dataset.abilityId }); break;
+            case "lock-plan": await this.controller.lockPlan(); break;
+            case "begin-resolution": await this.controller.beginResolution(); break;
+            case "resolve-active-station": await this.controller.resolveCurrentStation(); break;
           }
         } catch (error) {
           console.error("Arkflight | Event board action failed", error);
