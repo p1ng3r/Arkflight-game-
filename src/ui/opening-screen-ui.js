@@ -69,20 +69,12 @@ function actorPortrait(state, stationId) {
   return `<img class="arkflight-opening-portrait" src="${escapeHtml(actor.img)}" alt="${escapeHtml(actor.name)}">`;
 }
 
-function masteryPreview(state, stationId) {
+function masteryTooltip(state, stationId) {
   const masteryId = state.masterySelections?.[stationId] ?? null;
   const mastery = getMasteryTechnique(stationId, masteryId);
   if (!mastery) return "";
   const trigger = mastery.trigger ?? titleCase(mastery.timing);
-  return `
-    <div class="arkflight-opening-helper-line">
-      <span class="arkflight-opening-helper-label"><i class="fa-solid fa-bolt"></i> Trigger</span>
-      <span>${escapeHtml(trigger)}</span>
-    </div>
-    <div class="arkflight-opening-helper-line">
-      <span class="arkflight-opening-helper-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Effect</span>
-      <span>${escapeHtml(mastery.description)}</span>
-    </div>`;
+  return `Trigger: ${trigger}\nEffect: ${mastery.description}`;
 }
 
 function crewRows(state) {
@@ -91,8 +83,9 @@ function crewRows(state) {
     const actorId = state.assignments?.[stationId]?.actorId ?? null;
     const masteryId = state.masterySelections?.[stationId] ?? null;
     const ready = Boolean(actorId && masteryId);
+    const tooltip = masteryTooltip(state, stationId);
     return `
-      <section class="arkflight-opening-station-card ${ready ? "ready" : "needs-setup"} ${masteryId ? "has-mastery" : ""}" data-opening-station="${stationId}">
+      <section class="arkflight-opening-station-card ${ready ? "ready" : "needs-setup"}" data-opening-station="${stationId}">
         <div class="arkflight-opening-station-main">
           <div class="arkflight-opening-station-name">
             <span class="arkflight-opening-station-glyph"><i class="${presentation?.iconClass ?? "fa-solid fa-circle"}"></i></span>
@@ -108,7 +101,10 @@ function crewRows(state) {
           <div class="arkflight-opening-mastery-field">
             <div class="arkflight-opening-field-stack">
               <span class="arkflight-opening-field-label">Mastery</span>
-              <select data-opening-control="mastery" data-station="${stationId}">${masteryOptions(state, stationId)}</select>
+              <div class="arkflight-opening-mastery-control">
+                <select data-opening-control="mastery" data-station="${stationId}" ${tooltip ? `title="${escapeHtml(tooltip)}"` : ""}>${masteryOptions(state, stationId)}</select>
+                ${tooltip ? `<span class="arkflight-opening-mastery-info" title="${escapeHtml(tooltip)}" aria-label="Mastery details"><i class="fa-solid fa-circle-info"></i></span>` : ""}
+              </div>
             </div>
           </div>
           <div class="arkflight-opening-row-state ${ready ? "ready" : "needs-setup"}">
@@ -116,7 +112,6 @@ function crewRows(state) {
             <span>${ready ? "READY" : "NEEDS SETUP"}</span>
           </div>
         </div>
-        ${masteryId ? `<div class="arkflight-opening-mastery-preview">${masteryPreview(state, stationId)}</div>` : ""}
       </section>
     `;
   }).join("");
@@ -165,13 +160,13 @@ function openingMarkup(controller, imageSrc) {
 
       <section class="arkflight-opening-muster">
         <div class="arkflight-opening-section-title">Crew Muster &amp; Station Mastery</div>
-        <p class="arkflight-opening-muster-help">Assign one officer to every station and ready one once-per-Event Mastery. Select a Mastery to see exactly when it can be used.</p>
+        <p class="arkflight-opening-muster-help">Assign one officer to every station and ready one once-per-Event Mastery. Hover the info icon beside a selected Mastery for its trigger and effect.</p>
         <div class="arkflight-opening-crew-list">${crewRows(state)}</div>
         <div class="arkflight-opening-ready-message ${ready ? "ready" : ""}">${ready ? "◆ CREW & MASTERY READY — the Event may begin." : "Complete all five officer assignments and Mastery choices before Round 1."}</div>
       </section>
 
       ${game.user.isGM
-        ? `<button type="button" class="arkflight-opening-begin" data-opening-begin ${ready ? "" : "disabled"}><i class="fa-solid fa-lock"></i> LOCK CREW &amp; MASTERY — BEGIN ROUND 1 PLANNING</button>`
+        ? `<button type="button" class="arkflight-opening-begin" data-opening-begin ${ready ? "" : "disabled"}><i class="fa-solid fa-lock"></i><span class="arkflight-opening-begin-label">LOCK CREW &amp; MASTERY — BEGIN ROUND 1 PLANNING</span></button>`
         : '<div class="arkflight-waiting">Waiting for the GM to lock the crew and begin Round 1.</div>'}
     </main>
 
