@@ -1,4 +1,5 @@
 import { clampMomentum } from "./event-schema.js";
+import { applyRewardPackageToState, applyRoundRewardPackageToState, resolveEventEnding } from "./reward-engine.js";
 
 function cloneSourceMap(source) {
   return Object.fromEntries(Object.entries(source ?? {}).map(([key, rows]) => [key, [...(rows ?? [])]]));
@@ -164,14 +165,21 @@ export function finalizeRound(event, state) {
   const momentumAfter = encounter.momentum;
   applyOutcomeEffects(encounter, outcome.effects ?? []);
   const roundNarrative = cinematicRoundNarrative({ round, bandId: state.roundResult.bandId, results: state.results, consequenceNarrative: outcome.narrative });
-  return { ...state, encounter, roundNarrative, consequenceNarrative: outcome.narrative, consequenceApplied: true, roundMomentumBefore: momentumBefore, roundMomentumAfter: momentumAfter };
-}
-
-function endingKeyForBand(bandId) {
-  if (bandId === "extraordinary") return "extraordinaryEscape";
-  if (bandId === "strong-success" || bandId === "mixed-success") return "escape";
-  if (bandId === "failure") return "costlyEscape";
-  return "disaster";
+  let next = {
+    ...state,
+    encounter,
+    roundNarrative,
+    consequenceNarrative: outcome.narrative,
+    consequenceApplied: true,
+    roundMomentumBefore: momentumBefore,
+    roundMomentumAward: Number(state.roundResult.momentumDelta ?? 0),
+    roundMomentumAfter: momentumAfter,
+    roundRewards: null
+  };
+  if (outcome.rewards) {
+    next = applyRoundRewardPackageToState(next, outcome.rewards, { roundId: round.id, bandId: state.roundResult.bandId });
+  }
+  return next;
 }
 
 export function advanceToNextRound(event, state) {
@@ -179,9 +187,10 @@ export function advanceToNextRound(event, state) {
   const nextIndex = Number(state.roundIndex ?? 0) + 1;
   const nextRound = event?.rounds?.[nextIndex];
   if (!nextRound) {
-    const endingKey = endingKeyForBand(state.roundResult?.bandId);
-    const eventEnding = event?.endings?.[endingKey] ?? null;
-    return { ...state, phase: "event-complete", eventEnding };
+    const eventEnding = resolveEventEnding(event, state.roundResult?.bandId);
+    let next = { ...state, phase: "event-complete", eventEnding };
+    next = applyRewardPackageToState(next, eventEnding.rewards);
+    return next;
   }
   return {
     ...state,
@@ -197,6 +206,7 @@ export function advanceToNextRound(event, state) {
     roundNarrative: null,
     consequenceNarrative: null,
     consequenceApplied: false,
+    roundRewards: null,
     selections: Object.fromEntries(Object.entries(state.selections).map(([stationId, selection]) => [stationId, { ...selection, actionId: null, skillId: null, riskTier: null, componentAbilityId: null }]))
   };
 }
