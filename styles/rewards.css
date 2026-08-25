@@ -14,6 +14,14 @@
 .arkflight-reward-edge strong{color:#f0c969}
 .arkflight-reward-edge-overflow{border-color:#8b4b3b;background:#2b1c18}
 .arkflight-reward-warning{margin-top:10px;padding:9px;border:1px solid #8b4b3b;background:#2b1c18;color:#e5b2a3}
+.arkflight-reward-grant-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:14px;padding:12px;border:1px solid #6f5c33;background:#211d15;align-items:end}
+.arkflight-reward-grant-controls label{display:grid;gap:4px}
+.arkflight-reward-grant-controls label>span{font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:#b5a47c}
+.arkflight-reward-grant-controls select{height:34px;border:1px solid #5c513b;background:#151411;color:#eadfc8;padding:4px 7px}
+.arkflight-reward-grant-controls button{height:34px;white-space:nowrap}
+.arkflight-reward-grant-controls>small{grid-column:1/-1;color:#9f9582;line-height:1.4}
+.arkflight-reward-granted{margin-top:14px;padding:10px;border:1px solid #58663d;background:#1c2419;color:#cbdca8}
+.arkflight-reward-granted i{margin-right:5px;color:#b9d27d}
 .arkflight-edge-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:9px}
 .arkflight-edge-card{min-height:122px;padding:10px;border:1px solid #7b6332;background:linear-gradient(180deg,#2b2519,#1d1a15);box-shadow:inset 0 0 0 1px rgba(216,182,90,.08)}
 .arkflight-edge-card header{padding-bottom:7px;margin-bottom:7px;border-bottom:1px solid #4d422c;color:#f0c969;font-weight:800}
@@ -26,4 +34,4 @@
 .arkflight-momentum-ledger>div{padding:7px;border:1px solid #4f4739;background:#191815;text-align:center}
 .arkflight-momentum-ledger span{display:block;font-size:8px;letter-spacing:.1em;color:#958b78;text-transform:uppercase}
 .arkflight-momentum-ledger strong{display:block;margin-top:2px;color:#f0cf74;font-size:17px}
-@media(max-width:800px){.arkflight-edge-grid{grid-template-columns:1fr}.arkflight-reward-row{grid-template-columns:1fr}.arkflight-momentum-ledger{grid-template-columns:1fr}}
+@media(max-width:800px){.arkflight-edge-grid{grid-template-columns:1fr}.arkflight-reward-row{grid-template-columns:1fr}.arkflight-momentum-ledger{grid-template-columns:1fr}.arkflight-reward-grant-controls{grid-template-columns:1fr}}
