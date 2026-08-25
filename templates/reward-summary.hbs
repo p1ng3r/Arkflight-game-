@@ -28,7 +28,7 @@
         <p class="arkflight-muted">No material reward is authored for this outcome.</p>
       {{/if}}
       {{#if edgeOverflow}}
-        <div class="arkflight-reward-warning"><i class="fa-solid fa-triangle-exclamation"></i> The shared Crew Edge hand is full. Resolve the overflow before carrying rewards forward.</div>
+        <div class="arkflight-reward-warning"><i class="fa-solid fa-triangle-exclamation"></i> The shared Crew Tactics pool is full. Resolve the overflow before carrying rewards forward.</div>
       {{/if}}
 
       {{#if isGM}}
@@ -55,24 +55,24 @@
     </section>
 
     <section class="arkflight-edge-hand">
-      <div class="arkflight-kicker">CREW EDGE — {{edgeHandCount}} / 3</div>
+      <div class="arkflight-kicker">CREW TACTICS — {{edgeHandCount}} / 3</div>
       {{#if edgeHand.length}}
         <div class="arkflight-edge-grid">
           {{#each edgeHand}}
             <article class="arkflight-edge-card">
               <header><i class="fa-solid fa-bolt"></i> {{name}}</header>
               <div><b>Trigger:</b> {{trigger}}</div>
-              <div><b>Cash In:</b> {{effect}}</div>
+              <div><b>Spend:</b> {{effect}}</div>
             </article>
           {{/each}}
         </div>
       {{else}}
-        <p class="arkflight-muted">The crew currently holds no Edge cards.</p>
+        <p class="arkflight-muted">The crew currently holds no Ready Tactics.</p>
       {{/if}}
     </section>
 
     <footer class="arkflight-reward-note">
-      Character treasure is granted through PF2e Item documents. Arkflight ship components, faction rewards, route knowledge, boons, and Crew Edge remain in their own Arkflight campaign layers.
+      Character treasure is granted through PF2e Item documents. Arkflight ship components, faction rewards, route knowledge, boons, and Crew Tactics remain in their own Arkflight campaign layers.
     </footer>
   {{/if}}
 </section>
