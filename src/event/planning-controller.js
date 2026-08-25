@@ -100,12 +100,7 @@ export class PlanningController {
     if (!event) throw new Error(`Unknown Arkflight Event: ${eventId}`);
     const round = event.rounds[0];
     const carriedTactics = this.state?.crewEdgeHand ?? [];
-    let next = createPlanningState({
-      eventId: event.id,
-      roundId: round.id,
-      roundIndex: 0,
-      crewEdgeHand: carriedTactics
-    });
+    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0, crewEdgeHand: carriedTactics });
     next = initializeEncounter(event, next);
     await this.#persistAndBroadcast(next);
     return next;
@@ -138,12 +133,18 @@ export class PlanningController {
   async continueToNextRound() { this.#requireGM(); return this.command({ type: "next-round" }); }
 
   async resolveCurrentStation(actorId = null) {
-    this.#requireGM();
     if (!this.state || this.state.phase !== "resolution") throw new Error("No station is waiting to resolve.");
     const stationId = activeStationId(this.state);
-    const assignedActorId = stationId ? this.state.assignments?.[stationId]?.actorId ?? null : null;
+    if (!stationId) throw new Error("No station is waiting to resolve.");
+
+    if (!game.user.isGM) {
+      this.#requireStationControl(game.user.id, stationId);
+      return this.command({ type: "resolve-active-station" });
+    }
+
+    const assignedActorId = this.state.assignments?.[stationId]?.actorId ?? null;
     const actor = actorId ? game.actors.get(actorId) : assignedActorId ? game.actors.get(assignedActorId) : canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
-    if (!actor) throw new Error(`No PF2e character is assigned to ${stationId ?? "this station"}.`);
+    if (!actor) throw new Error(`No PF2e character is assigned to ${stationId}.`);
     const { nextState } = await resolveActiveStation({ event: this.getEvent(), state: this.state, actor });
     return this.#persistAndBroadcast(nextState);
   }
@@ -171,16 +172,43 @@ export class PlanningController {
         break;
       }
       case "use-mastery":
+        this.#requireStationControl(sourceUserId, command.station);
         next = applyMasteryTechnique(this.state, command.station, command.options ?? {});
         break;
       case "use-tactic":
         next = applyCrewTactic(this.state, command.tacticId, command.options ?? {});
         break;
-      case "select-action": next = selectAction(this.state, command.station, command.actionId); break;
-      case "select-skill": next = selectSkill(this.state, command.station, command.skillId); break;
-      case "select-risk": next = selectRiskTier(this.state, command.station, command.riskTier); break;
-      case "select-component-ability": next = selectComponentAbility(this.state, command.station, command.componentAbilityId); break;
-      case "move-order": next = moveOrder(this.state, command.station, command.direction); break;
+      case "select-action":
+        this.#requireStationControl(sourceUserId, command.station);
+        next = selectAction(this.state, command.station, command.actionId);
+        break;
+      case "select-skill":
+        this.#requireStationControl(sourceUserId, command.station);
+        next = selectSkill(this.state, command.station, command.skillId);
+        break;
+      case "select-risk":
+        this.#requireStationControl(sourceUserId, command.station);
+        next = selectRiskTier(this.state, command.station, command.riskTier);
+        break;
+      case "select-component-ability":
+        this.#requireStationControl(sourceUserId, command.station);
+        next = selectComponentAbility(this.state, command.station, command.componentAbilityId);
+        break;
+      case "move-order":
+        this.#requireStationControl(sourceUserId, command.station);
+        next = moveOrder(this.state, command.station, command.direction);
+        break;
+      case "resolve-active-station": {
+        const stationId = activeStationId(this.state);
+        if (!stationId || this.state.phase !== "resolution") throw new Error("No station is waiting to resolve.");
+        this.#requireStationControl(sourceUserId, stationId);
+        const actorId = this.state.assignments?.[stationId]?.actorId ?? null;
+        const actor = actorId ? game.actors.get(actorId) : null;
+        if (!actor) throw new Error(`No PF2e character is assigned to ${stationId}.`);
+        const resolved = await resolveActiveStation({ event: this.getEvent(), state: this.state, actor });
+        next = resolved.nextState;
+        break;
+      }
       case "lock-plan":
         this.#requireGMUser(sourceUserId);
         next = lockPlanning(this.state);
@@ -246,9 +274,7 @@ export class PlanningController {
     const existingActorId = this.state.assignments?.[stationId]?.actorId ?? null;
     if (existingActorId) {
       const existingActor = game.actors.get(existingActorId);
-      if (!existingActor?.testUserPermission?.(user, "OWNER")) {
-        throw new Error("That Arkflight station has already been claimed by another player.");
-      }
+      if (!existingActor?.testUserPermission?.(user, "OWNER")) throw new Error("That Arkflight station has already been claimed by another player.");
     }
 
     if (!actorId) return;
@@ -265,7 +291,7 @@ export class PlanningController {
     const actorId = this.state.assignments?.[stationId]?.actorId;
     const actor = actorId ? game.actors.get(actorId) : null;
     if (!actor || !actor.testUserPermission?.(user, "OWNER")) {
-      throw new Error("Claim this station with one of your PF2e characters before choosing its Mastery Technique.");
+      throw new Error("You may only control the Arkflight station assigned to a PF2e character you own.");
     }
   }
 }
