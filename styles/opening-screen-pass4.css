@@ -1,0 +1,209 @@
+/* Pass 4 — premium opening-screen chrome and ornamentation.
+   Loaded after Pass 3; layout and gameplay remain unchanged. */
+
+.arkflight-event-board.arkflight-opening-mode .window-content {
+  background:
+    radial-gradient(circle at 50% 5%, rgba(107, 73, 27, .08), transparent 32%),
+    linear-gradient(180deg, #080a0c, #050708) !important;
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening {
+  position: relative;
+  border: 1px solid rgba(181, 135, 56, .78) !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(5, 6, 6, .98),
+    inset 0 0 0 3px rgba(193, 146, 64, .32),
+    inset 0 0 42px rgba(0, 0, 0, .35),
+    0 10px 34px rgba(0, 0, 0, .62) !important;
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening::before,
+.arkflight-opening-grid.arkflight-cinematic-opening::after {
+  content: "";
+  position: absolute;
+  z-index: 8;
+  pointer-events: none;
+  width: 72px;
+  height: 72px;
+  opacity: .72;
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening::before {
+  top: 4px;
+  left: 4px;
+  border-top: 2px solid rgba(214, 166, 78, .75);
+  border-left: 2px solid rgba(214, 166, 78, .75);
+  box-shadow:
+    inset 10px 10px 0 -9px rgba(124, 87, 34, .55),
+    inset 20px 20px 0 -19px rgba(214, 166, 78, .28);
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening::after {
+  right: 4px;
+  bottom: 4px;
+  border-right: 2px solid rgba(214, 166, 78, .75);
+  border-bottom: 2px solid rgba(214, 166, 78, .75);
+  box-shadow:
+    inset -10px -10px 0 -9px rgba(124, 87, 34, .55),
+    inset -20px -20px 0 -19px rgba(214, 166, 78, .28);
+}
+
+.arkflight-opening-command-column {
+  background:
+    linear-gradient(rgba(9, 12, 14, .94), rgba(7, 10, 12, .97)),
+    repeating-linear-gradient(45deg, rgba(255,255,255,.012) 0 1px, transparent 1px 6px) !important;
+}
+
+.arkflight-opening-stakes-column {
+  background:
+    radial-gradient(circle at 50% 92%, rgba(119, 82, 31, .12), transparent 28%),
+    linear-gradient(180deg, rgba(9,12,14,.99), rgba(6,9,10,.99)) !important;
+}
+
+.arkflight-opening-title-rule,
+.arkflight-opening-section-title::before,
+.arkflight-opening-section-title::after {
+  filter: drop-shadow(0 0 3px rgba(184, 136, 55, .16));
+}
+
+.arkflight-opening-station-card {
+  border-color: rgba(155, 119, 57, .72) !important;
+  background:
+    linear-gradient(180deg, rgba(37, 34, 28, .86), rgba(18, 20, 20, .91)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.7),
+    inset 0 1px 0 rgba(217, 171, 83, .06),
+    0 2px 9px rgba(0,0,0,.34) !important;
+}
+
+.arkflight-opening-station-card.ready {
+  border-color: rgba(183, 147, 74, .86) !important;
+  box-shadow:
+    inset 3px 0 0 rgba(116, 177, 91, .8),
+    inset 0 0 0 1px rgba(0,0,0,.72),
+    0 0 0 1px rgba(108, 164, 86, .08),
+    0 3px 10px rgba(0,0,0,.36) !important;
+}
+
+.arkflight-opening-station-glyph {
+  border-color: rgba(190, 145, 67, .72) !important;
+  background:
+    radial-gradient(circle, rgba(143, 103, 43, .22), transparent 62%),
+    linear-gradient(180deg, rgba(18,20,20,.96), rgba(8,11,12,.96)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.78),
+    inset 0 0 10px rgba(202, 153, 67, .08) !important;
+}
+
+.arkflight-opening-row-state {
+  min-width: 0;
+}
+
+.arkflight-opening-row-state.ready {
+  color: #a8d894 !important;
+}
+
+.arkflight-opening-row-state.ready span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  padding: 3px 6px;
+  border: 1px solid rgba(113, 161, 91, .5);
+  background: rgba(47, 82, 38, .2);
+  box-shadow: inset 0 0 7px rgba(110, 183, 87, .08);
+}
+
+.arkflight-opening-side-panel {
+  position: relative;
+  border-color: rgba(157, 117, 54, .72) !important;
+  background:
+    linear-gradient(180deg, rgba(12,15,16,.94), rgba(7,10,11,.94)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.7),
+    inset 0 0 16px rgba(172, 122, 45, .025) !important;
+}
+
+.arkflight-opening-side-panel::before,
+.arkflight-opening-side-panel::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
+
+.arkflight-opening-side-panel::before {
+  top: 3px;
+  left: 3px;
+  border-top: 1px solid rgba(203, 153, 66, .7);
+  border-left: 1px solid rgba(203, 153, 66, .7);
+}
+
+.arkflight-opening-side-panel::after {
+  right: 3px;
+  bottom: 3px;
+  border-right: 1px solid rgba(203, 153, 66, .7);
+  border-bottom: 1px solid rgba(203, 153, 66, .7);
+}
+
+.arkflight-opening-begin {
+  position: relative;
+  min-height: 54px !important;
+  width: min(94%, 690px) !important;
+  border: 1px solid #c2933d !important;
+  outline: 1px solid rgba(22, 14, 5, .95) !important;
+  outline-offset: -5px !important;
+  background:
+    linear-gradient(180deg, rgba(20, 86, 132, .98), rgba(10, 47, 77, .98)) !important;
+  color: #f3deb4 !important;
+  font-size: 17px !important;
+  letter-spacing: .05em !important;
+  text-shadow: 0 1px 2px #000;
+  box-shadow:
+    inset 0 0 0 1px rgba(61, 140, 196, .18),
+    inset 0 0 20px rgba(68, 155, 214, .12),
+    0 0 0 2px rgba(84, 57, 22, .78),
+    0 4px 12px rgba(0,0,0,.44) !important;
+}
+
+.arkflight-opening-begin::before,
+.arkflight-opening-begin::after {
+  content: "◆";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(222, 174, 78, .72);
+  font-size: 10px;
+}
+
+.arkflight-opening-begin::before { left: 14px; }
+.arkflight-opening-begin::after { right: 14px; }
+
+.arkflight-opening-begin:hover:not(:disabled) {
+  border-color: #ddb35c !important;
+  background:
+    linear-gradient(180deg, rgba(27, 104, 157, .99), rgba(12, 58, 91, .99)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(78, 166, 224, .22),
+    inset 0 0 24px rgba(82, 174, 231, .16),
+    0 0 0 2px rgba(111, 77, 31, .82),
+    0 0 14px rgba(40, 119, 169, .18),
+    0 4px 13px rgba(0,0,0,.46) !important;
+}
+
+.arkflight-opening-begin:disabled {
+  filter: saturate(.45) brightness(.75);
+  opacity: .52 !important;
+}
+
+.arkflight-opening-compass {
+  opacity: .34 !important;
+  filter: drop-shadow(0 0 8px rgba(184, 134, 48, .08));
+}
+
+@media (max-width: 1100px) {
+  .arkflight-opening-begin {
+    font-size: 15px !important;
+  }
+}
