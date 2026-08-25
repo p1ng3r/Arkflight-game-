@@ -1,5 +1,6 @@
 import { BASE_MASTERY, getMasteryTechnique } from "../content/base-mastery.js";
-import { STATIONS, eventSetupReady } from "../event/planning-state.js";
+import { STATIONS } from "../event/event-schema.js";
+import { eventSetupReady } from "../event/planning-state.js";
 import { stationPresentation } from "./station-presentation.js";
 
 function boardRoot(app, element) {
