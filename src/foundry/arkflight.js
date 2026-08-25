@@ -18,9 +18,51 @@ function ensureBoard() {
   return board;
 }
 
+function decorateEventCompleteBoard() {
+  if (!controller?.state || controller.state.phase !== "event-complete" || !board?.element) return;
+  const ending = controller.state.eventEnding;
+  if (!ending) return;
+  const panel = board.element.querySelector(".arkflight-round-result-panel");
+  if (!panel) return;
+
+  panel.innerHTML = "";
+
+  const kicker = document.createElement("div");
+  kicker.className = "arkflight-kicker";
+  kicker.textContent = "CLOSING CINEMATIC";
+
+  const title = document.createElement("h2");
+  title.textContent = ending.label || "Event Complete";
+
+  const vignette = document.createElement("article");
+  vignette.className = "arkflight-round-vignette arkflight-event-ending-vignette";
+  const paragraph = document.createElement("p");
+  paragraph.textContent = ending.vignette || "";
+  vignette.append(paragraph);
+
+  panel.append(kicker, title, vignette);
+
+  if (game.user.isGM) {
+    const actions = document.createElement("div");
+    actions.className = "arkflight-round-continue";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "arkflight-primary";
+    button.innerHTML = '<i class="fa-solid fa-trophy"></i> Open Rewards';
+    button.addEventListener("click", () => showRewardSummary());
+    actions.append(button);
+    panel.append(actions);
+  }
+}
+
 function renderBoard() {
   const app = ensureBoard();
-  if (app) app.render({ force: true });
+  if (!app) return null;
+  const rendered = app.render({ force: true });
+  if (controller?.state?.phase === "event-complete") {
+    setTimeout(decorateEventCompleteBoard, 75);
+  }
+  return rendered;
 }
 
 function showRewardSummary() {
@@ -58,7 +100,10 @@ function announceStateRewards(state) {
     const key = `${state.eventId}:${state.eventEnding.id ?? state.eventEnding.label}`;
     if (key !== lastEventRewardKey) {
       lastEventRewardKey = key;
-      showRewardSummary();
+      setTimeout(() => {
+        decorateEventCompleteBoard();
+        showRewardSummary();
+      }, 175);
     }
   }
 }
