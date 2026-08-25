@@ -2,6 +2,7 @@ import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
 import { rollPf2eStatistic } from "../pf2e/check-runner.js";
 import { activeStationId, recordStationResult } from "./resolution-state.js";
+import { applyEarnedRiskBenefit, checkAdjustments, consumeCheckAdjustments, finalizeRound } from "./round-runtime.js";
 
 function normalizedOutcomeSlug(outcome) {
   return String(outcome ?? "")
@@ -21,6 +22,13 @@ function normalizeOutcome(outcome) {
   throw new Error(`Unsupported PF2e outcome: ${outcome}`);
 }
 
+function liftDegree(degreeKey, amount = 0) {
+  const order = ["criticalFailure", "failure", "success", "criticalSuccess"];
+  const index = order.indexOf(degreeKey);
+  if (index < 0 || amount <= 0) return degreeKey;
+  return order[Math.min(order.length - 1, index + amount)];
+}
+
 export function selectedResolution(event, state, stationId) {
   const round = event?.rounds?.[state?.roundIndex ?? 0];
   const selection = state?.selections?.[stationId];
@@ -34,6 +42,7 @@ export function selectedResolution(event, state, stationId) {
   const riskBenefit = riskBid ? getRiskBenefit(riskBid.benefitId) : null;
   if (!action || !skill) return null;
 
+  const adjustments = checkAdjustments(state, stationId);
   return {
     stationId,
     selection,
@@ -41,7 +50,10 @@ export function selectedResolution(event, state, stationId) {
     skill,
     riskBid,
     riskBenefit,
-    finalDc: Number(skill.dc) + Number(riskBid?.tier ?? 0)
+    checkBonus: adjustments.bonus,
+    dcAdjustment: adjustments.dc,
+    degreeLift: adjustments.degreeLift,
+    finalDc: Math.max(0, Number(skill.dc) + Number(riskBid?.tier ?? 0) + Number(adjustments.dc ?? 0))
   };
 }
 
@@ -52,20 +64,24 @@ export async function resolveActiveStation({ event, state, actor }) {
   if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`);
   if (!actor) throw new Error("Select or configure a PF2e actor before rolling this station.");
 
+  const options = [
+    "arkflight:event",
+    `arkflight:station:${stationId}`,
+    `arkflight:action:${chosen.action.id}`,
+    ...(chosen.riskBid ? [`arkflight:risk:${chosen.riskBid.tier}`] : [])
+  ];
+
   const roll = await rollPf2eStatistic({
     actor,
     statisticSlug: chosen.skill.skill,
     dc: chosen.finalDc,
     label: `Arkflight — ${chosen.action.name}`,
-    options: [
-      "arkflight:event",
-      `arkflight:station:${stationId}`,
-      `arkflight:action:${chosen.action.id}`,
-      ...(chosen.riskBid ? [`arkflight:risk:${chosen.riskBid.tier}`] : [])
-    ]
+    options,
+    modifier: chosen.checkBonus
   });
 
-  const degreeKey = normalizeOutcome(roll.outcome);
+  const rawDegreeKey = normalizeOutcome(roll.outcome);
+  const degreeKey = liftDegree(rawDegreeKey, chosen.degreeLift);
   const riskEarned = Boolean(chosen.riskBid && (degreeKey === "success" || degreeKey === "criticalSuccess"));
   const riskText = riskEarned
     ? degreeKey === "criticalSuccess"
@@ -73,7 +89,7 @@ export async function resolveActiveStation({ event, state, actor }) {
       : chosen.riskBenefit?.success ?? "Risk benefit earned."
     : null;
 
-  const nextState = recordStationResult(state, stationId, {
+  let nextState = recordStationResult(state, stationId, {
     actorId: actor.id,
     actorName: actor.name,
     actionId: chosen.action.id,
@@ -82,16 +98,24 @@ export async function resolveActiveStation({ event, state, actor }) {
     skillSlug: chosen.skill.skill,
     baseDc: Number(chosen.skill.dc),
     riskTier: chosen.riskBid?.tier ?? null,
+    dcAdjustment: chosen.dcAdjustment,
+    checkBonus: chosen.checkBonus,
     finalDc: chosen.finalDc,
     total: roll.total,
     outcome: roll.outcome,
+    rawDegreeKey,
     degreeKey,
+    degreeLiftApplied: chosen.degreeLift,
     messageId: roll.messageId ?? null,
     riskBenefitId: chosen.riskBid?.benefitId ?? null,
     riskBenefitName: chosen.riskBenefit?.name ?? null,
     riskEarned,
     riskText
   });
+
+  nextState = consumeCheckAdjustments(nextState, stationId);
+  if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey);
+  if (nextState.phase === "round-result") nextState = finalizeRound(event, nextState);
 
   return { nextState, stationId, chosen, roll };
 }
