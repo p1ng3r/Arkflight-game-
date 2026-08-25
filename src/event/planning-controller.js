@@ -14,7 +14,7 @@ import {
   restartEvent
 } from "./planning-state.js";
 import { initializeResolution, activeStationId } from "./resolution-state.js";
-import { resolveActiveStation } from "./resolution-engine.js";
+import { resolveActiveStation, rollSelectedStation, applyStationRollResult } from "./resolution-engine.js";
 import { advanceToNextRound, encounterFromEvent, finalizeRound } from "./round-runtime.js";
 import { applyMasteryTechnique } from "./mastery-engine.js";
 import { applyCrewTactic } from "./tactics-engine.js";
@@ -137,14 +137,21 @@ export class PlanningController {
     const stationId = activeStationId(this.state);
     if (!stationId) throw new Error("No station is waiting to resolve.");
 
+    const assignedActorId = this.state.assignments?.[stationId]?.actorId ?? null;
+    const actor = actorId ? game.actors.get(actorId) : assignedActorId ? game.actors.get(assignedActorId) : null;
+    if (!actor) throw new Error(`No PF2e character is assigned to ${stationId}.`);
+
     if (!game.user.isGM) {
       this.#requireStationControl(game.user.id, stationId);
-      return this.command({ type: "resolve-active-station" });
+      const { roll } = await rollSelectedStation({ event: this.getEvent(), state: this.state, actor });
+      return this.command({
+        type: "submit-station-roll",
+        stationId,
+        actorId: actor.id,
+        roll: { total: Number(roll.total), outcome: roll.outcome, messageId: roll.messageId ?? null }
+      });
     }
 
-    const assignedActorId = this.state.assignments?.[stationId]?.actorId ?? null;
-    const actor = actorId ? game.actors.get(actorId) : assignedActorId ? game.actors.get(assignedActorId) : canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
-    if (!actor) throw new Error(`No PF2e character is assigned to ${stationId}.`);
     const { nextState } = await resolveActiveStation({ event: this.getEvent(), state: this.state, actor });
     return this.#persistAndBroadcast(nextState);
   }
@@ -198,14 +205,16 @@ export class PlanningController {
         this.#requireStationControl(sourceUserId, command.station);
         next = moveOrder(this.state, command.station, command.direction);
         break;
-      case "resolve-active-station": {
+      case "submit-station-roll": {
         const stationId = activeStationId(this.state);
         if (!stationId || this.state.phase !== "resolution") throw new Error("No station is waiting to resolve.");
+        if (command.stationId !== stationId) throw new Error("That station is no longer active.");
         this.#requireStationControl(sourceUserId, stationId);
-        const actorId = this.state.assignments?.[stationId]?.actorId ?? null;
-        const actor = actorId ? game.actors.get(actorId) : null;
+        const assignedActorId = this.state.assignments?.[stationId]?.actorId ?? null;
+        if (!assignedActorId || command.actorId !== assignedActorId) throw new Error("The submitted roll does not belong to the assigned station officer.");
+        const actor = game.actors.get(assignedActorId);
         if (!actor) throw new Error(`No PF2e character is assigned to ${stationId}.`);
-        const resolved = await resolveActiveStation({ event: this.getEvent(), state: this.state, actor });
+        const resolved = applyStationRollResult({ event: this.getEvent(), state: this.state, actor, roll: command.roll });
         next = resolved.nextState;
         break;
       }
