@@ -3,20 +3,32 @@ import { BASE_SIGNATURES } from "../content/base-signatures.js";
 import {
   createPlanningState,
   startPlanning,
+  assignActor,
   selectAction,
   selectSkill,
   selectRiskTier,
   selectSignature,
   selectComponentAbility,
   moveOrder,
-  lockPlanning
+  lockPlanning,
+  restartEvent
 } from "./planning-state.js";
-import { initializeResolution } from "./resolution-state.js";
+import { initializeResolution, activeStationId } from "./resolution-state.js";
 import { resolveActiveStation } from "./resolution-engine.js";
 
 const MODULE_ID = "arkflight-game";
 const SETTING_KEY = "activeEventPlanning";
 const SOCKET = `module.${MODULE_ID}`;
+
+function applyDefaultSignatures(state) {
+  return {
+    ...state,
+    selections: Object.fromEntries(Object.entries(state.selections).map(([station, selection]) => [
+      station,
+      { ...selection, signatureId: BASE_SIGNATURES[station]?.[0]?.id ?? null }
+    ]))
+  };
+}
 
 export class PlanningController {
   constructor({ onStateChange = null } = {}) {
@@ -66,16 +78,18 @@ export class PlanningController {
     const event = ARKFLIGHT_EVENTS[eventId];
     if (!event) throw new Error(`Unknown Arkflight Event: ${eventId}`);
     const round = event.rounds[0];
-    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0 });
-    next = {
-      ...next,
-      selections: Object.fromEntries(Object.entries(next.selections).map(([station, selection]) => [
-        station,
-        { ...selection, signatureId: BASE_SIGNATURES[station]?.[0]?.id ?? null }
-      ]))
-    };
+    const next = applyDefaultSignatures(createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0 }));
     await this.#persistAndBroadcast(next);
     return next;
+  }
+
+  async restartCurrentEvent() {
+    this.#requireGM();
+    const event = this.getEvent();
+    if (!event) throw new Error("No Arkflight Event is active.");
+    let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: true });
+    next = applyDefaultSignatures(next);
+    return this.#persistAndBroadcast(next);
   }
 
   async command(command) {
@@ -106,10 +120,14 @@ export class PlanningController {
   async resolveCurrentStation(actorId = null) {
     this.#requireGM();
     if (!this.state || this.state.phase !== "resolution") throw new Error("No station is waiting to resolve.");
+    const stationId = activeStationId(this.state);
+    const assignedActorId = stationId ? this.state.assignments?.[stationId]?.actorId ?? null : null;
     const actor = actorId
       ? game.actors.get(actorId)
-      : canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
-    if (!actor) throw new Error("Select a PF2e character token, or set a GM character, before resolving this station.");
+      : assignedActorId
+        ? game.actors.get(assignedActorId)
+        : canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
+    if (!actor) throw new Error(`No PF2e character is assigned to ${stationId ?? "this station"}. Assign one during planning or select a character token.`);
     const { nextState } = await resolveActiveStation({ event: this.getEvent(), state: this.state, actor });
     return this.#persistAndBroadcast(nextState);
   }
@@ -130,6 +148,10 @@ export class PlanningController {
       case "begin-planning":
         this.#requireGMUser(sourceUserId);
         next = startPlanning(this.state);
+        break;
+      case "assign-actor":
+        this.#requireGMUser(sourceUserId);
+        next = assignActor(this.state, command.station, command.actorId);
         break;
       case "select-action":
         next = selectAction(this.state, command.station, command.actionId);
@@ -156,6 +178,11 @@ export class PlanningController {
       case "begin-resolution":
         this.#requireGMUser(sourceUserId);
         next = initializeResolution(this.state);
+        break;
+      case "restart-event":
+        this.#requireGMUser(sourceUserId);
+        next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true });
+        next = applyDefaultSignatures(next);
         break;
       default:
         throw new Error(`Unknown planning command: ${command.type}`);
