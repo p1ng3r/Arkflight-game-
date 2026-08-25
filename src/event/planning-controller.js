@@ -15,6 +15,7 @@ import {
 } from "./planning-state.js";
 import { initializeResolution, activeStationId } from "./resolution-state.js";
 import { resolveActiveStation } from "./resolution-engine.js";
+import { advanceToNextRound, encounterFromEvent } from "./round-runtime.js";
 
 const MODULE_ID = "arkflight-game";
 const SETTING_KEY = "activeEventPlanning";
@@ -25,9 +26,13 @@ function applyDefaultSignatures(state) {
     ...state,
     selections: Object.fromEntries(Object.entries(state.selections).map(([station, selection]) => [
       station,
-      { ...selection, signatureId: BASE_SIGNATURES[station]?.[0]?.id ?? null }
+      { ...selection, signatureId: selection.signatureId ?? BASE_SIGNATURES[station]?.[0]?.id ?? null }
     ]))
   };
+}
+
+function initializeEncounter(event, state) {
+  return { ...state, encounter: encounterFromEvent(event), signatureUses: {} };
 }
 
 export class PlanningController {
@@ -78,7 +83,8 @@ export class PlanningController {
     const event = ARKFLIGHT_EVENTS[eventId];
     if (!event) throw new Error(`Unknown Arkflight Event: ${eventId}`);
     const round = event.rounds[0];
-    const next = applyDefaultSignatures(createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0 }));
+    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0 });
+    next = initializeEncounter(event, applyDefaultSignatures(next));
     await this.#persistAndBroadcast(next);
     return next;
   }
@@ -88,7 +94,7 @@ export class PlanningController {
     const event = this.getEvent();
     if (!event) throw new Error("No Arkflight Event is active.");
     let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: true });
-    next = applyDefaultSignatures(next);
+    next = initializeEncounter(event, applyDefaultSignatures(next));
     return this.#persistAndBroadcast(next);
   }
 
@@ -103,19 +109,10 @@ export class PlanningController {
     return null;
   }
 
-  async beginPlanning() {
-    return this.command({ type: "begin-planning" });
-  }
-
-  async lockPlan() {
-    this.#requireGM();
-    return this.command({ type: "lock-plan" });
-  }
-
-  async beginResolution() {
-    this.#requireGM();
-    return this.command({ type: "begin-resolution" });
-  }
+  async beginPlanning() { return this.command({ type: "begin-planning" }); }
+  async lockPlan() { this.#requireGM(); return this.command({ type: "lock-plan" }); }
+  async beginResolution() { this.#requireGM(); return this.command({ type: "begin-resolution" }); }
+  async continueToNextRound() { this.#requireGM(); return this.command({ type: "next-round" }); }
 
   async resolveCurrentStation(actorId = null) {
     this.#requireGM();
@@ -153,24 +150,12 @@ export class PlanningController {
         this.#requireGMUser(sourceUserId);
         next = assignActor(this.state, command.station, command.actorId);
         break;
-      case "select-action":
-        next = selectAction(this.state, command.station, command.actionId);
-        break;
-      case "select-skill":
-        next = selectSkill(this.state, command.station, command.skillId);
-        break;
-      case "select-risk":
-        next = selectRiskTier(this.state, command.station, command.riskTier);
-        break;
-      case "select-signature":
-        next = selectSignature(this.state, command.station, command.signatureId);
-        break;
-      case "select-component-ability":
-        next = selectComponentAbility(this.state, command.station, command.componentAbilityId);
-        break;
-      case "move-order":
-        next = moveOrder(this.state, command.station, command.direction);
-        break;
+      case "select-action": next = selectAction(this.state, command.station, command.actionId); break;
+      case "select-skill": next = selectSkill(this.state, command.station, command.skillId); break;
+      case "select-risk": next = selectRiskTier(this.state, command.station, command.riskTier); break;
+      case "select-signature": next = selectSignature(this.state, command.station, command.signatureId); break;
+      case "select-component-ability": next = selectComponentAbility(this.state, command.station, command.componentAbilityId); break;
+      case "move-order": next = moveOrder(this.state, command.station, command.direction); break;
       case "lock-plan":
         this.#requireGMUser(sourceUserId);
         next = lockPlanning(this.state);
@@ -179,10 +164,14 @@ export class PlanningController {
         this.#requireGMUser(sourceUserId);
         next = initializeResolution(this.state);
         break;
+      case "next-round":
+        this.#requireGMUser(sourceUserId);
+        next = advanceToNextRound(this.getEvent(), this.state);
+        break;
       case "restart-event":
         this.#requireGMUser(sourceUserId);
         next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true });
-        next = applyDefaultSignatures(next);
+        next = initializeEncounter(this.getEvent(), applyDefaultSignatures(next));
         break;
       default:
         throw new Error(`Unknown planning command: ${command.type}`);
