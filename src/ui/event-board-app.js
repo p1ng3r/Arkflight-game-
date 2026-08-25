@@ -23,6 +23,16 @@ function sourcesTitle(sources, fallback) {
   const rows = [...(sources ?? [])].filter(Boolean);
   return rows.length ? rows.join("\n") : fallback;
 }
+function openArtPopout(src, title) {
+  if (!src) return;
+  const ImagePopout = foundry?.applications?.apps?.ImagePopout ?? globalThis.ImagePopout;
+  if (typeof ImagePopout === "function") {
+    const popout = new ImagePopout(src, { title: title || "Arkflight Event Art", shareable: false });
+    popout.render(true);
+    return;
+  }
+  window.open(src, "_blank", "noopener,noreferrer");
+}
 
 export class ArkflightEventBoard extends HandlebarsApplication {
   static DEFAULT_OPTIONS = { id: "arkflight-event-board", classes: ["arkflight", "arkflight-event-board"], position: { width: 1180, height: 820 }, window: { title: "Arkflight Event", icon: "fa-solid fa-compass" } };
@@ -184,8 +194,27 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     };
   }
 
-  async _onRender(context, options) { await super._onRender(context, options); this.#bindActions(); this.#startTimerTicker(); }
+  async _onRender(context, options) { await super._onRender(context, options); this.#bindActions(); this.#bindArtPopouts(); this.#startTimerTicker(); }
   async _preClose(options) { if (this._timerInterval) clearInterval(this._timerInterval); this._timerInterval = null; return super._preClose(options); }
+
+  #bindArtPopouts() {
+    const event = this.controller.getEvent();
+    const round = this.controller.getRound();
+    for (const image of this.element.querySelectorAll(".arkflight-event-art img, .arkflight-round-thumb img")) {
+      image.classList.add("arkflight-clickable-art");
+      image.setAttribute("role", "button");
+      image.setAttribute("tabindex", "0");
+      image.setAttribute("title", "Click to enlarge event art");
+      const open = () => openArtPopout(image.src, round?.title || event?.title || "Arkflight Event Art");
+      image.addEventListener("click", open);
+      image.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          open();
+        }
+      });
+    }
+  }
 
   #bindActions() {
     for (const element of this.element.querySelectorAll("button[data-ark-action]")) {
