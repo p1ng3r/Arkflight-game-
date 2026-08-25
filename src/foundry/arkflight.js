@@ -8,7 +8,7 @@ import { installMasteryTacticsUI } from "../ui/mastery-tactics-ui.js";
 import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 import { installPlayerResolutionUI } from "../ui/player-resolution-ui.js";
 import { installMasteryOpportunityUI } from "../ui/mastery-opportunity-ui.js";
-import "../ui/opening-screen-ui.js";
+import { installOpeningScreenUI } from "../ui/opening-screen-ui.js";
 
 const MODULE_ID = "arkflight-game";
 let controller = null;
@@ -101,6 +101,7 @@ Hooks.once("init", () => {
   installPlayerSetupClaims();
   installPlayerResolutionUI();
   installMasteryOpportunityUI();
+  installOpeningScreenUI();
 
   game.arkflight = {
     events: ARKFLIGHT_EVENTS,
