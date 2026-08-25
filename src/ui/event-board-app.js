@@ -33,6 +33,13 @@ function openArtPopout(src, title) {
   }
   window.open(src, "_blank", "noopener,noreferrer");
 }
+function option(select, value, label, selected = false) {
+  const node = document.createElement("option");
+  node.value = value;
+  node.textContent = label;
+  node.selected = selected;
+  select.append(node);
+}
 
 export class ArkflightEventBoard extends HandlebarsApplication {
   static DEFAULT_OPTIONS = { id: "arkflight-event-board", classes: ["arkflight", "arkflight-event-board"], position: { width: 1180, height: 820 }, window: { title: "Arkflight Event", icon: "fa-solid fa-compass" } };
@@ -194,8 +201,126 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     };
   }
 
-  async _onRender(context, options) { await super._onRender(context, options); this.#bindActions(); this.#bindArtPopouts(); this.#startTimerTicker(); }
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    this.#compactPlanningCards();
+    this.#bindActions();
+    this.#bindArtPopouts();
+    this.#startTimerTicker();
+  }
   async _preClose(options) { if (this._timerInterval) clearInterval(this._timerInterval); this._timerInterval = null; return super._preClose(options); }
+
+  #compactPlanningCards() {
+    if (!this.element || !["planning", "locked"].includes(this.controller.state?.phase)) return;
+
+    for (const card of this.element.querySelectorAll(".arkflight-station-card")) {
+      const station = card.querySelector("[data-station]")?.dataset.station;
+      if (!station) continue;
+      card.classList.add("arkflight-compact-card");
+
+      const actionList = card.querySelector(".arkflight-action-list");
+      const selectedActionButton = actionList?.querySelector(".arkflight-action-choice.selected");
+      const hasAction = Boolean(selectedActionButton);
+      if (actionList) {
+        const select = document.createElement("select");
+        select.className = "arkflight-plan-select arkflight-action-select";
+        select.dataset.arkSelect = "action";
+        select.dataset.station = station;
+        option(select, "", "Choose action…", !hasAction);
+        for (const button of actionList.querySelectorAll(".arkflight-action-choice")) {
+          const name = button.querySelector("span")?.textContent?.trim() || "Action";
+          const kind = button.querySelector("small")?.textContent?.trim() || "";
+          const heroic = Boolean(button.querySelector(".arkflight-heroic-icon"));
+          option(select, button.dataset.actionId, `${heroic ? "★ " : ""}${name}${kind ? ` · ${kind}` : ""}`, button.classList.contains("selected"));
+        }
+        const description = card.querySelector(".arkflight-action-description")?.textContent?.trim();
+        if (description) select.title = description;
+        actionList.replaceChildren(select);
+      }
+      card.querySelector(".arkflight-action-description")?.remove();
+
+      const skillList = card.querySelector(".arkflight-skill-list");
+      const selectedSkillButton = skillList?.querySelector(".arkflight-skill-choice.selected");
+      const hasSkill = Boolean(selectedSkillButton);
+      if (skillList) {
+        const select = document.createElement("select");
+        select.className = "arkflight-plan-select arkflight-skill-select";
+        select.dataset.arkSelect = "skill";
+        select.dataset.station = station;
+        option(select, "", "Choose PF2e skill…", !hasSkill);
+        for (const button of skillList.querySelectorAll(".arkflight-skill-choice")) {
+          const name = button.querySelector(".arkflight-skill-name")?.textContent?.trim() || "Skill";
+          const dc = button.querySelector(".arkflight-skill-dc")?.textContent?.trim() || "";
+          const mod = button.querySelector(".arkflight-skill-mod")?.textContent?.trim() || "";
+          const heroic = Boolean(button.querySelector(".arkflight-heroic-icon"));
+          option(select, button.dataset.skillId, `${heroic ? "★ " : ""}${name} · ${dc}${mod ? ` · ${mod}` : ""}`, button.classList.contains("selected"));
+        }
+        skillList.replaceChildren(select);
+      }
+
+      const riskSection = card.querySelector(".arkflight-risk-section");
+      if (riskSection) {
+        const buttons = [...riskSection.querySelectorAll(".arkflight-risk-clear, .arkflight-risk-choice")];
+        const select = document.createElement("select");
+        select.className = "arkflight-plan-select arkflight-risk-select";
+        select.dataset.arkSelect = "risk";
+        select.dataset.station = station;
+        let selectedDetail = null;
+        for (const button of buttons) {
+          if (button.classList.contains("arkflight-risk-clear")) {
+            option(select, "", `Normal · ${button.textContent.trim().replace(/^Normal\s*[—-]\s*/, "DC ")}`, button.classList.contains("selected"));
+            continue;
+          }
+          const tier = button.dataset.riskTier;
+          const headline = button.querySelector("div")?.textContent?.replace(/\s+/g, " ")?.trim() || `Heroic +${tier}`;
+          option(select, tier, `★ ${headline}`, button.classList.contains("selected"));
+          if (button.classList.contains("selected")) {
+            const detail = document.createElement("div");
+            detail.className = "arkflight-selected-risk-detail";
+            const lines = [...button.querySelectorAll("small")].map((node) => node.textContent.trim()).filter(Boolean);
+            detail.innerHTML = lines.map((line) => `<span>${line}</span>`).join("");
+            selectedDetail = detail;
+          }
+        }
+        riskSection.querySelectorAll(".arkflight-risk-clear, .arkflight-risk-choice").forEach((node) => node.remove());
+        riskSection.append(select);
+        if (selectedDetail) riskSection.append(selectedDetail);
+      }
+
+      const loadout = card.querySelector(".arkflight-loadout-section");
+      if (loadout) {
+        const buttons = [...loadout.querySelectorAll(".arkflight-loadout-choice")];
+        const select = document.createElement("select");
+        select.className = "arkflight-plan-select arkflight-signature-select";
+        select.dataset.arkSelect = "ability";
+        select.dataset.station = station;
+        option(select, "", "No Signature selected", !buttons.some((button) => button.classList.contains("selected")));
+        for (const button of buttons) {
+          const isSignature = button.dataset.signatureId;
+          const id = isSignature || button.dataset.abilityId;
+          const prefix = isSignature ? "signature:" : "component:";
+          const name = button.querySelector("strong")?.textContent?.trim() || button.textContent.trim();
+          const description = button.querySelector("small")?.textContent?.trim();
+          option(select, `${prefix}${id}`, `★ ${name}`, button.classList.contains("selected"));
+          if (description && button.classList.contains("selected")) select.title = description;
+        }
+        loadout.querySelectorAll(".arkflight-loadout-choice").forEach((node) => node.remove());
+        loadout.append(select);
+      }
+
+      const footerStatus = card.querySelector(".arkflight-station-footer>span:first-child");
+      if (footerStatus) {
+        const assigned = Boolean(card.querySelector(".arkflight-actor-select")?.value || card.querySelector(".arkflight-assigned-name")?.textContent?.trim()?.toLowerCase() !== "unassigned");
+        footerStatus.innerHTML = card.classList.contains("complete")
+          ? '<i class="fa-solid fa-check"></i> READY'
+          : !assigned
+            ? '<i class="fa-regular fa-circle"></i> NEEDS OFFICER'
+            : !hasAction
+              ? '<i class="fa-regular fa-circle"></i> NEEDS ACTION'
+              : '<i class="fa-regular fa-circle"></i> NEEDS SKILL';
+      }
+    }
+  }
 
   #bindArtPopouts() {
     const event = this.controller.getEvent();
@@ -240,11 +365,36 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         } catch (error) { console.error("Arkflight | Event board action failed", error); ui.notifications?.warn(error.message); }
       });
     }
+
     for (const select of this.element.querySelectorAll("select[data-ark-action='assign-actor']")) {
       select.addEventListener("change", async (event) => {
         const element = event.currentTarget;
         try { await this.controller.command({ type: "assign-actor", station: element.dataset.station, actorId: element.value || null }); }
         catch (error) { console.error("Arkflight | Station actor assignment failed", error); ui.notifications?.warn(error.message); }
+      });
+    }
+
+    for (const select of this.element.querySelectorAll("select[data-ark-select]")) {
+      select.disabled = this.controller.state?.phase !== "planning";
+      select.addEventListener("change", async (event) => {
+        const element = event.currentTarget;
+        const station = element.dataset.station;
+        try {
+          if (element.dataset.arkSelect === "action") await this.controller.command({ type: "select-action", station, actionId: element.value || null });
+          if (element.dataset.arkSelect === "skill") await this.controller.command({ type: "select-skill", station, skillId: element.value || null });
+          if (element.dataset.arkSelect === "risk") await this.controller.command({ type: "select-risk", station, riskTier: element.value ? Number(element.value) : null });
+          if (element.dataset.arkSelect === "ability") {
+            const [kind, id] = String(element.value || "").split(":");
+            if (!element.value) {
+              await this.controller.command({ type: "select-signature", station, signatureId: null });
+              await this.controller.command({ type: "select-component-ability", station, componentAbilityId: null });
+            } else if (kind === "signature") {
+              await this.controller.command({ type: "select-signature", station, signatureId: id });
+            } else if (kind === "component") {
+              await this.controller.command({ type: "select-component-ability", station, componentAbilityId: id });
+            }
+          }
+        } catch (error) { console.error("Arkflight | Compact planning selection failed", error); ui.notifications?.warn(error.message); }
       });
     }
   }
