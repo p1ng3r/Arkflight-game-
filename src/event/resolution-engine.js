@@ -46,6 +46,7 @@ export function selectedResolution(event, state, stationId) {
   const riskIncrease = Number(riskBid?.tier ?? 0);
   const baseDc = Number(skill.dc);
   const preAdjustmentDc = baseDc + riskIncrease;
+  const momentumBonus = Math.max(0, Math.min(3, Number(state?.encounter?.momentum ?? 0)));
   return {
     stationId,
     selection,
@@ -53,6 +54,7 @@ export function selectedResolution(event, state, stationId) {
     skill,
     riskBid,
     riskBenefit,
+    momentumBonus,
     checkBonus: adjustments.bonus,
     checkBonusSources: adjustments.bonusSources,
     dcAdjustment: adjustments.dc,
@@ -72,16 +74,37 @@ export async function resolveActiveStation({ event, state, actor }) {
   if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`);
   if (!actor) throw new Error("Select or configure a PF2e actor before rolling this station.");
 
+  const modifiers = [];
+  if (chosen.momentumBonus) {
+    modifiers.push({
+      slug: "arkflight-momentum",
+      label: "Arkflight Momentum",
+      modifier: chosen.momentumBonus,
+      type: "untyped",
+      source: `Crew Momentum ${chosen.momentumBonus}/3`
+    });
+  }
+  if (chosen.checkBonus) {
+    modifiers.push({
+      slug: "arkflight-crew-advantage",
+      label: "Arkflight Crew Advantage",
+      modifier: chosen.checkBonus,
+      type: "untyped",
+      source: chosen.checkBonusSources?.join("; ") || "Arkflight Heroic / Risk Benefit"
+    });
+  }
+
   const roll = await rollPf2eStatistic({
     actor,
     statisticSlug: chosen.skill.skill,
     dc: chosen.finalDc,
-    bonus: chosen.checkBonus,
+    modifiers,
     label: `Arkflight — ${chosen.action.name}`,
     options: [
       "arkflight:event",
       `arkflight:station:${stationId}`,
       `arkflight:action:${chosen.action.id}`,
+      `arkflight:momentum:${chosen.momentumBonus}`,
       ...(chosen.riskBid ? [`arkflight:risk:${chosen.riskBid.tier}`] : [])
     ]
   });
@@ -108,6 +131,7 @@ export async function resolveActiveStation({ event, state, actor }) {
     preAdjustmentDc: chosen.preAdjustmentDc,
     dcAdjustment: chosen.dcAdjustment,
     dcAdjustmentSources: chosen.dcAdjustmentSources,
+    momentumBonus: chosen.momentumBonus,
     checkBonus: chosen.checkBonus,
     checkBonusSources: chosen.checkBonusSources,
     finalDc: chosen.finalDc,
