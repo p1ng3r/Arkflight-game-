@@ -1,0 +1,182 @@
+/* Arkflight Opening Screen — Pass 1: proportions and composition only.
+   Keep this layer after opening-screen.css so the working UI can be tuned
+   without disturbing interaction or gameplay behavior. */
+
+/* Use true fluid tracks. No hard minimum track widths: the earlier opening
+   overflow bug came from minimum pixel tracks fighting the Foundry window. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-grid.arkflight-cinematic-opening {
+  grid-template-columns: minmax(0, 30fr) minmax(0, 45fr) minmax(0, 25fr) !important;
+  min-height: 700px;
+  max-width: 100%;
+}
+
+/* LEFT — give the event illustration more visual authority. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-column {
+  min-width: 0;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-column img {
+  object-position: 53% center;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption {
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  padding-top: 14px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption h3 {
+  font-size: 19px;
+  line-height: 1.08;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption p {
+  max-width: 31ch;
+  font-size: 10.5px;
+  line-height: 1.42;
+}
+
+/* CENTER — more room for title/story, less dead vertical spacing. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column {
+  min-width: 0;
+  padding: 22px 24px 18px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-overline {
+  margin-top: 1px;
+  font-size: 9px;
+  letter-spacing: .31em;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-title {
+  width: min(100%, 720px);
+  max-width: 720px;
+  margin: 7px auto 9px;
+  font-size: clamp(29px, 2.35vw, 39px);
+  line-height: 1.04;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-title-rule {
+  width: 78%;
+  margin-bottom: 13px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-story {
+  width: min(100%, 700px);
+  max-width: 700px;
+  font-size: 13.25px;
+  line-height: 1.58;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-muster {
+  margin-top: 14px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-section-title {
+  margin-bottom: 3px;
+  font-size: 15px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-muster-help {
+  margin-bottom: 7px;
+  font-size: 9.5px;
+  line-height: 1.35;
+}
+
+/* Keep the current working muster controls untouched structurally, but allow
+   them to consume the newly wider center column naturally. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-crew-row {
+  grid-template-columns: 132px minmax(0, .95fr) minmax(0, 1.15fr) 50px;
+  min-width: 0;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-station-name {
+  padding-inline: 9px;
+  font-size: 12px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-ready-message {
+  margin-top: 7px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin {
+  width: min(95%, 720px);
+  min-height: 50px;
+}
+
+/* RIGHT — trim padding so the 25% rail still has useful interior width. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column {
+  min-width: 0;
+  padding: 16px 14px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel {
+  margin-bottom: 13px;
+  padding: 12px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel h3 {
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  font-size: 14px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-grid {
+  gap: 3px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake-icon {
+  width: 39px;
+  height: 39px;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake-label {
+  font-size: 8px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake-value {
+  font-size: 16px;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-score-grid {
+  gap: 7px 9px;
+  font-size: 11px;
+}
+
+/* At narrower Foundry window widths, keep all three columns but bias a little
+   more room to the interactive center before the existing mobile breakpoint
+   eventually stacks the design. */
+@media (max-width: 1120px) {
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-grid.arkflight-cinematic-opening {
+    grid-template-columns: minmax(0, 29fr) minmax(0, 46fr) minmax(0, 25fr) !important;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column {
+    padding-inline: 20px;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-title {
+    font-size: clamp(27px, 2.6vw, 36px);
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-story {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 920px) {
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-grid.arkflight-cinematic-opening {
+    grid-template-columns: minmax(0, 28fr) minmax(0, 48fr) minmax(0, 24fr) !important;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column {
+    padding-inline: 16px;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column {
+    padding-inline: 10px;
+  }
+}
