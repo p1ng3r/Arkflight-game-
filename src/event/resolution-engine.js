@@ -67,12 +67,12 @@ export function selectedResolution(event, state, stationId) {
   };
 }
 
-export async function resolveActiveStation({ event, state, actor }) {
+export async function rollSelectedStation({ event, state, actor }) {
   const stationId = activeStationId(state);
   if (!stationId) throw new Error("No station is waiting to resolve.");
   const chosen = selectedResolution(event, state, stationId);
   if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`);
-  if (!actor) throw new Error("Select or configure a PF2e actor before rolling this station.");
+  if (!actor) throw new Error("The assigned PF2e actor is unavailable.");
 
   const modifiers = [];
   if (chosen.momentumBonus) {
@@ -109,6 +109,17 @@ export async function resolveActiveStation({ event, state, actor }) {
     ]
   });
 
+  return { stationId, chosen, roll };
+}
+
+export function applyStationRollResult({ event, state, actor, roll }) {
+  const stationId = activeStationId(state);
+  if (!stationId) throw new Error("No station is waiting to resolve.");
+  const chosen = selectedResolution(event, state, stationId);
+  if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`);
+  if (!actor) throw new Error("The assigned PF2e actor is unavailable.");
+  if (!roll || !Number.isFinite(Number(roll.total)) || !roll.outcome) throw new Error("Arkflight received an invalid PF2e roll result.");
+
   const rawDegreeKey = normalizeOutcome(roll.outcome);
   const degreeKey = liftDegree(rawDegreeKey, chosen.degreeLift);
   const riskEarned = Boolean(chosen.riskBid && (degreeKey === "success" || degreeKey === "criticalSuccess"));
@@ -135,7 +146,7 @@ export async function resolveActiveStation({ event, state, actor }) {
     checkBonus: chosen.checkBonus,
     checkBonusSources: chosen.checkBonusSources,
     finalDc: chosen.finalDc,
-    total: roll.total,
+    total: Number(roll.total),
     outcome: roll.outcome,
     rawDegreeKey,
     degreeKey,
@@ -151,6 +162,10 @@ export async function resolveActiveStation({ event, state, actor }) {
   nextState = consumeCheckAdjustments(nextState, stationId);
   if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey);
   if (nextState.phase === "round-result") nextState = finalizeRound(event, nextState);
-
   return { nextState, stationId, chosen, roll };
+}
+
+export async function resolveActiveStation({ event, state, actor }) {
+  const rolled = await rollSelectedStation({ event, state, actor });
+  return applyStationRollResult({ event, state, actor, roll: rolled.roll });
 }
