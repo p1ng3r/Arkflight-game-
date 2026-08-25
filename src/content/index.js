@@ -9,6 +9,7 @@ export { WEAPONS } from "./weapons.js";
 export { CREW_SPECIALISTS } from "./crew-specialists.js";
 export { FALLBACK_ACTIONS } from "./fallback-actions.js";
 export { RISK_BENEFITS, RISK_BENEFIT_BY_ID, getRiskBenefit, riskBenefitsByTag } from "./risk-benefits.js";
+export { CREW_EDGE_CARDS, CREW_EDGE_CARD_LIST, CREW_EDGE_HAND_MAX, getCrewEdgeCard } from "./crew-edge-cards.js";
 export { ARKFLIGHT_EVENTS, GLASSBACK_CINDERWAKE, GLASSBACK_HAZARDS } from "./events/index.js";
 
 import { HULLS } from "./hulls.js";
