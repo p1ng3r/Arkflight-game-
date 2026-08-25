@@ -1,0 +1,89 @@
+/* Keep Event Setup fully contained inside the right-hand vignette pane. */
+.arkflight-event-setup,
+.arkflight-event-setup * {
+  box-sizing: border-box;
+}
+
+.arkflight-event-setup {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.arkflight-setup-grid,
+.arkflight-setup-row,
+.arkflight-setup-row > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.arkflight-setup-row {
+  grid-template-columns: minmax(92px, 0.72fr) minmax(112px, 0.95fr) minmax(0, 1.35fr) !important;
+  gap: 6px !important;
+  padding: 6px !important;
+}
+
+.arkflight-setup-station {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+
+.arkflight-setup-row select {
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 30px;
+  padding-right: 22px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 10px;
+}
+
+.arkflight-setup-row .arkflight-mastery-select {
+  min-width: 0 !important;
+}
+
+.arkflight-setup-help,
+.arkflight-setup-ready {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.arkflight-vignette,
+.arkflight-event-copy,
+.arkflight-event-layout > * {
+  min-width: 0;
+}
+
+/* This panel should scroll vertically only; never make the Event Board wider. */
+.arkflight-event-board .window-content,
+#arkflight-event-board .window-content {
+  overflow-x: hidden !important;
+}
+
+@media (max-width: 1050px) {
+  .arkflight-setup-row {
+    grid-template-columns: minmax(86px, 0.7fr) minmax(105px, 0.9fr) minmax(0, 1.2fr) !important;
+  }
+
+  .arkflight-setup-row select,
+  .arkflight-setup-station {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 760px) {
+  .arkflight-setup-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .arkflight-setup-row select,
+  .arkflight-setup-station {
+    font-size: 11px;
+  }
+}
