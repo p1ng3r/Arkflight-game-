@@ -16,6 +16,12 @@ function formatTimer(seconds) {
   return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
 }
 
+function moduleAssetPath(path) {
+  if (!path) return "";
+  if (/^(https?:|data:|modules\/)/.test(path)) return path;
+  return `modules/arkflight-game/${String(path).replace(/^\/+/, "")}`;
+}
+
 export class ArkflightEventBoard extends HandlebarsApplication {
   static DEFAULT_OPTIONS = {
     id: "arkflight-event-board",
@@ -109,7 +115,9 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       empty: false,
       isGM: game.user.isGM,
       event,
+      eventImage: moduleAssetPath(event.image),
       round,
+      roundNumber: (state.roundIndex ?? 0) + 1,
       state,
       opening: state.phase === "opening",
       planning: state.phase === "planning",
