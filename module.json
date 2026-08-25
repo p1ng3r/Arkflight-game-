@@ -25,6 +25,7 @@
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
-    "src/ui/mastery-clarity-ui.js"
+    "src/ui/mastery-clarity-ui.js",
+    "src/ui/event-board-large-desktop.js"
   ]
 }
