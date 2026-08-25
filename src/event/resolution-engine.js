@@ -43,7 +43,7 @@ export function selectedResolution(event, state, stationId) {
 
   const adjustments = checkAdjustments(state, stationId);
   const authoredRiskIncrease = Number(riskBid?.tier ?? 0);
-  const riskReducedByMastery = Boolean(state?.encounter?.riskTierReductions?.[stationId] && riskBid);
+  const riskReducedByMastery = Boolean(state?.masteryRiskTierReductions?.[stationId] && riskBid);
   const riskIncrease = riskReducedByMastery ? reducedRiskIncrease(authoredRiskIncrease) : authoredRiskIncrease;
   const baseDc = Number(skill.dc);
   const preAdjustmentDc = baseDc + riskIncrease;
@@ -119,13 +119,18 @@ export function applyStationRollResult({ event, state, actor, roll }) {
     riskEarned, riskText
   });
 
-  const postCheckPressure = state.encounter?.postCheckPressure?.[stationId] ?? null;
+  const postCheckPressure = state.masteryPostCheckPressure?.[stationId] ?? null;
   nextState = consumeCheckAdjustments(nextState, stationId);
+  const masteryRiskTierReductions = { ...(nextState.masteryRiskTierReductions ?? {}) };
+  const masteryPostCheckPressure = { ...(nextState.masteryPostCheckPressure ?? {}) };
+  delete masteryRiskTierReductions[stationId];
+  delete masteryPostCheckPressure[stationId];
+  nextState = { ...nextState, masteryRiskTierReductions, masteryPostCheckPressure };
+
   if (postCheckPressure) {
-    const encounter = { ...nextState.encounter, pressure: { ...(nextState.encounter?.pressure ?? {}) }, postCheckPressure: { ...(nextState.encounter?.postCheckPressure ?? {}) } };
+    const encounter = { ...nextState.encounter, pressure: { ...(nextState.encounter?.pressure ?? {}) }, notes: [...(nextState.encounter?.notes ?? [])] };
     encounter.pressure[postCheckPressure.system] = Math.max(0, Number(encounter.pressure[postCheckPressure.system] ?? 0) + Number(postCheckPressure.value ?? 0));
-    delete encounter.postCheckPressure[stationId];
-    encounter.notes = [...(encounter.notes ?? []), `${postCheckPressure.source}: Arkengine Pressure +${postCheckPressure.value} after ${stationId} resolved.`];
+    encounter.notes.push(`${postCheckPressure.source}: Arkengine Pressure +${postCheckPressure.value} after ${stationId} resolved.`);
     nextState = { ...nextState, encounter };
   }
   if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey);
