@@ -32,22 +32,24 @@
       {{/if}}
 
       {{#if isGM}}
-        {{#if rewardsGranted}}
-          <div class="arkflight-reward-granted"><i class="fa-solid fa-check"></i> PF2e rewards granted to <strong>{{rewardRecipientName}}</strong>.</div>
-        {{else}}
-          <div class="arkflight-reward-grant-controls">
-            <label>
-              <span>PF2e Reward Recipient</span>
-              <select data-ark-reward-recipient>
-                <option value="">Choose character / party / loot actor…</option>
-                {{#each recipients}}
-                  <option value="{{id}}">{{name}} · {{type}}</option>
-                {{/each}}
-              </select>
-            </label>
-            <button type="button" class="arkflight-primary" data-ark-action="grant-pf2e-rewards"><i class="fa-solid fa-box-open"></i> Grant PF2e Rewards</button>
-            <small>Gold becomes native PF2e Gold Pieces. Salvage and valuables become native PF2e treasure Items. Authored PF2e compendium items are cloned into the recipient inventory.</small>
-          </div>
+        {{#if hasPf2eGrantableRewards}}
+          {{#if rewardsGranted}}
+            <div class="arkflight-reward-granted"><i class="fa-solid fa-check"></i> PF2e rewards granted to <strong>{{rewardRecipientName}}</strong>.</div>
+          {{else}}
+            <div class="arkflight-reward-grant-controls">
+              <label>
+                <span>PF2e Reward Recipient</span>
+                <select data-ark-reward-recipient>
+                  <option value="">Choose character / party / loot actor…</option>
+                  {{#each recipients}}
+                    <option value="{{id}}">{{name}} · {{type}}</option>
+                  {{/each}}
+                </select>
+              </label>
+              <button type="button" class="arkflight-primary" data-ark-action="grant-pf2e-rewards"><i class="fa-solid fa-box-open"></i> Grant PF2e Rewards</button>
+              <small>Gold becomes native PF2e Gold Pieces. Salvage and valuables become native PF2e treasure Items. Authored PF2e compendium items are cloned into the recipient inventory.</small>
+            </div>
+          {{/if}}
         {{/if}}
       {{/if}}
     </section>
