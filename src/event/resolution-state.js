@@ -7,7 +7,7 @@ export function initializeResolution(state) {
     phase: "resolution",
     activeOrderIndex: 0,
     results: {},
-    signatureUses: {},
+    signatureUses: { ...(state.signatureUses ?? {}) },
     roundResult: null
   };
 }
