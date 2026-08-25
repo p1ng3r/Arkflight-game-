@@ -27,6 +27,10 @@ function targetStation(state, riskBid) {
   if (authored && state.order.includes(authored) && !state.results?.[authored]) return authored;
   return state.order.filter((id) => !state.results?.[id])[0] ?? null;
 }
+function nextEligibleStation(state, allowedStations = []) {
+  const allowed = new Set(allowedStations);
+  return state.order.find((stationId) => !state.results?.[stationId] && allowed.has(stationId)) ?? null;
+}
 function addSource(encounter, bucket, stationId, source) {
   if (!stationId || !source) return;
   encounter[bucket][stationId] ??= [];
@@ -66,11 +70,12 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
   const encounter = cloneEncounter(state.encounter);
   const target = targetStation(state, chosen.riskBid);
   const unresolved = state.order.filter((stationId) => !state.results?.[stationId]);
-  const bonusTarget = (value) => {
-    if (!target) return;
-    encounter.checkBonuses[target] = Number(encounter.checkBonuses[target] ?? 0) + value;
-    addSource(encounter, "checkBonusSources", target, riskSource(chosen, `+${value} to the PF2e check`));
+  const addCheckBonus = (stationId, value) => {
+    if (!stationId) return;
+    encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + value;
+    addSource(encounter, "checkBonusSources", stationId, riskSource(chosen, `+${value} to the PF2e check`));
   };
+  const bonusTarget = (value) => addCheckBonus(target, value);
   const dcTarget = (value) => {
     if (!target) return;
     encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) + value;
@@ -82,10 +87,7 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
     case "dc-next-1": dcTarget(critical ? -2 : -1); break;
     case "crew-surge": {
       const value = critical ? 2 : 1;
-      for (const stationId of unresolved) {
-        encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + value;
-        addSource(encounter, "checkBonusSources", stationId, riskSource(chosen, `+${value} to the PF2e check`));
-      }
+      for (const stationId of unresolved) addCheckBonus(stationId, value);
       break;
     }
     case "order-followup":
@@ -93,8 +95,7 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
         const activeIndex = Number(state.activeOrderIndex ?? 0); const currentTargetIndex = state.order.indexOf(target);
         if (currentTargetIndex > activeIndex) { const order = [...state.order]; order.splice(currentTargetIndex, 1); order.splice(activeIndex, 0, target); state = { ...state, order }; }
         const value = critical ? 3 : 2;
-        encounter.checkBonuses[target] = Number(encounter.checkBonuses[target] ?? 0) + value;
-        addSource(encounter, "checkBonusSources", target, riskSource(chosen, `+${value} to the PF2e check`));
+        addCheckBonus(target, value);
         if (critical) {
           encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) - 1;
           addSource(encounter, "dcAdjustmentSources", target, riskSource(chosen, "-1 DC"));
@@ -103,7 +104,12 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
       break;
     case "arkengine-vent": addPressure(encounter, "arkengine", critical ? -2 : -1); break;
     case "lifeveil-steady": addPressure(encounter, "lifeveil", critical ? -2 : -1); break;
-    case "arkengine-overdrive": bonusTarget(critical ? 3 : 2); break;
+    case "arkengine-overdrive": {
+      const eligibleTarget = nextEligibleStation(state, ["engineer", "navigator"]);
+      addCheckBonus(eligibleTarget, critical ? 3 : 2);
+      if (critical) encounter.notes.push("Controlled Overdrive also prevents Arkengine Pressure from increasing from the aided Engineer/Navigator action.");
+      break;
+    }
     case "arkengine-master": addPressure(encounter, "arkengine", -2); if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); break;
     case "degree-lift":
       if (target) {
