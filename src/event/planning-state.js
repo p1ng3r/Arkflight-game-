@@ -10,9 +10,13 @@ function emptySelection() {
   };
 }
 
-export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Date.now() }) {
+function emptyAssignments() {
+  return Object.fromEntries(STATIONS.map((station) => [station, { actorId: null }]));
+}
+
+export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Date.now(), assignments = null }) {
   return {
-    version: 1,
+    version: 2,
     eventId,
     roundId,
     roundIndex,
@@ -22,6 +26,7 @@ export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Da
     planningEndsAt: null,
     lockedAt: null,
     order: [...STATIONS],
+    assignments: assignments ? structuredClone(assignments) : emptyAssignments(),
     selections: Object.fromEntries(STATIONS.map((station) => [station, emptySelection()]))
   };
 }
@@ -39,6 +44,20 @@ export function startPlanning(state, now = Date.now()) {
 export function planningSecondsRemaining(state, now = Date.now()) {
   if (!state?.planningEndsAt) return PLANNING_SECONDS;
   return Math.max(0, Math.ceil((state.planningEndsAt - now) / 1000));
+}
+
+export function assignActor(state, station, actorId) {
+  assertStation(station);
+  if (!state || !["opening", "planning"].includes(state.phase)) {
+    throw new Error("Station actors may only be assigned before the plan is locked.");
+  }
+  return {
+    ...state,
+    assignments: {
+      ...(state.assignments ?? emptyAssignments()),
+      [station]: { actorId: actorId || null }
+    }
+  };
 }
 
 export function selectAction(state, station, actionId) {
@@ -90,19 +109,26 @@ export function planningReady(state) {
   if (!state || state.phase !== "planning") return false;
   return STATIONS.every((station) => {
     const selection = state.selections?.[station];
-    return Boolean(selection?.actionId && selection?.skillId);
+    const actorId = state.assignments?.[station]?.actorId;
+    return Boolean(actorId && selection?.actionId && selection?.skillId);
   });
 }
 
 export function lockPlanning(state, now = Date.now()) {
   assertPlanning(state);
-  if (!planningReady(state)) throw new Error("Every station must choose an action and skill before the plan can be locked.");
+  if (!planningReady(state)) throw new Error("Every station must have an assigned PF2e character, action, and skill before the plan can be locked.");
   return { ...state, phase: "locked", lockedAt: now };
 }
 
-export function beginResolution(state) {
-  if (!state || state.phase !== "locked") throw new Error("Resolution may only begin from a locked plan.");
-  return { ...state, phase: "resolution" };
+export function restartEvent(state, { roundId, preserveAssignments = true, now = Date.now() } = {}) {
+  if (!state?.eventId) throw new Error("No Arkflight Event is active.");
+  return createPlanningState({
+    eventId: state.eventId,
+    roundId: roundId ?? state.roundId,
+    roundIndex: 0,
+    now,
+    assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null
+  });
 }
 
 function updateSelection(state, station, patch) {
