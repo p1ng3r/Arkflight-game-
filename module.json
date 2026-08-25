@@ -27,7 +27,8 @@
     "styles/opening-screen-large-fit-fix.css",
     "styles/opening-screen-branding.css",
     "styles/opening-screen-status-fit.css",
-    "styles/opening-screen-center-scale-down.css"
+    "styles/opening-screen-center-scale-down.css",
+    "styles/opening-screen-final-layout-fix.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
