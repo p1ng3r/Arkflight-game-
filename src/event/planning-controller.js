@@ -41,6 +41,7 @@ function repairLoadedState(state) {
   if (!event) return state;
 
   let repaired = state;
+  if (!Array.isArray(repaired.crewEdgeHand)) repaired = { ...repaired, crewEdgeHand: [] };
   if (!repaired.encounter) repaired = { ...repaired, encounter: encounterFromEvent(event) };
   if (repaired.phase === "round-result" && repaired.roundResult && !repaired.consequenceApplied) {
     repaired = finalizeRound(event, repaired);
@@ -96,7 +97,8 @@ export class PlanningController {
     const event = ARKFLIGHT_EVENTS[eventId];
     if (!event) throw new Error(`Unknown Arkflight Event: ${eventId}`);
     const round = event.rounds[0];
-    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0 });
+    const carriedEdges = this.state?.crewEdgeHand ?? [];
+    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0, crewEdgeHand: carriedEdges });
     next = initializeEncounter(event, applyDefaultSignatures(next));
     await this.#persistAndBroadcast(next);
     return next;
@@ -106,7 +108,7 @@ export class PlanningController {
     this.#requireGM();
     const event = this.getEvent();
     if (!event) throw new Error("No Arkflight Event is active.");
-    let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: true });
+    let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true });
     next = initializeEncounter(event, applyDefaultSignatures(next));
     return this.#persistAndBroadcast(next);
   }
@@ -186,7 +188,7 @@ export class PlanningController {
         break;
       case "restart-event":
         this.#requireGMUser(sourceUserId);
-        next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true });
+        next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true });
         next = initializeEncounter(this.getEvent(), applyDefaultSignatures(next));
         break;
       default:
