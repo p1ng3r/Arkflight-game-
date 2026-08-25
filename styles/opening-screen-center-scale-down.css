@@ -1,0 +1,83 @@
+/* Final center-column scale-down pass.
+   Loaded last so the large-screen layout remains intact while center typography drops one step.
+   Compact/fallback sizing is intentionally untouched. */
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-overline {
+  font-size: 10px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-title {
+  font-size: 44px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-story {
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-section-title {
+  font-size: 19px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-muster-help {
+  font-size: 10.5px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-station-copy strong {
+  font-size: 12px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-station-copy small,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-field-label {
+  font-size: 8px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"],
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"] {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"] option,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"] option,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"] optgroup,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"] optgroup {
+  font-size: 14px !important;
+}
+
+/* Give the status cell a little more room without widening the whole row. */
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-station-main {
+  grid-template-columns: minmax(142px, .78fr) minmax(195px, .98fr) minmax(245px, 1.28fr) 76px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-row-state {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 3px !important;
+  gap: 2px !important;
+  font-size: 7.5px !important;
+  letter-spacing: .07em !important;
+  line-height: 1.05 !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-row-state i {
+  font-size: 11px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-row-state.ready span {
+  min-width: 0 !important;
+  width: 100% !important;
+  padding: 3px 2px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-ready-message {
+  font-size: 9px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-begin-label {
+  font-size: 19px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-begin i {
+  font-size: 17px !important;
+}
