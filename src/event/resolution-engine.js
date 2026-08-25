@@ -54,7 +54,7 @@ export function selectedResolution(event, state, stationId) {
     checkBonus: adjustments.bonus,
     dcAdjustment: adjustments.dc,
     degreeLift: adjustments.degreeLift,
-    finalDc: Math.max(0, listedDc - Number(adjustments.bonus ?? 0))
+    finalDc: Math.max(0, listedDc)
   };
 }
 
@@ -69,12 +69,14 @@ export async function resolveActiveStation({ event, state, actor }) {
     actor,
     statisticSlug: chosen.skill.skill,
     dc: chosen.finalDc,
+    bonus: chosen.checkBonus,
     label: `Arkflight — ${chosen.action.name}`,
     options: [
       "arkflight:event",
       `arkflight:station:${stationId}`,
       `arkflight:action:${chosen.action.id}`,
-      ...(chosen.riskBid ? [`arkflight:risk:${chosen.riskBid.tier}`] : [])
+      ...(chosen.riskBid ? [`arkflight:risk:${chosen.riskBid.tier}`] : []),
+      ...(chosen.checkBonus ? [`arkflight:crew-advantage:${chosen.checkBonus}`] : [])
     ]
   });
 
