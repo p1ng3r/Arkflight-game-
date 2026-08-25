@@ -46,26 +46,45 @@ export function resolveEventEnding(event, finalBandId) {
   return ending;
 }
 
-export function applyRewardPackageToState(state, rewards) {
+function awardEdgeCards(state, edgeCards = []) {
   const currentHand = [...(state?.crewEdgeHand ?? [])].filter((id) => getCrewEdgeCard(id));
-  const awardedEdges = [];
-  const overflowEdges = [];
-  for (const edgeId of rewards?.edgeCards ?? []) {
+  const awardedEdgeCards = [];
+  const overflowEdgeCards = [];
+  for (const edgeId of edgeCards) {
     if (currentHand.length < CREW_EDGE_HAND_MAX) {
       currentHand.push(edgeId);
-      awardedEdges.push(edgeId);
+      awardedEdgeCards.push(edgeId);
     } else {
-      overflowEdges.push(edgeId);
+      overflowEdgeCards.push(edgeId);
     }
   }
+  return { crewEdgeHand: currentHand, awardedEdgeCards, overflowEdgeCards };
+}
 
+export function applyRoundRewardPackageToState(state, rewards, { roundId = null, bandId = null } = {}) {
+  const award = awardEdgeCards(state, rewards?.edgeCards ?? []);
   return {
     ...state,
-    crewEdgeHand: currentHand,
+    crewEdgeHand: award.crewEdgeHand,
+    roundRewards: {
+      ...(rewards ?? rewardPackage()),
+      roundId,
+      bandId,
+      awardedEdgeCards: award.awardedEdgeCards,
+      overflowEdgeCards: award.overflowEdgeCards
+    }
+  };
+}
+
+export function applyRewardPackageToState(state, rewards) {
+  const award = awardEdgeCards(state, rewards?.edgeCards ?? []);
+  return {
+    ...state,
+    crewEdgeHand: award.crewEdgeHand,
     eventRewards: {
       ...(rewards ?? rewardPackage()),
-      awardedEdgeCards: awardedEdges,
-      overflowEdgeCards: overflowEdges,
+      awardedEdgeCards: award.awardedEdgeCards,
+      overflowEdgeCards: award.overflowEdgeCards,
       granted: false
     }
   };
@@ -85,6 +104,10 @@ export function rewardRows(rewards) {
   for (const edgeId of rewards.awardedEdgeCards ?? rewards.edgeCards ?? []) {
     const card = getCrewEdgeCard(edgeId);
     if (card) rows.push({ type: "edge", label: `Crew Edge — ${card.name}`, detail: `${card.trigger} ${card.effect}` });
+  }
+  for (const edgeId of rewards.overflowEdgeCards ?? []) {
+    const card = getCrewEdgeCard(edgeId);
+    if (card) rows.push({ type: "edge-overflow", label: `Crew Edge Overflow — ${card.name}`, detail: "Shared hand is full (3 cards); the GM must replace or discard a card before keeping this reward." });
   }
   return rows;
 }
