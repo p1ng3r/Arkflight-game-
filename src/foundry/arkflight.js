@@ -1,4 +1,5 @@
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
+import { BASE_SIGNATURES } from "../content/base-signatures.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 
@@ -17,12 +18,19 @@ function renderBoard() {
   if (app) app.render({ force: true });
 }
 
+function baseStationOptions() {
+  return Object.fromEntries(Object.entries(BASE_SIGNATURES).map(([stationId, signatures]) => [
+    stationId,
+    { signatures: [...signatures], componentAbilities: [] }
+  ]));
+}
+
 Hooks.once("init", () => {
   PlanningController.registerSetting();
 
   game.arkflight = {
     events: ARKFLIGHT_EVENTS,
-    stationOptions: {},
+    stationOptions: baseStationOptions(),
     get controller() { return controller; },
     openBoard() {
       renderBoard();
@@ -35,8 +43,9 @@ Hooks.once("init", () => {
       return controller.state;
     },
     setStationOptions(stationId, options = {}) {
+      const base = BASE_SIGNATURES[stationId] ?? [];
       this.stationOptions[stationId] = {
-        signatures: [...(options.signatures ?? [])],
+        signatures: [...(options.signatures ?? base)],
         componentAbilities: [...(options.componentAbilities ?? [])]
       };
       if (board?.rendered) board.render({ force: true });
