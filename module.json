@@ -24,11 +24,13 @@
     "styles/opening-screen-polish.css",
     "styles/opening-screen-large-desktop.css",
     "styles/opening-screen-select-fix.css",
-    "styles/opening-screen-large-fit-fix.css"
+    "styles/opening-screen-large-fit-fix.css",
+    "styles/opening-screen-branding.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
     "src/ui/mastery-clarity-ui.js",
-    "src/ui/event-board-large-desktop.js"
+    "src/ui/event-board-large-desktop.js",
+    "src/ui/opening-branding-ui.js"
   ]
 }
