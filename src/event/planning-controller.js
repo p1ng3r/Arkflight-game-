@@ -115,7 +115,12 @@ export class PlanningController {
     this.#requireGM();
     const event = this.getEvent();
     if (!event) throw new Error("No Arkflight Event is active.");
-    let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true, preserveMastery: true });
+    let next = restartEvent(this.state, {
+      roundId: event.rounds[0]?.id,
+      preserveAssignments: false,
+      preserveCrewEdgeHand: true,
+      preserveMastery: false
+    });
     next = initializeEncounter(event, next);
     return this.#persistAndBroadcast(next);
   }
@@ -155,10 +160,11 @@ export class PlanningController {
         next = startPlanning(this.state);
         break;
       case "assign-actor":
-        this.#requireGMUser(sourceUserId);
+        this.#requireActorControl(sourceUserId, command.actorId);
         next = assignActor(this.state, command.station, command.actorId);
         break;
       case "select-mastery": {
+        this.#requireStationControl(sourceUserId, command.station);
         const technique = getMasteryTechnique(command.station, command.masteryId);
         if (!technique) throw new Error("Choose a valid Mastery Technique for that station.");
         next = selectMastery(this.state, command.station, command.masteryId);
@@ -206,7 +212,12 @@ export class PlanningController {
         break;
       case "restart-event":
         this.#requireGMUser(sourceUserId);
-        next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true, preserveMastery: true });
+        next = restartEvent(this.state, {
+          roundId: this.getEvent()?.rounds?.[0]?.id,
+          preserveAssignments: false,
+          preserveCrewEdgeHand: true,
+          preserveMastery: false
+        });
         next = initializeEncounter(this.getEvent(), next);
         break;
       default:
@@ -226,6 +237,27 @@ export class PlanningController {
   #acceptSnapshot(next) { this.state = repairLoadedState(next); this.onStateChange?.(this.state); }
   #requireGM() { if (!game.user.isGM) throw new Error("Only the GM may perform that Arkflight Event action."); }
   #requireGMUser(userId) { const user = game.users.get(userId); if (!user?.isGM) throw new Error("Only the GM may perform that Arkflight Event action."); }
+
+  #requireActorControl(userId, actorId) {
+    const user = game.users.get(userId);
+    if (!user) throw new Error("Unknown Arkflight player.");
+    if (user.isGM || !actorId) return;
+    const actor = game.actors.get(actorId);
+    if (!actor || actor.type !== "character" || !actor.testUserPermission?.(user, "OWNER")) {
+      throw new Error("You may only claim an Arkflight station with a PF2e character you own.");
+    }
+  }
+
+  #requireStationControl(userId, stationId) {
+    const user = game.users.get(userId);
+    if (!user) throw new Error("Unknown Arkflight player.");
+    if (user.isGM) return;
+    const actorId = this.state.assignments?.[stationId]?.actorId;
+    const actor = actorId ? game.actors.get(actorId) : null;
+    if (!actor || !actor.testUserPermission?.(user, "OWNER")) {
+      throw new Error("Claim this station with one of your PF2e characters before choosing its Mastery Technique.");
+    }
+  }
 }
 
 export const PLANNING_MODULE_ID = MODULE_ID;
