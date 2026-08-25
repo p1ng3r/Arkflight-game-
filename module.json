@@ -17,6 +17,7 @@
     "styles/setup-mastery-fix.css"
   ],
   "esmodules": [
-    "src/foundry/arkflight.js"
+    "src/foundry/arkflight.js",
+    "src/ui/mastery-clarity-ui.js"
   ]
 }
