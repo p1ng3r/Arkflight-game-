@@ -1,0 +1,7 @@
+import { GLASSBACK_CINDERWAKE, GLASSBACK_HAZARDS } from "./glassback-cinderwake.js";
+
+export { GLASSBACK_CINDERWAKE, GLASSBACK_HAZARDS };
+
+export const ARKFLIGHT_EVENTS = Object.freeze({
+  [GLASSBACK_CINDERWAKE.id]: GLASSBACK_CINDERWAKE
+});
