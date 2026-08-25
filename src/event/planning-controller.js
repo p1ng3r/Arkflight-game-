@@ -104,8 +104,7 @@ export class PlanningController {
       eventId: event.id,
       roundId: round.id,
       roundIndex: 0,
-      crewEdgeHand: carriedTactics,
-      masterySelections: defaultMasterySelections()
+      crewEdgeHand: carriedTactics
     });
     next = initializeEncounter(event, next);
     await this.#persistAndBroadcast(next);
