@@ -1,13 +1,13 @@
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
-import { BASE_SIGNATURES } from "../content/base-signatures.js";
+import { BASE_MASTERY, getMasteryTechnique } from "../content/base-mastery.js";
 import {
   createPlanningState,
   startPlanning,
   assignActor,
+  selectMastery,
   selectAction,
   selectSkill,
   selectRiskTier,
-  selectSignature,
   selectComponentAbility,
   moveOrder,
   lockPlanning,
@@ -16,23 +16,19 @@ import {
 import { initializeResolution, activeStationId } from "./resolution-state.js";
 import { resolveActiveStation } from "./resolution-engine.js";
 import { advanceToNextRound, encounterFromEvent, finalizeRound } from "./round-runtime.js";
+import { applyMasteryTechnique } from "./mastery-engine.js";
+import { applyCrewTactic } from "./tactics-engine.js";
 
 const MODULE_ID = "arkflight-game";
 const SETTING_KEY = "activeEventPlanning";
 const SOCKET = `module.${MODULE_ID}`;
 
-function applyDefaultSignatures(state) {
-  return {
-    ...state,
-    selections: Object.fromEntries(Object.entries(state.selections).map(([station, selection]) => [
-      station,
-      { ...selection, signatureId: selection.signatureId ?? BASE_SIGNATURES[station]?.[0]?.id ?? null }
-    ]))
-  };
+function defaultMasterySelections() {
+  return Object.fromEntries(Object.entries(BASE_MASTERY).map(([stationId, rows]) => [stationId, rows?.[0]?.id ?? null]));
 }
 
 function initializeEncounter(event, state) {
-  return { ...state, encounter: encounterFromEvent(event), signatureUses: {} };
+  return { ...state, encounter: encounterFromEvent(event), masteryUses: {} };
 }
 
 function repairLoadedState(state) {
@@ -42,10 +38,23 @@ function repairLoadedState(state) {
 
   let repaired = state;
   if (!Array.isArray(repaired.crewEdgeHand)) repaired = { ...repaired, crewEdgeHand: [] };
-  if (!repaired.encounter) repaired = { ...repaired, encounter: encounterFromEvent(event) };
-  if (repaired.phase === "round-result" && repaired.roundResult && !repaired.consequenceApplied) {
-    repaired = finalizeRound(event, repaired);
+  if (!repaired.masterySelections) {
+    const legacy = repaired.selections ?? {};
+    const defaults = defaultMasterySelections();
+    repaired = {
+      ...repaired,
+      masterySelections: Object.fromEntries(Object.keys(defaults).map((stationId) => [
+        stationId,
+        legacy?.[stationId]?.signatureId && getMasteryTechnique(stationId, legacy[stationId].signatureId)
+          ? legacy[stationId].signatureId
+          : defaults[stationId]
+      ]))
+    };
   }
+  if (!repaired.masteryUses) repaired = { ...repaired, masteryUses: repaired.signatureUses ?? {} };
+  if (typeof repaired.setupLocked !== "boolean") repaired = { ...repaired, setupLocked: repaired.phase !== "opening" };
+  if (!repaired.encounter) repaired = { ...repaired, encounter: encounterFromEvent(event) };
+  if (repaired.phase === "round-result" && repaired.roundResult && !repaired.consequenceApplied) repaired = finalizeRound(event, repaired);
   return repaired;
 }
 
@@ -77,18 +86,11 @@ export class PlanningController {
           await this.#applyCommand(payload.command, payload.sourceUserId);
         } catch (error) {
           console.error("Arkflight | Planning command rejected", error);
-          game.socket.emit(SOCKET, {
-            type: "error",
-            targetUserId: payload.sourceUserId,
-            message: error.message,
-            sourceUserId: game.user.id
-          });
+          game.socket.emit(SOCKET, { type: "error", targetUserId: payload.sourceUserId, message: error.message, sourceUserId: game.user.id });
         }
         return;
       }
-      if (payload.type === "error" && payload.targetUserId === game.user.id) {
-        ui.notifications?.warn(payload.message);
-      }
+      if (payload.type === "error" && payload.targetUserId === game.user.id) ui.notifications?.warn(payload.message);
     });
   }
 
@@ -97,9 +99,15 @@ export class PlanningController {
     const event = ARKFLIGHT_EVENTS[eventId];
     if (!event) throw new Error(`Unknown Arkflight Event: ${eventId}`);
     const round = event.rounds[0];
-    const carriedEdges = this.state?.crewEdgeHand ?? [];
-    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0, crewEdgeHand: carriedEdges });
-    next = initializeEncounter(event, applyDefaultSignatures(next));
+    const carriedTactics = this.state?.crewEdgeHand ?? [];
+    let next = createPlanningState({
+      eventId: event.id,
+      roundId: round.id,
+      roundIndex: 0,
+      crewEdgeHand: carriedTactics,
+      masterySelections: defaultMasterySelections()
+    });
+    next = initializeEncounter(event, next);
     await this.#persistAndBroadcast(next);
     return next;
   }
@@ -108,19 +116,15 @@ export class PlanningController {
     this.#requireGM();
     const event = this.getEvent();
     if (!event) throw new Error("No Arkflight Event is active.");
-    let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true });
-    next = initializeEncounter(event, applyDefaultSignatures(next));
+    let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true, preserveMastery: true });
+    next = initializeEncounter(event, next);
     return this.#persistAndBroadcast(next);
   }
 
   async command(command) {
     if (!command?.type) throw new Error("Planning command requires a type.");
     if (game.user.isGM) return this.#applyCommand(command, game.user.id);
-    game.socket.emit(SOCKET, {
-      type: "command",
-      command,
-      sourceUserId: game.user.id
-    });
+    game.socket.emit(SOCKET, { type: "command", command, sourceUserId: game.user.id });
     return null;
   }
 
@@ -134,24 +138,14 @@ export class PlanningController {
     if (!this.state || this.state.phase !== "resolution") throw new Error("No station is waiting to resolve.");
     const stationId = activeStationId(this.state);
     const assignedActorId = stationId ? this.state.assignments?.[stationId]?.actorId ?? null : null;
-    const actor = actorId
-      ? game.actors.get(actorId)
-      : assignedActorId
-        ? game.actors.get(assignedActorId)
-        : canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
-    if (!actor) throw new Error(`No PF2e character is assigned to ${stationId ?? "this station"}. Assign one during planning or select a character token.`);
+    const actor = actorId ? game.actors.get(actorId) : assignedActorId ? game.actors.get(assignedActorId) : canvas.tokens?.controlled?.[0]?.actor ?? game.user.character ?? null;
+    if (!actor) throw new Error(`No PF2e character is assigned to ${stationId ?? "this station"}.`);
     const { nextState } = await resolveActiveStation({ event: this.getEvent(), state: this.state, actor });
     return this.#persistAndBroadcast(nextState);
   }
 
-  getEvent() {
-    return this.state ? ARKFLIGHT_EVENTS[this.state.eventId] ?? null : null;
-  }
-
-  getRound() {
-    const event = this.getEvent();
-    return event?.rounds?.[this.state?.roundIndex ?? 0] ?? null;
-  }
+  getEvent() { return this.state ? ARKFLIGHT_EVENTS[this.state.eventId] ?? null : null; }
+  getRound() { const event = this.getEvent(); return event?.rounds?.[this.state?.roundIndex ?? 0] ?? null; }
 
   async #applyCommand(command, sourceUserId) {
     if (!this.state) throw new Error("No Arkflight Event is active.");
@@ -165,10 +159,21 @@ export class PlanningController {
         this.#requireGMUser(sourceUserId);
         next = assignActor(this.state, command.station, command.actorId);
         break;
+      case "select-mastery": {
+        const technique = getMasteryTechnique(command.station, command.masteryId);
+        if (!technique) throw new Error("Choose a valid Mastery Technique for that station.");
+        next = selectMastery(this.state, command.station, command.masteryId);
+        break;
+      }
+      case "use-mastery":
+        next = applyMasteryTechnique(this.state, command.station, command.options ?? {});
+        break;
+      case "use-tactic":
+        next = applyCrewTactic(this.state, command.tacticId, command.options ?? {});
+        break;
       case "select-action": next = selectAction(this.state, command.station, command.actionId); break;
       case "select-skill": next = selectSkill(this.state, command.station, command.skillId); break;
       case "select-risk": next = selectRiskTier(this.state, command.station, command.riskTier); break;
-      case "select-signature": next = selectSignature(this.state, command.station, command.signatureId); break;
       case "select-component-ability": next = selectComponentAbility(this.state, command.station, command.componentAbilityId); break;
       case "move-order": next = moveOrder(this.state, command.station, command.direction); break;
       case "lock-plan":
@@ -181,9 +186,7 @@ export class PlanningController {
         break;
       case "next-round":
         this.#requireGMUser(sourceUserId);
-        if (this.state.phase === "round-result" && this.state.roundResult && !this.state.consequenceApplied) {
-          next = finalizeRound(this.getEvent(), this.state);
-        }
+        if (this.state.phase === "round-result" && this.state.roundResult && !this.state.consequenceApplied) next = finalizeRound(this.getEvent(), this.state);
         next = advanceToNextRound(this.getEvent(), next);
         break;
       case "mark-rewards-granted":
@@ -204,8 +207,8 @@ export class PlanningController {
         break;
       case "restart-event":
         this.#requireGMUser(sourceUserId);
-        next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true });
-        next = initializeEncounter(this.getEvent(), applyDefaultSignatures(next));
+        next = restartEvent(this.state, { roundId: this.getEvent()?.rounds?.[0]?.id, preserveAssignments: true, preserveCrewEdgeHand: true, preserveMastery: true });
+        next = initializeEncounter(this.getEvent(), next);
         break;
       default:
         throw new Error(`Unknown planning command: ${command.type}`);
@@ -221,19 +224,9 @@ export class PlanningController {
     return next;
   }
 
-  #acceptSnapshot(next) {
-    this.state = repairLoadedState(next);
-    this.onStateChange?.(this.state);
-  }
-
-  #requireGM() {
-    if (!game.user.isGM) throw new Error("Only the GM may perform that Arkflight Event action.");
-  }
-
-  #requireGMUser(userId) {
-    const user = game.users.get(userId);
-    if (!user?.isGM) throw new Error("Only the GM may perform that Arkflight Event action.");
-  }
+  #acceptSnapshot(next) { this.state = repairLoadedState(next); this.onStateChange?.(this.state); }
+  #requireGM() { if (!game.user.isGM) throw new Error("Only the GM may perform that Arkflight Event action."); }
+  #requireGMUser(userId) { const user = game.users.get(userId); if (!user?.isGM) throw new Error("Only the GM may perform that Arkflight Event action."); }
 }
 
 export const PLANNING_MODULE_ID = MODULE_ID;
