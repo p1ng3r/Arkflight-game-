@@ -5,6 +5,7 @@ import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
 import { installMasteryTacticsUI } from "../ui/mastery-tactics-ui.js";
+import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 
 const MODULE_ID = "arkflight-game";
 let controller = null;
@@ -108,6 +109,7 @@ function announceStateRewards(state) {
 Hooks.once("init", () => {
   PlanningController.registerSetting();
   installMasteryTacticsUI();
+  installPlayerSetupClaims();
 
   game.arkflight = {
     events: ARKFLIGHT_EVENTS,
