@@ -72,7 +72,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         };
       });
       const configured = stationOptions[stationId] ?? {};
-      const signatures = (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId }));
+      const signatures = (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId, expended: Boolean(state.signatureUses?.[stationId]) }));
       const componentAbilities = (configured.componentAbilities ?? []).map((item) => ({ ...item, selected: item.id === selection.componentAbilityId }));
       const result = state.results?.[stationId] ?? null;
       const assignedActorId = state.assignments?.[stationId]?.actorId ?? null;
@@ -124,6 +124,8 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       baseDc: chosen.skill.dc,
       riskTier: chosen.riskBid?.tier ?? null,
       riskName: chosen.riskBenefit?.name ?? null,
+      checkBonus: chosen.checkBonus,
+      dcAdjustment: chosen.dcAdjustment,
       finalDc: chosen.finalDc,
       assignedActorName: activeAssignedActor?.name ?? null
     } : null;
@@ -139,6 +141,11 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       };
     }).filter(Boolean);
 
+    const encounter = state.encounter ?? event.startingState ?? {};
+    const pressure = Object.entries(encounter.pressure ?? {}).map(([system, value]) => ({ system: titleCase(system), value }));
+    const hazards = (encounter.hazards ?? []).map((id) => ({ id, name: titleCase(id) }));
+    const finalRound = (state.roundIndex ?? 0) >= event.rounds.length - 1;
+
     return {
       ...context,
       empty: false,
@@ -153,16 +160,22 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       locked: state.phase === "locked",
       resolution: state.phase === "resolution",
       roundResultPhase: state.phase === "round-result",
+      eventComplete: state.phase === "event-complete",
       readyToLock: planningReady(state),
       timerExpired: remaining <= 0,
       timerText: formatTimer(remaining),
-      momentum: event.startingState?.momentum ?? 0,
-      pressure: Object.entries(event.startingState?.pressure ?? {}).map(([system, value]) => ({ system: titleCase(system), value })),
+      momentum: Number(encounter.momentum ?? 0),
+      pressure,
+      hazards,
+      hasHazards: hazards.length > 0,
       stations,
       order,
       activeResolution,
       resultRows,
-      roundResult: state.roundResult ?? null
+      roundResult: state.roundResult ?? null,
+      roundNarrative: state.roundNarrative ?? null,
+      consequenceNarrative: state.consequenceNarrative ?? null,
+      finalRound
     };
   }
 
@@ -199,6 +212,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
             case "lock-plan": await this.controller.lockPlan(); break;
             case "begin-resolution": await this.controller.beginResolution(); break;
             case "resolve-active-station": await this.controller.resolveCurrentStation(); break;
+            case "next-round": await this.controller.continueToNextRound(); break;
             case "restart-event": await this.controller.command({ type: "restart-event" }); break;
           }
         } catch (error) {
@@ -212,11 +226,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       select.addEventListener("change", async (event) => {
         const element = event.currentTarget;
         try {
-          await this.controller.command({
-            type: "assign-actor",
-            station: element.dataset.station,
-            actorId: element.value || null
-          });
+          await this.controller.command({ type: "assign-actor", station: element.dataset.station, actorId: element.value || null });
         } catch (error) {
           console.error("Arkflight | Station actor assignment failed", error);
           ui.notifications?.warn(error.message);
