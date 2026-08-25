@@ -33,25 +33,70 @@ export const GLASSBACK_HAZARDS = Object.freeze({
 
 const ROUND_OUTCOMES = Object.freeze([
   Object.freeze({
-    extraordinary: "The crew clears a commanding lane through the wreck. Reduce 1 Hull Pressure if present and carry the clean opening into the next round.",
-    "strong-success": "The ship clears the first spar field without gaining Pressure.",
-    "mixed-success": "The ship clears the lane, but the crossing adds 1 Hull Pressure.",
-    failure: "The lane collapses around the ship. Add 2 Hull Pressure and activate Collapsing Spars.",
-    disaster: "The wreck catches the ship broadside. Add 2 Hull Pressure and 1 Rigging Pressure, then activate Collapsing Spars."
+    extraordinary: Object.freeze({
+      narrative: "The crew clears a commanding lane through the wreck. The hull sheds the worst of the impact as the ship carries a clean opening into the next round.",
+      effects: Object.freeze([{ kind: "pressure", system: "hull", value: -1 }])
+    }),
+    "strong-success": Object.freeze({
+      narrative: "The ship clears the first spar field without taking new system Pressure.",
+      effects: Object.freeze([])
+    }),
+    "mixed-success": Object.freeze({
+      narrative: "The ship clears the lane, but burning wreckage hammers the hull and adds 1 Hull Pressure.",
+      effects: Object.freeze([{ kind: "pressure", system: "hull", value: 1 }])
+    }),
+    failure: Object.freeze({
+      narrative: "The lane collapses around the ship. The hull takes 2 Pressure and Collapsing Spars remain in the crew's path.",
+      effects: Object.freeze([{ kind: "pressure", system: "hull", value: 2 }, { kind: "hazard", hazardId: "collapsing-spars" }])
+    }),
+    disaster: Object.freeze({
+      narrative: "The wreck catches the ship broadside. Hull Pressure rises by 2, Rigging Pressure rises by 1, and Collapsing Spars choke the route ahead.",
+      effects: Object.freeze([{ kind: "pressure", system: "hull", value: 2 }, { kind: "pressure", system: "rigging", value: 1 }, { kind: "hazard", hazardId: "collapsing-spars" }])
+    })
   }),
   Object.freeze({
-    extraordinary: "The crew crosses the furnace current in perfect alignment. Reduce 1 Arkengine or Lifeveil Pressure and suppress Ember Current if active.",
-    "strong-success": "The ship crosses the cinderwake without gaining Pressure.",
-    "mixed-success": "The ship gains ground, but the Arkengine takes 1 Pressure.",
-    failure: "The red current catches the ship. Add 1 Arkengine Pressure and 1 Lifeveil Pressure, then activate Ember Current.",
-    disaster: "The furnace wake rolls across the vessel. Add 2 Arkengine Pressure and 1 Lifeveil Pressure, then activate Ember Current."
+    extraordinary: Object.freeze({
+      narrative: "The crew crosses the furnace current in perfect alignment, bleeding strain from the system under the greatest load and leaving the ember flow behind them.",
+      effects: Object.freeze([{ kind: "reduce-highest-pressure", systems: ["arkengine", "lifeveil"], value: 1 }])
+    }),
+    "strong-success": Object.freeze({
+      narrative: "The ship crosses the cinderwake without gaining new system Pressure.",
+      effects: Object.freeze([])
+    }),
+    "mixed-success": Object.freeze({
+      narrative: "The ship gains ground, but the Arkengine takes 1 Pressure from the furnace crossing.",
+      effects: Object.freeze([{ kind: "pressure", system: "arkengine", value: 1 }])
+    }),
+    failure: Object.freeze({
+      narrative: "The red current catches the ship. Arkengine and Lifeveil each take 1 Pressure and the Ember Current clings to the vessel.",
+      effects: Object.freeze([{ kind: "pressure", system: "arkengine", value: 1 }, { kind: "pressure", system: "lifeveil", value: 1 }, { kind: "hazard", hazardId: "ember-current" }])
+    }),
+    disaster: Object.freeze({
+      narrative: "The furnace wake rolls across the vessel. Arkengine Pressure rises by 2, Lifeveil Pressure rises by 1, and the Ember Current becomes an active threat.",
+      effects: Object.freeze([{ kind: "pressure", system: "arkengine", value: 2 }, { kind: "pressure", system: "lifeveil", value: 1 }, { kind: "hazard", hazardId: "ember-current" }])
+    })
   }),
   Object.freeze({
-    extraordinary: "The ship takes the blue seam at the perfect instant and bursts free of the Glassback's shadow. Reduce 1 Pressure from any system and mark the exceptional escape ending.",
-    "strong-success": "The ship clears the wreck and escapes the Glassback's turn cleanly.",
-    "mixed-success": "The ship escapes, but the final crossing adds 1 Hull or Lifeveil Pressure as authored by the event state.",
-    failure: "The ship is forced through the seam late. Add 2 Pressure split between Hull and Lifeveil and activate Glassback Turn for the conclusion.",
-    disaster: "The Glassback closes the seam around the ship. Add 2 Hull Pressure and 2 Lifeveil Pressure and mark the disaster ending."
+    extraordinary: Object.freeze({
+      narrative: "The ship takes the blue seam at the perfect instant and bursts free of the Glassback's shadow, shedding 1 Pressure from the system under the greatest strain.",
+      effects: Object.freeze([{ kind: "reduce-highest-pressure", systems: ["hull", "arkengine", "lifeveil", "rigging"], value: 1 }])
+    }),
+    "strong-success": Object.freeze({
+      narrative: "The ship clears the wreck and escapes the Glassback's turn cleanly.",
+      effects: Object.freeze([])
+    }),
+    "mixed-success": Object.freeze({
+      narrative: "The ship escapes, but the last violent crossing adds 1 Hull Pressure before the blue seam closes behind it.",
+      effects: Object.freeze([{ kind: "pressure", system: "hull", value: 1 }])
+    }),
+    failure: Object.freeze({
+      narrative: "The ship is forced through the seam late. Hull and Lifeveil each take 1 Pressure and the Glassback's final turn remains a dangerous complication through the escape.",
+      effects: Object.freeze([{ kind: "pressure", system: "hull", value: 1 }, { kind: "pressure", system: "lifeveil", value: 1 }, { kind: "hazard", hazardId: "glassback-turn" }])
+    }),
+    disaster: Object.freeze({
+      narrative: "The Glassback closes the seam around the ship. Hull and Lifeveil each take 2 Pressure as the vessel is caught in the monster's final turn.",
+      effects: Object.freeze([{ kind: "pressure", system: "hull", value: 2 }, { kind: "pressure", system: "lifeveil", value: 2 }, { kind: "hazard", hazardId: "glassback-turn" }])
+    })
   })
 ]);
 
@@ -101,16 +146,12 @@ const ROUNDS = GLASSBACK_ROUND_DATA.map((rawRound, index) => {
     ])
   );
 
-  const outcomes = Object.fromEntries(
-    Object.entries(ROUND_OUTCOMES[index]).map(([band, narrative]) => [band, Object.freeze({ narrative })])
-  );
-
   return roundDefinition({
     id: `glassback-round-${roundNumber}`,
     title: rawRound.title,
     situation: rawRound.situation,
     stationActions,
-    outcomes,
+    outcomes: ROUND_OUTCOMES[index],
     narrativeHooks: { theme: rawRound.title, targetSentences: 4 }
   });
 });
