@@ -4,6 +4,14 @@ import { grantPf2eRewards, pf2eRewardRecipients } from "../pf2e/reward-granter.j
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const HandlebarsApplication = HandlebarsApplicationMixin(ApplicationV2);
 
+function hasPf2eGrantableRewards(rewards) {
+  if (!rewards) return false;
+  return Number(rewards.gold ?? 0) > 0
+    || (rewards.valuables?.length ?? 0) > 0
+    || (rewards.salvage?.length ?? 0) > 0
+    || (rewards.pf2eItems?.length ?? 0) > 0;
+}
+
 export class ArkflightRewardSummary extends HandlebarsApplication {
   static DEFAULT_OPTIONS = {
     id: "arkflight-reward-summary",
@@ -39,6 +47,7 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
       edgeHandCount: state?.crewEdgeHand?.length ?? 0,
       edgeOverflow: (rewards?.overflowEdgeCards ?? []).length > 0,
       hasRewards: rows.length > 0,
+      hasPf2eGrantableRewards: hasPf2eGrantableRewards(rewards),
       isGM: game.user.isGM,
       rewardsGranted: Boolean(rewards?.granted),
       rewardRecipientName: rewards?.recipientActorName ?? null,
