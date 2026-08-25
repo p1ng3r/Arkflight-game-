@@ -7,6 +7,7 @@ import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
 import { installMasteryTacticsUI } from "../ui/mastery-tactics-ui.js";
 import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 import { installPlayerResolutionUI } from "../ui/player-resolution-ui.js";
+import { installMasteryOpportunityUI } from "../ui/mastery-opportunity-ui.js";
 
 const MODULE_ID = "arkflight-game";
 let controller = null;
@@ -27,24 +28,18 @@ function decorateEventCompleteBoard() {
   if (!ending) return;
   const panel = board.element.querySelector(".arkflight-round-result-panel");
   if (!panel) return;
-
   panel.innerHTML = "";
-
   const kicker = document.createElement("div");
   kicker.className = "arkflight-kicker";
   kicker.textContent = "CLOSING CINEMATIC";
-
   const title = document.createElement("h2");
   title.textContent = ending.label || "Event Complete";
-
   const vignette = document.createElement("article");
   vignette.className = "arkflight-round-vignette arkflight-event-ending-vignette";
   const paragraph = document.createElement("p");
   paragraph.textContent = ending.vignette || "";
   vignette.append(paragraph);
-
   panel.append(kicker, title, vignette);
-
   if (game.user.isGM) {
     const actions = document.createElement("div");
     actions.className = "arkflight-round-continue";
@@ -73,15 +68,11 @@ function showRewardSummary() {
 }
 
 function baseStationOptions() {
-  return Object.fromEntries(Object.entries(BASE_MASTERY).map(([stationId, masteries]) => [
-    stationId,
-    { masteries: [...masteries], signatures: [], componentAbilities: [] }
-  ]));
+  return Object.fromEntries(Object.entries(BASE_MASTERY).map(([stationId, masteries]) => [stationId, { masteries: [...masteries], signatures: [], componentAbilities: [] }]));
 }
 
 function announceStateRewards(state) {
   if (!state) return;
-
   if (state.phase === "round-result" && state.consequenceApplied) {
     const key = `${state.eventId}:${state.roundId}:${state.roundResult?.bandId}:${state.roundMomentumBefore}:${state.roundMomentumAfter}`;
     if (key !== lastRoundRewardKey) {
@@ -94,15 +85,11 @@ function announceStateRewards(state) {
       ui.notifications?.info(`Arkflight Momentum: ${before} ${award >= 0 ? "+" : ""}${award} → ${after}.${tacticText}`);
     }
   }
-
   if (state.phase === "event-complete" && state.eventEnding) {
     const key = `${state.eventId}:${state.eventEnding.id ?? state.eventEnding.label}`;
     if (key !== lastEventRewardKey) {
       lastEventRewardKey = key;
-      setTimeout(() => {
-        decorateEventCompleteBoard();
-        showRewardSummary();
-      }, 175);
+      setTimeout(() => { decorateEventCompleteBoard(); showRewardSummary(); }, 175);
     }
   }
 }
@@ -112,19 +99,14 @@ Hooks.once("init", () => {
   installMasteryTacticsUI();
   installPlayerSetupClaims();
   installPlayerResolutionUI();
+  installMasteryOpportunityUI();
 
   game.arkflight = {
     events: ARKFLIGHT_EVENTS,
     stationOptions: baseStationOptions(),
     get controller() { return controller; },
-    openBoard() {
-      renderBoard();
-      return board;
-    },
-    openRewards() {
-      showRewardSummary();
-      return rewardSummary;
-    },
+    openBoard() { renderBoard(); return board; },
+    openRewards() { showRewardSummary(); return rewardSummary; },
     async openEvent(eventId = "glassback-cinderwake") {
       if (!controller) throw new Error("Arkflight is not ready yet.");
       await controller.openEvent(eventId);
@@ -133,28 +115,16 @@ Hooks.once("init", () => {
     },
     setStationOptions(stationId, options = {}) {
       const base = BASE_MASTERY[stationId] ?? [];
-      this.stationOptions[stationId] = {
-        masteries: [...(options.masteries ?? base)],
-        signatures: [],
-        componentAbilities: [...(options.componentAbilities ?? [])]
-      };
+      this.stationOptions[stationId] = { masteries: [...(options.masteries ?? base)], signatures: [], componentAbilities: [...(options.componentAbilities ?? [])] };
       if (board?.rendered) board.render({ force: true });
     }
   };
 });
 
 Hooks.once("ready", () => {
-  controller = new PlanningController({
-    onStateChange: (state) => {
-      renderBoard();
-      announceStateRewards(state);
-    }
-  });
+  controller = new PlanningController({ onStateChange: (state) => { renderBoard(); announceStateRewards(state); } });
   controller.activateSockets();
-  if (controller.state?.eventId) {
-    renderBoard();
-    announceStateRewards(controller.state);
-  }
+  if (controller.state?.eventId) { renderBoard(); announceStateRewards(controller.state); }
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
@@ -169,10 +139,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
     onChange: async () => {
       if (!controller) return;
       if (!controller.state?.eventId) {
-        if (!game.user.isGM) {
-          ui.notifications?.info("Waiting for the GM to launch an Arkflight Event.");
-          return;
-        }
+        if (!game.user.isGM) { ui.notifications?.info("Waiting for the GM to launch an Arkflight Event."); return; }
         await game.arkflight.openEvent("glassback-cinderwake");
         return;
       }
