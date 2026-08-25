@@ -15,7 +15,7 @@ import {
 } from "./planning-state.js";
 import { initializeResolution, activeStationId } from "./resolution-state.js";
 import { resolveActiveStation } from "./resolution-engine.js";
-import { advanceToNextRound, encounterFromEvent } from "./round-runtime.js";
+import { advanceToNextRound, encounterFromEvent, finalizeRound } from "./round-runtime.js";
 
 const MODULE_ID = "arkflight-game";
 const SETTING_KEY = "activeEventPlanning";
@@ -35,10 +35,23 @@ function initializeEncounter(event, state) {
   return { ...state, encounter: encounterFromEvent(event), signatureUses: {} };
 }
 
+function repairLoadedState(state) {
+  if (!state?.eventId) return state;
+  const event = ARKFLIGHT_EVENTS[state.eventId];
+  if (!event) return state;
+
+  let repaired = state;
+  if (!repaired.encounter) repaired = { ...repaired, encounter: encounterFromEvent(event) };
+  if (repaired.phase === "round-result" && repaired.roundResult && !repaired.consequenceApplied) {
+    repaired = finalizeRound(event, repaired);
+  }
+  return repaired;
+}
+
 export class PlanningController {
   constructor({ onStateChange = null } = {}) {
     this.onStateChange = onStateChange;
-    this.state = game.settings.get(MODULE_ID, SETTING_KEY) || null;
+    this.state = repairLoadedState(game.settings.get(MODULE_ID, SETTING_KEY) || null);
   }
 
   static registerSetting() {
@@ -166,7 +179,10 @@ export class PlanningController {
         break;
       case "next-round":
         this.#requireGMUser(sourceUserId);
-        next = advanceToNextRound(this.getEvent(), this.state);
+        if (this.state.phase === "round-result" && this.state.roundResult && !this.state.consequenceApplied) {
+          next = finalizeRound(this.getEvent(), this.state);
+        }
+        next = advanceToNextRound(this.getEvent(), next);
         break;
       case "restart-event":
         this.#requireGMUser(sourceUserId);
@@ -188,8 +204,8 @@ export class PlanningController {
   }
 
   #acceptSnapshot(next) {
-    this.state = next;
-    this.onStateChange?.(next);
+    this.state = repairLoadedState(next);
+    this.onStateChange?.(this.state);
   }
 
   #requireGM() {
