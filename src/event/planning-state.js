@@ -8,9 +8,9 @@ function emptyAssignments() {
   return Object.fromEntries(STATIONS.map((station) => [station, { actorId: null }]));
 }
 
-export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Date.now(), assignments = null }) {
+export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Date.now(), assignments = null, crewEdgeHand = [] }) {
   return {
-    version: 2,
+    version: 3,
     eventId,
     roundId,
     roundIndex,
@@ -21,6 +21,7 @@ export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Da
     lockedAt: null,
     order: [...STATIONS],
     assignments: assignments ? structuredClone(assignments) : emptyAssignments(),
+    crewEdgeHand: [...crewEdgeHand],
     selections: Object.fromEntries(STATIONS.map((station) => [station, emptySelection()]))
   };
 }
@@ -65,9 +66,16 @@ export function lockPlanning(state, now = Date.now()) {
   return { ...state, phase: "locked", lockedAt: now };
 }
 
-export function restartEvent(state, { roundId, preserveAssignments = true, now = Date.now() } = {}) {
+export function restartEvent(state, { roundId, preserveAssignments = true, preserveCrewEdgeHand = true, now = Date.now() } = {}) {
   if (!state?.eventId) throw new Error("No Arkflight Event is active.");
-  return createPlanningState({ eventId: state.eventId, roundId: roundId ?? state.roundId, roundIndex: 0, now, assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null });
+  return createPlanningState({
+    eventId: state.eventId,
+    roundId: roundId ?? state.roundId,
+    roundIndex: 0,
+    now,
+    assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null,
+    crewEdgeHand: preserveCrewEdgeHand ? (state.crewEdgeHand ?? []) : []
+  });
 }
 
 function updateSelection(state, station, patch) { return { ...state, selections: { ...state.selections, [station]: { ...state.selections[station], ...patch } } }; }
