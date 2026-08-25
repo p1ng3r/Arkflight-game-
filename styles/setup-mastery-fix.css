@@ -1,30 +1,64 @@
-/* Keep Event Setup fully contained inside the right-hand vignette pane. */
+/* Keep the entire Event opening layout inside the ApplicationV2 window. */
+.arkflight-event-board,
+.arkflight-event-board .window-content,
+.arkflight-board-shell,
+.arkflight-opening-grid,
+.arkflight-event-art,
+.arkflight-vignette,
 .arkflight-event-setup,
 .arkflight-event-setup * {
   box-sizing: border-box;
 }
 
-.arkflight-event-setup {
+/* The original opening grid used 360px minimum tracks. Once setup controls were
+   inserted those minimums could force the whole board wider than the window. */
+.arkflight-board-shell {
   width: 100%;
   max-width: 100%;
   min-width: 0;
   overflow-x: hidden;
 }
 
-.arkflight-setup-grid,
-.arkflight-setup-row,
-.arkflight-setup-row > * {
+.arkflight-opening-grid {
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) !important;
+  overflow: hidden;
+}
+
+.arkflight-opening-grid > *,
+.arkflight-event-art,
+.arkflight-vignette {
+  min-width: 0 !important;
   max-width: 100%;
 }
 
+.arkflight-event-setup {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.arkflight-setup-grid,
+.arkflight-setup-row,
+.arkflight-setup-row > * {
+  min-width: 0 !important;
+  max-width: 100%;
+}
+
+/* No minimum pixel width on either selector. They divide whatever room the
+   vignette actually has instead of enlarging the vignette to fit themselves. */
 .arkflight-setup-row {
-  grid-template-columns: minmax(92px, 0.72fr) minmax(112px, 0.95fr) minmax(0, 1.35fr) !important;
+  width: 100%;
+  grid-template-columns: 88px minmax(0, .92fr) minmax(0, 1.28fr) !important;
   gap: 6px !important;
   padding: 6px !important;
 }
 
 .arkflight-setup-station {
+  min-width: 0 !important;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -37,7 +71,7 @@
   max-width: 100% !important;
   min-width: 0 !important;
   height: 30px;
-  padding-right: 22px;
+  padding-right: 20px;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -54,13 +88,14 @@
   overflow-wrap: anywhere;
 }
 
-.arkflight-vignette,
-.arkflight-event-copy,
-.arkflight-event-layout > * {
-  min-width: 0;
+/* ApplicationV2 should only need vertical scrolling here. */
+.arkflight-event-board .window-content,
+#arkflight-event-board .window-content,
+.arkflight-event-board .window-content > * {
+  min-width: 0 !important;
+  max-width: 100%;
 }
 
-/* This panel should scroll vertically only; never make the Event Board wider. */
 .arkflight-event-board .window-content,
 #arkflight-event-board .window-content {
   overflow-x: hidden !important;
@@ -68,7 +103,7 @@
 
 @media (max-width: 1050px) {
   .arkflight-setup-row {
-    grid-template-columns: minmax(86px, 0.7fr) minmax(105px, 0.9fr) minmax(0, 1.2fr) !important;
+    grid-template-columns: 82px minmax(0, .9fr) minmax(0, 1.2fr) !important;
   }
 
   .arkflight-setup-row select,
@@ -77,7 +112,13 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 850px) {
+  .arkflight-opening-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 620px) {
   .arkflight-setup-row {
     grid-template-columns: 1fr !important;
   }
