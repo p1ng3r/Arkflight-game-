@@ -159,17 +159,30 @@ export function finalizeRound(event, state) {
   const outcome = round?.outcomes?.[state.roundResult.bandId];
   if (!outcome) throw new Error(`Missing authored round outcome for ${state.roundResult.bandId}.`);
   const encounter = cloneEncounter(state.encounter);
-  encounter.momentum = clampMomentum(encounter.momentum + Number(state.roundResult.momentumDelta ?? 0));
+  const momentumBefore = Number(encounter.momentum ?? 0);
+  encounter.momentum = clampMomentum(momentumBefore + Number(state.roundResult.momentumDelta ?? 0));
+  const momentumAfter = encounter.momentum;
   applyOutcomeEffects(encounter, outcome.effects ?? []);
   const roundNarrative = cinematicRoundNarrative({ round, bandId: state.roundResult.bandId, results: state.results, consequenceNarrative: outcome.narrative });
-  return { ...state, encounter, roundNarrative, consequenceNarrative: outcome.narrative, consequenceApplied: true };
+  return { ...state, encounter, roundNarrative, consequenceNarrative: outcome.narrative, consequenceApplied: true, roundMomentumBefore: momentumBefore, roundMomentumAfter: momentumAfter };
+}
+
+function endingKeyForBand(bandId) {
+  if (bandId === "extraordinary") return "extraordinaryEscape";
+  if (bandId === "strong-success" || bandId === "mixed-success") return "escape";
+  if (bandId === "failure") return "costlyEscape";
+  return "disaster";
 }
 
 export function advanceToNextRound(event, state) {
   if (state?.phase !== "round-result" || !state.consequenceApplied) throw new Error("Finish the current round before advancing.");
   const nextIndex = Number(state.roundIndex ?? 0) + 1;
   const nextRound = event?.rounds?.[nextIndex];
-  if (!nextRound) return { ...state, phase: "event-complete" };
+  if (!nextRound) {
+    const endingKey = endingKeyForBand(state.roundResult?.bandId);
+    const eventEnding = event?.endings?.[endingKey] ?? null;
+    return { ...state, phase: "event-complete", eventEnding };
+  }
   return {
     ...state,
     roundIndex: nextIndex,
