@@ -43,7 +43,9 @@ export function selectedResolution(event, state, stationId) {
   if (!action || !skill) return null;
 
   const adjustments = checkAdjustments(state, stationId);
-  const listedDc = Number(skill.dc) + Number(riskBid?.tier ?? 0) + Number(adjustments.dc ?? 0);
+  const riskIncrease = Number(riskBid?.tier ?? 0);
+  const baseDc = Number(skill.dc);
+  const preAdjustmentDc = baseDc + riskIncrease;
   return {
     stationId,
     selection,
@@ -52,9 +54,14 @@ export function selectedResolution(event, state, stationId) {
     riskBid,
     riskBenefit,
     checkBonus: adjustments.bonus,
+    checkBonusSources: adjustments.bonusSources,
     dcAdjustment: adjustments.dc,
+    dcAdjustmentSources: adjustments.dcSources,
     degreeLift: adjustments.degreeLift,
-    finalDc: Math.max(0, listedDc)
+    degreeLiftSources: adjustments.degreeLiftSources,
+    riskIncrease,
+    preAdjustmentDc,
+    finalDc: Math.max(0, preAdjustmentDc + Number(adjustments.dc ?? 0))
   };
 }
 
@@ -75,8 +82,7 @@ export async function resolveActiveStation({ event, state, actor }) {
       "arkflight:event",
       `arkflight:station:${stationId}`,
       `arkflight:action:${chosen.action.id}`,
-      ...(chosen.riskBid ? [`arkflight:risk:${chosen.riskBid.tier}`] : []),
-      ...(chosen.checkBonus ? [`arkflight:crew-advantage:${chosen.checkBonus}`] : [])
+      ...(chosen.riskBid ? [`arkflight:risk:${chosen.riskBid.tier}`] : [])
     ]
   });
 
@@ -98,14 +104,19 @@ export async function resolveActiveStation({ event, state, actor }) {
     skillSlug: chosen.skill.skill,
     baseDc: Number(chosen.skill.dc),
     riskTier: chosen.riskBid?.tier ?? null,
+    riskIncrease: chosen.riskIncrease,
+    preAdjustmentDc: chosen.preAdjustmentDc,
     dcAdjustment: chosen.dcAdjustment,
+    dcAdjustmentSources: chosen.dcAdjustmentSources,
     checkBonus: chosen.checkBonus,
+    checkBonusSources: chosen.checkBonusSources,
     finalDc: chosen.finalDc,
     total: roll.total,
     outcome: roll.outcome,
     rawDegreeKey,
     degreeKey,
     degreeLiftApplied: chosen.degreeLift,
+    degreeLiftSources: chosen.degreeLiftSources,
     messageId: roll.messageId ?? null,
     riskBenefitId: chosen.riskBid?.benefitId ?? null,
     riskBenefitName: chosen.riskBenefit?.name ?? null,
