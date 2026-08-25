@@ -10,7 +10,8 @@
   },
   "styles": [
     "styles/arkflight.css",
-    "styles/event-round.css"
+    "styles/event-round.css",
+    "styles/arkflight-enhancements.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js"
