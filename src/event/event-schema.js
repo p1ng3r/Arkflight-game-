@@ -29,8 +29,11 @@ export function stationAction({ id, station, name, description, skills, conseque
   return Object.freeze({ id, station, name, description, skills: Object.freeze([...skills]), consequences: Object.freeze({ ...consequences }), tags: Object.freeze([...tags]) });
 }
 
-export function roundDefinition({ id, title, situation = "", image = "", stationActions, outcomes, narrativeHooks = {} }) {
+export function roundDefinition({ id, title, situation = "", openingVignette = "", image = "", stationActions, outcomes, narrativeHooks = {} }) {
   if (!id || !title) throw new Error("Round requires id and title");
+  if (!openingVignette) throw new Error(`Round ${id} requires an opening vignette`);
+  const sentenceCount = String(openingVignette).split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length;
+  if (sentenceCount < 3 || sentenceCount > 6) throw new Error(`Round ${id} opening vignette must be 3-6 sentences; received ${sentenceCount}`);
   for (const station of STATIONS) {
     const actions = stationActions?.[station];
     if (!Array.isArray(actions) || actions.length !== 3) throw new Error(`Round ${id} must author exactly 3 ${station} actions`);
@@ -38,7 +41,7 @@ export function roundDefinition({ id, title, situation = "", image = "", station
   for (const band of ROUND_BANDS) {
     if (!outcomes?.[band.id]) throw new Error(`Round ${id} missing outcome for ${band.id}`);
   }
-  return Object.freeze({ id, title, situation, image, stationActions: Object.freeze({ ...stationActions }), outcomes: Object.freeze({ ...outcomes }), narrativeHooks: Object.freeze({ ...narrativeHooks }) });
+  return Object.freeze({ id, title, situation, openingVignette, image, stationActions: Object.freeze({ ...stationActions }), outcomes: Object.freeze({ ...outcomes }), narrativeHooks: Object.freeze({ ...narrativeHooks }) });
 }
 
 export function eventDefinition({ id, title, image, openingVignette, goal, startingState = {}, rounds, endings = {} }) {
