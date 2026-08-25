@@ -1,5 +1,9 @@
 import { clampMomentum } from "./event-schema.js";
 
+function cloneSourceMap(source) {
+  return Object.fromEntries(Object.entries(source ?? {}).map(([key, rows]) => [key, [...(rows ?? [])]]));
+}
+
 function cloneEncounter(encounter) {
   return {
     momentum: Number(encounter?.momentum ?? 0),
@@ -8,6 +12,9 @@ function cloneEncounter(encounter) {
     checkBonuses: { ...(encounter?.checkBonuses ?? {}) },
     dcAdjustments: { ...(encounter?.dcAdjustments ?? {}) },
     degreeLifts: { ...(encounter?.degreeLifts ?? {}) },
+    checkBonusSources: cloneSourceMap(encounter?.checkBonusSources),
+    dcAdjustmentSources: cloneSourceMap(encounter?.dcAdjustmentSources),
+    degreeLiftSources: cloneSourceMap(encounter?.degreeLiftSources),
     notes: [...(encounter?.notes ?? [])]
   };
 }
@@ -19,10 +26,37 @@ function targetStation(state, riskBid) {
   if (authored && state.order.includes(authored) && !state.results?.[authored]) return authored;
   return state.order.filter((id) => !state.results?.[id])[0] ?? null;
 }
+function addSource(encounter, bucket, stationId, source) {
+  if (!stationId || !source) return;
+  encounter[bucket][stationId] ??= [];
+  encounter[bucket][stationId].push(source);
+}
+function riskSource(chosen, effect) {
+  return `${chosen.riskBenefit?.name ?? "Heroic benefit"} from ${chosen.stationId ?? "an earlier station"}: ${effect}`;
+}
 
 export function encounterFromEvent(event) { return cloneEncounter(event?.startingState ?? {}); }
-export function checkAdjustments(state, stationId) { const encounter = cloneEncounter(state?.encounter); return { bonus: Number(encounter.checkBonuses?.[stationId] ?? 0), dc: Number(encounter.dcAdjustments?.[stationId] ?? 0), degreeLift: Number(encounter.degreeLifts?.[stationId] ?? 0) }; }
-export function consumeCheckAdjustments(state, stationId) { const encounter = cloneEncounter(state?.encounter); delete encounter.checkBonuses[stationId]; delete encounter.dcAdjustments[stationId]; delete encounter.degreeLifts[stationId]; return { ...state, encounter }; }
+export function checkAdjustments(state, stationId) {
+  const encounter = cloneEncounter(state?.encounter);
+  return {
+    bonus: Number(encounter.checkBonuses?.[stationId] ?? 0),
+    dc: Number(encounter.dcAdjustments?.[stationId] ?? 0),
+    degreeLift: Number(encounter.degreeLifts?.[stationId] ?? 0),
+    bonusSources: [...(encounter.checkBonusSources?.[stationId] ?? [])],
+    dcSources: [...(encounter.dcAdjustmentSources?.[stationId] ?? [])],
+    degreeLiftSources: [...(encounter.degreeLiftSources?.[stationId] ?? [])]
+  };
+}
+export function consumeCheckAdjustments(state, stationId) {
+  const encounter = cloneEncounter(state?.encounter);
+  delete encounter.checkBonuses[stationId];
+  delete encounter.dcAdjustments[stationId];
+  delete encounter.degreeLifts[stationId];
+  delete encounter.checkBonusSources[stationId];
+  delete encounter.dcAdjustmentSources[stationId];
+  delete encounter.degreeLiftSources[stationId];
+  return { ...state, encounter };
+}
 
 export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
   if (!chosen?.riskBid || !chosen?.riskBenefit || !(degreeKey === "success" || degreeKey === "criticalSuccess")) return state;
@@ -31,26 +65,51 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
   const encounter = cloneEncounter(state.encounter);
   const target = targetStation(state, chosen.riskBid);
   const unresolved = state.order.filter((stationId) => !state.results?.[stationId]);
-  const bonusTarget = (value) => { if (target) encounter.checkBonuses[target] = Number(encounter.checkBonuses[target] ?? 0) + value; };
-  const dcTarget = (value) => { if (target) encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) + value; };
+  const bonusTarget = (value) => {
+    if (!target) return;
+    encounter.checkBonuses[target] = Number(encounter.checkBonuses[target] ?? 0) + value;
+    addSource(encounter, "checkBonusSources", target, riskSource(chosen, `+${value} to the PF2e check`));
+  };
+  const dcTarget = (value) => {
+    if (!target) return;
+    encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) + value;
+    addSource(encounter, "dcAdjustmentSources", target, riskSource(chosen, `${value} DC`));
+  };
 
   switch (id) {
     case "aid-next-1": bonusTarget(critical ? 2 : 1); break;
     case "dc-next-1": dcTarget(critical ? -2 : -1); break;
-    case "crew-surge": for (const stationId of unresolved) encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + (critical ? 2 : 1); break;
+    case "crew-surge": {
+      const value = critical ? 2 : 1;
+      for (const stationId of unresolved) {
+        encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + value;
+        addSource(encounter, "checkBonusSources", stationId, riskSource(chosen, `+${value} to the PF2e check`));
+      }
+      break;
+    }
     case "order-followup":
       if (target) {
         const activeIndex = Number(state.activeOrderIndex ?? 0); const currentTargetIndex = state.order.indexOf(target);
         if (currentTargetIndex > activeIndex) { const order = [...state.order]; order.splice(currentTargetIndex, 1); order.splice(activeIndex, 0, target); state = { ...state, order }; }
-        encounter.checkBonuses[target] = Number(encounter.checkBonuses[target] ?? 0) + (critical ? 3 : 2);
-        if (critical) encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) - 1;
+        const value = critical ? 3 : 2;
+        encounter.checkBonuses[target] = Number(encounter.checkBonuses[target] ?? 0) + value;
+        addSource(encounter, "checkBonusSources", target, riskSource(chosen, `+${value} to the PF2e check`));
+        if (critical) {
+          encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) - 1;
+          addSource(encounter, "dcAdjustmentSources", target, riskSource(chosen, "-1 DC"));
+        }
       }
       break;
     case "arkengine-vent": addPressure(encounter, "arkengine", critical ? -2 : -1); break;
     case "lifeveil-steady": addPressure(encounter, "lifeveil", critical ? -2 : -1); break;
     case "arkengine-overdrive": bonusTarget(critical ? 3 : 2); break;
     case "arkengine-master": addPressure(encounter, "arkengine", -2); if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); break;
-    case "degree-lift": if (target) encounter.degreeLifts[target] = Math.max(Number(encounter.degreeLifts[target] ?? 0), 1); break;
+    case "degree-lift":
+      if (target) {
+        encounter.degreeLifts[target] = Math.max(Number(encounter.degreeLifts[target] ?? 0), 1);
+        addSource(encounter, "degreeLiftSources", target, riskSource(chosen, "improve the degree of success by one step"));
+      }
+      break;
     case "order-swap":
       if (target) { const activeIndex = Number(state.activeOrderIndex ?? 0); const currentTargetIndex = state.order.indexOf(target); if (currentTargetIndex > activeIndex) { const order = [...state.order]; order.splice(currentTargetIndex, 1); order.splice(activeIndex, 0, target); state = { ...state, order }; } }
       break;
