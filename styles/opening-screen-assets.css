@@ -1,0 +1,206 @@
+/* Opening screen image-asset chrome.
+   Expects WebP trim assets in assets/ui/trim/. */
+
+:root {
+  --arkflight-ui-trim: "modules/arkflight-game/assets/ui/trim";
+}
+
+/* OUTER FRAME HARDWARE */
+.arkflight-opening-grid.arkflight-cinematic-opening::before {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 20 !important;
+  pointer-events: none !important;
+  top: -4px !important;
+  left: -4px !important;
+  width: 118px !important;
+  height: 118px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  background: url("../assets/ui/trim/ui_outer_frame_corner_top_left.webp") top left / contain no-repeat !important;
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 20 !important;
+  pointer-events: none !important;
+  right: -4px !important;
+  bottom: -4px !important;
+  width: 118px !important;
+  height: 118px !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  transform: rotate(180deg);
+  background: url("../assets/ui/trim/ui_outer_frame_corner_top_left.webp") top left / contain no-repeat !important;
+}
+
+/* Use the two column shells for the other two reusable rotated corners. */
+.arkflight-opening-art-column::before,
+.arkflight-opening-stakes-column::after {
+  content: "";
+  position: absolute;
+  z-index: 19;
+  pointer-events: none;
+  width: 104px;
+  height: 104px;
+  background: url("../assets/ui/trim/ui_outer_frame_corner_top_left.webp") top left / contain no-repeat;
+}
+
+.arkflight-opening-art-column::before {
+  left: -4px;
+  bottom: -4px;
+  transform: rotate(-90deg);
+  transform-origin: center;
+}
+
+.arkflight-opening-stakes-column::after {
+  right: -4px;
+  top: -4px;
+  transform: rotate(90deg);
+  transform-origin: center;
+}
+
+/* PHYSICAL PANEL CORNER BRACKETS */
+.arkflight-opening-side-panel::before,
+.arkflight-opening-side-panel::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 4;
+  pointer-events: none;
+  width: 34px !important;
+  height: 34px !important;
+  border: 0 !important;
+  background: url("../assets/ui/trim/ui_panel_corner_bracket.webp") center / contain no-repeat !important;
+  opacity: .9;
+}
+
+.arkflight-opening-side-panel::before {
+  top: -2px !important;
+  left: -2px !important;
+}
+
+.arkflight-opening-side-panel::after {
+  right: -2px !important;
+  bottom: -2px !important;
+  transform: rotate(180deg);
+}
+
+/* DECORATIVE DIVIDERS */
+.arkflight-opening-title-rule {
+  width: 76% !important;
+  height: 18px !important;
+  margin: 0 auto 10px !important;
+  background: url("../assets/ui/trim/ui_divider_rail_horizontal.webp") center / 100% 100% no-repeat !important;
+  filter: none !important;
+}
+
+.arkflight-opening-section-title::before,
+.arkflight-opening-section-title::after {
+  height: 12px !important;
+  border: 0 !important;
+  background: url("../assets/ui/trim/ui_divider_rail_horizontal.webp") center / 100% 100% no-repeat !important;
+  opacity: .68;
+}
+
+/* REAL COMPASS ORNAMENT */
+.arkflight-opening-compass {
+  width: 116px !important;
+  height: 116px !important;
+  margin: 20px auto 0 !important;
+  opacity: .62 !important;
+  background: url("../assets/ui/trim/ui_compass_ornament_medallion.webp") center / contain no-repeat !important;
+  filter: drop-shadow(0 3px 10px rgba(0,0,0,.5)) !important;
+}
+
+.arkflight-opening-compass i {
+  display: none !important;
+}
+
+/* PRIMARY COMMAND BUTTON — actual asset-backed construction. */
+.arkflight-opening-begin {
+  isolation: isolate;
+  min-height: 64px !important;
+  padding: 0 76px !important;
+  overflow: visible !important;
+  border: 0 !important;
+  outline: 0 !important;
+  background:
+    url("../assets/ui/trim/ui_primary_button_center_strip.webp") center / calc(100% - 118px) 100% no-repeat !important;
+  box-shadow: 0 7px 18px rgba(0,0,0,.48) !important;
+}
+
+.arkflight-opening-begin::before,
+.arkflight-opening-begin::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: -1;
+  top: 50% !important;
+  width: 106px !important;
+  height: 82px !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  pointer-events: none;
+  transform: translateY(-50%) !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+.arkflight-opening-begin::before {
+  left: -18px !important;
+  background-image: url("../assets/ui/trim/ui_primary_button_endcap_left.webp") !important;
+}
+
+.arkflight-opening-begin::after {
+  right: -18px !important;
+  background-image: url("../assets/ui/trim/ui_primary_button_endcap_right.webp") !important;
+}
+
+.arkflight-opening-begin:hover:not(:disabled) {
+  filter: brightness(1.1) saturate(1.08);
+  box-shadow:
+    0 0 16px rgba(55, 132, 188, .22),
+    0 7px 19px rgba(0,0,0,.5) !important;
+}
+
+.arkflight-opening-begin:disabled {
+  opacity: .52 !important;
+  filter: saturate(.35) brightness(.68) !important;
+}
+
+/* Keep image hardware from blocking interaction. */
+.arkflight-opening-side-panel,
+.arkflight-opening-station-card,
+.arkflight-opening-command-column,
+.arkflight-opening-stakes-column,
+.arkflight-opening-art-column {
+  position: relative;
+}
+
+@media (max-width: 1100px) {
+  .arkflight-opening-grid.arkflight-cinematic-opening::before,
+  .arkflight-opening-grid.arkflight-cinematic-opening::after {
+    width: 92px !important;
+    height: 92px !important;
+  }
+
+  .arkflight-opening-art-column::before,
+  .arkflight-opening-stakes-column::after {
+    width: 82px;
+    height: 82px;
+  }
+
+  .arkflight-opening-begin {
+    min-height: 58px !important;
+    padding-inline: 62px !important;
+  }
+
+  .arkflight-opening-begin::before,
+  .arkflight-opening-begin::after {
+    width: 88px !important;
+    height: 70px !important;
+  }
+}
