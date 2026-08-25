@@ -1,4 +1,7 @@
 import { getMasteryTechnique } from "../content/base-mastery.js";
+import { getRiskBenefit } from "../content/risk-benefits.js";
+import { scoreRound } from "./event-schema.js";
+import { applyEarnedRiskBenefit } from "./round-runtime.js";
 
 function cloneSources(source) {
   return Object.fromEntries(Object.entries(source ?? {}).map(([key, rows]) => [key, [...(rows ?? [])]]));
@@ -17,11 +20,16 @@ function cloneEncounter(encounter = {}) {
     degreeLiftSources: cloneSources(encounter.degreeLiftSources),
     notes: [...(encounter.notes ?? [])],
     pressureGuards: { ...(encounter.pressureGuards ?? {}) },
+    generalPressureGuard: Number(encounter.generalPressureGuard ?? 0),
     hazardGuard: Number(encounter.hazardGuard ?? 0),
     momentumLossGuard: Number(encounter.momentumLossGuard ?? 0),
     riskOverrides: { ...(encounter.riskOverrides ?? {}) },
+    riskTierReductions: { ...(encounter.riskTierReductions ?? {}) },
     hazardShelters: { ...(encounter.hazardShelters ?? {}) },
-    suppressedHazards: [...(encounter.suppressedHazards ?? [])]
+    suppressedHazards: [...(encounter.suppressedHazards ?? [])],
+    postCheckPressure: { ...(encounter.postCheckPressure ?? {}) },
+    pressureRedirects: structuredClone(encounter.pressureRedirects ?? {}),
+    systemDisableGuards: { ...(encounter.systemDisableGuards ?? {}) }
   };
 }
 
@@ -33,22 +41,20 @@ function assertTarget(state, stationId) {
   if (!stationId || !unresolved(state).includes(stationId)) throw new Error("Choose an unresolved station.");
 }
 
-function addCheckBonus(encounter, stationId, value, source) {
-  encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + Number(value ?? 0);
-  encounter.checkBonusSources[stationId] ??= [];
-  encounter.checkBonusSources[stationId].push(source);
+function addDegreeLift(encounter, stationId, value, source) {
+  encounter.degreeLifts[stationId] = Math.max(Number(encounter.degreeLifts[stationId] ?? 0), Number(value ?? 0));
+  encounter.degreeLiftSources[stationId] ??= [];
+  encounter.degreeLiftSources[stationId].push(source);
 }
 
-function addDcAdjustment(encounter, stationId, value, source) {
-  encounter.dcAdjustments[stationId] = Number(encounter.dcAdjustments[stationId] ?? 0) + Number(value ?? 0);
-  encounter.dcAdjustmentSources[stationId] ??= [];
-  encounter.dcAdjustmentSources[stationId].push(source);
-}
-
-function suppressHazard(encounter, hazardId) {
-  if (!hazardId || !encounter.hazards.includes(hazardId)) throw new Error("Choose an active Hazard.");
-  encounter.hazards = encounter.hazards.filter((id) => id !== hazardId);
-  if (!encounter.suppressedHazards.includes(hazardId)) encounter.suppressedHazards.push(hazardId);
+function moveToFrontOfRemaining(state, stationId) {
+  assertTarget(state, stationId);
+  const order = [...state.order];
+  const from = order.indexOf(stationId);
+  const target = state.phase === "resolution" ? Number(state.activeOrderIndex ?? 0) : 0;
+  order.splice(from, 1);
+  order.splice(target, 0, stationId);
+  return { ...state, order };
 }
 
 function markUsed(state, stationId, mastery) {
@@ -65,6 +71,17 @@ function markUsed(state, stationId, mastery) {
   };
 }
 
+function improveFailedResult(state, sourceStationId) {
+  const result = state.results?.[sourceStationId];
+  if (!result || !["failure", "criticalFailure"].includes(result.degreeKey)) throw new Error("Not Like This requires a Failure or Critical Failure result.");
+  const degreeKey = result.degreeKey === "criticalFailure" ? "failure" : "success";
+  const results = { ...state.results, [sourceStationId]: { ...result, degreeKey, masteryImprovedBy: "captain-not-like-this" } };
+  const roundResult = state.phase === "round-result"
+    ? scoreRound(state.order.map((id) => results[id]?.degreeKey))
+    : state.roundResult;
+  return { ...state, results, roundResult };
+}
+
 export function masteryReady(state, stationId) {
   const masteryId = state?.masterySelections?.[stationId] ?? null;
   return Boolean(masteryId && !state?.masteryUses?.[stationId]);
@@ -79,75 +96,105 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
   if (state.masteryUses?.[stationId]) throw new Error(`${mastery.name} is already EXPENDED for this Event.`);
 
   let next = { ...state };
-  const encounter = cloneEncounter(state.encounter);
+  let encounter = cloneEncounter(state.encounter);
   const source = `Mastery — ${mastery.name}`;
 
   switch (mastery.id) {
-    case "captain-commanding-moment":
+    case "captain-carry-the-deed": {
+      const sourceStationId = options.sourceStationId;
+      const result = state.results?.[sourceStationId];
+      if (!result?.riskEarned || !result.riskBenefitId) throw new Error("Carry the Deed requires a station that just earned a Heroic/Risk benefit.");
       assertTarget(state, options.targetStationId);
-      addCheckBonus(encounter, options.targetStationId, 2, `${source}: +2 to the PF2e check`);
-      break;
-    case "captain-hold-the-crew-together":
-      encounter.momentumLossGuard = Math.max(encounter.momentumLossGuard, 1);
-      encounter.notes.push(`${source} will reduce this round's next Momentum loss by 1.`);
-      break;
-    case "captain-change-the-plan": {
-      assertTarget(state, options.firstStationId);
-      assertTarget(state, options.secondStationId);
-      if (options.firstStationId === options.secondStationId) throw new Error("Choose two different unresolved stations.");
-      const order = [...state.order];
-      const a = order.indexOf(options.firstStationId);
-      const b = order.indexOf(options.secondStationId);
-      [order[a], order[b]] = [order[b], order[a]];
-      next = { ...next, order };
+      if (options.targetStationId === sourceStationId) throw new Error("Choose another unresolved station.");
+      const riskBenefit = getRiskBenefit(result.riskBenefitId);
+      if (!riskBenefit) throw new Error("The earned Heroic/Risk benefit could not be found.");
+      next = applyEarnedRiskBenefit(
+        { ...state, encounter },
+        {
+          stationId: sourceStationId,
+          riskBenefit,
+          riskBid: { benefitId: result.riskBenefitId, parameters: { targetStationId: options.targetStationId } }
+        },
+        result.degreeKey === "criticalSuccess" ? "criticalSuccess" : "success"
+      );
+      encounter = cloneEncounter(next.encounter);
+      encounter.notes.push(`${source} extended ${riskBenefit.name} to ${options.targetStationId}.`);
       break;
     }
-    case "engineer-emergency-vent":
-      encounter.pressure.arkengine = Math.max(0, Number(encounter.pressure.arkengine ?? 0) - 2);
+    case "captain-set-the-pace":
+      throw new Error("Set the Pace resolves automatically when Round 1 planning begins.");
+    case "captain-not-like-this":
+      next = improveFailedResult(state, options.sourceStationId);
+      encounter = cloneEncounter(next.encounter);
+      encounter.notes.push(`${source} improved ${options.sourceStationId}'s failed result by one degree.`);
       break;
-    case "engineer-overburn-the-core":
+
+    case "engineer-redline-the-arkengine":
       assertTarget(state, options.targetStationId);
-      if (!["engineer", "navigator"].includes(options.targetStationId)) throw new Error("Overburn the Core may only aid an unresolved Engineer or Navigator station.");
-      addCheckBonus(encounter, options.targetStationId, 3, `${source}: +3 to the PF2e check`);
-      encounter.pressure.arkengine = Number(encounter.pressure.arkengine ?? 0) + 1;
+      if (!["engineer", "navigator"].includes(options.targetStationId)) throw new Error("Redline the Arkengine may only affect Engineer or Navigator.");
+      addDegreeLift(encounter, options.targetStationId, 1, `${source}: improve the final degree by one step`);
+      encounter.postCheckPressure[options.targetStationId] = { system: "arkengine", value: 1, source };
       break;
-    case "engineer-impossible-restart":
-    case "watchmaster-saw-it-coming":
-      suppressHazard(encounter, options.hazardId);
+    case "engineer-keep-her-breathing": {
+      const system = options.system;
+      if (!system) throw new Error("Choose the ship system being kept operational.");
+      encounter.systemDisableGuards[system] = 1;
+      encounter.notes.push(`${source} keeps ${system} operational through the next station resolution.`);
       break;
-    case "navigator-perfect-line":
-      assertTarget(state, options.targetStationId);
-      addDcAdjustment(encounter, options.targetStationId, -2, `${source}: -2 final DC`);
+    }
+    case "engineer-crosswire-the-systems": {
+      const fromSystem = options.fromSystem;
+      const toSystem = options.toSystem;
+      if (!fromSystem || !toSystem || fromSystem === toSystem) throw new Error("Choose two different ship systems for Crosswire the Systems.");
+      encounter.pressureRedirects[fromSystem] = { destination: toSystem, maximum: 2, source };
       break;
-    case "navigator-read-the-way-ahead":
-      encounter.notes.push(`${source} revealed the next round's opening situation to the crew.`);
-      break;
-    case "navigator-impossible-course":
+    }
+
+    case "navigator-impossible-passage":
       assertTarget(state, options.targetStationId);
       encounter.riskOverrides[options.targetStationId] = true;
-      encounter.notes.push(`${source} lets ${options.targetStationId} ignore one authored Heroic/Risk restriction this round.`);
+      encounter.notes.push(`${source} lets ${options.targetStationId} ignore one authored Hazard or Heroic/Risk restriction this round.`);
       break;
-    case "watchmaster-call-the-opening":
-      if (!encounter.hazards.length) throw new Error("Call the Opening requires an active Hazard.");
+    case "navigator-find-another-way":
       assertTarget(state, options.targetStationId);
-      addCheckBonus(encounter, options.targetStationId, 2, `${source}: +2 while exploiting an active Hazard`);
+      next = { ...next, reopenedStations: { ...(state.reopenedStations ?? {}), [options.targetStationId]: true } };
       break;
-    case "watchmaster-nothing-gets-past-me":
+    case "navigator-read-the-current":
+      next = moveToFrontOfRemaining(state, options.targetStationId);
+      break;
+
+    case "watchmaster-call-the-true-opening":
       assertTarget(state, options.targetStationId);
-      addCheckBonus(encounter, options.targetStationId, 1, `${source}: +1 from threat awareness`);
-      encounter.notes.push(`${source} exposed every currently active Hazard to the crew.`);
+      if (!state.selections?.[options.targetStationId]?.riskTier) throw new Error("Call the True Opening requires a station with a Heroic/Risk Bid.");
+      encounter.riskTierReductions[options.targetStationId] = true;
       break;
-    case "veilwarden-aegis-of-the-veil":
-      encounter.pressureGuards.lifeveil = Number(encounter.pressureGuards.lifeveil ?? 0) + 2;
+    case "watchmaster-nothing-surprises-me":
+      assertTarget(state, options.targetStationId);
+      next = { ...next, reopenedStations: { ...(state.reopenedStations ?? {}), [options.targetStationId]: true } };
       break;
-    case "veilwarden-shelter-the-crew":
+    case "watchmaster-exploit-the-break": {
+      const sourceResult = state.results?.[options.sourceStationId];
+      if (sourceResult?.degreeKey !== "criticalSuccess") throw new Error("Exploit the Break requires a Critical Success.");
+      next = moveToFrontOfRemaining(state, options.targetStationId);
+      break;
+    }
+
+    case "veilwarden-stand-between": {
+      const fromSystem = options.fromSystem;
+      if (!["hull", "arkengine", "rigging"].includes(fromSystem)) throw new Error("Stand Between may redirect Hull, Arkengine, or Rigging Pressure.");
+      encounter.pressureRedirects[fromSystem] = { destination: "lifeveil", all: true, source };
+      break;
+    }
+    case "veilwarden-seal-the-impossible":
+      encounter.hazardGuard = Math.max(Number(encounter.hazardGuard ?? 0), 1);
+      break;
+    case "veilwarden-sanctuary":
       assertTarget(state, options.targetStationId);
       encounter.hazardShelters[options.targetStationId] = true;
-      addCheckBonus(encounter, options.targetStationId, 1, `${source}: +1 while sheltered from Hazard interference`);
+      encounter.riskOverrides[options.targetStationId] = true;
+      encounter.notes.push(`${source} creates a Hazard-free sanctuary around ${options.targetStationId}'s next check.`);
       break;
-    case "veilwarden-seal-the-breach":
-      encounter.hazardGuard = Math.max(encounter.hazardGuard, 1);
-      break;
+
     default:
       throw new Error(`Unsupported Mastery Technique: ${mastery.id}`);
   }
