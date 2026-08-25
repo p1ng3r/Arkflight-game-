@@ -7,7 +7,10 @@ function rootElement(app, element) {
 
 function actorOwnedByCurrentUser(actor) {
   if (game.user.isGM) return true;
-  return Boolean(actor?.testUserPermission?.(game.user, "OWNER"));
+  if (!actor) return false;
+  if (actor.isOwner) return true;
+  const ownerLevel = globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+  return Boolean(actor.testUserPermission?.(game.user, ownerLevel));
 }
 
 function refreshPlayerActorSelect(select) {
@@ -21,9 +24,7 @@ function refreshPlayerActorSelect(select) {
     if (!actorOwnedByCurrentUser(actor)) option.remove();
   }
 
-  if (selected && ![...select.options].some((option) => option.value === selected)) {
-    select.value = "";
-  }
+  if (selected && ![...select.options].some((option) => option.value === selected)) select.value = "";
   select.title = "Choose one of your PF2e characters to claim this Arkflight station for the Event.";
 }
 
@@ -44,10 +45,7 @@ export function installPlayerSetupClaims() {
     const controller = game.arkflight?.controller;
     if (!root || !controller?.state || controller.state.phase !== "opening" || controller.state.setupLocked) return;
 
-    for (const actorSelect of root.querySelectorAll('select[data-ark-setup="actor"]')) {
-      refreshPlayerActorSelect(actorSelect);
-    }
-
+    for (const actorSelect of root.querySelectorAll('select[data-ark-setup="actor"]')) refreshPlayerActorSelect(actorSelect);
     for (const masterySelect of root.querySelectorAll('select[data-ark-setup="mastery"]')) {
       refreshPlayerMasterySelect(masterySelect, masterySelect.dataset.station, controller);
     }
