@@ -1,0 +1,56 @@
+<section class="arkflight-reward-shell">
+  {{#if empty}}
+    <div class="arkflight-empty"><h2>No completed Arkflight Event</h2></div>
+  {{else}}
+    <header class="arkflight-reward-header">
+      <div class="arkflight-kicker">EVENT OUTCOME</div>
+      <h1>{{ending.label}}</h1>
+      <p>{{event.title}}</p>
+    </header>
+
+    <article class="arkflight-ending-vignette">
+      <div class="arkflight-kicker">CLOSING CINEMATIC</div>
+      <p>{{ending.vignette}}</p>
+    </article>
+
+    <section class="arkflight-reward-section">
+      <div class="arkflight-kicker">REWARDS</div>
+      {{#if hasRewards}}
+        <div class="arkflight-reward-list">
+          {{#each rewardRows}}
+            <div class="arkflight-reward-row arkflight-reward-{{type}}">
+              <strong>{{label}}</strong>
+              {{#if detail}}<span>{{detail}}</span>{{/if}}
+            </div>
+          {{/each}}
+        </div>
+      {{else}}
+        <p class="arkflight-muted">No material reward is authored for this outcome.</p>
+      {{/if}}
+      {{#if edgeOverflow}}
+        <div class="arkflight-reward-warning"><i class="fa-solid fa-triangle-exclamation"></i> The shared Crew Edge hand is full. Resolve the overflow before carrying rewards forward.</div>
+      {{/if}}
+    </section>
+
+    <section class="arkflight-edge-hand">
+      <div class="arkflight-kicker">CREW EDGE — {{edgeHandCount}} / 3</div>
+      {{#if edgeHand.length}}
+        <div class="arkflight-edge-grid">
+          {{#each edgeHand}}
+            <article class="arkflight-edge-card">
+              <header><i class="fa-solid fa-bolt"></i> {{name}}</header>
+              <div><b>Trigger:</b> {{trigger}}</div>
+              <div><b>Cash In:</b> {{effect}}</div>
+            </article>
+          {{/each}}
+        </div>
+      {{else}}
+        <p class="arkflight-muted">The crew currently holds no Edge cards.</p>
+      {{/if}}
+    </section>
+
+    <footer class="arkflight-reward-note">
+      Gold, PF2e items, salvage, ship components, faction rewards, route knowledge, and boons are authored by the Event. Automatic transfer to a specific character or party stash is intentionally not performed until a recipient is chosen.
+    </footer>
+  {{/if}}
+</section>
