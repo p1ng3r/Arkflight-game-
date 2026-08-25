@@ -17,7 +17,8 @@
     "styles/setup-mastery-fix.css",
     "styles/opening-screen.css",
     "styles/opening-screen-pass1.css",
-    "styles/opening-screen-pass2.css"
+    "styles/opening-screen-pass2.css",
+    "styles/opening-screen-pass3.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
