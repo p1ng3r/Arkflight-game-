@@ -14,10 +14,12 @@
     "styles/arkflight-enhancements.css",
     "styles/image-popout.css",
     "styles/rewards.css",
-    "styles/setup-mastery-fix.css"
+    "styles/setup-mastery-fix.css",
+    "styles/opening-screen.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
-    "src/ui/mastery-clarity-ui.js"
+    "src/ui/mastery-clarity-ui.js",
+    "src/ui/opening-screen-ui.js"
   ]
 }
