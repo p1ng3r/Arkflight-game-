@@ -23,7 +23,8 @@
     "styles/opening-screen-assets.css",
     "styles/opening-screen-polish.css",
     "styles/opening-screen-large-desktop.css",
-    "styles/opening-screen-select-fix.css"
+    "styles/opening-screen-select-fix.css",
+    "styles/opening-screen-large-fit-fix.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
