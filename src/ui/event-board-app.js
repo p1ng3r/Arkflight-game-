@@ -75,6 +75,8 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         };
       });
       const configured = stationOptions[stationId] ?? {};
+      const signatures = (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId }));
+      const componentAbilities = (configured.componentAbilities ?? []).map((item) => ({ ...item, selected: item.id === selection.componentAbilityId }));
 
       return {
         stationId,
@@ -98,8 +100,9 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         selectedSkill,
         riskChoices,
         hasRiskChoices: riskChoices.length > 0,
-        signatures: (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId })),
-        componentAbilities: (configured.componentAbilities ?? []).map((item) => ({ ...item, selected: item.id === selection.componentAbilityId })),
+        signatures,
+        componentAbilities,
+        hasEncounterAbilities: signatures.length > 0 || componentAbilities.length > 0,
         index
       };
     });
