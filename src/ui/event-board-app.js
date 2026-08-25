@@ -9,36 +9,15 @@ import { stationPresentation } from "./station-presentation.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const HandlebarsApplication = HandlebarsApplicationMixin(ApplicationV2);
 
-function titleCase(value) {
-  return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function formatTimer(seconds) {
-  const value = Math.max(0, Number(seconds) || 0);
-  return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
-}
-
-function moduleAssetPath(path) {
-  if (!path) return "";
-  if (/^(https?:|data:|modules\/)/.test(path)) return path;
-  return `modules/arkflight-game/${String(path).replace(/^\/+/, "")}`;
-}
+function titleCase(value) { return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
+function formatTimer(seconds) { const value = Math.max(0, Number(seconds) || 0); return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`; }
+function moduleAssetPath(path) { if (!path) return ""; if (/^(https?:|data:|modules\/)/.test(path)) return path; return `modules/arkflight-game/${String(path).replace(/^\/+/, "")}`; }
 
 export class ArkflightEventBoard extends HandlebarsApplication {
-  static DEFAULT_OPTIONS = {
-    id: "arkflight-event-board",
-    classes: ["arkflight", "arkflight-event-board"],
-    position: { width: 1180, height: 820 },
-    window: { title: "Arkflight Event", icon: "fa-solid fa-compass" }
-  };
-
+  static DEFAULT_OPTIONS = { id: "arkflight-event-board", classes: ["arkflight", "arkflight-event-board"], position: { width: 1180, height: 820 }, window: { title: "Arkflight Event", icon: "fa-solid fa-compass" } };
   static PARTS = { board: { template: "modules/arkflight-game/templates/event-board.hbs" } };
 
-  constructor(controller, options = {}) {
-    super(options);
-    this.controller = controller;
-    this._timerInterval = null;
-  }
+  constructor(controller, options = {}) { super(options); this.controller = controller; this._timerInterval = null; }
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
@@ -49,9 +28,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
 
     const remaining = planningSecondsRemaining(state);
     const stationOptions = game.arkflight?.stationOptions ?? {};
-    const playerActors = game.actors.contents
-      .filter((actor) => actor.type === "character")
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const playerActors = game.actors.contents.filter((actor) => actor.type === "character").sort((a, b) => a.name.localeCompare(b.name));
 
     const stations = STATIONS.map((stationId, index) => {
       const selection = state.selections[stationId];
@@ -62,14 +39,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       const selectedSkill = selectedAction?.skills?.find((skill) => skill.id === selection.skillId) ?? null;
       const riskChoices = (selectedSkill?.riskBids ?? []).map((risk) => {
         const benefit = getRiskBenefit(risk.benefitId);
-        return {
-          ...risk,
-          name: benefit?.name ?? risk.benefitId,
-          success: benefit?.success ?? "",
-          criticalSuccess: benefit?.criticalSuccess ?? "",
-          modifiedDc: Number(selectedSkill.dc) + Number(risk.tier),
-          selected: selection.riskTier === risk.tier
-        };
+        return { ...risk, name: benefit?.name ?? risk.benefitId, success: benefit?.success ?? "", criticalSuccess: benefit?.criticalSuccess ?? "", modifiedDc: Number(selectedSkill.dc) + Number(risk.tier), selected: selection.riskTier === risk.tier };
       });
       const configured = stationOptions[stationId] ?? {};
       const signatures = (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId, expended: Boolean(state.signatureUses?.[stationId]) }));
@@ -77,7 +47,6 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       const result = state.results?.[stationId] ?? null;
       const assignedActorId = state.assignments?.[stationId]?.actorId ?? null;
       const assignedActor = assignedActorId ? game.actors.get(assignedActorId) : null;
-
       return {
         stationId,
         presentation: stationPresentation(stationId),
@@ -103,44 +72,13 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       };
     });
 
-    const order = state.order.map((stationId, index) => ({
-      stationId,
-      position: index + 1,
-      name: stationPresentation(stationId)?.displayName ?? titleCase(stationId),
-      resolved: Boolean(state.results?.[stationId]),
-      active: state.phase === "resolution" && activeStationId(state) === stationId
-    }));
-
+    const order = state.order.map((stationId, index) => ({ stationId, position: index + 1, name: stationPresentation(stationId)?.displayName ?? titleCase(stationId), resolved: Boolean(state.results?.[stationId]), active: state.phase === "resolution" && activeStationId(state) === stationId }));
     const activeId = activeStationId(state);
     const chosen = activeId ? selectedResolution(event, state, activeId) : null;
     const activeAssignedActorId = activeId ? state.assignments?.[activeId]?.actorId ?? null : null;
     const activeAssignedActor = activeAssignedActorId ? game.actors.get(activeAssignedActorId) : null;
-    const activeResolution = chosen ? {
-      stationId: activeId,
-      stationName: stationPresentation(activeId)?.displayName ?? titleCase(activeId),
-      actionName: chosen.action.name,
-      skillLabel: chosen.skill.label,
-      skillSlug: chosen.skill.skill,
-      baseDc: chosen.skill.dc,
-      riskTier: chosen.riskBid?.tier ?? null,
-      riskName: chosen.riskBenefit?.name ?? null,
-      checkBonus: chosen.checkBonus,
-      dcAdjustment: chosen.dcAdjustment,
-      finalDc: chosen.finalDc,
-      assignedActorName: activeAssignedActor?.name ?? null
-    } : null;
-
-    const resultRows = state.order.map((stationId) => {
-      const result = state.results?.[stationId];
-      if (!result) return null;
-      return {
-        stationId,
-        stationName: stationPresentation(stationId)?.displayName ?? titleCase(stationId),
-        ...result,
-        outcomeLabel: titleCase(result.degreeKey ?? result.outcome)
-      };
-    }).filter(Boolean);
-
+    const activeResolution = chosen ? { stationId: activeId, stationName: stationPresentation(activeId)?.displayName ?? titleCase(activeId), actionName: chosen.action.name, skillLabel: chosen.skill.label, skillSlug: chosen.skill.skill, baseDc: chosen.skill.dc, riskTier: chosen.riskBid?.tier ?? null, riskName: chosen.riskBenefit?.name ?? null, checkBonus: chosen.checkBonus, dcAdjustment: chosen.dcAdjustment, finalDc: chosen.finalDc, assignedActorName: activeAssignedActor?.name ?? null } : null;
+    const resultRows = state.order.map((stationId) => { const result = state.results?.[stationId]; if (!result) return null; return { stationId, stationName: stationPresentation(stationId)?.displayName ?? titleCase(stationId), ...result, outcomeLabel: titleCase(result.degreeKey ?? result.outcome) }; }).filter(Boolean);
     const encounter = state.encounter ?? event.startingState ?? {};
     const pressure = Object.entries(encounter.pressure ?? {}).map(([system, value]) => ({ system: titleCase(system), value }));
     const hazards = (encounter.hazards ?? []).map((id) => ({ id, name: titleCase(id) }));
@@ -157,6 +95,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       nextRoundNumber: (state.roundIndex ?? 0) + 2,
       state,
       opening: state.phase === "opening",
+      roundOpening: state.phase === "round-opening",
       planning: state.phase === "planning",
       locked: state.phase === "locked",
       resolution: state.phase === "resolution",
@@ -180,25 +119,13 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     };
   }
 
-  async _onRender(context, options) {
-    await super._onRender(context, options);
-    this.#bindActions();
-    this.#startTimerTicker();
-  }
-
-  async _preClose(options) {
-    if (this._timerInterval) clearInterval(this._timerInterval);
-    this._timerInterval = null;
-    return super._preClose(options);
-  }
+  async _onRender(context, options) { await super._onRender(context, options); this.#bindActions(); this.#startTimerTicker(); }
+  async _preClose(options) { if (this._timerInterval) clearInterval(this._timerInterval); this._timerInterval = null; return super._preClose(options); }
 
   #bindActions() {
     for (const element of this.element.querySelectorAll("button[data-ark-action]")) {
       element.addEventListener("click", async (event) => {
-        event.preventDefault();
-        const button = event.currentTarget;
-        const action = button.dataset.arkAction;
-        const station = button.dataset.station;
+        event.preventDefault(); const button = event.currentTarget; const action = button.dataset.arkAction; const station = button.dataset.station;
         try {
           switch (action) {
             case "begin-planning": await this.controller.beginPlanning(); break;
@@ -216,22 +143,14 @@ export class ArkflightEventBoard extends HandlebarsApplication {
             case "next-round": await this.controller.continueToNextRound(); break;
             case "restart-event": await this.controller.command({ type: "restart-event" }); break;
           }
-        } catch (error) {
-          console.error("Arkflight | Event board action failed", error);
-          ui.notifications?.warn(error.message);
-        }
+        } catch (error) { console.error("Arkflight | Event board action failed", error); ui.notifications?.warn(error.message); }
       });
     }
-
     for (const select of this.element.querySelectorAll("select[data-ark-action='assign-actor']")) {
       select.addEventListener("change", async (event) => {
         const element = event.currentTarget;
-        try {
-          await this.controller.command({ type: "assign-actor", station: element.dataset.station, actorId: element.value || null });
-        } catch (error) {
-          console.error("Arkflight | Station actor assignment failed", error);
-          ui.notifications?.warn(error.message);
-        }
+        try { await this.controller.command({ type: "assign-actor", station: element.dataset.station, actorId: element.value || null }); }
+        catch (error) { console.error("Arkflight | Station actor assignment failed", error); ui.notifications?.warn(error.message); }
       });
     }
   }
@@ -242,16 +161,8 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     this._timerInterval = setInterval(() => {
       const seconds = planningSecondsRemaining(this.controller.state);
       const timer = this.element?.querySelector?.("[data-arkflight-timer]");
-      if (timer) {
-        timer.textContent = formatTimer(seconds);
-        timer.classList.toggle("expired", seconds <= 0);
-      }
-      if (seconds <= 0) {
-        const label = this.element?.querySelector?.("[data-arkflight-timer-label]");
-        if (label) label.textContent = "TIME — GM MAY LOCK PLAN";
-        clearInterval(this._timerInterval);
-        this._timerInterval = null;
-      }
+      if (timer) { timer.textContent = formatTimer(seconds); timer.classList.toggle("expired", seconds <= 0); }
+      if (seconds <= 0) { const label = this.element?.querySelector?.("[data-arkflight-timer-label]"); if (label) label.textContent = "TIME — GM MAY LOCK PLAN"; clearInterval(this._timerInterval); this._timerInterval = null; }
     }, 1000);
   }
 }
