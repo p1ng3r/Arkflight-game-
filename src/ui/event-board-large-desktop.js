@@ -4,6 +4,8 @@ const HORIZONTAL_MARGIN = 96;
 const VERTICAL_MARGIN = 110;
 const MIN_WIDTH = 1100;
 const MIN_HEIGHT = 760;
+const LARGE_WIDTH = 1380;
+const LARGE_HEIGHT = 820;
 
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
@@ -24,9 +26,17 @@ function desiredBoardRect() {
   return { width, height, left, top };
 }
 
+function applyBoardScaleClass(root, rect) {
+  if (!root?.classList) return;
+  const large = rect.width >= LARGE_WIDTH && rect.height >= LARGE_HEIGHT;
+  root.classList.toggle("arkflight-large-desktop", large);
+  root.classList.toggle("arkflight-compact-desktop", !large);
+}
+
 function applyBoardSize(app, root) {
   const rect = desiredBoardRect();
   const key = `${rect.width}x${rect.height}@${rect.left},${rect.top}`;
+  applyBoardScaleClass(root, rect);
   if (root?.dataset?.arkflightLargeDesktop === key) return;
 
   try {
