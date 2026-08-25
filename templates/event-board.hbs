@@ -1,54 +1,76 @@
 <section class="arkflight-board-shell">
   {{#if empty}}
-    <div class="arkflight-empty">
-      <h2>No Arkflight Event Active</h2>
-      <p>The GM can launch an event from <code>game.arkflight.openEvent()</code>.</p>
-    </div>
+    <div class="arkflight-empty"><h2>No Arkflight Event Active</h2><p>The GM can launch an event from <code>game.arkflight.openEvent()</code>.</p></div>
   {{else}}
     <header class="arkflight-event-header">
       <div><div class="arkflight-kicker">ARKFLIGHT EVENT</div><h1>{{event.title}}</h1><p class="arkflight-goal"><strong>Goal:</strong> {{event.goal}}</p></div>
       <div class="arkflight-status-strip"><div class="arkflight-status-box"><span>Momentum</span><strong>{{momentum}} / 3</strong></div>{{#each pressure}}<div class="arkflight-status-box"><span>{{system}}</span><strong>{{value}}</strong></div>{{/each}}</div>
     </header>
+
     {{#if opening}}
       <div class="arkflight-opening-grid">
         <div class="arkflight-event-art"><img src="{{eventImage}}" alt="{{event.title}}" /><div class="arkflight-art-fallback">EVENT ART</div></div>
         <article class="arkflight-vignette"><div class="arkflight-kicker">OPENING VIGNETTE</div><p>{{event.openingVignette}}</p>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-planning"><i class="fa-solid fa-hourglass-start"></i> Begin Crew Planning — 3:00</button>{{else}}<div class="arkflight-waiting">Waiting for the GM to begin crew planning.</div>{{/if}}</article>
       </div>
     {{else}}
-      <section class="arkflight-round-banner">
-        <div><div class="arkflight-kicker">ROUND {{roundNumber}}</div><h2>{{round.title}}</h2><p>{{round.situation}}</p></div>
+      <section class="arkflight-round-banner arkflight-round-banner-with-art">
+        <div class="arkflight-round-thumb"><img src="{{eventImage}}" alt="{{round.title}}" /><span>ROUND ART</span></div>
+        <div class="arkflight-round-copy"><div class="arkflight-kicker">ROUND {{roundNumber}}</div><h2>{{round.title}}</h2><p>{{round.situation}}</p></div>
         {{#if planning}}<div class="arkflight-timer-panel"><span data-arkflight-timer-label>CREW PLANNING</span><strong data-arkflight-timer>{{timerText}}</strong><small>Choices remain editable until the GM locks the plan.</small></div>{{/if}}
-        {{#if locked}}<div class="arkflight-phase-badge">PLAN LOCKED</div>{{/if}}{{#if resolution}}<div class="arkflight-phase-badge">RESOLUTION</div>{{/if}}
+        {{#if locked}}<div class="arkflight-phase-badge">PLAN LOCKED</div>{{/if}}{{#if resolution}}<div class="arkflight-phase-badge">RESOLUTION</div>{{/if}}{{#if roundResultPhase}}<div class="arkflight-phase-badge">ROUND COMPLETE</div>{{/if}}
       </section>
-      <section class="arkflight-order-bar"><div class="arkflight-kicker">RESOLUTION ORDER</div><div class="arkflight-order-chain">{{#each order}}<div class="arkflight-order-step"><span>{{position}}</span>{{name}}</div>{{/each}}</div></section>
-      <div class="arkflight-station-grid">
-        {{#each stations}}
-          <article class="arkflight-station-card {{#if complete}}complete{{/if}}">
-            <header class="arkflight-station-header">
-              <div class="arkflight-station-identity"><div class="arkflight-station-glyph"><i class="{{presentation.iconClass}}"></i></div><div><span>STATION {{orderPosition}}</span><h3>{{presentation.displayName}}</h3></div></div>
-              {{#if ../planning}}<div class="arkflight-order-controls"><button type="button" title="Resolve earlier" data-ark-action="move-earlier" data-station="{{stationId}}" {{#unless canMoveEarlier}}disabled{{/unless}}><i class="fa-solid fa-arrow-left"></i></button><button type="button" title="Resolve later" data-ark-action="move-later" data-station="{{stationId}}" {{#unless canMoveLater}}disabled{{/unless}}><i class="fa-solid fa-arrow-right"></i></button></div>{{/if}}
-            </header>
-            <div class="arkflight-card-section">
-              <div class="arkflight-section-title">1. Choose Action</div><div class="arkflight-action-list">{{#each availableActions}}<button type="button" class="arkflight-action-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-action" data-station="{{../stationId}}" data-action-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}><span>{{name}}</span>{{#if fallback}}<small>CORE</small>{{else}}<small>EVENT</small>{{/if}}</button>{{/each}}</div>{{#if selectedAction}}<p class="arkflight-action-description">{{selectedAction.description}}</p>{{/if}}
-            </div>
-            <div class="arkflight-card-section">
-              <div class="arkflight-section-title">2. Choose Skill</div>{{#if selectedAction}}<div class="arkflight-skill-list">{{#each skillChoices}}<button type="button" class="arkflight-skill-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-skill" data-station="{{../stationId}}" data-skill-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}><span>{{label}} <em>{{skill}}</em></span><strong>DC {{dc}}</strong>{{#if heroic}}<small>HEROIC AVAILABLE</small>{{/if}}</button>{{/each}}</div>{{else}}<p class="arkflight-muted">Choose an action to reveal its skills.</p>{{/if}}
-            </div>
-            {{#if selectedSkill}}
-              <div class="arkflight-card-section arkflight-risk-section"><div class="arkflight-section-title">3. Heroic / Risk Bid</div>{{#if hasRiskChoices}}<button type="button" class="arkflight-risk-clear {{#unless selection.riskTier}}selected{{/unless}}" data-ark-action="clear-risk" data-station="{{stationId}}" {{#unless ../planning}}disabled{{/unless}}>Normal — DC {{selectedSkill.dc}}</button>{{#each riskChoices}}<button type="button" class="arkflight-risk-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-risk" data-station="{{../stationId}}" data-risk-tier="{{tier}}" {{#unless ../../planning}}disabled{{/unless}}><div><strong>+{{tier}} DC</strong> — {{name}} <span>DC {{modifiedDc}}</span></div><small><b>Success:</b> {{success}}</small><small><b>Critical:</b> {{criticalSuccess}}</small></button>{{/each}}{{else}}<div class="arkflight-no-risk">This authored skill has no Heroic / Risk Bid option.</div>{{/if}}</div>
-            {{/if}}
-            {{#if hasEncounterAbilities}}
-              <div class="arkflight-card-section arkflight-loadout-section"><div class="arkflight-section-title">Encounter Ability</div>{{#if signatures.length}}{{#each signatures}}<button type="button" class="arkflight-loadout-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-signature" data-station="{{../stationId}}" data-signature-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}>{{name}}</button>{{/each}}{{/if}}{{#if componentAbilities.length}}{{#each componentAbilities}}<button type="button" class="arkflight-loadout-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-component-ability" data-station="{{../stationId}}" data-ability-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}>{{name}}</button>{{/each}}{{/if}}</div>
-            {{/if}}
-            <footer class="arkflight-station-footer">{{#if complete}}<span class="ready"><i class="fa-solid fa-check"></i> READY</span>{{else}}<span><i class="fa-regular fa-circle"></i> CHOOSING</span>{{/if}}{{#if selection.riskTier}}<strong>HEROIC +{{selection.riskTier}}</strong>{{/if}}</footer>
+
+      <section class="arkflight-order-bar"><div class="arkflight-kicker">RESOLUTION ORDER</div><div class="arkflight-order-chain">{{#each order}}<div class="arkflight-order-step {{#if active}}active{{/if}} {{#if resolved}}resolved{{/if}}"><span>{{position}}</span>{{name}}</div>{{/each}}</div></section>
+
+      {{#if resolution}}
+        <section class="arkflight-resolution-grid">
+          <article class="arkflight-resolution-focus">
+            <div class="arkflight-kicker">ACTIVE STATION</div>
+            <h2>{{activeResolution.stationName}}</h2>
+            <div class="arkflight-resolution-choice"><span>Action</span><strong>{{activeResolution.actionName}}</strong></div>
+            <div class="arkflight-resolution-choice"><span>PF2e Skill</span><strong>{{activeResolution.skillLabel}} ({{activeResolution.skillSlug}})</strong></div>
+            <div class="arkflight-resolution-choice"><span>Base DC</span><strong>{{activeResolution.baseDc}}</strong></div>
+            {{#if activeResolution.riskTier}}<div class="arkflight-resolution-choice heroic"><span>Heroic / Risk</span><strong>+{{activeResolution.riskTier}} — {{activeResolution.riskName}}</strong></div>{{/if}}
+            <div class="arkflight-resolution-final-dc"><span>FINAL DC</span><strong>{{activeResolution.finalDc}}</strong></div>
+            {{#if isGM}}
+              <p class="arkflight-resolution-help">Select the PF2e character token making this station check. The selected actor is currently: <strong>{{#if activeResolution.selectedTokenName}}{{activeResolution.selectedTokenName}}{{else}}NONE{{/if}}</strong>.</p>
+              <button type="button" class="arkflight-primary arkflight-roll-button" data-ark-action="resolve-active-station"><i class="fa-solid fa-dice-d20"></i> Roll {{activeResolution.skillLabel}} vs DC {{activeResolution.finalDc}}</button>
+            {{else}}<p class="arkflight-waiting">Waiting for the GM to resolve {{activeResolution.stationName}}.</p>{{/if}}
           </article>
-        {{/each}}
-      </div>
-      <footer class="arkflight-board-footer">
-        {{#if planning}}<div>{{#if readyToLock}}All five stations have an Action and Skill selected.{{else}}The plan cannot lock until every station has an Action and Skill.{{/if}}</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="lock-plan" {{#unless readyToLock}}disabled{{/unless}}><i class="fa-solid fa-lock"></i> Lock Plan</button>{{/if}}{{/if}}
-        {{#if locked}}<div>The crew plan is locked. No normal planning choices can change.</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-resolution"><i class="fa-solid fa-play"></i> Begin Resolution</button>{{/if}}{{/if}}
-        {{#if resolution}}<div><strong>Resolution handoff reached.</strong> The next implementation slice will execute PF2e checks in the locked order.</div>{{/if}}
-      </footer>
+          <aside class="arkflight-resolution-results">
+            <div class="arkflight-kicker">ROUND RESULTS</div>
+            {{#if resultRows.length}}
+              {{#each resultRows}}<div class="arkflight-result-row"><div><strong>{{stationName}}</strong><span>{{actionName}}</span></div><div class="arkflight-result-outcome">{{outcomeLabel}} <b>{{total}}</b></div>{{#if riskEarned}}<small><b>{{riskBenefitName}}:</b> {{riskText}}</small>{{/if}}</div>{{/each}}
+            {{else}}<p class="arkflight-muted">No station has resolved yet.</p>{{/if}}
+          </aside>
+        </section>
+      {{else if roundResultPhase}}
+        <section class="arkflight-round-result-panel">
+          <div class="arkflight-kicker">ROUND RESULT</div>
+          <h2>{{roundResult.bandId}}</h2>
+          <div class="arkflight-round-score">Crew Score <strong>{{roundResult.score}}</strong></div>
+          <div class="arkflight-round-score">Momentum Change <strong>{{roundResult.momentumDelta}}</strong></div>
+          <div class="arkflight-result-list">{{#each resultRows}}<div class="arkflight-result-row"><div><strong>{{stationName}}</strong><span>{{actionName}}</span></div><div class="arkflight-result-outcome">{{outcomeLabel}} <b>{{total}}</b></div>{{#if riskEarned}}<small><b>{{riskBenefitName}}:</b> {{riskText}}</small>{{/if}}</div>{{/each}}</div>
+        </section>
+      {{else}}
+        <div class="arkflight-station-grid">
+          {{#each stations}}
+            <article class="arkflight-station-card {{#if complete}}complete{{/if}}">
+              <header class="arkflight-station-header"><div class="arkflight-station-identity"><div class="arkflight-station-glyph"><i class="{{presentation.iconClass}}"></i></div><div><span>STATION {{orderPosition}}</span><h3>{{presentation.displayName}}</h3></div></div>{{#if ../planning}}<div class="arkflight-order-controls"><button type="button" title="Resolve earlier" data-ark-action="move-earlier" data-station="{{stationId}}" {{#unless canMoveEarlier}}disabled{{/unless}}><i class="fa-solid fa-arrow-left"></i></button><button type="button" title="Resolve later" data-ark-action="move-later" data-station="{{stationId}}" {{#unless canMoveLater}}disabled{{/unless}}><i class="fa-solid fa-arrow-right"></i></button></div>{{/if}}</header>
+              <div class="arkflight-card-section"><div class="arkflight-section-title">1. Choose Action</div><div class="arkflight-action-list">{{#each availableActions}}<button type="button" class="arkflight-action-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-action" data-station="{{../stationId}}" data-action-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}><span>{{name}}</span>{{#if fallback}}<small>FALLBACK</small>{{else}}<small>EVENT</small>{{/if}}</button>{{/each}}</div>{{#if selectedAction}}<p class="arkflight-action-description">{{selectedAction.description}}</p>{{/if}}</div>
+              <div class="arkflight-card-section"><div class="arkflight-section-title">2. Choose PF2e Skill</div>{{#if selectedAction}}<div class="arkflight-skill-list">{{#each skillChoices}}<button type="button" class="arkflight-skill-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-skill" data-station="{{../stationId}}" data-skill-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}><span>{{label}} <em>{{skill}}</em></span><strong>DC {{dc}}</strong>{{#if heroic}}<small>HEROIC AVAILABLE</small>{{/if}}</button>{{/each}}</div>{{else}}<p class="arkflight-muted">Choose an action to reveal its PF2e skills.</p>{{/if}}</div>
+              {{#if selectedSkill}}<div class="arkflight-card-section arkflight-risk-section"><div class="arkflight-section-title">3. Heroic / Risk Bid</div>{{#if hasRiskChoices}}<button type="button" class="arkflight-risk-clear {{#unless selection.riskTier}}selected{{/unless}}" data-ark-action="clear-risk" data-station="{{stationId}}" {{#unless ../planning}}disabled{{/unless}}>Normal — DC {{selectedSkill.dc}}</button>{{#each riskChoices}}<button type="button" class="arkflight-risk-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-risk" data-station="{{../stationId}}" data-risk-tier="{{tier}}" {{#unless ../../planning}}disabled{{/unless}}><div><strong>+{{tier}} DC</strong> — {{name}} <span>DC {{modifiedDc}}</span></div><small><b>Success:</b> {{success}}</small><small><b>Critical:</b> {{criticalSuccess}}</small></button>{{/each}}{{else}}<div class="arkflight-no-risk">This authored skill has no Heroic / Risk Bid option.</div>{{/if}}</div>{{/if}}
+              {{#if hasEncounterAbilities}}<div class="arkflight-card-section arkflight-loadout-section"><div class="arkflight-section-title">4. Signature Ability — Once Per Encounter</div>{{#each signatures}}<button type="button" class="arkflight-loadout-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-signature" data-station="{{../stationId}}" data-signature-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}><strong>{{name}}</strong><small>{{description}}</small></button>{{/each}}{{#each componentAbilities}}<button type="button" class="arkflight-loadout-choice {{#if selected}}selected{{/if}}" data-ark-action="choose-component-ability" data-station="{{../stationId}}" data-ability-id="{{id}}" {{#unless ../../planning}}disabled{{/unless}}>{{name}}</button>{{/each}}</div>{{/if}}
+              <footer class="arkflight-station-footer">{{#if complete}}<span class="ready"><i class="fa-solid fa-check"></i> READY</span>{{else}}<span><i class="fa-regular fa-circle"></i> CHOOSING</span>{{/if}}{{#if selection.riskTier}}<strong>HEROIC +{{selection.riskTier}}</strong>{{/if}}</footer>
+            </article>
+          {{/each}}
+        </div>
+
+        <footer class="arkflight-board-footer">
+          {{#if planning}}<div>{{#if readyToLock}}All five stations have an Action and PF2e Skill selected.{{else}}The plan cannot lock until every station has an Action and PF2e Skill.{{/if}}</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="lock-plan" {{#unless readyToLock}}disabled{{/unless}}><i class="fa-solid fa-lock"></i> Lock Plan</button>{{/if}}{{/if}}
+          {{#if locked}}<div>The crew plan is locked. Select the first station's PF2e actor when ready.</div>{{#if isGM}}<button type="button" class="arkflight-primary" data-ark-action="begin-resolution"><i class="fa-solid fa-play"></i> Begin Resolution</button>{{/if}}{{/if}}
+        </footer>
+      {{/if}}
     {{/if}}
   {{/if}}
 </section>
