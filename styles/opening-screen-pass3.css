@@ -1,0 +1,252 @@
+/* Pass 3 — Event Stakes, Hazards, and scoring polish.
+   Loaded after Pass 2; center Crew Muster layout intentionally untouched. */
+
+.arkflight-opening-stakes-column {
+  padding: 14px 12px 16px !important;
+  background:
+    radial-gradient(circle at 50% 2%, rgba(126, 88, 32, .10), transparent 30%),
+    radial-gradient(circle at 62% 88%, rgba(86, 60, 24, .10), transparent 35%),
+    linear-gradient(180deg, #090c0e, #070a0c) !important;
+}
+
+.arkflight-opening-side-panel {
+  position: relative;
+  margin-bottom: 12px !important;
+  padding: 12px 12px 13px !important;
+  overflow: hidden;
+  border: 1px solid rgba(155, 117, 54, .70) !important;
+  background:
+    linear-gradient(180deg, rgba(12,16,18,.94), rgba(7,10,12,.92)) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.70),
+    inset 0 0 24px rgba(131,89,28,.025),
+    0 2px 10px rgba(0,0,0,.28) !important;
+}
+
+.arkflight-opening-side-panel::before,
+.arkflight-opening-side-panel::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+  opacity: .72;
+}
+
+.arkflight-opening-side-panel::before {
+  top: 4px;
+  left: 4px;
+  border-top: 1px solid #b88b42;
+  border-left: 1px solid #b88b42;
+}
+
+.arkflight-opening-side-panel::after {
+  right: 4px;
+  bottom: 4px;
+  border-right: 1px solid #7d5d2d;
+  border-bottom: 1px solid #7d5d2d;
+}
+
+.arkflight-opening-side-panel h3 {
+  position: relative;
+  margin: 0 0 11px !important;
+  padding: 0 12px 8px !important;
+  border-bottom: 0 !important;
+  color: #dfbd75 !important;
+  font-size: 14px !important;
+  letter-spacing: .10em !important;
+  text-shadow: 0 1px 3px #000;
+}
+
+.arkflight-opening-side-panel h3::after {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(172,128,55,.55), transparent);
+}
+
+/* EVENT STAKES — Momentum is the anchor, Pressure systems are supporting gauges. */
+.arkflight-opening-stakes-grid {
+  display: grid !important;
+  grid-template-columns: 1.28fr repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+  align-items: end;
+}
+
+.arkflight-opening-stake {
+  position: relative;
+  min-width: 0;
+  padding: 2px 1px 0;
+}
+
+.arkflight-opening-stake-icon {
+  width: 38px !important;
+  height: 38px !important;
+  margin-bottom: 4px !important;
+  border-width: 1px !important;
+  background:
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, currentColor 15%, transparent), rgba(0,0,0,.42) 66%) !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(0,0,0,.45),
+    0 0 10px color-mix(in srgb, currentColor 24%, transparent) !important;
+  font-size: 15px !important;
+}
+
+.arkflight-opening-stake.momentum .arkflight-opening-stake-icon {
+  width: 50px !important;
+  height: 50px !important;
+  margin-top: -4px;
+  margin-bottom: 3px !important;
+  border-width: 1px !important;
+  font-size: 20px !important;
+  box-shadow:
+    inset 0 0 0 2px rgba(0,0,0,.45),
+    inset 0 0 13px rgba(76,184,255,.12),
+    0 0 14px rgba(69,187,255,.22) !important;
+}
+
+.arkflight-opening-stake-label {
+  font-size: 8px !important;
+  letter-spacing: .05em;
+  line-height: 1.1;
+}
+
+.arkflight-opening-stake-value {
+  margin-top: 2px !important;
+  font-size: 15px !important;
+  line-height: 1;
+  text-shadow: 0 1px 3px #000;
+}
+
+.arkflight-opening-stake.momentum .arkflight-opening-stake-label {
+  color: #d6e9f2 !important;
+  font-size: 9px !important;
+}
+
+.arkflight-opening-stake.momentum .arkflight-opening-stake-value {
+  font-size: 18px !important;
+}
+
+/* HAZARDS — empty state still feels intentional; active hazards read like warning seals. */
+.arkflight-opening-no-hazards {
+  position: relative;
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  padding: 8px 12px;
+  border: 1px dashed rgba(126,108,72,.28);
+  background: rgba(0,0,0,.18);
+  color: #77786f !important;
+  font-size: 9px !important;
+  letter-spacing: .025em;
+}
+
+.arkflight-opening-no-hazards::before {
+  content: "◈";
+  display: inline-block;
+  margin-right: 5px;
+  color: #6d634d;
+}
+
+.arkflight-opening-hazard-list {
+  gap: 6px !important;
+}
+
+.arkflight-opening-hazard {
+  position: relative;
+  padding: 7px 10px !important;
+  border: 1px solid #a0492b !important;
+  background:
+    linear-gradient(180deg, rgba(92,30,17,.58), rgba(54,17,11,.46)) !important;
+  color: #ef8258 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0,0,0,.45),
+    0 0 8px rgba(172,64,31,.10);
+  font-size: 9px !important;
+  letter-spacing: .07em !important;
+}
+
+/* SCORING — readable at a glance and closer to an RPG rules card. */
+.arkflight-opening-score-grid {
+  gap: 7px 12px !important;
+  padding: 2px 5px 0;
+  font-size: 11px !important;
+}
+
+.arkflight-opening-score-grid span {
+  font-family: var(--font-serif, serif);
+  letter-spacing: .015em;
+}
+
+.arkflight-opening-score-grid strong {
+  min-width: 25px;
+  text-align: right;
+  font-size: 12px;
+  text-shadow: 0 1px 3px #000;
+}
+
+.arkflight-opening-score-zero {
+  position: relative;
+  margin-top: 11px !important;
+  padding: 9px 7px 2px !important;
+  border-top: 0 !important;
+  color: #cfc4ad !important;
+}
+
+.arkflight-opening-score-zero::before {
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(146,112,57,.48), transparent);
+}
+
+.arkflight-opening-score-zero strong {
+  color: #eee0bd;
+  font-family: var(--font-serif, serif);
+  font-size: 11px;
+  letter-spacing: .035em;
+}
+
+.arkflight-opening-score-zero small {
+  color: #8f8878;
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.arkflight-opening-compass {
+  margin-top: 16px !important;
+  opacity: .28 !important;
+  transform: scale(1.08);
+}
+
+@media (max-width: 1080px) {
+  .arkflight-opening-stakes-column {
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+  }
+
+  .arkflight-opening-side-panel {
+    padding-left: 9px !important;
+    padding-right: 9px !important;
+  }
+
+  .arkflight-opening-stakes-grid {
+    gap: 3px !important;
+  }
+
+  .arkflight-opening-stake-icon {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .arkflight-opening-stake.momentum .arkflight-opening-stake-icon {
+    width: 44px !important;
+    height: 44px !important;
+  }
+}
