@@ -1,0 +1,17 @@
+{
+  "id": "arkflight-game",
+  "title": "Arkflight Game",
+  "description": "Cooperative PF2e Arkflight ship events, ship progression, and tactical crew play.",
+  "version": "0.1.0",
+  "socket": true,
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "styles": [
+    "styles/arkflight.css"
+  ],
+  "esmodules": [
+    "src/foundry/arkflight.js"
+  ]
+}
