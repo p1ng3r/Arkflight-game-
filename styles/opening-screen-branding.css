@@ -1,0 +1,52 @@
+/* Opening-screen Arkflight branding and final Mastery-control cleanup. */
+
+.arkflight-opening-art-column {
+  position: relative !important;
+}
+
+.arkflight-opening-brand-logo {
+  position: absolute !important;
+  z-index: 8 !important;
+  top: 22px !important;
+  left: 50% !important;
+  width: clamp(112px, 10vw, 156px) !important;
+  height: auto !important;
+  max-height: 132px !important;
+  object-fit: contain !important;
+  transform: translateX(-50%) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  opacity: .92 !important;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.78)) !important;
+}
+
+/* The Mastery select already carries the Trigger/Effect tooltip. Remove the separate info cell. */
+.arkflight-opening-mastery-info {
+  display: none !important;
+}
+
+.arkflight-opening-mastery-control {
+  display: block !important;
+  grid-template-columns: none !important;
+}
+
+.arkflight-opening-mastery-control select {
+  width: 100% !important;
+}
+
+/* Reclaim the freed info-button space for Mastery text. */
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-station-main {
+  grid-template-columns: minmax(150px, .80fr) minmax(205px, 1fr) minmax(255px, 1.28fr) 82px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-mastery-field select {
+  padding-right: 30px !important;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1380px) {
+  .arkflight-opening-brand-logo {
+    top: 18px !important;
+    width: 118px !important;
+  }
+}
