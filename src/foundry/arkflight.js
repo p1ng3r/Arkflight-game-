@@ -1,9 +1,10 @@
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
-import { BASE_SIGNATURES } from "../content/base-signatures.js";
+import { BASE_MASTERY } from "../content/base-mastery.js";
 import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
+import { installMasteryTacticsUI } from "../ui/mastery-tactics-ui.js";
 
 const MODULE_ID = "arkflight-game";
 let controller = null;
@@ -59,9 +60,7 @@ function renderBoard() {
   const app = ensureBoard();
   if (!app) return null;
   const rendered = app.render({ force: true });
-  if (controller?.state?.phase === "event-complete") {
-    setTimeout(decorateEventCompleteBoard, 75);
-  }
+  if (controller?.state?.phase === "event-complete") setTimeout(decorateEventCompleteBoard, 75);
   return rendered;
 }
 
@@ -72,9 +71,9 @@ function showRewardSummary() {
 }
 
 function baseStationOptions() {
-  return Object.fromEntries(Object.entries(BASE_SIGNATURES).map(([stationId, signatures]) => [
+  return Object.fromEntries(Object.entries(BASE_MASTERY).map(([stationId, masteries]) => [
     stationId,
-    { signatures: [...signatures], componentAbilities: [] }
+    { masteries: [...masteries], signatures: [], componentAbilities: [] }
   ]));
 }
 
@@ -88,11 +87,9 @@ function announceStateRewards(state) {
       const before = Number(state.roundMomentumBefore ?? state.encounter?.momentum ?? 0);
       const award = Number(state.roundMomentumAward ?? state.roundResult?.momentumDelta ?? 0);
       const after = Number(state.roundMomentumAfter ?? state.encounter?.momentum ?? 0);
-      const edgeNames = (state.roundRewards?.awardedEdgeCards ?? [])
-        .map((id) => getCrewEdgeCard(id)?.name)
-        .filter(Boolean);
-      const edgeText = edgeNames.length ? ` Crew Edge earned: ${edgeNames.join(", ")}.` : "";
-      ui.notifications?.info(`Arkflight Momentum: ${before} ${award >= 0 ? "+" : ""}${award} → ${after}.${edgeText}`);
+      const tacticNames = (state.roundRewards?.awardedEdgeCards ?? []).map((id) => getCrewEdgeCard(id)?.name).filter(Boolean);
+      const tacticText = tacticNames.length ? ` Crew Tactic earned: ${tacticNames.join(", ")}.` : "";
+      ui.notifications?.info(`Arkflight Momentum: ${before} ${award >= 0 ? "+" : ""}${award} → ${after}.${tacticText}`);
     }
   }
 
@@ -110,6 +107,7 @@ function announceStateRewards(state) {
 
 Hooks.once("init", () => {
   PlanningController.registerSetting();
+  installMasteryTacticsUI();
 
   game.arkflight = {
     events: ARKFLIGHT_EVENTS,
@@ -130,9 +128,10 @@ Hooks.once("init", () => {
       return controller.state;
     },
     setStationOptions(stationId, options = {}) {
-      const base = BASE_SIGNATURES[stationId] ?? [];
+      const base = BASE_MASTERY[stationId] ?? [];
       this.stationOptions[stationId] = {
-        signatures: [...(options.signatures ?? base)],
+        masteries: [...(options.masteries ?? base)],
+        signatures: [],
         componentAbilities: [...(options.componentAbilities ?? [])]
       };
       if (board?.rendered) board.render({ force: true });
