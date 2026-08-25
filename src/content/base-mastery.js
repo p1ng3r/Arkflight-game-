@@ -1,132 +1,132 @@
 export const BASE_MASTERY = Object.freeze({
   captain: Object.freeze([
     Object.freeze({
-      id: "captain-commanding-moment",
-      name: "Commanding Moment",
-      description: "Choose one unresolved station. It gains +2 to its next PF2e check.",
-      timing: "round",
+      id: "captain-carry-the-deed",
+      name: "Carry the Deed",
+      description: "After a station succeeds on a Heroic/Risk Bid, choose another unresolved station. That station receives the same earned Heroic benefit without taking the original Risk increase.",
+      timing: "after-heroic-success",
       target: "unresolved-station",
-      effect: Object.freeze({ kind: "check-bonus", value: 2 })
+      effect: Object.freeze({ kind: "copy-earned-heroic" })
     }),
     Object.freeze({
-      id: "captain-hold-the-crew-together",
-      name: "Hold the Crew Together",
-      description: "For this round, reduce the next Momentum loss from the round result by 1.",
-      timing: "round",
+      id: "captain-set-the-pace",
+      name: "Set the Pace",
+      description: "When Round 1 planning begins, the crew starts the Event with +1 Momentum. This Mastery resolves automatically.",
+      timing: "event-start",
       target: "none",
-      effect: Object.freeze({ kind: "momentum-loss-guard", value: 1 })
+      effect: Object.freeze({ kind: "starting-momentum", value: 1 })
     }),
     Object.freeze({
-      id: "captain-change-the-plan",
-      name: "Change the Plan",
-      description: "Swap the resolution positions of any two unresolved stations.",
-      timing: "planning-or-resolution",
-      target: "two-unresolved-stations",
-      effect: Object.freeze({ kind: "swap-unresolved-stations" })
+      id: "captain-not-like-this",
+      name: "Not Like This",
+      description: "After a station rolls a Failure or Critical Failure, improve the result by one degree, to a maximum of Success.",
+      timing: "after-failed-check",
+      target: "latest-result",
+      effect: Object.freeze({ kind: "improve-failed-result", value: 1, maximum: "success" })
     })
   ]),
   engineer: Object.freeze([
     Object.freeze({
-      id: "engineer-emergency-vent",
-      name: "Emergency Vent",
-      description: "Bleed off 2 Arkengine Pressure, to a minimum of 0.",
-      timing: "round",
-      target: "none",
-      effect: Object.freeze({ kind: "reduce-pressure", system: "arkengine", value: 2 })
-    }),
-    Object.freeze({
-      id: "engineer-overburn-the-core",
-      name: "Overburn the Core",
-      description: "Choose an unresolved Engineer or Navigator station. It gains +3 to its next PF2e check; immediately add 1 Arkengine Pressure.",
-      timing: "round",
+      id: "engineer-redline-the-arkengine",
+      name: "Redline the Arkengine",
+      description: "Before an Engineer or Navigator check, improve its final degree of success by one step, up to Critical Success. After the check, the Arkengine gains 1 Pressure.",
+      timing: "before-engineer-or-navigator-check",
       target: "engineer-or-navigator",
-      effect: Object.freeze({ kind: "overburn", value: 3, pressure: 1 })
+      effect: Object.freeze({ kind: "redline", degreeLift: 1, pressure: 1 })
     }),
     Object.freeze({
-      id: "engineer-impossible-restart",
-      name: "Impossible Restart",
-      description: "Suppress one active Hazard for the rest of the current round.",
-      timing: "round",
-      target: "active-hazard",
-      effect: Object.freeze({ kind: "suppress-hazard-round" })
+      id: "engineer-keep-her-breathing",
+      name: "Keep Her Breathing",
+      description: "When an Arkengine or ship system would become disabled, keep it operational through the end of the next station resolution before the disabling consequence takes hold.",
+      timing: "system-disable",
+      target: "ship-system",
+      effect: Object.freeze({ kind: "delay-system-disable", stations: 1 })
+    }),
+    Object.freeze({
+      id: "engineer-crosswire-the-systems",
+      name: "Crosswire the Systems",
+      description: "When a ship system would gain Pressure, redirect up to 2 of that Pressure to another ship system instead.",
+      timing: "before-pressure",
+      target: "pressure-redirect",
+      effect: Object.freeze({ kind: "redirect-pressure", maximum: 2 })
     })
   ]),
   navigator: Object.freeze([
     Object.freeze({
-      id: "navigator-perfect-line",
-      name: "Perfect Line",
-      description: "Choose one unresolved station. Reduce its final DC by 2.",
-      timing: "round",
-      target: "unresolved-station",
-      effect: Object.freeze({ kind: "dc-adjustment", value: -2 })
-    }),
-    Object.freeze({
-      id: "navigator-read-the-way-ahead",
-      name: "Read the Way Ahead",
-      description: "Preview the next round's opening situation before the crew reaches it.",
-      timing: "round",
-      target: "none",
-      effect: Object.freeze({ kind: "preview-next-round" })
-    }),
-    Object.freeze({
-      id: "navigator-impossible-course",
-      name: "Impossible Course",
-      description: "Choose one unresolved station. It ignores one authored Heroic/Risk restriction for the rest of this round.",
-      timing: "planning-or-resolution",
+      id: "navigator-impossible-passage",
+      name: "Impossible Passage",
+      description: "Choose one unresolved station. For this round it may ignore one active Hazard restriction or authored restriction that would block an Action or Heroic/Risk option.",
+      timing: "planning-or-before-check",
       target: "unresolved-station",
       effect: Object.freeze({ kind: "risk-override" })
+    }),
+    Object.freeze({
+      id: "navigator-find-another-way",
+      name: "Find Another Way",
+      description: "After the plan is locked but before the chosen station rolls, reopen that station's Action, Skill, and Heroic/Risk choices for one final change.",
+      timing: "after-plan-lock",
+      target: "unresolved-station",
+      effect: Object.freeze({ kind: "reopen-station-plan" })
+    }),
+    Object.freeze({
+      id: "navigator-read-the-current",
+      name: "Read the Current",
+      description: "After the round order is locked, move one unresolved station anywhere in the remaining resolution order.",
+      timing: "after-plan-lock",
+      target: "move-unresolved-station",
+      effect: Object.freeze({ kind: "move-unresolved-station" })
     })
   ]),
   watchmaster: Object.freeze([
     Object.freeze({
-      id: "watchmaster-saw-it-coming",
-      name: "Saw It Coming",
-      description: "Suppress one active Hazard for the rest of the current round.",
-      timing: "round",
-      target: "active-hazard",
-      effect: Object.freeze({ kind: "suppress-hazard-round" })
+      id: "watchmaster-call-the-true-opening",
+      name: "Call the True Opening",
+      description: "Before a Heroic/Risk check, reduce its Risk increase by one tier for this check: +2 becomes +0, +5 becomes +2, and +8 becomes +5. The original Heroic payoff is unchanged.",
+      timing: "before-heroic-check",
+      target: "active-station",
+      effect: Object.freeze({ kind: "reduce-risk-tier" })
     }),
     Object.freeze({
-      id: "watchmaster-call-the-opening",
-      name: "Call the Opening",
-      description: "While a Hazard is active, choose one unresolved station. It gains +2 to its next PF2e check.",
-      timing: "round",
-      target: "unresolved-station",
-      effect: Object.freeze({ kind: "hazard-check-bonus", value: 2 })
+      id: "watchmaster-nothing-surprises-me",
+      name: "Nothing Surprises Me",
+      description: "When a new Hazard or surprise complication is revealed after planning, the affected station may completely reselect its Action, Skill, and Heroic/Risk choice before rolling.",
+      timing: "hazard-reveal",
+      target: "affected-station",
+      effect: Object.freeze({ kind: "reopen-station-plan" })
     }),
     Object.freeze({
-      id: "watchmaster-nothing-gets-past-me",
-      name: "Nothing Gets Past Me",
-      description: "Read every active threat and give one unresolved station +1 to its next PF2e check.",
-      timing: "round",
+      id: "watchmaster-exploit-the-break",
+      name: "Exploit the Break",
+      description: "After any station critically succeeds, choose one unresolved station and move it to the front of the remaining resolution order.",
+      timing: "after-critical-success",
       target: "unresolved-station",
-      effect: Object.freeze({ kind: "reveal-and-aid", value: 1 })
+      effect: Object.freeze({ kind: "move-next" })
     })
   ]),
   veilwarden: Object.freeze([
     Object.freeze({
-      id: "veilwarden-aegis-of-the-veil",
-      name: "Aegis of the Veil",
-      description: "Prevent the next 2 Lifeveil Pressure gained during this round.",
-      timing: "round",
-      target: "none",
-      effect: Object.freeze({ kind: "pressure-guard", system: "lifeveil", value: 2 })
+      id: "veilwarden-stand-between",
+      name: "Stand Between",
+      description: "When Hull, Arkengine, or Rigging would gain Pressure from one source, redirect all of that Pressure to Lifeveil instead.",
+      timing: "before-pressure",
+      target: "pressure-source-system",
+      effect: Object.freeze({ kind: "redirect-all-pressure", destination: "lifeveil" })
     }),
     Object.freeze({
-      id: "veilwarden-shelter-the-crew",
-      name: "Shelter the Crew",
-      description: "Choose one unresolved station. It ignores one Hazard penalty and gains +1 to its next PF2e check.",
-      timing: "round",
-      target: "unresolved-station",
-      effect: Object.freeze({ kind: "hazard-shelter", value: 1 })
-    }),
-    Object.freeze({
-      id: "veilwarden-seal-the-breach",
-      name: "Seal the Breach",
-      description: "Prevent the next Hazard that would be added by this round's consequence.",
-      timing: "round",
+      id: "veilwarden-seal-the-impossible",
+      name: "Seal the Impossible",
+      description: "When a Hazard would escalate, create a breach, or add another Hazard, cancel that escalation completely.",
+      timing: "before-hazard-escalation",
       target: "none",
       effect: Object.freeze({ kind: "hazard-guard", value: 1 })
+    }),
+    Object.freeze({
+      id: "veilwarden-sanctuary",
+      name: "Sanctuary",
+      description: "Before one unresolved station rolls, that station is treated as though no active Hazards affect its check or authored restrictions for that check.",
+      timing: "before-check",
+      target: "unresolved-station",
+      effect: Object.freeze({ kind: "sanctuary" })
     })
   ])
 });
