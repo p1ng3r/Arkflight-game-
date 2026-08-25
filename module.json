@@ -20,7 +20,8 @@
     "styles/opening-screen-pass2.css",
     "styles/opening-screen-pass3.css",
     "styles/opening-screen-pass4.css",
-    "styles/opening-screen-assets.css"
+    "styles/opening-screen-assets.css",
+    "styles/opening-screen-polish.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
