@@ -1,0 +1,79 @@
+/* Final large-screen select readability pass.
+   Loaded after all other opening-screen CSS so native Foundry/Chromium select styles cannot shrink the controls again. */
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-actor-field select,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-mastery-field select,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"],
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"] {
+  box-sizing: border-box !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 34px 0 12px !important;
+  border: 1px solid rgba(181, 140, 58, .72) !important;
+  border-radius: 2px !important;
+  background-color: #0d1116 !important;
+  background-image: linear-gradient(180deg, #171b21 0%, #0c1015 100%) !important;
+  color: #ead29a !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,.9) !important;
+  color-scheme: dark !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"]:hover,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"]:hover {
+  border-color: rgba(215, 169, 75, .9) !important;
+  background-image: linear-gradient(180deg, #1b2027 0%, #10151b 100%) !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"]:focus,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"]:focus {
+  outline: none !important;
+  border-color: #d8ad54 !important;
+  box-shadow:
+    0 0 0 1px rgba(216, 173, 84, .55),
+    0 0 12px rgba(216, 173, 84, .16),
+    inset 0 0 0 1px rgba(255, 229, 166, .05) !important;
+}
+
+/* Chromium/Electron honors these option colors on many Windows configurations.
+   color-scheme: dark above asks the native popup to use a dark palette when the OS owns part of the menu. */
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"] option,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"] option,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"] optgroup,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"] optgroup {
+  background: #0b0f14 !important;
+  background-color: #0b0f14 !important;
+  color: #ead29a !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="actor"] option:checked,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode select[data-opening-control="mastery"] option:checked {
+  background: #26394a !important;
+  background-color: #26394a !important;
+  color: #fff0c7 !important;
+}
+
+/* Give the larger controls enough physical room without changing the compact fallback. */
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-station-card,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-station-main {
+  min-height: 66px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-station-main {
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-field-label {
+  font-size: 9px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-mastery-info {
+  width: 34px !important;
+  height: 42px !important;
+  font-size: 15px !important;
+}
