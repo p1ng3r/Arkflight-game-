@@ -19,7 +19,6 @@
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
-    "src/ui/mastery-clarity-ui.js",
-    "src/ui/opening-screen-ui.js"
+    "src/ui/mastery-clarity-ui.js"
   ]
 }
