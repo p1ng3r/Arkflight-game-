@@ -8,7 +8,10 @@ function boardRoot(app, element) {
 }
 
 function playerOwnsActor(actor) {
-  return Boolean(actor?.testUserPermission?.(game.user, "OWNER"));
+  if (!actor) return false;
+  if (actor.isOwner) return true;
+  const ownerLevel = globalThis.CONST?.DOCUMENT_OWNERSHIP_LEVELS?.OWNER ?? 3;
+  return Boolean(actor.testUserPermission?.(game.user, ownerLevel));
 }
 
 function decoratePlayerResolution(root, controller) {
@@ -23,7 +26,7 @@ function decoratePlayerResolution(root, controller) {
 
   const waiting = focus.querySelector(".arkflight-waiting");
   if (!playerOwnsActor(actor)) {
-    if (waiting) waiting.textContent = `Waiting for ${actor?.name ?? "the assigned officer"} to resolve this station.`;
+    if (waiting) waiting.textContent = `Waiting for ${actor?.name ?? "the assigned officer"}'s player to resolve this station.`;
     return;
   }
 
@@ -42,7 +45,7 @@ function decoratePlayerResolution(root, controller) {
   button.addEventListener("click", async () => {
     button.disabled = true;
     try {
-      await controller.resolveCurrentStation();
+      await controller.resolveCurrentStation(actor.id);
     } catch (error) {
       console.error("Arkflight | Player station resolution failed", error);
       ui.notifications?.warn(error.message);
