@@ -109,9 +109,25 @@ export const GLASSBACK_CINDERWAKE = eventDefinition({
   startingState: { momentum: 0, pressure: { hull: 0, arkengine: 0, lifeveil: 0, rigging: 0 }, hazards: [] },
   rounds: ROUNDS,
   endings: {
-    extraordinaryEscape: { condition: "final-round-extraordinary", label: "Blue Seam Triumph" },
-    escape: { condition: "final-round-at-least-mixed", label: "Clear of Cinderwake" },
-    costlyEscape: { condition: "final-round-failure", label: "Scorched Escape" },
-    disaster: { condition: "final-round-disaster", label: "Caught in the Glassback's Turn" }
+    extraordinaryEscape: {
+      condition: "final-round-extraordinary",
+      label: "Blue Seam Triumph",
+      vignette: "The blue seam opens at exactly the right heartbeat, and the ship drives through it before the Glassback can finish its turn. Fire and black wreckage vanish behind a curtain of cold sapphire light as the Arkengine catches cleanly and the Lifeveil settles around the hull. For several breaths there is only the fading thunder of the leviathan somewhere beyond the seam. The crew has not merely escaped Cinderwake Wreck—they have stolen the passage from the beast itself."
+    },
+    escape: {
+      condition: "final-round-at-least-mixed",
+      label: "Clear of Cinderwake",
+      vignette: "The ship punches through the narrowing blue seam with the Cinderwake still clawing at its stern. Behind you, the Glassback rolls through the wreckage and disappears into a storm of embers and shattered spars. The vessel bears the marks of the crossing, but the Arkengine keeps its rhythm and the Lifeveil holds. Cinderwake Wreck falls away into the dark, and for the first time since the leviathan appeared, the crew has room to breathe."
+    },
+    costlyEscape: {
+      condition: "final-round-failure",
+      label: "Scorched Escape",
+      vignette: "The blue seam begins to collapse before the ship is fully through, forcing the crew to tear the vessel across the threshold under brutal strain. The Glassback's shadow fills the burning wreck behind you as the last edge of the seam snaps shut. Warning bells and groaning timbers answer the silence on the far side, proof that the escape extracted its price. You are alive and clear of the beast, but the ship carries Cinderwake with it in scorched metal, strained veilwork, and damaged hull."
+    },
+    disaster: {
+      condition: "final-round-disaster",
+      label: "Caught in the Glassback's Turn",
+      vignette: "The Glassback reaches the blue seam at the same instant as the ship, and the world becomes fire, scale, and fractured light. The vessel is thrown through the collapsing passage with systems screaming and wreckage hammering against the Lifeveil. When the darkness finally steadies, the leviathan is gone from sight—but the silence aboard is filled with the sound of damage settling through the hull. The crew escaped Cinderwake Wreck by the narrowest possible margin, and the ship will remember the crossing long after the embers fade."
+    }
   }
 });
