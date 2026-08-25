@@ -1,0 +1,29 @@
+.arkflight-reward-summary .window-content{padding:0;overflow:auto;background:#151513;color:#e9e2cf}
+.arkflight-reward-shell{min-height:100%;padding:22px;background:linear-gradient(180deg,#28231a 0,#171613 45%,#10100f 100%)}
+.arkflight-reward-header{padding-bottom:14px;border-bottom:1px solid #5b4f39}
+.arkflight-reward-header h1{margin:3px 0 4px;color:#f0d58d;font-size:34px}
+.arkflight-reward-header p{margin:0;color:#bdb29b}
+.arkflight-ending-vignette{margin-top:16px;padding:18px 20px;border:1px solid #755f36;background:#201d16;box-shadow:inset 0 0 30px rgba(180,130,45,.05)}
+.arkflight-ending-vignette p{margin:8px 0 0;font-size:16px;line-height:1.65;color:#eee3c9}
+.arkflight-reward-section,.arkflight-edge-hand{margin-top:16px;padding:15px;border:1px solid #4f4739;background:#191815}
+.arkflight-reward-list{display:grid;gap:6px;margin-top:8px}
+.arkflight-reward-row{display:grid;grid-template-columns:minmax(180px,.8fr) 1.2fr;gap:14px;align-items:start;padding:8px 10px;border:1px solid #3f392f;background:#211f1a}
+.arkflight-reward-row strong{color:#e8d6a4}
+.arkflight-reward-row span{color:#bdb29c;font-size:11px;line-height:1.4}
+.arkflight-reward-edge{border-color:#846a35;background:#2a2418}
+.arkflight-reward-edge strong{color:#f0c969}
+.arkflight-reward-edge-overflow{border-color:#8b4b3b;background:#2b1c18}
+.arkflight-reward-warning{margin-top:10px;padding:9px;border:1px solid #8b4b3b;background:#2b1c18;color:#e5b2a3}
+.arkflight-edge-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:9px}
+.arkflight-edge-card{min-height:122px;padding:10px;border:1px solid #7b6332;background:linear-gradient(180deg,#2b2519,#1d1a15);box-shadow:inset 0 0 0 1px rgba(216,182,90,.08)}
+.arkflight-edge-card header{padding-bottom:7px;margin-bottom:7px;border-bottom:1px solid #4d422c;color:#f0c969;font-weight:800}
+.arkflight-edge-card div{font-size:10px;line-height:1.45;color:#c9bea8;margin-top:5px}
+.arkflight-edge-card b{color:#e0d1ae}
+.arkflight-reward-note{margin-top:14px;padding:10px;border-top:1px solid #474036;color:#938a7b;font-size:10px;line-height:1.45}
+.arkflight-round-reward-toast{margin:10px 0;padding:9px 11px;border:1px solid #806735;background:#2a2417;color:#ead9ae}
+.arkflight-round-reward-toast strong{color:#f0c969}
+.arkflight-momentum-ledger{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 12px}
+.arkflight-momentum-ledger>div{padding:7px;border:1px solid #4f4739;background:#191815;text-align:center}
+.arkflight-momentum-ledger span{display:block;font-size:8px;letter-spacing:.1em;color:#958b78;text-transform:uppercase}
+.arkflight-momentum-ledger strong{display:block;margin-top:2px;color:#f0cf74;font-size:17px}
+@media(max-width:800px){.arkflight-edge-grid{grid-template-columns:1fr}.arkflight-reward-row{grid-template-columns:1fr}.arkflight-momentum-ledger{grid-template-columns:1fr}}
