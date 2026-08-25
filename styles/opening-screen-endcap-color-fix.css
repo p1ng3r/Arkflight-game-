@@ -1,0 +1,65 @@
+/* Final primary-button endcap color match.
+   The source right endcap is much warmer/oranger than the blue-black center plate.
+   Correct each cap independently so the three-piece button reads as one forged control. */
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin::before,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin::after {
+  opacity: .92 !important;
+  filter:
+    grayscale(.16)
+    sepia(.10)
+    saturate(.52)
+    brightness(.80)
+    contrast(1.08)
+    drop-shadow(0 2px 4px rgba(0, 0, 0, .58)) !important;
+}
+
+/* Viewer-left cap: retain a little warm brass, but remove the bright yellow/orange cast. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin::before {
+  filter:
+    grayscale(.14)
+    sepia(.08)
+    saturate(.56)
+    brightness(.82)
+    contrast(1.07)
+    drop-shadow(0 2px 4px rgba(0, 0, 0, .58)) !important;
+}
+
+/* Viewer-right cap needs the stronger correction: darker, less saturated, slightly cooler. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin::after {
+  opacity: .88 !important;
+  filter:
+    grayscale(.24)
+    sepia(.04)
+    saturate(.38)
+    brightness(.72)
+    contrast(1.12)
+    drop-shadow(0 2px 4px rgba(0, 0, 0, .62)) !important;
+}
+
+/* Disabled state should dim the assembled control evenly rather than re-warming the caps. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin:disabled::before,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin:disabled::after {
+  opacity: .72 !important;
+}
+
+/* Hover adds only a restrained lift so the right cap does not flare orange again. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin:hover:not(:disabled)::before {
+  filter:
+    grayscale(.12)
+    sepia(.08)
+    saturate(.60)
+    brightness(.88)
+    contrast(1.07)
+    drop-shadow(0 2px 5px rgba(0, 0, 0, .62)) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin:hover:not(:disabled)::after {
+  filter:
+    grayscale(.20)
+    sepia(.03)
+    saturate(.42)
+    brightness(.78)
+    contrast(1.12)
+    drop-shadow(0 2px 5px rgba(0, 0, 0, .66)) !important;
+}
