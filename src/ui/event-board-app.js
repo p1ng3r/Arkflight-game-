@@ -12,6 +12,17 @@ const HandlebarsApplication = HandlebarsApplicationMixin(ApplicationV2);
 function titleCase(value) { return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (c) => c.toUpperCase()); }
 function formatTimer(seconds) { const value = Math.max(0, Number(seconds) || 0); return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`; }
 function moduleAssetPath(path) { if (!path) return ""; if (/^(https?:|data:|modules\/)/.test(path)) return path; return `modules/arkflight-game/${String(path).replace(/^\/+/, "")}`; }
+function signed(value) { const n = Number(value ?? 0); return n > 0 ? `+${n}` : String(n); }
+function statisticMod(actor, slug) {
+  if (!actor || !slug) return null;
+  const statistic = actor.getStatistic?.(slug) ?? actor.skills?.[slug];
+  const value = Number(statistic?.check?.mod ?? statistic?.mod);
+  return Number.isFinite(value) ? value : null;
+}
+function sourcesTitle(sources, fallback) {
+  const rows = [...(sources ?? [])].filter(Boolean);
+  return rows.length ? rows.join("\n") : fallback;
+}
 
 export class ArkflightEventBoard extends HandlebarsApplication {
   static DEFAULT_OPTIONS = { id: "arkflight-event-board", classes: ["arkflight", "arkflight-event-board"], position: { width: 1180, height: 820 }, window: { title: "Arkflight Event", icon: "fa-solid fa-compass" } };
@@ -47,6 +58,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       const result = state.results?.[stationId] ?? null;
       const assignedActorId = state.assignments?.[stationId]?.actorId ?? null;
       const assignedActor = assignedActorId ? game.actors.get(assignedActorId) : null;
+
       return {
         stationId,
         presentation: stationPresentation(stationId),
@@ -58,9 +70,24 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         assignedActorId,
         assignedActorName: assignedActor?.name ?? null,
         actorOptions: playerActors.map((actor) => ({ id: actor.id, name: actor.name, selected: actor.id === assignedActorId })),
-        availableActions: availableActions.map((action) => ({ ...action, fallback: action.id === fallback.id, selected: action.id === selection.actionId })),
+        availableActions: availableActions.map((action) => ({
+          ...action,
+          fallback: action.id === fallback.id,
+          selected: action.id === selection.actionId,
+          heroic: (action.skills ?? []).some((skill) => (skill.riskBids?.length ?? 0) > 0)
+        })),
         selectedAction,
-        skillChoices: (selectedAction?.skills ?? []).map((skill) => ({ ...skill, selected: skill.id === selection.skillId, heroic: (skill.riskBids?.length ?? 0) > 0 })),
+        skillChoices: (selectedAction?.skills ?? []).map((skill) => {
+          const mod = statisticMod(assignedActor, skill.skill);
+          return {
+            ...skill,
+            selected: skill.id === selection.skillId,
+            heroic: (skill.riskBids?.length ?? 0) > 0,
+            skillMod: mod,
+            skillModLabel: mod === null ? "—" : signed(mod),
+            skillModTitle: assignedActor ? `${assignedActor.name}'s ${skill.label} modifier` : "Assign an officer to show their PF2e modifier."
+          };
+        }),
         selectedSkill,
         riskChoices,
         hasRiskChoices: riskChoices.length > 0,
@@ -77,8 +104,46 @@ export class ArkflightEventBoard extends HandlebarsApplication {
     const chosen = activeId ? selectedResolution(event, state, activeId) : null;
     const activeAssignedActorId = activeId ? state.assignments?.[activeId]?.actorId ?? null : null;
     const activeAssignedActor = activeAssignedActorId ? game.actors.get(activeAssignedActorId) : null;
-    const activeResolution = chosen ? { stationId: activeId, stationName: stationPresentation(activeId)?.displayName ?? titleCase(activeId), actionName: chosen.action.name, skillLabel: chosen.skill.label, skillSlug: chosen.skill.skill, baseDc: chosen.skill.dc, riskTier: chosen.riskBid?.tier ?? null, riskName: chosen.riskBenefit?.name ?? null, checkBonus: chosen.checkBonus, dcAdjustment: chosen.dcAdjustment, finalDc: chosen.finalDc, assignedActorName: activeAssignedActor?.name ?? null } : null;
-    const resultRows = state.order.map((stationId) => { const result = state.results?.[stationId]; if (!result) return null; return { stationId, stationName: stationPresentation(stationId)?.displayName ?? titleCase(stationId), ...result, outcomeLabel: titleCase(result.degreeKey ?? result.outcome) }; }).filter(Boolean);
+    const activeSkillMod = chosen ? statisticMod(activeAssignedActor, chosen.skill.skill) : null;
+    const activeResolution = chosen ? {
+      stationId: activeId,
+      stationName: stationPresentation(activeId)?.displayName ?? titleCase(activeId),
+      actionName: chosen.action.name,
+      skillLabel: chosen.skill.label,
+      skillSlug: chosen.skill.skill,
+      skillModLabel: activeSkillMod === null ? "—" : signed(activeSkillMod),
+      baseDc: chosen.skill.dc,
+      riskTier: chosen.riskBid?.tier ?? null,
+      riskName: chosen.riskBenefit?.name ?? null,
+      riskIncrease: chosen.riskIncrease,
+      preAdjustmentDc: chosen.preAdjustmentDc,
+      checkBonus: chosen.checkBonus,
+      checkBonusLabel: signed(chosen.checkBonus),
+      checkBonusTitle: sourcesTitle(chosen.checkBonusSources, "Arkflight crew advantage from an earlier Heroic / Risk benefit."),
+      dcAdjustment: chosen.dcAdjustment,
+      dcAdjustmentLabel: signed(chosen.dcAdjustment),
+      dcAdjustmentTitle: sourcesTitle(chosen.dcAdjustmentSources, "Arkflight DC adjustment from an earlier Heroic / Risk benefit."),
+      degreeLift: chosen.degreeLift,
+      degreeLiftTitle: sourcesTitle(chosen.degreeLiftSources, "Arkflight degree improvement from an earlier Heroic / Risk benefit."),
+      finalDc: chosen.finalDc,
+      assignedActorName: activeAssignedActor?.name ?? null
+    } : null;
+
+    const resultRows = state.order.map((stationId) => {
+      const result = state.results?.[stationId];
+      if (!result) return null;
+      return {
+        stationId,
+        stationName: stationPresentation(stationId)?.displayName ?? titleCase(stationId),
+        ...result,
+        outcomeLabel: titleCase(result.degreeKey ?? result.outcome),
+        checkBonusLabel: signed(result.checkBonus),
+        dcAdjustmentLabel: signed(result.dcAdjustment),
+        checkBonusTitle: sourcesTitle(result.checkBonusSources, "Arkflight crew advantage."),
+        dcAdjustmentTitle: sourcesTitle(result.dcAdjustmentSources, "Arkflight DC adjustment.")
+      };
+    }).filter(Boolean);
+
     const encounter = state.encounter ?? event.startingState ?? {};
     const pressure = Object.entries(encounter.pressure ?? {}).map(([system, value]) => ({ system: titleCase(system), value }));
     const hazards = (encounter.hazards ?? []).map((id) => ({ id, name: titleCase(id) }));
