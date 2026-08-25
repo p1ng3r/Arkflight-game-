@@ -10,10 +10,10 @@ export const ROUND_BANDS = Object.freeze([
 export const RISK_TIERS = Object.freeze([2, 5, 8]);
 export const PLANNING_SECONDS = 180;
 
-export function riskBid({ tier, benefitId, narrativeHook = "" }) {
+export function riskBid({ tier, benefitId, parameters = {}, narrativeHook = "" }) {
   if (!RISK_TIERS.includes(tier)) throw new Error(`Unsupported Risk Bid tier: ${tier}`);
   if (!benefitId) throw new Error("Risk Bid requires benefitId");
-  return Object.freeze({ tier, benefitId, narrativeHook });
+  return Object.freeze({ tier, benefitId, parameters: Object.freeze({ ...parameters }), narrativeHook });
 }
 
 export function skillChoice({ id, label, skill, dc, traits = [], riskBids = [] }) {
@@ -43,7 +43,7 @@ export function roundDefinition({ id, title, situation = "", image = "", station
 
 export function eventDefinition({ id, title, image, openingVignette, goal, startingState = {}, rounds, endings = {} }) {
   if (!id || !title || !image || !openingVignette || !goal) throw new Error("Event requires id, title, image, openingVignette, and goal");
-  const sentenceCount = String(openingVignette).split(/[.!?]+/).map(s => s.trim()).filter(Boolean).length;
+  const sentenceCount = String(openingVignette).split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length;
   if (sentenceCount < 3 || sentenceCount > 6) throw new Error(`Opening vignette must be 3-6 sentences; received ${sentenceCount}`);
   if (!Array.isArray(rounds) || rounds.length < 1) throw new Error("Event requires at least one round");
   return Object.freeze({
@@ -64,7 +64,7 @@ export function scoreRound(degrees) {
     if (!(degree in DEGREE_SCORES)) throw new Error(`Unknown degree: ${degree}`);
     return sum + DEGREE_SCORES[degree];
   }, 0);
-  const band = ROUND_BANDS.find(entry => score >= entry.min && score <= entry.max);
+  const band = ROUND_BANDS.find((entry) => score >= entry.min && score <= entry.max);
   if (!band) throw new Error(`No round band for score ${score}`);
   return Object.freeze({ score, bandId: band.id, momentumDelta: band.momentum });
 }
