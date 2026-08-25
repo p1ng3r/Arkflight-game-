@@ -1,0 +1,505 @@
+/* Arkflight cinematic Event opening screen.
+   This is real responsive UI; the concept artwork is only a visual target. */
+
+.arkflight-event-board.arkflight-opening-mode .window-content {
+  padding: 0 !important;
+  overflow-x: hidden !important;
+  background: #080a0c !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-board-shell {
+  padding: 0 !important;
+  min-width: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(82, 57, 24, .16), transparent 42%),
+    linear-gradient(180deg, #101315 0%, #07090b 100%) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-event-header,
+.arkflight-event-board.arkflight-opening-mode > .window-content .arkflight-hazard-strip {
+  display: none !important;
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening {
+  display: grid !important;
+  grid-template-columns: minmax(270px, .86fr) minmax(430px, 1.28fr) minmax(285px, .82fr) !important;
+  gap: 0 !important;
+  width: 100%;
+  min-height: 720px;
+  margin: 0 !important;
+  overflow: hidden !important;
+  border: 1px solid #72592f;
+  box-shadow:
+    inset 0 0 0 2px rgba(8, 8, 7, .9),
+    inset 0 0 0 3px rgba(171, 128, 55, .25),
+    0 0 24px rgba(0, 0, 0, .7);
+}
+
+.arkflight-opening-art-column,
+.arkflight-opening-command-column,
+.arkflight-opening-stakes-column {
+  min-width: 0;
+  position: relative;
+}
+
+/* LEFT — event art */
+.arkflight-opening-art-column {
+  overflow: hidden;
+  border-right: 1px solid rgba(157, 119, 52, .65);
+  background: #08090a;
+}
+
+.arkflight-opening-art-column::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.08), transparent 55%, rgba(0,0,0,.68)),
+    linear-gradient(90deg, transparent 88%, rgba(0,0,0,.5));
+  box-shadow: inset 0 0 28px rgba(0,0,0,.55);
+}
+
+.arkflight-opening-art-column img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.arkflight-opening-art-caption {
+  position: absolute;
+  z-index: 3;
+  left: 20px;
+  right: 20px;
+  bottom: 22px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(206, 164, 85, .45);
+  text-shadow: 0 2px 3px #000;
+}
+
+.arkflight-opening-art-caption .round-label {
+  color: #c9a766;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+
+.arkflight-opening-art-caption h3 {
+  margin: 4px 0 5px;
+  color: #f2e4c5;
+  font-family: var(--font-serif, serif);
+  font-size: 20px;
+}
+
+.arkflight-opening-art-caption p {
+  margin: 0;
+  color: #cfc4ad;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* CENTER — title, story, muster */
+.arkflight-opening-command-column {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 26px 20px;
+  color: #e8dfc9;
+  background:
+    radial-gradient(circle at 50% -12%, rgba(121, 84, 33, .17), transparent 38%),
+    linear-gradient(180deg, rgba(15,18,20,.99), rgba(8,11,13,.99));
+  border-right: 1px solid rgba(157, 119, 52, .6);
+}
+
+.arkflight-opening-overline {
+  text-align: center;
+  color: #b99657;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .34em;
+  text-transform: uppercase;
+}
+
+.arkflight-opening-title {
+  margin: 8px auto 11px;
+  max-width: 640px;
+  text-align: center;
+  color: #e9c987;
+  font-family: var(--font-serif, serif);
+  font-size: clamp(28px, 2.5vw, 42px);
+  line-height: 1.05;
+  letter-spacing: .035em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 7px rgba(0,0,0,.8);
+}
+
+.arkflight-opening-title-rule {
+  width: 72%;
+  height: 1px;
+  margin: 0 auto 15px;
+  background: linear-gradient(90deg, transparent, #886a35 25%, #c2994e 50%, #886a35 75%, transparent);
+}
+
+.arkflight-opening-story {
+  max-width: 650px;
+  margin: 0 auto;
+  color: #d9d1bf;
+  font-family: var(--font-serif, serif);
+  font-size: 13px;
+  line-height: 1.52;
+}
+
+.arkflight-opening-muster {
+  margin-top: 17px;
+}
+
+.arkflight-opening-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+  color: #d9b974;
+  font-family: var(--font-serif, serif);
+  font-size: 16px;
+  letter-spacing: .07em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.arkflight-opening-section-title::before,
+.arkflight-opening-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(179,137,60,.65));
+}
+
+.arkflight-opening-section-title::after {
+  transform: scaleX(-1);
+}
+
+.arkflight-opening-muster-help {
+  margin: 0 0 9px;
+  color: #9e9583;
+  font-size: 10px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.arkflight-opening-crew-list {
+  display: grid;
+  gap: 5px;
+}
+
+.arkflight-opening-crew-row {
+  display: grid;
+  grid-template-columns: 142px minmax(135px, .92fr) minmax(155px, 1.12fr) 54px;
+  align-items: center;
+  min-width: 0;
+  min-height: 45px;
+  border: 1px solid rgba(130, 103, 57, .58);
+  background: linear-gradient(90deg, rgba(43,39,31,.72), rgba(21,23,22,.78));
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.42);
+}
+
+.arkflight-opening-station-name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 0 10px;
+  color: #e2c789;
+  font-family: var(--font-serif, serif);
+  font-size: 13px;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+
+.arkflight-opening-station-name i {
+  width: 25px;
+  color: #d0aa5c;
+  font-size: 18px;
+  text-align: center;
+}
+
+.arkflight-opening-actor-field,
+.arkflight-opening-mastery-field {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  padding: 4px;
+}
+
+.arkflight-opening-portrait {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  object-fit: cover;
+  border: 1px solid #745d35;
+  border-radius: 2px;
+  background: #101212;
+}
+
+.arkflight-opening-portrait.empty {
+  display: grid;
+  place-items: center;
+  color: #655d4c;
+  font-size: 15px;
+}
+
+.arkflight-opening-crew-row select {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 34px;
+  border: 1px solid #5f5135;
+  border-radius: 2px;
+  background: #151719;
+  color: #ddd3bc;
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+
+.arkflight-opening-actor-field select {
+  margin-left: 5px;
+}
+
+.arkflight-opening-mastery-field select {
+  border-color: rgba(151,113,49,.8);
+  color: #e5d2a5;
+}
+
+.arkflight-opening-row-state {
+  padding-right: 8px;
+  color: #71806a;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-align: right;
+}
+
+.arkflight-opening-row-state.ready {
+  color: #8fc07a;
+}
+
+.arkflight-opening-mastery-preview {
+  grid-column: 2 / -1;
+  display: none;
+  margin: -1px 6px 6px 146px;
+  padding: 6px 8px;
+  border-left: 2px solid #8c6b34;
+  background: rgba(0,0,0,.23);
+  color: #aaa18e;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.arkflight-opening-crew-row.has-mastery + .arkflight-opening-mastery-preview {
+  display: block;
+}
+
+.arkflight-opening-mastery-preview strong {
+  color: #cdb175;
+}
+
+.arkflight-opening-ready-message {
+  margin: 8px 0 5px;
+  color: #b8846e;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.arkflight-opening-ready-message.ready {
+  color: #8fbd7b;
+}
+
+.arkflight-opening-begin {
+  width: min(92%, 660px);
+  min-height: 48px;
+  margin: auto auto 0;
+  border: 1px solid #a57b37 !important;
+  outline: 1px solid rgba(31,19,5,.95);
+  outline-offset: -4px;
+  background:
+    linear-gradient(180deg, rgba(17,67,105,.95), rgba(10,42,67,.96)) !important;
+  color: #f0ddb6 !important;
+  font-family: var(--font-serif, serif);
+  font-size: 16px;
+  letter-spacing: .035em;
+  box-shadow:
+    inset 0 0 16px rgba(63,145,196,.15),
+    0 0 0 2px rgba(89,63,27,.7);
+}
+
+.arkflight-opening-begin:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(24,82,126,.98), rgba(12,50,79,.98)) !important;
+  border-color: #d0a455 !important;
+}
+
+.arkflight-opening-begin:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+/* RIGHT — stakes / hazards / scoring */
+.arkflight-opening-stakes-column {
+  padding: 20px 18px;
+  background:
+    radial-gradient(circle at 70% 100%, rgba(78,56,25,.16), transparent 34%),
+    #090c0e;
+}
+
+.arkflight-opening-side-panel {
+  margin-bottom: 15px;
+  padding: 14px;
+  border: 1px solid rgba(131,99,49,.62);
+  background: rgba(9,12,14,.8);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.5);
+}
+
+.arkflight-opening-side-panel h3 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(142,106,52,.48);
+  color: #d4b16e;
+  font-family: var(--font-serif, serif);
+  font-size: 15px;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.arkflight-opening-stakes-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0,1fr));
+  gap: 4px;
+}
+
+.arkflight-opening-stake {
+  min-width: 0;
+  text-align: center;
+}
+
+.arkflight-opening-stake-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 5px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: rgba(0,0,0,.35);
+  box-shadow: 0 0 10px color-mix(in srgb, currentColor 24%, transparent);
+  font-size: 18px;
+}
+
+.arkflight-opening-stake.momentum { color: #5ec4ff; }
+.arkflight-opening-stake.hull { color: #df6848; }
+.arkflight-opening-stake.arkengine { color: #e5a43c; }
+.arkflight-opening-stake.lifeveil { color: #9ac95e; }
+.arkflight-opening-stake.rigging { color: #ba74c9; }
+
+.arkflight-opening-stake-label {
+  display: block;
+  overflow: hidden;
+  color: #c9bea6;
+  font-family: var(--font-serif, serif);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+.arkflight-opening-stake-value {
+  display: block;
+  margin-top: 2px;
+  color: currentColor;
+  font-size: 17px;
+}
+
+.arkflight-opening-hazard-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.arkflight-opening-hazard {
+  padding: 7px 9px;
+  border: 1px solid #9a4a2d;
+  background: rgba(73,24,13,.42);
+  color: #e7764d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.arkflight-opening-no-hazards {
+  color: #74766e;
+  font-size: 10px;
+  font-style: italic;
+  text-align: center;
+}
+
+.arkflight-opening-score-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 10px;
+  font-size: 12px;
+}
+
+.arkflight-opening-score-grid .crit-success { color: #62c4ff; }
+.arkflight-opening-score-grid .success { color: #79c979; }
+.arkflight-opening-score-grid .failure { color: #e99a3c; }
+.arkflight-opening-score-grid .crit-failure { color: #ea5d45; }
+
+.arkflight-opening-score-zero {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(126,96,51,.48);
+  color: #d6cdbb;
+  font-family: var(--font-serif, serif);
+  font-size: 11px;
+  text-align: center;
+}
+
+.arkflight-opening-compass {
+  display: grid;
+  place-items: center;
+  min-height: 90px;
+  color: rgba(151,114,53,.28);
+  font-size: 62px;
+}
+
+@media (max-width: 1120px) {
+  .arkflight-opening-grid.arkflight-cinematic-opening {
+    grid-template-columns: minmax(220px,.7fr) minmax(400px,1.3fr) minmax(245px,.76fr) !important;
+  }
+  .arkflight-opening-command-column { padding-left: 18px; padding-right: 18px; }
+  .arkflight-opening-crew-row { grid-template-columns: 118px minmax(120px,.9fr) minmax(140px,1.08fr) 48px; }
+  .arkflight-opening-station-name { padding: 0 7px; font-size: 11px; }
+}
+
+@media (max-width: 900px) {
+  .arkflight-opening-grid.arkflight-cinematic-opening {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    min-height: 0;
+    overflow-y: auto !important;
+  }
+  .arkflight-opening-art-column { min-height: 340px; border-right: 0; border-bottom: 1px solid #72592f; }
+  .arkflight-opening-command-column { border-right: 0; border-bottom: 1px solid #72592f; }
+  .arkflight-opening-stakes-grid { max-width: 480px; margin: 0 auto; }
+}
+
+@media (max-width: 610px) {
+  .arkflight-opening-command-column { padding: 18px 12px; }
+  .arkflight-opening-crew-row { grid-template-columns: 102px minmax(0,1fr); }
+  .arkflight-opening-mastery-field { grid-column: 2; }
+  .arkflight-opening-row-state { grid-column: 2; padding: 2px 6px 6px; text-align: left; }
+  .arkflight-opening-mastery-preview { margin-left: 108px; grid-column: 1 / -1; }
+}
