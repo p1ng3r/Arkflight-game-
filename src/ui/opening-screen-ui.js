@@ -74,7 +74,15 @@ function masteryPreview(state, stationId) {
   const mastery = getMasteryTechnique(stationId, masteryId);
   if (!mastery) return "";
   const trigger = mastery.trigger ?? titleCase(mastery.timing);
-  return `<strong>Trigger:</strong> ${escapeHtml(trigger)} &nbsp; <strong>Effect:</strong> ${escapeHtml(mastery.description)}`;
+  return `
+    <div class="arkflight-opening-helper-line">
+      <span class="arkflight-opening-helper-label"><i class="fa-solid fa-bolt"></i> Trigger</span>
+      <span>${escapeHtml(trigger)}</span>
+    </div>
+    <div class="arkflight-opening-helper-line">
+      <span class="arkflight-opening-helper-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Effect</span>
+      <span>${escapeHtml(mastery.description)}</span>
+    </div>`;
 }
 
 function crewRows(state) {
@@ -84,21 +92,32 @@ function crewRows(state) {
     const masteryId = state.masterySelections?.[stationId] ?? null;
     const ready = Boolean(actorId && masteryId);
     return `
-      <div class="arkflight-opening-crew-row ${masteryId ? "has-mastery" : ""}" data-opening-station="${stationId}">
-        <div class="arkflight-opening-station-name">
-          <i class="${presentation?.iconClass ?? "fa-solid fa-circle"}"></i>
-          <span>${escapeHtml(presentation?.displayName ?? titleCase(stationId))}</span>
+      <section class="arkflight-opening-station-card ${ready ? "ready" : "needs-setup"} ${masteryId ? "has-mastery" : ""}" data-opening-station="${stationId}">
+        <div class="arkflight-opening-station-main">
+          <div class="arkflight-opening-station-name">
+            <span class="arkflight-opening-station-glyph"><i class="${presentation?.iconClass ?? "fa-solid fa-circle"}"></i></span>
+            <span class="arkflight-opening-station-copy"><small>STATION</small><strong>${escapeHtml(presentation?.displayName ?? titleCase(stationId))}</strong></span>
+          </div>
+          <div class="arkflight-opening-actor-field">
+            ${actorPortrait(state, stationId)}
+            <div class="arkflight-opening-field-stack">
+              <span class="arkflight-opening-field-label">Officer</span>
+              <select data-opening-control="actor" data-station="${stationId}" ${game.user.isGM ? "" : "disabled"}>${actorOptions(state, stationId)}</select>
+            </div>
+          </div>
+          <div class="arkflight-opening-mastery-field">
+            <div class="arkflight-opening-field-stack">
+              <span class="arkflight-opening-field-label">Mastery</span>
+              <select data-opening-control="mastery" data-station="${stationId}">${masteryOptions(state, stationId)}</select>
+            </div>
+          </div>
+          <div class="arkflight-opening-row-state ${ready ? "ready" : "needs-setup"}">
+            <i class="fa-solid ${ready ? "fa-circle-check" : "fa-circle-dot"}"></i>
+            <span>${ready ? "READY" : "NEEDS SETUP"}</span>
+          </div>
         </div>
-        <div class="arkflight-opening-actor-field">
-          ${actorPortrait(state, stationId)}
-          <select data-opening-control="actor" data-station="${stationId}" ${game.user.isGM ? "" : "disabled"}>${actorOptions(state, stationId)}</select>
-        </div>
-        <div class="arkflight-opening-mastery-field">
-          <select data-opening-control="mastery" data-station="${stationId}">${masteryOptions(state, stationId)}</select>
-        </div>
-        <div class="arkflight-opening-row-state ${ready ? "ready" : ""}">${ready ? "READY" : "NEEDS SETUP"}</div>
-      </div>
-      <div class="arkflight-opening-mastery-preview">${masteryPreview(state, stationId)}</div>
+        ${masteryId ? `<div class="arkflight-opening-mastery-preview">${masteryPreview(state, stationId)}</div>` : ""}
+      </section>
     `;
   }).join("");
 }
@@ -239,12 +258,11 @@ function decorateOpeningScreen(root, controller) {
   bindOpeningControls(root, controller);
 }
 
-Hooks.on("renderApplicationV2", (app, element) => {
-  const root = boardRoot(app, element);
-  const controller = game.arkflight?.controller;
-  if (!root || !controller?.state) return;
-
-  /* Run after Arkflight's legacy opening decorators so this screen is the final
-     presentation layer and no duplicate setup block can remain behind it. */
-  setTimeout(() => decorateOpeningScreen(root, controller), 0);
-});
+export function installOpeningScreenUI() {
+  Hooks.on("renderApplicationV2", (app, element) => {
+    const root = boardRoot(app, element);
+    const controller = game.arkflight?.controller;
+    if (!root || !controller?.state) return;
+    setTimeout(() => decorateOpeningScreen(root, controller), 0);
+  });
+}
