@@ -9,7 +9,8 @@
     "verified": "14"
   },
   "styles": [
-    "styles/arkflight.css"
+    "styles/arkflight.css",
+    "styles/event-round.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js"
