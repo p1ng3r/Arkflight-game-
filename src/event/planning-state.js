@@ -1,13 +1,7 @@
 import { STATIONS, PLANNING_SECONDS } from "./event-schema.js";
 
 function emptySelection() {
-  return {
-    actionId: null,
-    skillId: null,
-    riskTier: null,
-    signatureId: null,
-    componentAbilityId: null
-  };
+  return { actionId: null, skillId: null, riskTier: null, signatureId: null, componentAbilityId: null };
 }
 
 function emptyAssignments() {
@@ -32,13 +26,8 @@ export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Da
 }
 
 export function startPlanning(state, now = Date.now()) {
-  if (!state || state.phase !== "opening") throw new Error("Planning may only start from the opening phase.");
-  return {
-    ...state,
-    phase: "planning",
-    planningStartedAt: now,
-    planningEndsAt: now + (PLANNING_SECONDS * 1000)
-  };
+  if (!state || !["opening", "round-opening"].includes(state.phase)) throw new Error("Planning may only start from an opening phase.");
+  return { ...state, phase: "planning", planningStartedAt: now, planningEndsAt: now + (PLANNING_SECONDS * 1000) };
 }
 
 export function planningSecondsRemaining(state, now = Date.now()) {
@@ -48,70 +37,26 @@ export function planningSecondsRemaining(state, now = Date.now()) {
 
 export function assignActor(state, station, actorId) {
   assertStation(station);
-  if (!state || !["opening", "planning"].includes(state.phase)) {
-    throw new Error("Station actors may only be assigned before the plan is locked.");
-  }
-  return {
-    ...state,
-    assignments: {
-      ...(state.assignments ?? emptyAssignments()),
-      [station]: { actorId: actorId || null }
-    }
-  };
+  if (!state || !["opening", "round-opening", "planning"].includes(state.phase)) throw new Error("Station actors may only be assigned before the plan is locked.");
+  return { ...state, assignments: { ...(state.assignments ?? emptyAssignments()), [station]: { actorId: actorId || null } } };
 }
 
-export function selectAction(state, station, actionId) {
-  assertPlanning(state);
-  assertStation(station);
-  return updateSelection(state, station, { actionId, skillId: null, riskTier: null });
-}
-
-export function selectSkill(state, station, skillId) {
-  assertPlanning(state);
-  assertStation(station);
-  if (!state.selections[station]?.actionId) throw new Error("Choose an action before choosing a skill.");
-  return updateSelection(state, station, { skillId, riskTier: null });
-}
-
-export function selectRiskTier(state, station, riskTier) {
-  assertPlanning(state);
-  assertStation(station);
-  if (!state.selections[station]?.skillId) throw new Error("Choose a skill before choosing a Risk Bid.");
-  const normalized = riskTier === null || riskTier === 0 ? null : Number(riskTier);
-  if (normalized !== null && ![2, 5, 8].includes(normalized)) throw new Error(`Unsupported Risk Bid tier: ${riskTier}`);
-  return updateSelection(state, station, { riskTier: normalized });
-}
-
-export function selectSignature(state, station, signatureId) {
-  assertPlanning(state);
-  assertStation(station);
-  return updateSelection(state, station, { signatureId: signatureId || null });
-}
-
-export function selectComponentAbility(state, station, componentAbilityId) {
-  assertPlanning(state);
-  assertStation(station);
-  return updateSelection(state, station, { componentAbilityId: componentAbilityId || null });
-}
+export function selectAction(state, station, actionId) { assertPlanning(state); assertStation(station); return updateSelection(state, station, { actionId, skillId: null, riskTier: null }); }
+export function selectSkill(state, station, skillId) { assertPlanning(state); assertStation(station); if (!state.selections[station]?.actionId) throw new Error("Choose an action before choosing a skill."); return updateSelection(state, station, { skillId, riskTier: null }); }
+export function selectRiskTier(state, station, riskTier) { assertPlanning(state); assertStation(station); if (!state.selections[station]?.skillId) throw new Error("Choose a skill before choosing a Risk Bid."); const normalized = riskTier === null || riskTier === 0 ? null : Number(riskTier); if (normalized !== null && ![2,5,8].includes(normalized)) throw new Error(`Unsupported Risk Bid tier: ${riskTier}`); return updateSelection(state, station, { riskTier: normalized }); }
+export function selectSignature(state, station, signatureId) { assertPlanning(state); assertStation(station); return updateSelection(state, station, { signatureId: signatureId || null }); }
+export function selectComponentAbility(state, station, componentAbilityId) { assertPlanning(state); assertStation(station); return updateSelection(state, station, { componentAbilityId: componentAbilityId || null }); }
 
 export function moveOrder(state, station, direction) {
-  assertPlanning(state);
-  assertStation(station);
-  const order = [...state.order];
-  const index = order.indexOf(station);
-  const target = direction === "earlier" ? index - 1 : direction === "later" ? index + 1 : index;
+  assertPlanning(state); assertStation(station);
+  const order = [...state.order]; const index = order.indexOf(station); const target = direction === "earlier" ? index - 1 : direction === "later" ? index + 1 : index;
   if (target < 0 || target >= order.length || target === index) return state;
-  [order[index], order[target]] = [order[target], order[index]];
-  return { ...state, order };
+  [order[index], order[target]] = [order[target], order[index]]; return { ...state, order };
 }
 
 export function planningReady(state) {
   if (!state || state.phase !== "planning") return false;
-  return STATIONS.every((station) => {
-    const selection = state.selections?.[station];
-    const actorId = state.assignments?.[station]?.actorId;
-    return Boolean(actorId && selection?.actionId && selection?.skillId);
-  });
+  return STATIONS.every((station) => Boolean(state.assignments?.[station]?.actorId && state.selections?.[station]?.actionId && state.selections?.[station]?.skillId));
 }
 
 export function lockPlanning(state, now = Date.now()) {
@@ -122,29 +67,9 @@ export function lockPlanning(state, now = Date.now()) {
 
 export function restartEvent(state, { roundId, preserveAssignments = true, now = Date.now() } = {}) {
   if (!state?.eventId) throw new Error("No Arkflight Event is active.");
-  return createPlanningState({
-    eventId: state.eventId,
-    roundId: roundId ?? state.roundId,
-    roundIndex: 0,
-    now,
-    assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null
-  });
+  return createPlanningState({ eventId: state.eventId, roundId: roundId ?? state.roundId, roundIndex: 0, now, assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null });
 }
 
-function updateSelection(state, station, patch) {
-  return {
-    ...state,
-    selections: {
-      ...state.selections,
-      [station]: { ...state.selections[station], ...patch }
-    }
-  };
-}
-
-function assertPlanning(state) {
-  if (!state || state.phase !== "planning") throw new Error("Selections may only change during planning.");
-}
-
-function assertStation(station) {
-  if (!STATIONS.includes(station)) throw new Error(`Unknown station: ${station}`);
-}
+function updateSelection(state, station, patch) { return { ...state, selections: { ...state.selections, [station]: { ...state.selections[station], ...patch } } }; }
+function assertPlanning(state) { if (!state || state.phase !== "planning") throw new Error("Selections may only change during planning."); }
+function assertStation(station) { if (!STATIONS.includes(station)) throw new Error(`Unknown station: ${station}`); }
