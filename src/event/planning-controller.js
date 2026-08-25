@@ -160,7 +160,7 @@ export class PlanningController {
         next = startPlanning(this.state);
         break;
       case "assign-actor":
-        this.#requireActorControl(sourceUserId, command.actorId);
+        this.#requireStationClaimPermission(sourceUserId, command.station, command.actorId);
         next = assignActor(this.state, command.station, command.actorId);
         break;
       case "select-mastery": {
@@ -238,10 +238,20 @@ export class PlanningController {
   #requireGM() { if (!game.user.isGM) throw new Error("Only the GM may perform that Arkflight Event action."); }
   #requireGMUser(userId) { const user = game.users.get(userId); if (!user?.isGM) throw new Error("Only the GM may perform that Arkflight Event action."); }
 
-  #requireActorControl(userId, actorId) {
+  #requireStationClaimPermission(userId, stationId, actorId) {
     const user = game.users.get(userId);
     if (!user) throw new Error("Unknown Arkflight player.");
-    if (user.isGM || !actorId) return;
+    if (user.isGM) return;
+
+    const existingActorId = this.state.assignments?.[stationId]?.actorId ?? null;
+    if (existingActorId) {
+      const existingActor = game.actors.get(existingActorId);
+      if (!existingActor?.testUserPermission?.(user, "OWNER")) {
+        throw new Error("That Arkflight station has already been claimed by another player.");
+      }
+    }
+
+    if (!actorId) return;
     const actor = game.actors.get(actorId);
     if (!actor || actor.type !== "character" || !actor.testUserPermission?.(user, "OWNER")) {
       throw new Error("You may only claim an Arkflight station with a PF2e character you own.");
