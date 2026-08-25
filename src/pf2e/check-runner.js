@@ -33,24 +33,26 @@ function readableDegree(...values) {
   return null;
 }
 
-function withArkflightModifier(statistic, bonus) {
-  const value = Number(bonus ?? 0);
-  if (!value) return statistic;
+function withArkflightModifiers(statistic, modifiers = []) {
+  const rows = [...(modifiers ?? [])]
+    .map((entry) => ({ ...entry, modifier: Number(entry?.modifier ?? 0) }))
+    .filter((entry) => Number.isFinite(entry.modifier) && entry.modifier !== 0);
+  if (!rows.length) return statistic;
 
   const Modifier = game.pf2e?.Modifier;
   if (!Modifier || typeof statistic?.clone !== "function") {
-    throw new Error("PF2e Modifier API is unavailable; Arkflight cannot apply the crew bonus visibly.");
+    throw new Error("PF2e Modifier API is unavailable; Arkflight cannot apply its modifiers visibly.");
   }
 
-  const modifier = new Modifier({
-    slug: "arkflight-crew-advantage",
-    label: "Arkflight Crew Advantage",
-    modifier: value,
-    type: "untyped",
-    source: "Arkflight Heroic / Risk Benefit"
-  });
+  const pf2eModifiers = rows.map((entry) => new Modifier({
+    slug: entry.slug,
+    label: entry.label,
+    modifier: entry.modifier,
+    type: entry.type ?? "untyped",
+    source: entry.source ?? "Arkflight"
+  }));
 
-  return statistic.clone({ check: { modifiers: [modifier] } });
+  return statistic.clone({ check: { modifiers: pf2eModifiers } });
 }
 
 export async function rollPf2eStatistic({
@@ -59,13 +61,26 @@ export async function rollPf2eStatistic({
   dc,
   label = "Arkflight Station Check",
   options = [],
-  bonus = 0
+  bonus = 0,
+  modifiers = []
 }) {
   if (!actor) throw new Error("A PF2e actor is required.");
   const baseStatistic = actor.getStatistic?.(statisticSlug) ?? actor.skills?.[statisticSlug];
   if (!baseStatistic?.check?.roll) throw new Error(`PF2e statistic is unavailable: ${statisticSlug}`);
 
-  const statistic = withArkflightModifier(baseStatistic, bonus);
+  const combinedModifiers = [...(modifiers ?? [])];
+  const legacyBonus = Number(bonus ?? 0);
+  if (legacyBonus) {
+    combinedModifiers.push({
+      slug: "arkflight-crew-advantage",
+      label: "Arkflight Crew Advantage",
+      modifier: legacyBonus,
+      type: "untyped",
+      source: "Arkflight Heroic / Risk Benefit"
+    });
+  }
+
+  const statistic = withArkflightModifiers(baseStatistic, combinedModifiers);
   let captured = null;
   const roll = await statistic.check.roll({
     dc: { value: Number(dc) },
