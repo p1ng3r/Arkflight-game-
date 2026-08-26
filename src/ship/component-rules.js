@@ -12,6 +12,14 @@ export const COMPONENT_TYPES = Object.freeze({
 
 export const EFFECT_MODES = Object.freeze({ ADD: "add", SET: "set" });
 
+function freezeStationUnlocks(stations = {}) {
+  return Object.freeze(Object.fromEntries(Object.entries(stations).map(([station, values = {}]) => [station, Object.freeze({
+    masteries: Object.freeze([...new Set(values.masteries ?? [])]),
+    combatActions: Object.freeze([...new Set(values.combatActions ?? [])]),
+    passiveEffects: Object.freeze([...new Set(values.passiveEffects ?? [])])
+  })])));
+}
+
 export function component({
   id,
   name,
@@ -41,7 +49,11 @@ export function component({
     capabilities: Object.freeze([...new Set(capabilities)]),
     unlocks: Object.freeze({
       signatures: Object.freeze([...new Set(unlocks.signatures ?? [])]),
-      actions: Object.freeze([...new Set(unlocks.actions ?? [])])
+      actions: Object.freeze([...new Set(unlocks.actions ?? [])]),
+      masteries: Object.freeze([...new Set(unlocks.masteries ?? [])]),
+      combatActions: Object.freeze([...new Set(unlocks.combatActions ?? [])]),
+      passiveEffects: Object.freeze([...new Set(unlocks.passiveEffects ?? [])]),
+      stations: freezeStationUnlocks(unlocks.stations ?? {})
     }),
     requirements: Object.freeze({ ...requirements }),
     tradeoffs: Object.freeze([...tradeoffs]),
