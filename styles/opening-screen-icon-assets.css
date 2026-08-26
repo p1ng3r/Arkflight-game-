@@ -61,7 +61,6 @@
   background-image: url("../assets/ui/stations/station_icon_veilwarden.webp") !important;
 }
 
-/* Give the new artwork enough room without changing the station-row width budget. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-station-name {
   column-gap: 7px !important;
 }
@@ -75,7 +74,7 @@
   height: 50px !important;
   min-width: 50px !important;
   min-height: 50px !important;
-  margin: 0 auto 4px !important;
+  margin: 0 auto 3px !important;
   padding: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -111,9 +110,51 @@
   background-image: url("../assets/ui/stakes/event_stake_icon_rigging.webp") !important;
 }
 
-/* Keep all five stake emblems on exactly the same visual footprint. */
+/* Icon-only stakes: the artwork identifies the system; hover/focus explains it. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake-label {
+  display: none !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake {
+  min-width: 0 !important;
+  padding: 1px 2px 3px !important;
+  cursor: help;
+  outline: none;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake:focus-visible .arkflight-opening-stake-icon,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake:hover .arkflight-opening-stake-icon {
+  filter: brightness(1.08) drop-shadow(0 0 5px rgba(214, 174, 88, .24)) drop-shadow(0 2px 4px rgba(0, 0, 0, .82));
+}
+
+/* Three icons on the first row, two centered on the second row. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-grid {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
   align-items: start !important;
+  justify-items: center !important;
+  column-gap: 2px !important;
+  row-gap: 7px !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake {
+  grid-column: span 2;
+  width: 100% !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake:nth-child(5) {
+  grid-column: 4 / span 2;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake-value {
+  display: block !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  text-align: center !important;
 }
 
 /* Compact desktop fallback. */
