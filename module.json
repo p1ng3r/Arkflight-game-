@@ -38,7 +38,8 @@
     "styles/crew-ux.css",
     "styles/station-icons.css",
     "styles/hold-log-ux.css",
-    "styles/voyage-ship-binding.css"
+    "styles/voyage-ship-binding.css",
+    "styles/opening-screen-css-textures.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
