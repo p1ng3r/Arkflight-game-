@@ -9,6 +9,11 @@ import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 import { installPlayerResolutionUI } from "../ui/player-resolution-ui.js";
 import { installMasteryOpportunityUI } from "../ui/mastery-opportunity-ui.js";
 import { installOpeningScreenUI } from "../ui/opening-screen-ui.js";
+import {
+  isArkflightShip,
+  markVehicleAsArkflightShip,
+  registerArkflightShipSheet
+} from "../ui/ship-sheet-app.js";
 
 const MODULE_ID = "arkflight-game";
 let controller = null;
@@ -97,6 +102,7 @@ function announceStateRewards(state) {
 
 Hooks.once("init", () => {
   PlanningController.registerSetting();
+  registerArkflightShipSheet();
   installMasteryTacticsUI();
   installPlayerSetupClaims();
   installPlayerResolutionUI();
@@ -109,6 +115,8 @@ Hooks.once("init", () => {
     get controller() { return controller; },
     openBoard() { renderBoard(); return board; },
     openRewards() { showRewardSummary(); return rewardSummary; },
+    isShip(actor) { return isArkflightShip(actor); },
+    async markVehicleAsShip(actor) { return markVehicleAsArkflightShip(actor); },
     async openEvent(eventId = "glassback-cinderwake") {
       if (!controller) throw new Error("Arkflight is not ready yet.");
       await controller.openEvent(eventId);
