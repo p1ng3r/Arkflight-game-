@@ -95,7 +95,7 @@ function decorate(root) {
 
   if (!active || !data) {
     panel.innerHTML = `
-      <div class="arkflight-bound-vessel-empty"><i class="fa-solid fa-ship"></i></div>
+      <div class="arkflight-bound-vessel-empty" role="img" aria-label="Arkflight vessel emblem"></div>
       <div class="arkflight-bound-vessel-copy">
         <span>ACTIVE VOYAGE VESSEL</span>
         <strong>No Vessel Selected</strong>
@@ -111,7 +111,7 @@ function decorate(root) {
         <small>${text(data.hull?.name)} · ${text(data.engine?.name)}</small>
       </div>
       ${selector}
-      <div class="arkflight-bound-vessel-stats">
+      <div class="arkflight-bound-vessel-stats" aria-label="Selected vessel status">
         <div><span>Hull</span><strong>${data.resources.hull?.value ?? 0}/${data.resources.hull?.max ?? data.derived.stats?.hullIntegrity ?? 0}</strong></div>
         <div><span>Lifeveil</span><strong>${data.resources.lifeveil?.value ?? 0}/${data.resources.lifeveil?.max ?? data.derived.stats?.lifeveilCapacity ?? 0}</strong></div>
         <div><span>Strain</span><strong>${data.resources.strain?.value ?? 0}/${data.resources.strain?.max ?? data.derived.stats?.strainCapacity ?? 0}</strong></div>
