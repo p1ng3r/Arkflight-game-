@@ -36,7 +36,8 @@
     "styles/shipwright-ux.css",
     "styles/armory-ux.css",
     "styles/crew-ux.css",
-    "styles/station-icons.css"
+    "styles/station-icons.css",
+    "styles/hold-log-ux.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -46,6 +47,7 @@
     "src/ui/opening-stakes-tooltip-ui.js",
     "src/ui/armory-ux.js",
     "src/ui/crew-ux.js",
-    "src/ui/station-icon-ux.js"
+    "src/ui/station-icon-ux.js",
+    "src/ui/hold-log-ux.js"
   ]
 }
