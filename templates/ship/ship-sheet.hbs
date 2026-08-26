@@ -51,7 +51,7 @@
   {{#if arkflight.isShipwrightTab}}
     <main class="arkflight-commissioning-shell">
       <section class="arkflight-commissioning-main">
-        <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">SHIPWRIGHT COMMISSION</span><h2>Core Vessel Configuration</h2></div><small>Changes remain staged until Commission Vessel.</small></div>
+        <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">SHIPWRIGHT COMMISSION</span><h2>Vessel Configuration &amp; Refit</h2></div><small>{{arkflight.commissioning.noticeLabel}}</small></div>
 
         <div class="arkflight-commission-stage">
           <div class="arkflight-stage-heading"><span>01</span><div><h3>Hull Chassis</h3><p>The hull establishes base statistics, crew scale, room capacity, weapon mounts, and compatible Arkengines.</p></div></div>
@@ -75,6 +75,23 @@
           <div class="arkflight-stage-heading"><span>04</span><div><h3>Arkengine Pattern</h3><p>Configure the Arkengine's operational character.</p></div></div>
           <div class="arkflight-choice-grid">{{#each arkflight.commissioning.arkenginePatterns as |item|}}<button type="button" class="arkflight-choice-card compact {{#if item.selected}}is-selected{{/if}}" data-commission-field="arkenginePattern" data-id="{{item.id}}"><strong>{{item.name}}</strong><p>{{item.description}}</p></button>{{/each}}</div>
         </div>
+
+        <div class="arkflight-commission-stage">
+          <div class="arkflight-stage-heading with-capacity"><span>05</span><div><h3>Arkengine Mods</h3><p>Socket permanent engine modifications into the installed Arkengine.</p></div><div class="arkflight-capacity-meter {{#if arkflight.commissioning.capacities.arkengineMods.over}}is-over{{/if}}"><strong>{{arkflight.commissioning.capacities.arkengineMods.used}} / {{arkflight.commissioning.capacities.arkengineMods.max}}</strong><small>MOD CAPACITY</small></div></div>
+          <div class="arkflight-fitting-grid">{{#each arkflight.commissioning.arkengineMods as |item|}}<button type="button" class="arkflight-fitting-card {{#if item.installed}}is-installed{{/if}}" data-fitting-kind="arkengineMod" data-id="{{item.id}}" {{#if item.blocked}}disabled{{/if}}><span class="arkflight-fitting-state">{{#if item.installed}}INSTALLED{{else}}{{#if item.blocked}}CAPACITY FULL{{else}}INSTALL{{/if}}{{/if}}</span><strong>{{item.name}}</strong><small>T{{item.tier}} · {{item.type}} · {{item.cost}} slot</small><p>{{item.description}}</p></button>{{/each}}</div>
+        </div>
+
+        <div class="arkflight-commission-stage">
+          <div class="arkflight-stage-heading with-capacity"><span>06</span><div><h3>Rooms</h3><p>Core rooms are hull-provided. Expansion rooms consume the vessel's room capacity.</p></div><div class="arkflight-capacity-meter {{#if arkflight.commissioning.capacities.rooms.over}}is-over{{/if}}"><strong>{{arkflight.commissioning.capacities.rooms.used}} / {{arkflight.commissioning.capacities.rooms.max}}</strong><small>ROOM CAPACITY</small></div></div>
+          <div class="arkflight-core-room-block"><h4>Hull Core Rooms</h4><div class="arkflight-core-room-grid">{{#each arkflight.commissioning.coreRooms as |room|}}<div class="arkflight-core-room-card"><i class="fa-solid fa-lock"></i><div><strong>{{room.name}}</strong><small>HULL PROVIDED</small></div></div>{{/each}}</div></div>
+          <h4 class="arkflight-fitting-subhead">Expansion Rooms</h4>
+          <div class="arkflight-fitting-grid">{{#each arkflight.commissioning.rooms as |item|}}<button type="button" class="arkflight-fitting-card {{#if item.installed}}is-installed{{/if}}" data-fitting-kind="room" data-id="{{item.id}}" {{#if item.blocked}}disabled{{/if}}><span class="arkflight-fitting-state">{{#if item.installed}}INSTALLED{{else}}{{#if item.blocked}}CAPACITY FULL{{else}}INSTALL{{/if}}{{/if}}</span><strong>{{item.name}}</strong><small>T{{item.tier}} · {{item.type}} · {{item.cost}} room</small><p>{{item.description}}</p></button>{{/each}}</div>
+        </div>
+
+        <div class="arkflight-commission-stage">
+          <div class="arkflight-stage-heading with-capacity"><span>07</span><div><h3>Ship Mods</h3><p>Permanent vessel-wide refits separate from Arkengine modifications.</p></div><div class="arkflight-capacity-meter {{#if arkflight.commissioning.capacities.shipMods.over}}is-over{{/if}}"><strong>{{arkflight.commissioning.capacities.shipMods.used}} / {{arkflight.commissioning.capacities.shipMods.max}}</strong><small>SHIP MOD CAPACITY</small></div></div>
+          <div class="arkflight-fitting-grid">{{#each arkflight.commissioning.shipMods as |item|}}<button type="button" class="arkflight-fitting-card {{#if item.installed}}is-installed{{/if}}" data-fitting-kind="shipMod" data-id="{{item.id}}" {{#if item.blocked}}disabled{{/if}}><span class="arkflight-fitting-state">{{#if item.installed}}INSTALLED{{else}}{{#if item.blocked}}CAPACITY FULL{{else}}INSTALL{{/if}}{{/if}}</span><strong>{{item.name}}</strong><small>T{{item.tier}} · {{item.type}} · {{item.cost}} slot</small><p>{{item.description}}</p></button>{{/each}}</div>
+        </div>
         {{/if}}
       </section>
 
@@ -83,10 +100,12 @@
         <h2>{{actor.name}}</h2>
         <div class="arkflight-build-line"><span>Hull</span><strong>{{arkflight.commissioning.hullName}}</strong><small>{{arkflight.commissioning.hullPatternName}}</small></div>
         <div class="arkflight-build-line"><span>Arkengine</span><strong>{{arkflight.commissioning.engineName}}</strong><small>{{arkflight.commissioning.enginePatternName}}</small></div>
+        {{#if arkflight.commissioning.hasEngine}}<div class="arkflight-summary-capacities"><div><span>Engine Mods</span><strong>{{arkflight.commissioning.capacities.arkengineMods.used}} / {{arkflight.commissioning.capacities.arkengineMods.max}}</strong></div><div><span>Rooms</span><strong>{{arkflight.commissioning.capacities.rooms.used}} / {{arkflight.commissioning.capacities.rooms.max}}</strong></div><div><span>Ship Mods</span><strong>{{arkflight.commissioning.capacities.shipMods.used}} / {{arkflight.commissioning.capacities.shipMods.max}}</strong></div></div>{{/if}}
         <h3>Derived Preview</h3>
         <div class="arkflight-preview-grid">{{#each arkflight.commissioning.previewStats as |stat|}}<div><span>{{stat.label}}</span><strong>{{stat.value}}</strong></div>{{/each}}</div>
         {{#if arkflight.commissioning.validation.errors.length}}<div class="arkflight-validation-box"><h3>Required</h3>{{#each arkflight.commissioning.validation.errors as |error|}}<p><i class="fa-solid fa-triangle-exclamation"></i> {{error}}</p>{{/each}}</div>{{/if}}
-        <div class="arkflight-commission-actions"><button type="button" data-action="reset-commissioning">RESET DRAFT</button><button type="button" class="arkflight-commission-button" data-action="commission-vessel" {{#unless arkflight.commissioning.canCommission}}disabled{{/unless}}><i class="fa-solid fa-hammer"></i> COMMISSION VESSEL</button></div>
+        {{#if arkflight.commissioning.validation.warnings.length}}<div class="arkflight-validation-box"><h3>Warnings</h3>{{#each arkflight.commissioning.validation.warnings as |warning|}}<p class="is-warning"><i class="fa-solid fa-circle-info"></i> {{warning}}</p>{{/each}}</div>{{/if}}
+        <div class="arkflight-commission-actions"><button type="button" data-action="reset-commissioning">RESET DRAFT</button><button type="button" class="arkflight-commission-button" data-action="commission-vessel" {{#unless arkflight.commissioning.canCommission}}disabled{{/unless}}><i class="fa-solid fa-hammer"></i> {{arkflight.commissioning.commitLabel}}</button></div>
       </aside>
     </main>
   {{/if}}
