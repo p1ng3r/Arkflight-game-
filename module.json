@@ -36,6 +36,7 @@
     "src/foundry/arkflight.js",
     "src/ui/mastery-clarity-ui.js",
     "src/ui/event-board-large-desktop.js",
-    "src/ui/opening-branding-ui.js"
+    "src/ui/opening-branding-ui.js",
+    "src/ui/opening-stakes-tooltip-ui.js"
   ]
 }
