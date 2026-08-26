@@ -1,6 +1,8 @@
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
 import { BASE_MASTERY } from "../content/base-mastery.js";
 import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
+import { SHIP_CATALOGS } from "../content/index.js";
+import { validateShip } from "../ship/validate-ship.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
@@ -17,6 +19,7 @@ import {
 } from "../ui/ship-sheet-app.js";
 
 const MODULE_ID = "arkflight-game";
+const ACTIVE_SHIP_SETTING = "activeVoyageShipUuid";
 let controller = null;
 let board = null;
 let rewardSummary = null;
@@ -27,6 +30,70 @@ function ensureBoard() {
   if (!controller) return null;
   if (!board) board = new ArkflightEventBoard(controller);
   return board;
+}
+
+function shipPayload(actor) {
+  return actor?.flags?.[MODULE_ID]?.ship ?? null;
+}
+
+function commissionedShips() {
+  return [...(game.actors ?? [])].filter((actor) => {
+    if (!isArkflightShip(actor)) return false;
+    const ship = shipPayload(actor);
+    if (!ship) return false;
+    return validateShip(ship, SHIP_CATALOGS).ok;
+  });
+}
+
+async function resolveActorReference(reference) {
+  if (!reference) return null;
+  if (reference.documentName === "Actor") return reference;
+  if (typeof reference !== "string") return null;
+  const direct = game.actors?.get(reference) ?? game.actors?.find((actor) => actor.uuid === reference || actor.name === reference);
+  if (direct) return direct;
+  try {
+    const resolved = await fromUuid(reference);
+    return resolved?.documentName === "Actor" ? resolved : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+async function resolveVoyageShip(reference = null) {
+  if (reference) {
+    const actor = await resolveActorReference(reference);
+    if (!actor || !isArkflightShip(actor)) throw new Error("Choose an Arkflight PF2e Vehicle Actor for this Event.");
+    const validation = validateShip(shipPayload(actor), SHIP_CATALOGS);
+    if (!validation.ok) throw new Error(`${actor.name} is not ready for Voyage: ${validation.errors.join(" ")}`);
+    return actor;
+  }
+
+  const ships = commissionedShips();
+  if (ships.length === 1) return ships[0];
+  if (!ships.length) throw new Error("No commissioned Arkflight vessel is available. Commission a ship before launching an Event.");
+  throw new Error(`Multiple commissioned Arkflight vessels are available. Launch with game.arkflight.openEvent("glassback-cinderwake", shipActor).`);
+}
+
+async function prefillCrewFromShip(actor) {
+  const stations = shipPayload(actor)?.crew?.stations ?? {};
+  const usedActorIds = new Set();
+  for (const [station, reference] of Object.entries(stations)) {
+    if (!reference) continue;
+    const officer = await resolveActorReference(reference);
+    if (!officer || usedActorIds.has(officer.id)) continue;
+    usedActorIds.add(officer.id);
+    try {
+      await controller.command({ type: "assign-actor", station, actorId: officer.id });
+    } catch (error) {
+      console.warn(`Arkflight | Could not prefill ${station} from ${actor.name}`, error);
+    }
+  }
+}
+
+function activeVoyageShip() {
+  const uuid = game.settings?.get(MODULE_ID, ACTIVE_SHIP_SETTING) || null;
+  if (!uuid) return null;
+  return game.actors?.find((actor) => actor.uuid === uuid) ?? null;
 }
 
 function decorateEventCompleteBoard() {
@@ -103,6 +170,13 @@ function announceStateRewards(state) {
 
 Hooks.once("init", () => {
   PlanningController.registerSetting();
+  game.settings.register(MODULE_ID, ACTIVE_SHIP_SETTING, {
+    name: "Active Arkflight Voyage Vessel",
+    scope: "world",
+    config: false,
+    type: String,
+    default: ""
+  });
   registerArkflightShipSheet();
   installShipwrightUX();
   installMasteryTacticsUI();
@@ -115,14 +189,20 @@ Hooks.once("init", () => {
     events: ARKFLIGHT_EVENTS,
     stationOptions: baseStationOptions(),
     get controller() { return controller; },
+    get activeShip() { return activeVoyageShip(); },
+    get commissionedShips() { return commissionedShips(); },
     openBoard() { renderBoard(); return board; },
     openRewards() { showRewardSummary(); return rewardSummary; },
     isShip(actor) { return isArkflightShip(actor); },
     async markVehicleAsShip(actor) { return markVehicleAsArkflightShip(actor); },
-    async openEvent(eventId = "glassback-cinderwake") {
+    async openEvent(eventId = "glassback-cinderwake", shipReference = null) {
       if (!controller) throw new Error("Arkflight is not ready yet.");
+      const shipActor = await resolveVoyageShip(shipReference);
       await controller.openEvent(eventId);
+      await game.settings.set(MODULE_ID, ACTIVE_SHIP_SETTING, shipActor.uuid);
+      await prefillCrewFromShip(shipActor);
       renderBoard();
+      ui.notifications?.info(`${shipActor.name} bound to ${ARKFLIGHT_EVENTS[eventId]?.title ?? "Arkflight Event"}.`);
       return controller.state;
     },
     setStationOptions(stationId, options = {}) {
@@ -152,7 +232,11 @@ Hooks.on("getSceneControlButtons", (controls) => {
       if (!controller) return;
       if (!controller.state?.eventId) {
         if (!game.user.isGM) { ui.notifications?.info("Waiting for the GM to launch an Arkflight Event."); return; }
-        await game.arkflight.openEvent("glassback-cinderwake");
+        try {
+          await game.arkflight.openEvent("glassback-cinderwake");
+        } catch (error) {
+          ui.notifications?.warn(error.message);
+        }
         return;
       }
       renderBoard();
