@@ -55,7 +55,11 @@ function capacityView(label, used, max) {
 }
 
 export function isArkflightShip(actor) {
-  return actor?.type === "vehicle" && actor?.flags?.[MODULE_ID]?.isArkflightShip === true;
+  if (actor?.type !== "vehicle") return false;
+  // The explicit marker is authoritative for newly commissioned vessels. A
+  // persisted Arkflight ship payload is also accepted so older/manual-sheet
+  // vessels created before the marker was enforced remain discoverable.
+  return actor?.flags?.[MODULE_ID]?.isArkflightShip === true || Boolean(shipFlag(actor));
 }
 
 export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
@@ -260,26 +264,12 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
         if (!game.user.isGM) return;
         const field = event.currentTarget.dataset.commissionField;
         const id = event.currentTarget.dataset.id;
-        const persistent = shipFlag(this.actor) ?? createShip({ identity: { name: this.actor.name || "Unnamed Vessel" } });
-        const draft = this._ensureDraft(persistent);
-        if (field === "hull") {
-          draft.hull.chassisId = id;
-          const hull = SHIP_CATALOGS.hulls?.[id];
-          const allowed = hull?.data?.allowedArkengines ?? [];
-          if (draft.arkengine.chassisId && allowed.length && !allowed.includes(draft.arkengine.chassisId)) {
-            draft.arkengine.chassisId = "";
-            draft.arkengine.modIds = [];
-          }
-        } else if (field === "hullPattern") {
-          draft.hull.patternId = id;
-        } else if (field === "arkengine") {
-          if (draft.arkengine.chassisId !== id) draft.arkengine.modIds = [];
-          draft.arkengine.chassisId = id;
-        } else if (field === "arkenginePattern") {
-          draft.arkengine.patternId = id;
-        } else return;
+        if (!field || !id || !this._draftShip) return;
+        if (field === "hull") { this._draftShip.hull.chassisId = id; const hull = SHIP_CATALOGS.hulls?.[id]; const allowed = hull?.data?.allowedArkengines ?? []; if (this._draftShip.arkengine?.chassisId && allowed.length && !allowed.includes(this._draftShip.arkengine.chassisId)) { this._draftShip.arkengine.chassisId = ""; this._draftShip.arkengine.patternId = "standard"; this._draftShip.arkengine.modIds = []; } }
+        if (field === "hullPattern") this._draftShip.hull.patternId = id;
+        if (field === "arkengine") { this._draftShip.arkengine.chassisId = id; this._draftShip.arkengine.modIds = []; }
+        if (field === "arkenginePattern") this._draftShip.arkengine.patternId = id;
         this._draftDirty = true;
-        this.activeTab = "shipwright";
         this.render(false);
       });
     }
@@ -287,17 +277,17 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
     for (const button of html.querySelectorAll("[data-fitting-kind]")) {
       button.addEventListener("click", (event) => {
         event.preventDefault();
-        if (!game.user.isGM || event.currentTarget.disabled) return;
+        if (!game.user.isGM || !this._draftShip) return;
         const kind = event.currentTarget.dataset.fittingKind;
         const id = event.currentTarget.dataset.id;
-        const persistent = shipFlag(this.actor) ?? createShip({ identity: { name: this.actor.name || "Unnamed Vessel" } });
-        const draft = this._ensureDraft(persistent);
-        const list = kind === "arkengineMod" ? draft.arkengine.modIds : kind === "room" ? draft.rooms : kind === "shipMod" ? draft.shipMods : null;
+        let list = null;
+        if (kind === "arkengineMod") list = this._draftShip.arkengine.modIds;
+        if (kind === "room") list = this._draftShip.rooms;
+        if (kind === "shipMod") list = this._draftShip.shipMods;
         if (!list) return;
         const index = list.indexOf(id);
         if (index >= 0) list.splice(index, 1); else list.push(id);
         this._draftDirty = true;
-        this.activeTab = "shipwright";
         this.render(false);
       });
     }
@@ -318,7 +308,11 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
         return;
       }
       const saved = syncResourceMaxima(clone(this._draftShip), validation.derived);
-      await this.actor.update({ [`flags.${MODULE_ID}.ship`]: saved });
+      await this.actor.update({
+        [`flags.${MODULE_ID}.isArkflightShip`]: true,
+        [`flags.${MODULE_ID}.ship`]: saved,
+        "flags.core.sheetClass": ARKFLIGHT_SHIP_SHEET_ID
+      });
       this._draftShip = clone(saved);
       this._draftDirty = false;
       this.shipwrightMode = false;
