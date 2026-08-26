@@ -1,177 +1,99 @@
 <form class="arkflight-ship-shell {{cssClass}}" autocomplete="off">
   <header class="arkflight-ship-header">
     <img class="arkflight-ship-portrait" src="{{arkflight.actorImg}}" alt="{{actor.name}}">
-
     <div class="arkflight-ship-identity">
       <div class="arkflight-ship-kicker">ARKFLIGHT VESSEL</div>
-      <div class="arkflight-ship-name-row">
-        <h1>{{actor.name}}</h1>
-        <span class="arkflight-tier">TIER {{arkflight.tier}}</span>
-      </div>
+      <div class="arkflight-ship-name-row"><h1>{{actor.name}}</h1><span class="arkflight-tier">TIER {{arkflight.tier}}</span></div>
       <div class="arkflight-ship-registry-row">
-        <span>{{arkflight.hullName}}</span>
-        <span>{{arkflight.hullPatternName}}</span>
+        <span>{{arkflight.hullName}}</span><span>{{arkflight.hullPatternName}}</span>
         {{#if arkflight.ship.identity.registry}}<span>REG {{arkflight.ship.identity.registry}}</span>{{/if}}
         {{#if arkflight.ship.identity.callsign}}<span>CALLSIGN {{arkflight.ship.identity.callsign}}</span>{{/if}}
       </div>
-      <div class="arkflight-powertrain-line">
-        <strong>{{arkflight.arkengineName}}</strong>
-        <span>{{arkflight.arkenginePatternName}}</span>
-      </div>
+      <div class="arkflight-powertrain-line"><strong>{{arkflight.arkengineName}}</strong><span>{{arkflight.arkenginePatternName}}</span></div>
     </div>
-
     <div class="arkflight-ship-header-actions">
-      <div class="arkflight-readiness {{arkflight.validation.statusClass}}">
-        <i class="fa-solid {{#if arkflight.validation.ok}}fa-circle-check{{else}}fa-triangle-exclamation{{/if}}"></i>
-        {{arkflight.validation.label}}
-      </div>
-      {{#if arkflight.isGM}}
-        <button type="button" class="arkflight-shipwright-toggle {{#if arkflight.shipwrightMode}}is-active{{/if}}" data-action="shipwright-mode">
-          <i class="fa-solid fa-hammer"></i>
-          {{#if arkflight.shipwrightMode}}SHIPWRIGHT MODE ON{{else}}SHIPWRIGHT MODE{{/if}}
-        </button>
-      {{/if}}
+      <div class="arkflight-readiness {{arkflight.validation.statusClass}}"><i class="fa-solid {{#if arkflight.validation.ok}}fa-circle-check{{else}}fa-triangle-exclamation{{/if}}"></i> {{arkflight.validation.label}}</div>
+      {{#if arkflight.isGM}}<button type="button" class="arkflight-shipwright-toggle {{#if arkflight.shipwrightMode}}is-active{{/if}}" data-action="shipwright-mode"><i class="fa-solid fa-hammer"></i> {{#if arkflight.shipwrightMode}}RETURN TO COMMAND{{else}}SHIPWRIGHT MODE{{/if}}</button>{{/if}}
     </div>
   </header>
 
-  <section class="arkflight-resource-strip">
-    {{#each arkflight.resources as |resource|}}
-      <div class="arkflight-resource-card">
-        <div class="arkflight-resource-label"><i class="fa-solid {{resource.icon}}"></i> {{resource.label}}</div>
-        <div class="arkflight-resource-values">
-          {{#if ../arkflight.canOperate}}
-            <input type="number" min="0" value="{{resource.value}}" data-resource="{{resource.key}}">
-          {{else}}
-            <strong>{{resource.value}}</strong>
-          {{/if}}
-          <span>/</span>
-          <strong>{{resource.max}}</strong>
-        </div>
-      </div>
-    {{/each}}
-  </section>
-
-  <section class="arkflight-stat-strip">
-    {{#each arkflight.stats as |stat|}}
-      <div class="arkflight-stat-card">
-        <span>{{stat.label}}</span>
-        <strong>{{stat.value}}</strong>
-      </div>
-    {{/each}}
-    <div class="arkflight-stat-card arkflight-crew-summary">
-      <span>Crew</span>
-      <strong>{{arkflight.crew.minimum}} / {{arkflight.crew.recommended}} / {{arkflight.crew.maximum}}</strong>
-      <small>MIN / REC / MAX · {{arkflight.crew.specialists}} specialists</small>
-    </div>
-  </section>
-
-  <main class="arkflight-command-grid">
-    <section class="arkflight-command-panel arkflight-systems-panel">
-      <div class="arkflight-panel-heading">
-        <div>
-          <span class="arkflight-ship-kicker">COMMAND STATUS</span>
-          <h2>Ship Systems</h2>
-        </div>
-        {{#if arkflight.shipwrightMode}}<small>Click a system to cycle condition.</small>{{/if}}
-      </div>
-
-      <div class="arkflight-system-list">
-        {{#each arkflight.systems as |system|}}
-          <button type="button" class="arkflight-system-row {{system.stateClass}}" data-system-state="{{system.key}}" {{#unless ../arkflight.shipwrightMode}}disabled{{/unless}}>
-            <span class="arkflight-system-name">{{system.label}}</span>
-            <span class="arkflight-system-state">{{system.stateLabel}}</span>
-            {{#if system.conditionCount}}<span class="arkflight-condition-count">{{system.conditionCount}}</span>{{/if}}
-          </button>
-        {{/each}}
-      </div>
-
-      {{#if arkflight.conditions.length}}
-        <div class="arkflight-condition-box">
-          <h3>Persistent Conditions</h3>
-          {{#each arkflight.conditions as |condition|}}
-            <div class="arkflight-condition-line">
-              <strong>{{condition.id}}</strong>
-              <span>{{condition.system}} · severity {{condition.severity}}</span>
-            </div>
-          {{/each}}
-        </div>
-      {{/if}}
+  {{#if arkflight.isCommandTab}}
+    <section class="arkflight-resource-strip">
+      {{#each arkflight.resources as |resource|}}<div class="arkflight-resource-card"><div class="arkflight-resource-label"><i class="fa-solid {{resource.icon}}"></i> {{resource.label}}</div><div class="arkflight-resource-values">{{#if ../arkflight.canOperate}}<input type="number" min="0" value="{{resource.value}}" data-resource="{{resource.key}}">{{else}}<strong>{{resource.value}}</strong>{{/if}}<span>/</span><strong>{{resource.max}}</strong></div></div>{{/each}}
+    </section>
+    <section class="arkflight-stat-strip">
+      {{#each arkflight.stats as |stat|}}<div class="arkflight-stat-card"><span>{{stat.label}}</span><strong>{{stat.value}}</strong></div>{{/each}}
+      <div class="arkflight-stat-card arkflight-crew-summary"><span>Crew</span><strong>{{arkflight.crew.minimum}} / {{arkflight.crew.recommended}} / {{arkflight.crew.maximum}}</strong><small>MIN / REC / MAX · {{arkflight.crew.specialists}} specialists</small></div>
     </section>
 
-    <section class="arkflight-command-panel arkflight-vessel-panel">
-      <div class="arkflight-panel-heading">
-        <div>
-          <span class="arkflight-ship-kicker">VESSEL PROFILE</span>
-          <h2>{{arkflight.ship.identity.name}}</h2>
-        </div>
-      </div>
+    <main class="arkflight-command-grid">
+      <section class="arkflight-command-panel arkflight-systems-panel">
+        <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">COMMAND STATUS</span><h2>Ship Systems</h2></div>{{#if arkflight.shipwrightMode}}<small>Click a system to cycle condition.</small>{{/if}}</div>
+        <div class="arkflight-system-list">{{#each arkflight.systems as |system|}}<button type="button" class="arkflight-system-row {{system.stateClass}}" data-system-state="{{system.key}}" {{#unless ../arkflight.shipwrightMode}}disabled{{/unless}}><span class="arkflight-system-name">{{system.label}}</span><span class="arkflight-system-state">{{system.stateLabel}}</span>{{#if system.conditionCount}}<span class="arkflight-condition-count">{{system.conditionCount}}</span>{{/if}}</button>{{/each}}</div>
+        {{#if arkflight.conditions.length}}<div class="arkflight-condition-box"><h3>Persistent Conditions</h3>{{#each arkflight.conditions as |condition|}}<div class="arkflight-condition-line"><strong>{{condition.id}}</strong><span>{{condition.system}} · severity {{condition.severity}}</span></div>{{/each}}</div>{{/if}}
+      </section>
 
-      <div class="arkflight-component-stack">
-        <div class="arkflight-component-line">
-          <span>Hull</span>
-          <strong>{{arkflight.hullName}}</strong>
-          <small>{{arkflight.hullPatternName}}</small>
-        </div>
-        <div class="arkflight-component-line">
-          <span>Arkengine</span>
-          <strong>{{arkflight.arkengineName}}</strong>
-          <small>{{arkflight.arkenginePatternName}}</small>
-        </div>
-      </div>
+      <section class="arkflight-command-panel arkflight-vessel-panel">
+        <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">VESSEL PROFILE</span><h2>{{arkflight.ship.identity.name}}</h2></div></div>
+        <div class="arkflight-component-stack"><div class="arkflight-component-line"><span>Hull</span><strong>{{arkflight.hullName}}</strong><small>{{arkflight.hullPatternName}}</small></div><div class="arkflight-component-line"><span>Arkengine</span><strong>{{arkflight.arkengineName}}</strong><small>{{arkflight.arkenginePatternName}}</small></div></div>
+        <div class="arkflight-profile-subsection"><h3>Traits</h3><div class="arkflight-chip-row">{{#each arkflight.tags as |tag|}}<span class="arkflight-chip">{{tag}}</span>{{/each}}{{#unless arkflight.tags.length}}<span class="arkflight-empty-text">No derived traits yet.</span>{{/unless}}</div></div>
+        <div class="arkflight-profile-subsection"><h3>Capabilities</h3><div class="arkflight-chip-row">{{#each arkflight.capabilities as |capability|}}<span class="arkflight-chip arkflight-capability-chip">{{capability}}</span>{{/each}}{{#unless arkflight.capabilities.length}}<span class="arkflight-empty-text">No component capabilities yet.</span>{{/unless}}</div></div>
+        {{#unless arkflight.validation.ok}}<div class="arkflight-validation-box"><h3>Commissioning Issues</h3>{{#each arkflight.validation.errors as |error|}}<p><i class="fa-solid fa-triangle-exclamation"></i> {{error}}</p>{{/each}}{{#each arkflight.validation.warnings as |warning|}}<p class="is-warning"><i class="fa-solid fa-circle-info"></i> {{warning}}</p>{{/each}}</div>{{/unless}}
+      </section>
 
-      <div class="arkflight-profile-subsection">
-        <h3>Traits</h3>
-        <div class="arkflight-chip-row">
-          {{#each arkflight.tags as |tag|}}<span class="arkflight-chip">{{tag}}</span>{{/each}}
-          {{#unless arkflight.tags.length}}<span class="arkflight-empty-text">No derived traits yet.</span>{{/unless}}
-        </div>
-      </div>
+      <section class="arkflight-command-panel arkflight-stations-panel">
+        <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">BRIDGE WATCH</span><h2>Stations</h2></div></div>
+        <div class="arkflight-station-list">{{#each arkflight.stations as |station|}}<div class="arkflight-station-card"><div class="arkflight-station-emblem"><i class="fa-solid fa-compass-drafting"></i></div><div><strong>{{station.label}}</strong><span>{{station.assignment}}</span></div></div>{{/each}}</div>
+      </section>
+    </main>
+  {{/if}}
 
-      <div class="arkflight-profile-subsection">
-        <h3>Capabilities</h3>
-        <div class="arkflight-chip-row">
-          {{#each arkflight.capabilities as |capability|}}<span class="arkflight-chip arkflight-capability-chip">{{capability}}</span>{{/each}}
-          {{#unless arkflight.capabilities.length}}<span class="arkflight-empty-text">No component capabilities yet.</span>{{/unless}}
-        </div>
-      </div>
+  {{#if arkflight.isShipwrightTab}}
+    <main class="arkflight-commissioning-shell">
+      <section class="arkflight-commissioning-main">
+        <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">SHIPWRIGHT COMMISSION</span><h2>Core Vessel Configuration</h2></div><small>Changes remain staged until Commission Vessel.</small></div>
 
-      {{#unless arkflight.validation.ok}}
-        <div class="arkflight-validation-box">
-          <h3>Commissioning Issues</h3>
-          {{#each arkflight.validation.errors as |error|}}<p><i class="fa-solid fa-triangle-exclamation"></i> {{error}}</p>{{/each}}
-          {{#each arkflight.validation.warnings as |warning|}}<p class="is-warning"><i class="fa-solid fa-circle-info"></i> {{warning}}</p>{{/each}}
+        <div class="arkflight-commission-stage">
+          <div class="arkflight-stage-heading"><span>01</span><div><h3>Hull Chassis</h3><p>The hull establishes base statistics, crew scale, room capacity, weapon mounts, and compatible Arkengines.</p></div></div>
+          <div class="arkflight-choice-grid arkflight-hull-grid">{{#each arkflight.commissioning.hulls as |item|}}<button type="button" class="arkflight-choice-card {{#if item.selected}}is-selected{{/if}}" data-commission-field="hull" data-id="{{item.id}}"><span class="arkflight-choice-top"><strong>{{item.name}}</strong><em>T{{item.tier}}</em></span><small>{{item.role}}</small><p>{{item.description}}</p><div class="arkflight-mini-stats"><span>AC {{item.base.armorClass}}</span><span>Hull {{item.base.hullIntegrity}}</span><span>Cargo {{item.base.cargoCapacity}}</span><span>Speed {{item.base.combatSpeed}}</span></div></button>{{/each}}</div>
         </div>
-      {{/unless}}
-    </section>
 
-    <section class="arkflight-command-panel arkflight-stations-panel">
-      <div class="arkflight-panel-heading">
-        <div>
-          <span class="arkflight-ship-kicker">BRIDGE WATCH</span>
-          <h2>Stations</h2>
+        {{#if arkflight.commissioning.hasHull}}
+        <div class="arkflight-commission-stage">
+          <div class="arkflight-stage-heading"><span>02</span><div><h3>Hull Pattern</h3><p>Choose the vessel's structural emphasis. Pattern effects feed directly into derived statistics.</p></div></div>
+          <div class="arkflight-choice-grid">{{#each arkflight.commissioning.hullPatterns as |item|}}<button type="button" class="arkflight-choice-card compact {{#if item.selected}}is-selected{{/if}}" data-commission-field="hullPattern" data-id="{{item.id}}"><strong>{{item.name}}</strong><p>{{item.description}}</p></button>{{/each}}</div>
         </div>
-      </div>
 
-      <div class="arkflight-station-list">
-        {{#each arkflight.stations as |station|}}
-          <div class="arkflight-station-card">
-            <div class="arkflight-station-emblem"><i class="fa-solid fa-compass-drafting"></i></div>
-            <div>
-              <strong>{{station.label}}</strong>
-              <span>{{station.assignment}}</span>
-            </div>
-          </div>
-        {{/each}}
-      </div>
-    </section>
-  </main>
+        <div class="arkflight-commission-stage">
+          <div class="arkflight-stage-heading"><span>03</span><div><h3>Arkengine</h3><p>Only Arkengines compatible with the selected hull are shown.</p></div></div>
+          <div class="arkflight-choice-grid">{{#each arkflight.commissioning.arkengines as |item|}}<button type="button" class="arkflight-choice-card {{#if item.selected}}is-selected{{/if}}" data-commission-field="arkengine" data-id="{{item.id}}"><span class="arkflight-choice-top"><strong>{{item.name}}</strong><em>T{{item.tier}}</em></span>{{#if item.preferred}}<span class="arkflight-recommended">RECOMMENDED</span>{{/if}}<p>{{item.description}}</p><div class="arkflight-mini-stats"><span>Mods {{item.modCapacity}}</span><span>Fuel {{item.fuelSlots}}</span></div></button>{{/each}}</div>
+        </div>
+        {{/if}}
+
+        {{#if arkflight.commissioning.hasEngine}}
+        <div class="arkflight-commission-stage">
+          <div class="arkflight-stage-heading"><span>04</span><div><h3>Arkengine Pattern</h3><p>Configure the Arkengine's operational character.</p></div></div>
+          <div class="arkflight-choice-grid">{{#each arkflight.commissioning.arkenginePatterns as |item|}}<button type="button" class="arkflight-choice-card compact {{#if item.selected}}is-selected{{/if}}" data-commission-field="arkenginePattern" data-id="{{item.id}}"><strong>{{item.name}}</strong><p>{{item.description}}</p></button>{{/each}}</div>
+        </div>
+        {{/if}}
+      </section>
+
+      <aside class="arkflight-commissioning-summary">
+        <span class="arkflight-ship-kicker">STAGED BUILD</span>
+        <h2>{{actor.name}}</h2>
+        <div class="arkflight-build-line"><span>Hull</span><strong>{{arkflight.commissioning.hullName}}</strong><small>{{arkflight.commissioning.hullPatternName}}</small></div>
+        <div class="arkflight-build-line"><span>Arkengine</span><strong>{{arkflight.commissioning.engineName}}</strong><small>{{arkflight.commissioning.enginePatternName}}</small></div>
+        <h3>Derived Preview</h3>
+        <div class="arkflight-preview-grid">{{#each arkflight.commissioning.previewStats as |stat|}}<div><span>{{stat.label}}</span><strong>{{stat.value}}</strong></div>{{/each}}</div>
+        {{#if arkflight.commissioning.validation.errors.length}}<div class="arkflight-validation-box"><h3>Required</h3>{{#each arkflight.commissioning.validation.errors as |error|}}<p><i class="fa-solid fa-triangle-exclamation"></i> {{error}}</p>{{/each}}</div>{{/if}}
+        <div class="arkflight-commission-actions"><button type="button" data-action="reset-commissioning">RESET DRAFT</button><button type="button" class="arkflight-commission-button" data-action="commission-vessel" {{#unless arkflight.commissioning.canCommission}}disabled{{/unless}}><i class="fa-solid fa-hammer"></i> COMMISSION VESSEL</button></div>
+      </aside>
+    </main>
+  {{/if}}
 
   <footer class="arkflight-ship-footer">
-    <span>COMMAND</span>
-    <span class="is-future">SHIPWRIGHT</span>
-    <span class="is-future">ARMORY</span>
-    <span class="is-future">CREW</span>
-    <span class="is-future">HOLD &amp; LOG</span>
-    <small>{{arkflight.actorUuid}}</small>
+    <button type="button" class="{{#if arkflight.isCommandTab}}is-active{{/if}}" data-tab="command">COMMAND</button>
+    {{#if arkflight.isGM}}<button type="button" class="{{#if arkflight.isShipwrightTab}}is-active{{/if}}" data-tab="shipwright">SHIPWRIGHT</button>{{else}}<span class="is-future">SHIPWRIGHT</span>{{/if}}
+    <span class="is-future">ARMORY</span><span class="is-future">CREW</span><span class="is-future">HOLD &amp; LOG</span><small>{{arkflight.actorUuid}}</small>
   </footer>
 </form>
