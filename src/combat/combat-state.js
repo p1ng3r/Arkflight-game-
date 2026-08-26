@@ -21,6 +21,7 @@ export function createCombatState(ship, options = {}) {
     facing: options.facing ?? "fore",
     range: options.range ?? "near",
     economy: Object.freeze({
+      baseline: Object.freeze({ actions: profile.actions, reactions: profile.reactions }),
       actions: economyTrack(profile.actions, profile.actions),
       reactions: economyTrack(profile.reactions, profile.reactions)
     }),
@@ -31,12 +32,15 @@ export function createCombatState(ship, options = {}) {
 }
 
 export function resetCombatRound(state, { actionBonus = 0, reactionBonus = 0 } = {}) {
-  const actionMax = Math.max(1, Number(state?.economy?.actions?.max ?? 1) + Number(actionBonus || 0));
-  const reactionMax = Math.max(0, Number(state?.economy?.reactions?.max ?? 0) + Number(reactionBonus || 0));
+  const baselineActions = Number(state?.economy?.baseline?.actions ?? state?.economy?.actions?.max ?? 1);
+  const baselineReactions = Number(state?.economy?.baseline?.reactions ?? state?.economy?.reactions?.max ?? 0);
+  const actionMax = Math.max(1, baselineActions + Number(actionBonus || 0));
+  const reactionMax = Math.max(0, baselineReactions + Number(reactionBonus || 0));
   return Object.freeze({
     ...state,
     round: Number(state?.round ?? 0) + 1,
     economy: Object.freeze({
+      ...state.economy,
       actions: economyTrack(actionMax, actionMax),
       reactions: economyTrack(reactionMax, reactionMax)
     }),
