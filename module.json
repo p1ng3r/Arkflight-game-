@@ -42,6 +42,7 @@
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
+    "src/foundry/combat-api.js",
     "src/ui/mastery-clarity-ui.js",
     "src/ui/event-board-large-desktop.js",
     "src/ui/opening-branding-ui.js",
