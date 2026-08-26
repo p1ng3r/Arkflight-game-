@@ -1,0 +1,89 @@
+/* Arkflight opening-screen CSS-only surface textures.
+   Purpose: replace giant baked background textures with lightweight layered CSS.
+   Brass corners/dividers remain separate transparent production assets.
+*/
+
+/* Full cinematic opening surface: deep navy/black lacquer with subtle aether haze,
+   warm aged-brass undertone, faint cross-grain and vignette. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-grid {
+  background-color: #070b0d !important;
+  background-image:
+    radial-gradient(ellipse at 48% 34%, rgba(23, 42, 55, .26) 0%, rgba(11, 21, 28, .13) 34%, transparent 64%),
+    radial-gradient(ellipse at 74% 76%, rgba(43, 31, 16, .10) 0%, transparent 48%),
+    radial-gradient(ellipse at 12% 18%, rgba(30, 48, 61, .11) 0%, transparent 42%),
+    repeating-linear-gradient(13deg, rgba(255,255,255,.008) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(103deg, rgba(184, 137, 68, .009) 0 1px, transparent 1px 9px),
+    linear-gradient(180deg, #0b1115 0%, #080d10 43%, #050809 100%) !important;
+  box-shadow:
+    inset 0 0 100px rgba(0, 0, 0, .78),
+    inset 0 0 2px rgba(218, 176, 88, .18) !important;
+}
+
+/* Center command panel gets a slightly richer lacquer surface, separate from the art. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column {
+  background-color: rgba(7, 12, 15, .94) !important;
+  background-image:
+    radial-gradient(ellipse at 50% 15%, rgba(25, 45, 59, .21), transparent 55%),
+    radial-gradient(ellipse at 50% 82%, rgba(29, 20, 11, .08), transparent 58%),
+    repeating-linear-gradient(27deg, rgba(255,255,255,.007) 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, rgba(10,16,20,.98), rgba(5,9,11,.99)) !important;
+}
+
+/* Right rail: darker, denser, slightly cooler so brass and colored stake icons pop. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column {
+  background-color: rgba(5, 9, 11, .98) !important;
+  background-image:
+    radial-gradient(circle at 50% 16%, rgba(22, 39, 50, .18), transparent 38%),
+    repeating-linear-gradient(155deg, rgba(255,255,255,.006) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #091014 0%, #05090b 100%) !important;
+  box-shadow: inset 18px 0 30px rgba(0,0,0,.22) !important;
+}
+
+/* Side panels: reusable dark enamel / slate texture with soft inner depth. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel,
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-station-card {
+  background-color: rgba(9, 14, 16, .95) !important;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(27, 46, 57, .13), transparent 48%),
+    repeating-linear-gradient(19deg, rgba(255,255,255,.006) 0 1px, transparent 1px 6px),
+    linear-gradient(180deg, rgba(13,19,21,.98), rgba(7,11,13,.98)) !important;
+}
+
+/* Fine warm veins/scratches without a bitmap. Kept deliberately faint so text stays readable. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel {
+  background-blend-mode: screen, normal, normal !important;
+}
+
+/* Aged surface on field controls; subtle enough not to fight native select readability. */
+.arkflight-event-board.arkflight-opening-mode select,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-row-state {
+  background-image:
+    linear-gradient(180deg, rgba(28,35,37,.56), rgba(9,12,13,.82)),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.008) 0 1px, transparent 1px 8px) !important;
+}
+
+/* Vignette the outer cinematic board without affecting click targets. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-cinematic-opening {
+  position: relative;
+  isolation: isolate;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-cinematic-opening::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  background:
+    radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.12) 78%, rgba(0,0,0,.38) 100%);
+  box-shadow: inset 0 0 1px rgba(224, 179, 90, .16);
+}
+
+/* Preserve the event artwork as artwork: no texture overlay is applied over the image. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-column > img {
+  position: relative;
+  z-index: 1;
+}
