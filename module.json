@@ -32,7 +32,8 @@
     "styles/opening-screen-endcap-color-fix.css",
     "styles/opening-screen-icon-assets.css",
     "styles/ship-sheet.css",
-    "styles/ship-sheet-commissioning.css"
+    "styles/ship-sheet-commissioning.css",
+    "styles/shipwright-ux.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
