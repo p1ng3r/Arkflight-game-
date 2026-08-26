@@ -1,38 +1,31 @@
+import { stationPresentation } from "./station-presentation.js";
+
 const MODULE_ID = "arkflight-game";
-const STATION_ICON_BASE = "/modules/arcflight/assets/ui/stations";
-const STATION_KEYS = Object.freeze({
-  captain: "captain",
-  engineer: "engineer",
-  navigator: "navigator",
-  watchmaster: "watchmaster",
-  veilwarden: "veilwarden"
-});
+const STATION_KEYS = Object.freeze([
+  "captain",
+  "engineer",
+  "navigator",
+  "watchmaster",
+  "veilwarden"
+]);
 
 function stationKeyFromCard(card) {
   const text = card?.textContent?.toLowerCase() ?? "";
-  for (const key of Object.keys(STATION_KEYS)) {
-    if (text.includes(key)) return key;
-  }
-  return null;
+  return STATION_KEYS.find((key) => text.includes(key)) ?? null;
 }
 
 function decorateCard(card) {
-  if (!card || card.dataset.stationIconDecorated === "true") return;
+  if (!card) return;
   const key = stationKeyFromCard(card);
   if (!key) return;
   const holder = card.querySelector(".arkflight-station-emblem,.arkflight-crew-station-icon");
   if (!holder) return;
+  const presentation = stationPresentation(key);
+  if (!presentation?.iconClass) return;
 
   holder.dataset.station = key;
-  holder.innerHTML = "";
-  const image = document.createElement("img");
-  image.className = "arkflight-station-icon-image";
-  image.src = `${STATION_ICON_BASE}/${key}_icon.webp`;
-  image.alt = `${key} station`;
-  image.addEventListener("error", () => {
-    holder.innerHTML = '<i class="fa-solid fa-compass-drafting"></i>';
-  }, { once: true });
-  holder.append(image);
+  holder.innerHTML = `<i class="${presentation.iconClass}" aria-hidden="true"></i>`;
+  holder.title = `${presentation.displayName} station`;
   card.dataset.stationIconDecorated = "true";
 }
 
