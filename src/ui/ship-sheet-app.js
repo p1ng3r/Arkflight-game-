@@ -201,7 +201,8 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
   activateListeners($html) {
     super.activateListeners($html);
     const html = $html[0];
-    improveShipwright(html.querySelector(".arkflight-ship-shell"), {
+    const shipRoot = html.matches?.(".arkflight-ship-shell") ? html : html.querySelector(".arkflight-ship-shell");
+    improveShipwright(shipRoot, {
       defaultSection: this.shipwrightSection,
       onSectionChange: (section) => { this.shipwrightSection = section; }
     });
