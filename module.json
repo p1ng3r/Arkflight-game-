@@ -29,7 +29,8 @@
     "styles/opening-screen-status-fit.css",
     "styles/opening-screen-center-scale-down.css",
     "styles/opening-screen-final-layout-fix.css",
-    "styles/opening-screen-endcap-color-fix.css"
+    "styles/opening-screen-endcap-color-fix.css",
+    "styles/opening-screen-icon-assets.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
