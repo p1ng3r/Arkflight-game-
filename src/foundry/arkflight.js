@@ -9,6 +9,7 @@ import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 import { installPlayerResolutionUI } from "../ui/player-resolution-ui.js";
 import { installMasteryOpportunityUI } from "../ui/mastery-opportunity-ui.js";
 import { installOpeningScreenUI } from "../ui/opening-screen-ui.js";
+import { installShipwrightUX } from "../ui/shipwright-ux.js";
 import {
   isArkflightShip,
   markVehicleAsArkflightShip,
@@ -103,6 +104,7 @@ function announceStateRewards(state) {
 Hooks.once("init", () => {
   PlanningController.registerSetting();
   registerArkflightShipSheet();
+  installShipwrightUX();
   installMasteryTacticsUI();
   installPlayerSetupClaims();
   installPlayerResolutionUI();
