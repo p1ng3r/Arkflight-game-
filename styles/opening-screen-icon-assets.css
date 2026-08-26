@@ -1,0 +1,134 @@
+/* Arkflight opening-screen icon assets.
+   Final visual replacement for the temporary Font Awesome station and Event Stakes glyphs.
+
+   Expected station assets:
+     assets/ui/stations/station_icon_captain.webp
+     assets/ui/stations/station_icon_engineer.webp
+     assets/ui/stations/station_icon_navigator.webp
+     assets/ui/stations/station_icon_watchmaster.webp
+     assets/ui/stations/station_icon_veilwarden.webp
+
+   Expected Event Stakes assets:
+     assets/ui/stakes/event_stake_icon_momentum.webp
+     assets/ui/stakes/event_stake_icon_hull.webp
+     assets/ui/stakes/event_stake_icon_arkengine.webp
+     assets/ui/stakes/event_stake_icon_lifeveil.webp
+     assets/ui/stakes/event_stake_icon_rigging.webp
+*/
+
+/* ---------- STATION ICONS ---------- */
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-station-glyph {
+  display: block !important;
+  flex: 0 0 42px !important;
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .72));
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-station-glyph > i {
+  display: none !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode [data-opening-station="captain"] .arkflight-opening-station-glyph {
+  background-image: url("../assets/ui/stations/station_icon_captain.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode [data-opening-station="engineer"] .arkflight-opening-station-glyph {
+  background-image: url("../assets/ui/stations/station_icon_engineer.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode [data-opening-station="navigator"] .arkflight-opening-station-glyph {
+  background-image: url("../assets/ui/stations/station_icon_navigator.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode [data-opening-station="watchmaster"] .arkflight-opening-station-glyph {
+  background-image: url("../assets/ui/stations/station_icon_watchmaster.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode [data-opening-station="veilwarden"] .arkflight-opening-station-glyph {
+  background-image: url("../assets/ui/stations/station_icon_veilwarden.webp") !important;
+}
+
+/* Give the new artwork enough room without changing the station-row width budget. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-station-name {
+  column-gap: 7px !important;
+}
+
+/* ---------- EVENT STAKES ICONS ---------- */
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake-icon,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake.momentum .arkflight-opening-stake-icon {
+  display: block !important;
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+  margin: 0 auto 4px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: transparent !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .82));
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake-icon > i {
+  display: none !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake.momentum .arkflight-opening-stake-icon {
+  background-image: url("../assets/ui/stakes/event_stake_icon_momentum.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake.hull .arkflight-opening-stake-icon {
+  background-image: url("../assets/ui/stakes/event_stake_icon_hull.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake.arkengine .arkflight-opening-stake-icon {
+  background-image: url("../assets/ui/stakes/event_stake_icon_arkengine.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake.lifeveil .arkflight-opening-stake-icon {
+  background-image: url("../assets/ui/stakes/event_stake_icon_lifeveil.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stake.rigging .arkflight-opening-stake-icon {
+  background-image: url("../assets/ui/stakes/event_stake_icon_rigging.webp") !important;
+}
+
+/* Keep all five stake emblems on exactly the same visual footprint. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-grid {
+  align-items: start !important;
+}
+
+/* Compact desktop fallback. */
+.arkflight-event-board.arkflight-compact-desktop.arkflight-opening-mode .arkflight-opening-station-glyph {
+  flex-basis: 34px !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+}
+
+.arkflight-event-board.arkflight-compact-desktop.arkflight-opening-mode .arkflight-opening-stake-icon,
+.arkflight-event-board.arkflight-compact-desktop.arkflight-opening-mode .arkflight-opening-stake.momentum .arkflight-opening-stake-icon {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+}
