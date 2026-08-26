@@ -1,0 +1,181 @@
+/* Arkflight production trim pass.
+   Uses the new alpha WebP brass assets plus open/closed lock controls.
+
+   Expected assets:
+     assets/ui/trim/brass/ui_divider_horizontal_brass.webp
+     assets/ui/trim/brass/ui_outer_frame_corner_top_left_brass_ornament.webp
+     assets/ui/trim/brass/ui_outer_frame_corner_top_left_bronze.webp
+     assets/ui/trim/brass/ui_outer_frame_corner_top_left_gold_trim.webp
+     assets/ui/trim/brass/ui_panel_corner_top_left_brass.webp
+     assets/ui/controls/lock_open_icon.webp
+     assets/ui/controls/lock_closed_icon.webp
+*/
+
+/* ---------- OUTER FRAME CORNERS ---------- */
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-grid.arkflight-cinematic-opening::before {
+  width: 126px !important;
+  height: 126px !important;
+  top: -5px !important;
+  left: -5px !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,.7)) !important;
+  background: url("../assets/ui/trim/brass/ui_outer_frame_corner_top_left_brass_ornament.webp") top left / contain no-repeat !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-grid.arkflight-cinematic-opening::after {
+  width: 126px !important;
+  height: 126px !important;
+  right: -5px !important;
+  bottom: -5px !important;
+  opacity: 1 !important;
+  transform: rotate(180deg) !important;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,.7)) !important;
+  background: url("../assets/ui/trim/brass/ui_outer_frame_corner_top_left_brass_ornament.webp") top left / contain no-repeat !important;
+}
+
+/* Bottom-left gets the richer gold-trim variant. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-column::before {
+  width: 110px !important;
+  height: 110px !important;
+  left: -5px !important;
+  bottom: -5px !important;
+  opacity: .96 !important;
+  transform: rotate(-90deg) !important;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.65)) !important;
+  background: url("../assets/ui/trim/brass/ui_outer_frame_corner_top_left_gold_trim.webp") top left / contain no-repeat !important;
+}
+
+/* Top-right uses the darker bronze variant to keep the rail from becoming too bright. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column::after {
+  width: 110px !important;
+  height: 110px !important;
+  right: -5px !important;
+  top: -5px !important;
+  opacity: .96 !important;
+  transform: rotate(90deg) !important;
+  filter: drop-shadow(0 3px 5px rgba(0,0,0,.65)) !important;
+  background: url("../assets/ui/trim/brass/ui_outer_frame_corner_top_left_bronze.webp") top left / contain no-repeat !important;
+}
+
+/* ---------- PANEL CORNER HARDWARE ---------- */
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel::before,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel::after {
+  width: 38px !important;
+  height: 38px !important;
+  opacity: .94 !important;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.65)) !important;
+  background: url("../assets/ui/trim/brass/ui_panel_corner_top_left_brass.webp") center / contain no-repeat !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel::before {
+  top: -3px !important;
+  left: -3px !important;
+  transform: none !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel::after {
+  right: -3px !important;
+  bottom: -3px !important;
+  transform: rotate(180deg) !important;
+}
+
+/* Give the vessel binding panel the same production brass hardware. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel {
+  position: relative !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel::before,
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 3 !important;
+  pointer-events: none !important;
+  width: 30px !important;
+  height: 30px !important;
+  opacity: .82 !important;
+  background: url("../assets/ui/trim/brass/ui_panel_corner_top_left_brass.webp") center / contain no-repeat !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel::before {
+  left: -2px !important;
+  top: -2px !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel::after {
+  right: -2px !important;
+  bottom: -2px !important;
+  transform: rotate(180deg) !important;
+}
+
+/* ---------- DIVIDERS ---------- */
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-title-rule {
+  width: 78% !important;
+  height: 20px !important;
+  margin: 0 auto 10px !important;
+  opacity: .94 !important;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.55)) !important;
+  background: url("../assets/ui/trim/brass/ui_divider_horizontal_brass.webp") center / 100% 100% no-repeat !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-section-title::before,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-section-title::after {
+  height: 13px !important;
+  opacity: .72 !important;
+  background: url("../assets/ui/trim/brass/ui_divider_horizontal_brass.webp") center / 100% 100% no-repeat !important;
+}
+
+/* ---------- LOCK / UNLOCK COMMAND ICON ---------- */
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin > i.fa-lock {
+  display: none !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-lock-icon {
+  display: block !important;
+  position: absolute !important;
+  z-index: 5 !important;
+  left: 40px !important;
+  top: 50% !important;
+  width: 50px !important;
+  height: 50px !important;
+  transform: translateY(-50%) !important;
+  pointer-events: none !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.8)) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-lock-icon.unlocked {
+  background-image: url("../assets/ui/controls/lock_open_icon.webp") !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-lock-icon.locked {
+  background-image: url("../assets/ui/controls/lock_closed_icon.webp") !important;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.8)) brightness(1.06) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin {
+  padding-left: 104px !important;
+  padding-right: 88px !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin:disabled .arkflight-opening-lock-icon {
+  opacity: .62 !important;
+}
+
+@media (max-width: 1100px) {
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-lock-icon {
+    left: 30px !important;
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin {
+    padding-left: 82px !important;
+    padding-right: 70px !important;
+  }
+}
