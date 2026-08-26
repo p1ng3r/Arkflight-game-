@@ -225,13 +225,17 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", async () => {
-  controller = new PlanningController({ onStateChange: (state) => { renderBoard(); announceStateRewards(state); } });
+  controller = new PlanningController({
+    onStateChange: (state) => {
+      if (board?.rendered) renderBoard();
+      announceStateRewards(state);
+    }
+  });
   controller.activateSockets();
-  if (controller.state?.eventId) {
-    await bindExistingEventShipIfNeeded();
-    renderBoard();
-    announceStateRewards(controller.state);
-  }
+
+  // Persisted Voyage state should survive a world reload, but the Event Board
+  // must remain closed until the user explicitly opens it or launches an Event.
+  if (controller.state?.eventId) await bindExistingEventShipIfNeeded();
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
