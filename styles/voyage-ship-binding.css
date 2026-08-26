@@ -1,1 +1,195 @@
-.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel{display:grid;grid-template-columns:54px minmax(0,1fr)minmax(220px,.8fr);gap:10px;align-items:center;margin:10px 0 12px;padding:9px 11px;border:1px solid #6e5630;background:linear-gradient(180deg,rgba(27,24,18,.96),rgba(11,15,16,.98));box-shadow:inset 0 0 0 1px rgba(218,176,88,.06)}.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel>img,.arkflight-bound-vessel-empty{width:54px;height:54px;border:1px solid #806633;background:#090b0c}.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel>img{object-fit:cover}.arkflight-bound-vessel-empty{display:grid;place-items:center;color:#b99b5c;font-size:20px}.arkflight-bound-vessel-copy span,.arkflight-bound-vessel-copy strong,.arkflight-bound-vessel-copy small,.arkflight-vessel-picker span{display:block}.arkflight-bound-vessel-copy span,.arkflight-vessel-picker span{color:#b99b5c;font-size:8px;font-weight:900;letter-spacing:.16em}.arkflight-bound-vessel-copy strong{margin-top:2px;color:#f1d38d;font-family:serif;font-size:18px}.arkflight-bound-vessel-copy small{margin-top:2px;color:#a9aaa3;font-size:9px}.arkflight-vessel-picker select{width:100%;height:32px;margin-top:3px;border:1px solid #7a6537!important;border-radius:0!important;color:#ead9a8!important;background:#11100e!important;box-shadow:none!important;color-scheme:dark}.arkflight-vessel-picker select option{color:#f2e8d1;background:#11100e}.arkflight-bound-vessel-stats{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(52px,1fr));gap:5px}.arkflight-bound-vessel-stats>div{min-width:54px;padding:5px 7px;border:1px solid #334247;background:#101719;text-align:center}.arkflight-bound-vessel-stats span,.arkflight-bound-vessel-stats strong{display:block}.arkflight-bound-vessel-stats span{color:#8b9697;font-size:7px;font-weight:900;text-transform:uppercase}.arkflight-bound-vessel-stats strong{margin-top:1px;color:#dff4f6;font-size:11px}.arkflight-bound-vessel.needs-vessel{border-color:#805a35}.arkflight-bound-vessel.needs-vessel .arkflight-bound-vessel-copy strong{color:#e9bc72}@media(max-width:900px){.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel{grid-template-columns:46px 1fr}.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel>img,.arkflight-bound-vessel-empty{width:46px;height:46px}.arkflight-vessel-picker,.arkflight-bound-vessel-stats{grid-column:1/-1}}
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(210px, .78fr);
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0 9px;
+  padding: 6px 9px;
+  min-height: 48px;
+  border: 1px solid #6e5630;
+  background: linear-gradient(180deg, rgba(27,24,18,.96), rgba(11,15,16,.98));
+  box-shadow: inset 0 0 0 1px rgba(218,176,88,.06);
+  box-sizing: border-box;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel > img,
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel-empty {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  min-height: 42px;
+  border: 0;
+  background-color: transparent;
+  box-sizing: border-box;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel > img {
+  object-fit: cover;
+  border: 1px solid #806633;
+  background: #090b0c;
+}
+
+/* Empty-state vessel emblem uses the same engraved Arkflight icon family as the station rows. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel-empty {
+  background-image: url("../assets/ui/stations/station_icon_captain.webp");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.72));
+}
+
+.arkflight-bound-vessel-copy,
+.arkflight-vessel-picker {
+  min-width: 0;
+}
+
+.arkflight-bound-vessel-copy span,
+.arkflight-bound-vessel-copy strong,
+.arkflight-bound-vessel-copy small,
+.arkflight-vessel-picker span {
+  display: block;
+}
+
+.arkflight-bound-vessel-copy span,
+.arkflight-vessel-picker span {
+  color: #b99b5c;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .15em;
+}
+
+.arkflight-bound-vessel-copy strong {
+  margin-top: 1px;
+  color: #f1d38d;
+  font-family: serif;
+  font-size: 16px;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arkflight-bound-vessel-copy small {
+  margin-top: 1px;
+  color: #a9aaa3;
+  font-size: 8px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arkflight-vessel-picker select {
+  width: 100%;
+  height: 28px;
+  margin-top: 2px;
+  border: 1px solid #7a6537 !important;
+  border-radius: 0 !important;
+  color: #ead9a8 !important;
+  background: #11100e !important;
+  box-shadow: none !important;
+  color-scheme: dark;
+  font-size: 11px;
+}
+
+.arkflight-vessel-picker select option {
+  color: #f2e8d1;
+  background: #11100e;
+}
+
+/* Selected-vessel stats form one thin status strip instead of a second large panel row. */
+.arkflight-bound-vessel-stats {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(48px, 1fr));
+  gap: 4px;
+  margin-top: -2px;
+}
+
+.arkflight-bound-vessel-stats > div {
+  min-width: 0;
+  padding: 2px 5px;
+  border: 1px solid rgba(51,66,71,.78);
+  background: rgba(16,23,25,.82);
+  text-align: center;
+}
+
+.arkflight-bound-vessel-stats span,
+.arkflight-bound-vessel-stats strong {
+  display: inline;
+}
+
+.arkflight-bound-vessel-stats span {
+  color: #8b9697;
+  font-size: 6.5px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.arkflight-bound-vessel-stats span::after {
+  content: " ";
+}
+
+.arkflight-bound-vessel-stats strong {
+  color: #dff4f6;
+  font-size: 9px;
+}
+
+.arkflight-bound-vessel.needs-vessel {
+  border-color: #805a35;
+}
+
+.arkflight-bound-vessel.needs-vessel .arkflight-bound-vessel-copy strong {
+  color: #e9bc72;
+}
+
+/* Keep the new vessel header from stealing the Crew Muster's breathing room. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column:has(.arkflight-bound-vessel) .arkflight-opening-muster {
+  margin-top: 6px !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column:has(.arkflight-bound-vessel) .arkflight-opening-section-title {
+  margin-top: 0 !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-command-column:has(.arkflight-bound-vessel) .arkflight-opening-crew-list {
+  margin-bottom: 5px !important;
+}
+
+/* The cinematic 88px lock plate was correct before vessel binding existed, but is too tall once the vessel header is present. */
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-command-column:has(.arkflight-bound-vessel) .arkflight-opening-begin {
+  min-height: 66px !important;
+  margin: 8px 8px 0 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-command-column:has(.arkflight-bound-vessel) .arkflight-opening-begin::before,
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-command-column:has(.arkflight-bound-vessel) .arkflight-opening-begin::after {
+  height: 66px !important;
+}
+
+.arkflight-event-board.arkflight-large-desktop.arkflight-opening-mode .arkflight-opening-command-column:has(.arkflight-bound-vessel) .arkflight-opening-begin-label {
+  font-size: 16px !important;
+  line-height: 1.12 !important;
+}
+
+@media (max-width: 900px) {
+  .arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel {
+    grid-template-columns: 38px 1fr;
+    gap: 6px;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel > img,
+  .arkflight-event-board.arkflight-opening-mode .arkflight-bound-vessel-empty {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  .arkflight-vessel-picker,
+  .arkflight-bound-vessel-stats {
+    grid-column: 1 / -1;
+  }
+}
