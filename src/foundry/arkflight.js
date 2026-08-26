@@ -96,6 +96,17 @@ function activeVoyageShip() {
   return game.actors?.find((actor) => actor.uuid === uuid) ?? null;
 }
 
+async function bindExistingEventShipIfNeeded() {
+  if (!game.user.isGM || !controller?.state?.eventId || activeVoyageShip()) return activeVoyageShip();
+  const ships = commissionedShips();
+  if (ships.length !== 1) return null;
+  const shipActor = ships[0];
+  await game.settings.set(MODULE_ID, ACTIVE_SHIP_SETTING, shipActor.uuid);
+  if (controller.state.phase === "opening" && !controller.state.setupLocked) await prefillCrewFromShip(shipActor);
+  ui.notifications?.info(`${shipActor.name} bound to the active Arkflight Event.`);
+  return shipActor;
+}
+
 function decorateEventCompleteBoard() {
   if (!controller?.state || controller.state.phase !== "event-complete" || !board?.element) return;
   const ending = controller.state.eventEnding;
@@ -213,10 +224,14 @@ Hooks.once("init", () => {
   };
 });
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
   controller = new PlanningController({ onStateChange: (state) => { renderBoard(); announceStateRewards(state); } });
   controller.activateSockets();
-  if (controller.state?.eventId) { renderBoard(); announceStateRewards(controller.state); }
+  if (controller.state?.eventId) {
+    await bindExistingEventShipIfNeeded();
+    renderBoard();
+    announceStateRewards(controller.state);
+  }
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
@@ -239,6 +254,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
         }
         return;
       }
+      if (game.user.isGM && !activeVoyageShip()) await bindExistingEventShipIfNeeded();
       renderBoard();
     }
   };
