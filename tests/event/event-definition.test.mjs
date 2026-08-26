@@ -22,11 +22,11 @@ test("all five stations have fallback actions", () => {
 });
 
 test("PF2e degree scoring uses the locked universal bands", () => {
-  assert.deepEqual(scoreRound(["criticalSuccess", "criticalSuccess", "success", "success", "success"]), { score: 7, bandId: "extraordinary", momentumDelta: 2 });
-  assert.deepEqual(scoreRound(["success", "success", "success", "success", "failure"]), { score: 4, bandId: "strong-success", momentumDelta: 1 });
-  assert.deepEqual(scoreRound(["success", "success", "failure", "failure", "failure"]), { score: 2, bandId: "mixed-success", momentumDelta: 0 });
-  assert.deepEqual(scoreRound(["success", "failure", "failure", "failure", "failure"]), { score: 1, bandId: "failure", momentumDelta: -1 });
-  assert.deepEqual(scoreRound(["criticalFailure", "failure", "failure", "failure", "failure"]), { score: -1, bandId: "disaster", momentumDelta: -2 });
+  assert.deepEqual(scoreRound(["criticalSuccess", "criticalSuccess", "success", "success", "success"]), { score: 7, bandId: "extraordinary", bandLabel: "Extraordinary", momentumDelta: 2 });
+  assert.deepEqual(scoreRound(["success", "success", "success", "success", "failure"]), { score: 3, bandId: "strong-success", bandLabel: "Strong Success", momentumDelta: 1 });
+  assert.deepEqual(scoreRound(["success", "success", "failure", "failure", "failure"]), { score: -1, bandId: "failure", bandLabel: "Failure", momentumDelta: -1 });
+  assert.deepEqual(scoreRound(["success", "success", "success", "failure", "failure"]), { score: 1, bandId: "mixed-success", bandLabel: "Narrow Success", momentumDelta: 0 });
+  assert.deepEqual(scoreRound(["criticalFailure", "failure", "failure", "failure", "failure"]), { score: -6, bandId: "disaster", bandLabel: "Disaster", momentumDelta: -2 });
 });
 
 test("Momentum is clamped from 0 through 3", () => {
