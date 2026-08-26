@@ -66,13 +66,18 @@ test("Strain actions increase persistent combat Strain and identify the pushed a
   assert.equal(state.facing, "aft");
 });
 
-test("Overcharge spends an Action, gains Strain, then adds an Action", () => {
+test("Overcharge spends an Action, gains Strain, then adds a temporary Action", () => {
   let state = createCombatState(ship("brigantine", 0, 10));
   state = executeCombatAction(state, "overcharge-arkengine");
   assert.equal(state.strain.value, 1);
   assert.equal(state.economy.actions.value, 4);
   assert.equal(state.economy.actions.max, 5);
+  assert.equal(state.economy.baseline.actions, 4);
   assert.equal(state.pushedAreas.at(-1), "arkengine");
+
+  state = resetCombatRound(state);
+  assert.equal(state.economy.actions.value, 4);
+  assert.equal(state.economy.actions.max, 4);
 });
 
 test("round reset refills the established combat economy", () => {
