@@ -1,1 +1,334 @@
-.arkflight-commissioning-shell{display:grid;grid-template-columns:minmax(0,1fr)300px;gap:12px;margin-top:10px}.arkflight-commissioning-main,.arkflight-commissioning-summary{border:1px solid #443a2d;background:linear-gradient(180deg,rgba(22,21,19,.96),rgba(12,13,14,.98));padding:14px}.arkflight-commissioning-main{min-width:0}.arkflight-commissioning-summary{position:sticky;top:0;align-self:start}.arkflight-commissioning-summary h2{margin:3px 0 14px;color:#ead9a8}.arkflight-commission-stage{margin-top:16px;padding-top:14px;border-top:1px solid #403728}.arkflight-stage-heading{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;margin-bottom:10px}.arkflight-stage-heading>span{display:grid;place-items:center;width:30px;height:30px;border:1px solid #725d34;color:#d2b873;background:#191611;font-size:11px;font-weight:800}.arkflight-stage-heading h3{margin:0;color:#d8c083;font-size:15px}.arkflight-stage-heading p{margin:3px 0 0;color:#817c70;font-size:10px}.arkflight-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.arkflight-hull-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arkflight-choice-card{position:relative;min-height:118px;padding:10px;border:1px solid #4b4638;border-radius:0;color:#d8d0bb;background:linear-gradient(180deg,rgba(28,27,23,.96),rgba(18,19,19,.96));text-align:left}.arkflight-choice-card:hover{border-color:#7f6a3d;background:linear-gradient(180deg,rgba(39,34,25,.98),rgba(19,22,22,.98))}.arkflight-choice-card.is-selected{border-color:#4f91a0;box-shadow:inset 0 0 0 1px rgba(93,181,201,.22);background:linear-gradient(180deg,rgba(24,54,59,.78),rgba(16,25,27,.98))}.arkflight-choice-card.compact{min-height:94px}.arkflight-choice-card strong{display:block;color:#e7d6a4;font-size:12px}.arkflight-choice-card p{margin:7px 0 0;color:#979082;font-size:10px;line-height:1.35}.arkflight-choice-card small{display:block;margin-top:4px;color:#8aa0a3;font-size:9px;text-transform:uppercase}.arkflight-choice-top{display:flex;align-items:center;justify-content:space-between;gap:8px}.arkflight-choice-top em{font-style:normal;color:#bda76e;font-size:9px;font-weight:800}.arkflight-mini-stats{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:8px;color:#92afb4;font-size:9px}.arkflight-recommended{display:inline-block;margin-top:5px;padding:2px 5px;border:1px solid #496f55;color:#a8d8b3;background:rgba(35,83,49,.24);font-size:8px;font-weight:800;letter-spacing:.08em}.arkflight-build-line{padding:9px 0;border-bottom:1px solid #39342c}.arkflight-build-line span,.arkflight-build-line strong,.arkflight-build-line small{display:block}.arkflight-build-line span{color:#8d7e60;font-size:8px;font-weight:800;text-transform:uppercase}.arkflight-build-line strong{margin-top:2px;color:#ead9a8}.arkflight-build-line small{margin-top:2px;color:#8fa3a5}.arkflight-commissioning-summary>h3{margin:16px 0 7px;color:#b99e63;font-size:10px;text-transform:uppercase;letter-spacing:.08em}.arkflight-preview-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.arkflight-preview-grid>div{padding:7px;border:1px solid #34383a;background:rgba(14,17,18,.86);text-align:center}.arkflight-preview-grid span,.arkflight-preview-grid strong{display:block}.arkflight-preview-grid span{color:#7f8b8d;font-size:8px;text-transform:uppercase}.arkflight-preview-grid strong{margin-top:2px;color:#dbecef;font-size:16px}.arkflight-commission-actions{display:grid;grid-template-columns:1fr;margin-top:14px;gap:7px}.arkflight-commission-actions button{min-height:34px;border:1px solid #574c37;border-radius:0;color:#bba56e;background:#171512;font-size:9px;font-weight:800;letter-spacing:.08em}.arkflight-commission-actions .arkflight-commission-button{border-color:#3f7884;color:#c3edf5;background:rgba(23,71,80,.34)}.arkflight-commission-actions .arkflight-commission-button:disabled{opacity:.35;cursor:not-allowed}.arkflight-ship-footer button{padding:0;border:0;background:transparent;color:#646058;font-size:9px;font-weight:800;letter-spacing:.1em}.arkflight-ship-footer button.is-active{color:#c4a65e}.arkflight-ship-footer button:hover{color:#d7c184}.arkflight-ship-footer span.is-future{color:#56534b}@media(max-width:920px){.arkflight-commissioning-shell{grid-template-columns:1fr}.arkflight-commissioning-summary{position:static}.arkflight-choice-grid,.arkflight-hull-grid{grid-template-columns:1fr 1fr}}
+.arkflight-commissioning-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 14px;
+  margin-top: 10px;
+  color: #e8dfc9;
+}
+
+.arkflight-commissioning-main,
+.arkflight-commissioning-summary {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #51452f;
+  color: #e8dfc9;
+  background: linear-gradient(180deg, #171613 0%, #0d0f10 100%);
+  box-shadow: inset 0 0 0 1px rgba(184, 149, 80, 0.05);
+}
+
+.arkflight-commissioning-summary {
+  position: sticky;
+  top: 0;
+  align-self: start;
+}
+
+.arkflight-commissioning-summary h2 {
+  margin: 4px 0 14px;
+  color: #f0ddb0;
+  font-size: 20px;
+}
+
+.arkflight-commission-stage {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #51452f;
+}
+
+.arkflight-stage-heading {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 11px;
+  align-items: start;
+  margin-bottom: 11px;
+}
+
+.arkflight-stage-heading > span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #806936;
+  color: #e2c87e;
+  background: #1e1a13;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.arkflight-stage-heading h3 {
+  margin: 0;
+  color: #e3ca8d;
+  font-size: 16px;
+}
+
+.arkflight-stage-heading p {
+  margin: 4px 0 0;
+  color: #b8b0a0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.arkflight-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.arkflight-hull-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* PF2e applies strong button text defaults. Force Arkflight cards to own their palette. */
+.arkflight-ship-sheet .arkflight-choice-card,
+.arkflight-ship-sheet .arkflight-choice-card:hover,
+.arkflight-ship-sheet .arkflight-choice-card:focus {
+  position: relative;
+  min-height: 124px;
+  padding: 11px 12px;
+  border: 1px solid #5e5543 !important;
+  border-radius: 0 !important;
+  outline: 0;
+  color: #e7dec8 !important;
+  background: linear-gradient(180deg, #26231d 0%, #17191a 100%) !important;
+  box-shadow: none;
+  text-align: left;
+  text-shadow: none !important;
+}
+
+.arkflight-ship-sheet .arkflight-choice-card:hover {
+  border-color: #a38546 !important;
+  background: linear-gradient(180deg, #332b1f 0%, #1b2021 100%) !important;
+}
+
+.arkflight-ship-sheet .arkflight-choice-card.is-selected,
+.arkflight-ship-sheet .arkflight-choice-card.is-selected:hover {
+  border-color: #62a9b7 !important;
+  background: linear-gradient(180deg, #1f454c 0%, #12272b 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(116, 211, 231, 0.18), 0 0 10px rgba(60, 145, 165, 0.12);
+}
+
+.arkflight-ship-sheet .arkflight-choice-card.compact {
+  min-height: 102px;
+}
+
+.arkflight-ship-sheet .arkflight-choice-card *,
+.arkflight-ship-sheet .arkflight-choice-card:hover * {
+  text-shadow: none !important;
+}
+
+.arkflight-ship-sheet .arkflight-choice-card strong {
+  display: block;
+  color: #f1dfaa !important;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.arkflight-ship-sheet .arkflight-choice-card p {
+  margin: 7px 0 0;
+  color: #c3baa9 !important;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.arkflight-ship-sheet .arkflight-choice-card small {
+  display: block;
+  margin-top: 5px;
+  color: #9eb9bd !important;
+  font-size: 9px;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.arkflight-choice-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.arkflight-ship-sheet .arkflight-choice-top em {
+  flex: 0 0 auto;
+  color: #d6bd79 !important;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.arkflight-mini-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin-top: 9px;
+}
+
+.arkflight-ship-sheet .arkflight-mini-stats span {
+  color: #a9cbd0 !important;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.arkflight-ship-sheet .arkflight-recommended {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 6px;
+  border: 1px solid #578164;
+  color: #bfe6c9 !important;
+  background: rgba(40, 94, 57, 0.34);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.arkflight-build-line {
+  padding: 10px 0;
+  border-bottom: 1px solid #494135;
+}
+
+.arkflight-build-line span,
+.arkflight-build-line strong,
+.arkflight-build-line small {
+  display: block;
+}
+
+.arkflight-build-line span {
+  color: #aa976d;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.arkflight-build-line strong {
+  margin-top: 3px;
+  color: #f0ddb0;
+  font-size: 13px;
+}
+
+.arkflight-build-line small {
+  margin-top: 3px;
+  color: #9db2b5;
+  font-size: 10px;
+}
+
+.arkflight-commissioning-summary > h3 {
+  margin: 17px 0 8px;
+  color: #cdb273;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arkflight-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.arkflight-preview-grid > div {
+  padding: 8px;
+  border: 1px solid #3c4547;
+  background: #111719;
+  text-align: center;
+}
+
+.arkflight-preview-grid span,
+.arkflight-preview-grid strong {
+  display: block;
+}
+
+.arkflight-preview-grid span {
+  color: #96a6a8;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.arkflight-preview-grid strong {
+  margin-top: 2px;
+  color: #def4f7;
+  font-size: 17px;
+}
+
+.arkflight-commission-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.arkflight-ship-sheet .arkflight-commission-actions button {
+  min-height: 36px;
+  border: 1px solid #685c43 !important;
+  border-radius: 0 !important;
+  color: #d3bd82 !important;
+  background: #1c1914 !important;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-shadow: none !important;
+}
+
+.arkflight-ship-sheet .arkflight-commission-actions button:hover {
+  border-color: #92783f !important;
+  color: #f0d997 !important;
+}
+
+.arkflight-ship-sheet .arkflight-commission-actions .arkflight-commission-button {
+  border-color: #4d8d9b !important;
+  color: #cff4fb !important;
+  background: #15333a !important;
+}
+
+.arkflight-ship-sheet .arkflight-commission-actions .arkflight-commission-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.arkflight-ship-sheet .arkflight-validation-box {
+  color: #e6d9c4;
+  background: rgba(91, 45, 29, 0.32);
+}
+
+.arkflight-ship-sheet .arkflight-validation-box h3 {
+  color: #e0ba76;
+}
+
+.arkflight-ship-sheet .arkflight-validation-box p {
+  color: #efb49b;
+}
+
+.arkflight-ship-footer button {
+  padding: 0;
+  border: 0 !important;
+  background: transparent !important;
+  color: #777168 !important;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-shadow: none !important;
+}
+
+.arkflight-ship-footer button.is-active {
+  color: #d7b967 !important;
+}
+
+.arkflight-ship-footer button:hover {
+  color: #f0d797 !important;
+}
+
+.arkflight-ship-footer span.is-future {
+  color: #56534b;
+}
+
+@media (max-width: 920px) {
+  .arkflight-commissioning-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .arkflight-commissioning-summary {
+    position: static;
+  }
+
+  .arkflight-choice-grid,
+  .arkflight-hull-grid {
+    grid-template-columns: 1fr;
+  }
+}
