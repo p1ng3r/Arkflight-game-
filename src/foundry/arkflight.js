@@ -26,14 +26,33 @@ let lastEventRewardKey = null;
 
 function ensureBoard() { if (!controller) return null; if (!board) board = new ArkflightEventBoard(controller); return board; }
 function shipPayload(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
-function commissionedShips() { return [...(game.actors ?? [])].filter((actor) => { if (!isArkflightShip(actor)) return false; const ship = shipPayload(actor); return Boolean(ship && validateShip(ship, SHIP_CATALOGS).ok); }); }
+
+function actorCandidates() {
+  const byUuid = new Map();
+  for (const actor of game.actors?.contents ?? []) if (actor?.uuid) byUuid.set(actor.uuid, actor);
+  for (const scene of game.scenes?.contents ?? []) {
+    for (const token of scene.tokens?.contents ?? []) {
+      const actor = token?.actor ?? null;
+      if (actor?.uuid) byUuid.set(actor.uuid, actor);
+    }
+  }
+  return [...byUuid.values()];
+}
+
+function commissionedShips() {
+  return actorCandidates().filter((actor) => {
+    if (!isArkflightShip(actor)) return false;
+    const ship = shipPayload(actor);
+    return Boolean(ship && validateShip(ship, SHIP_CATALOGS).ok);
+  });
+}
 function canonicalStation(id) { return id === "watchmaster" ? "battlewatch" : id; }
 
 async function resolveActorReference(reference) {
   if (!reference) return null;
   if (reference.documentName === "Actor") return reference;
   if (typeof reference !== "string") return null;
-  const direct = game.actors?.get(reference) ?? game.actors?.find((actor) => actor.uuid === reference || actor.name === reference);
+  const direct = actorCandidates().find((actor) => actor.id === reference || actor.uuid === reference || actor.name === reference) ?? null;
   if (direct) return direct;
   try { const resolved = await fromUuid(reference); return resolved?.documentName === "Actor" ? resolved : null; } catch (_error) { return null; }
 }
@@ -69,7 +88,7 @@ async function prefillCrewFromShip(actor) {
 function activeVoyageShip() {
   const uuid = game.settings?.get(MODULE_ID, ACTIVE_SHIP_SETTING) || null;
   if (!uuid) return null;
-  return game.actors?.find((actor) => actor.uuid === uuid) ?? null;
+  return actorCandidates().find((actor) => actor.uuid === uuid) ?? null;
 }
 
 function masteryIdsForShip(actor = activeVoyageShip()) {
