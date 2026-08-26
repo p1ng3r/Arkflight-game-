@@ -28,6 +28,7 @@ test("event setup requires five unique officers and one mastery per station", ()
 
 test("station mastery applies its effect and becomes expended for the event", () => {
   let state = readySetup();
+  state = selectMastery(state, "navigator", "navigator-find-another-way");
   state = startPlanning(state, 1000);
   state = {
     ...state,
@@ -45,10 +46,10 @@ test("station mastery applies its effect and becomes expended for the event", ()
     }
   };
 
-  state = applyMasteryTechnique(state, "captain", { targetStationId: "engineer" });
-  assert.equal(state.encounter.checkBonuses.engineer, 2);
-  assert.equal(state.masteryUses.captain.masteryId, "captain-commanding-moment");
-  assert.throws(() => applyMasteryTechnique(state, "captain", { targetStationId: "navigator" }), /EXPENDED/);
+  state = applyMasteryTechnique(state, "navigator", { targetStationId: "engineer" });
+  assert.equal(state.encounter.checkBonuses.engineer, 3);
+  assert.equal(state.masteryUses.navigator.masteryId, "navigator-find-another-way");
+  assert.throws(() => applyMasteryTechnique(state, "navigator", { targetStationId: "captain" }), /EXPENDED/);
 });
 
 test("crew tactic spends from the shared hand and applies a targeted effect", () => {
