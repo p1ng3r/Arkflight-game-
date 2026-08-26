@@ -244,13 +244,73 @@
   position: relative !important;
 }
 
+/* FINAL DESKTOP FRAME SCALE — outer hardware must read as structural corners,
+   not small panel ornaments. Keep panel corners separate and much smaller. */
+.arkflight-opening-grid.arkflight-cinematic-opening::before,
+.arkflight-opening-grid.arkflight-cinematic-opening::after,
+.arkflight-opening-art-column::before,
+.arkflight-opening-stakes-column::after {
+  width: 248px !important;
+  height: 248px !important;
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening::before {
+  top: -12px !important;
+  left: -12px !important;
+}
+
+.arkflight-opening-grid.arkflight-cinematic-opening::after {
+  right: -12px !important;
+  bottom: -12px !important;
+}
+
+.arkflight-opening-art-column::before {
+  left: -12px !important;
+  bottom: -12px !important;
+}
+
+.arkflight-opening-stakes-column::after {
+  right: -12px !important;
+  top: -12px !important;
+}
+
+/* Stabilize the CTA regardless of older flex/grid rules elsewhere in the stack. */
+.arkflight-opening-begin {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-direction: row !important;
+}
+
+.arkflight-opening-begin-label {
+  position: absolute !important;
+  left: 108px !important;
+  right: 86px !important;
+  top: 50% !important;
+  width: auto !important;
+  transform: translateY(-50%) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Any stray text node from stale decoration hooks is clipped to the button box. */
+.arkflight-opening-begin {
+  text-align: center !important;
+  line-height: 1 !important;
+}
+
 @media (max-width: 1100px) {
   .arkflight-opening-grid.arkflight-cinematic-opening::before,
   .arkflight-opening-grid.arkflight-cinematic-opening::after,
   .arkflight-opening-art-column::before,
   .arkflight-opening-stakes-column::after {
-    width: 138px !important;
-    height: 138px !important;
+    width: 176px !important;
+    height: 176px !important;
   }
 
   .arkflight-opening-side-panel::before,
@@ -265,5 +325,10 @@
     padding-right: 64px !important;
     background-position: 32px center, center !important;
     background-size: 42px 42px, calc(100% - 104px) 100% !important;
+  }
+
+  .arkflight-opening-begin-label {
+    left: 88px !important;
+    right: 64px !important;
   }
 }
