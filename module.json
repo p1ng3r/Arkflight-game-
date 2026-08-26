@@ -33,13 +33,15 @@
     "styles/opening-screen-icon-assets.css",
     "styles/ship-sheet.css",
     "styles/ship-sheet-commissioning.css",
-    "styles/shipwright-ux.css"
+    "styles/shipwright-ux.css",
+    "styles/armory-ux.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
     "src/ui/mastery-clarity-ui.js",
     "src/ui/event-board-large-desktop.js",
     "src/ui/opening-branding-ui.js",
-    "src/ui/opening-stakes-tooltip-ui.js"
+    "src/ui/opening-stakes-tooltip-ui.js",
+    "src/ui/armory-ux.js"
   ]
 }
