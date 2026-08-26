@@ -1,0 +1,44 @@
+<form class="arkflight-ship-shell {{cssClass}}" autocomplete="off">
+  <header class="arkflight-ship-proof-header">
+    <div>
+      <div class="arkflight-ship-kicker">ARKFLIGHT VESSEL</div>
+      <h1>{{actor.name}}</h1>
+      <p>PF2e Vehicle Actor · {{arkflight.actorUuid}}</p>
+    </div>
+    <div class="arkflight-ship-proof-status">
+      {{#if arkflight.marked}}
+        <strong>ARKFLIGHT SHIP BOUND</strong>
+      {{else}}
+        <strong>UNBOUND VEHICLE</strong>
+      {{/if}}
+    </div>
+  </header>
+
+  <section class="arkflight-ship-proof-grid">
+    <article>
+      <h2>Vehicle Document</h2>
+      <dl>
+        <dt>Actor Type</dt><dd>{{actor.type}}</dd>
+        <dt>Actor UUID</dt><dd>{{arkflight.actorUuid}}</dd>
+      </dl>
+    </article>
+
+    <article>
+      <h2>Arkflight Payload</h2>
+      {{#if arkflight.ship}}
+        <dl>
+          <dt>Ship Name</dt><dd>{{arkflight.ship.identity.name}}</dd>
+          <dt>Hull</dt><dd>{{arkflight.ship.hull.chassisId}}</dd>
+          <dt>Arkengine</dt><dd>{{arkflight.ship.arkengine.chassisId}}</dd>
+          <dt>Schema</dt><dd>v{{arkflight.ship.schemaVersion}}</dd>
+        </dl>
+      {{else}}
+        <p>No Arkflight ship payload has been initialized on this vehicle.</p>
+      {{/if}}
+    </article>
+  </section>
+
+  <footer class="arkflight-ship-proof-footer">
+    M1 architecture proof only. Command, Shipwright, Armory, Crew, and Hold tabs come after this vehicle-sheet binding is verified in Foundry.
+  </footer>
+</form>
