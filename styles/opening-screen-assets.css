@@ -11,7 +11,7 @@
   content: "" !important;
   display: block !important;
   position: absolute !important;
-  z-index: 20 !important;
+  z-index: 80 !important;
   pointer-events: none !important;
   width: 172px !important;
   height: 172px !important;
@@ -244,34 +244,42 @@
   position: relative !important;
 }
 
-/* FINAL DESKTOP FRAME SCALE — outer hardware must read as structural corners,
-   not small panel ornaments. Keep panel corners separate and much smaller. */
+/* FINAL DESKTOP FRAME SCALE — four major outer corners sit in front of the
+   complete opening-screen composition and visibly grab the outer frame. */
 .arkflight-opening-grid.arkflight-cinematic-opening::before,
 .arkflight-opening-grid.arkflight-cinematic-opening::after,
 .arkflight-opening-art-column::before,
 .arkflight-opening-stakes-column::after {
-  width: 248px !important;
-  height: 248px !important;
+  width: 320px !important;
+  height: 320px !important;
+  z-index: 80 !important;
 }
 
 .arkflight-opening-grid.arkflight-cinematic-opening::before {
-  top: -12px !important;
-  left: -12px !important;
+  top: -22px !important;
+  left: -22px !important;
 }
 
 .arkflight-opening-grid.arkflight-cinematic-opening::after {
-  right: -12px !important;
-  bottom: -12px !important;
+  right: -22px !important;
+  bottom: -22px !important;
 }
 
 .arkflight-opening-art-column::before {
-  left: -12px !important;
-  bottom: -12px !important;
+  left: -22px !important;
+  bottom: -22px !important;
 }
 
 .arkflight-opening-stakes-column::after {
-  right: -12px !important;
-  top: -12px !important;
+  right: -22px !important;
+  top: -22px !important;
+}
+
+/* Keep major corners above every panel, image, caption and inner ornament. */
+.arkflight-opening-grid.arkflight-cinematic-opening,
+.arkflight-opening-art-column,
+.arkflight-opening-stakes-column {
+  isolation: isolate !important;
 }
 
 /* Stabilize the CTA regardless of older flex/grid rules elsewhere in the stack. */
@@ -309,8 +317,8 @@
   .arkflight-opening-grid.arkflight-cinematic-opening::after,
   .arkflight-opening-art-column::before,
   .arkflight-opening-stakes-column::after {
-    width: 176px !important;
-    height: 176px !important;
+    width: 220px !important;
+    height: 220px !important;
   }
 
   .arkflight-opening-side-panel::before,
