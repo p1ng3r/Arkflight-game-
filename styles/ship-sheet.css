@@ -1,94 +1,500 @@
 .arkflight-ship-sheet .window-content {
   padding: 0;
-  background: #11100f;
+  background: #0c0d0e;
 }
 
 .arkflight-ship-shell {
   min-height: 100%;
-  padding: 18px;
+  padding: 14px;
+  overflow: auto;
   color: #e8dfc9;
   background:
-    linear-gradient(180deg, rgba(22, 19, 16, 0.96), rgba(10, 11, 12, 0.98));
+    radial-gradient(circle at 50% -10%, rgba(38, 91, 103, 0.18), transparent 38%),
+    linear-gradient(180deg, rgba(22, 19, 16, 0.98), rgba(8, 9, 10, 0.99));
 }
 
-.arkflight-ship-proof-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 18px 20px;
+.arkflight-ship-shell button,
+.arkflight-ship-shell input {
+  font: inherit;
+}
+
+.arkflight-ship-header {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: stretch;
+  padding: 14px;
   border: 1px solid #7d6434;
-  background: rgba(31, 27, 22, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(198, 157, 76, 0.08);
+  background: linear-gradient(180deg, rgba(34, 29, 23, 0.96), rgba(20, 19, 17, 0.94));
 }
 
-.arkflight-ship-proof-header h1 {
-  margin: 2px 0 4px;
-  color: #f2e5bd;
-  font-size: 28px;
+.arkflight-ship-portrait {
+  width: 116px;
+  height: 116px;
+  object-fit: cover;
+  border: 1px solid #8d7240;
+  background: #08090a;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8);
 }
 
-.arkflight-ship-proof-header p,
-.arkflight-ship-proof-footer {
-  color: #aaa08b;
+.arkflight-ship-identity {
+  min-width: 0;
 }
 
 .arkflight-ship-kicker {
   color: #b89550;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
-.arkflight-ship-proof-status {
-  padding: 9px 12px;
-  border: 1px solid #356f7c;
-  color: #bcecff;
-  background: rgba(20, 64, 76, 0.22);
+.arkflight-ship-name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.arkflight-ship-name-row h1 {
+  margin: 2px 0 6px;
+  color: #f3e7bf;
+  font-size: 30px;
+  line-height: 1;
+  text-shadow: 0 1px 0 #000;
+}
+
+.arkflight-tier {
+  padding: 3px 7px;
+  border: 1px solid #5e543e;
+  color: #cdb77d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.arkflight-ship-registry-row,
+.arkflight-powertrain-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  margin-top: 8px;
+  color: #aaa08b;
   font-size: 12px;
-  letter-spacing: 0.08em;
 }
 
-.arkflight-ship-proof-grid {
+.arkflight-ship-registry-row span:not(:last-child)::after {
+  content: "·";
+  margin-left: 14px;
+  color: #655a45;
+}
+
+.arkflight-powertrain-line strong {
+  color: #d9c188;
+}
+
+.arkflight-ship-header-actions {
+  display: flex;
+  min-width: 190px;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.arkflight-readiness,
+.arkflight-shipwright-toggle {
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid #4d5d4d;
+  border-radius: 0;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.arkflight-readiness.is-ready {
+  color: #c4f1d0;
+  border-color: #437252;
+  background: rgba(33, 91, 50, 0.2);
+}
+
+.arkflight-readiness.is-incomplete {
+  color: #f1c7a0;
+  border-color: #86563c;
+  background: rgba(99, 51, 29, 0.2);
+}
+
+.arkflight-shipwright-toggle {
+  color: #cbb579;
+  border-color: #6c5932;
+  background: #171512;
+}
+
+.arkflight-shipwright-toggle:hover,
+.arkflight-shipwright-toggle.is-active {
+  color: #d9f5ff;
+  border-color: #3c8291;
+  background: rgba(24, 76, 88, 0.32);
+}
+
+.arkflight-resource-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.arkflight-resource-card {
+  padding: 8px 10px;
+  border: 1px solid #51452f;
+  background: rgba(25, 23, 19, 0.92);
+}
+
+.arkflight-resource-label {
+  margin-bottom: 4px;
+  color: #b79b5d;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.arkflight-resource-values {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  color: #efe3bf;
+  font-size: 18px;
+}
+
+.arkflight-resource-values input {
+  width: 52px;
+  padding: 2px 3px;
+  border: 0;
+  border-bottom: 1px solid #5b7a80;
+  border-radius: 0;
+  color: #e4f8ff;
+  background: rgba(11, 32, 37, 0.5);
+  text-align: center;
+}
+
+.arkflight-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 0.8fr)) minmax(0, 1.6fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.arkflight-stat-card {
+  min-height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #34383a;
+  background: rgba(16, 18, 19, 0.88);
+}
+
+.arkflight-stat-card span {
+  color: #8e9696;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.arkflight-stat-card strong {
+  color: #dcebed;
+  font-size: 18px;
+}
+
+.arkflight-crew-summary strong {
+  font-size: 15px;
+}
+
+.arkflight-crew-summary small {
+  color: #7d8585;
+  font-size: 8px;
+}
+
+.arkflight-command-grid {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.88fr) minmax(360px, 1.35fr) minmax(240px, 0.82fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.arkflight-command-panel {
+  min-height: 390px;
+  padding: 12px;
+  border: 1px solid #443a2d;
+  background: linear-gradient(180deg, rgba(22, 21, 19, 0.94), rgba(13, 14, 14, 0.96));
+}
+
+.arkflight-panel-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #443927;
+}
+
+.arkflight-panel-heading h2 {
+  margin: 2px 0 0;
+  color: #d6bc7b;
+  font-size: 17px;
+}
+
+.arkflight-panel-heading small {
+  color: #7195a0;
+  font-size: 9px;
+}
+
+.arkflight-system-list,
+.arkflight-station-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.arkflight-system-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid #4a463a;
+  border-radius: 0;
+  color: #ddd5c0;
+  background: #171714;
+  text-align: left;
+}
+
+.arkflight-system-row:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.arkflight-system-name {
+  font-weight: 700;
+}
+
+.arkflight-system-state {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arkflight-system-row.is-functional .arkflight-system-state { color: #9fd8ae; }
+.arkflight-system-row.is-damaged .arkflight-system-state { color: #e2bd68; }
+.arkflight-system-row.is-disabled .arkflight-system-state { color: #df8a62; }
+.arkflight-system-row.is-destroyed .arkflight-system-state { color: #df6767; }
+
+.arkflight-condition-count {
+  min-width: 20px;
+  padding: 2px 5px;
+  border: 1px solid #7e5545;
+  color: #efb09a;
+  text-align: center;
+}
+
+.arkflight-condition-box,
+.arkflight-validation-box {
+  margin-top: 10px;
+  padding: 9px;
+  border: 1px solid #664839;
+  background: rgba(74, 37, 25, 0.18);
+}
+
+.arkflight-condition-box h3,
+.arkflight-validation-box h3,
+.arkflight-profile-subsection h3 {
+  margin: 0 0 7px;
+  color: #b99e63;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arkflight-condition-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+}
+
+.arkflight-condition-line span {
+  color: #9b8d82;
+}
+
+.arkflight-component-stack {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 14px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
-.arkflight-ship-proof-grid article {
-  min-height: 180px;
-  padding: 16px;
-  border: 1px solid #4c4334;
-  background: rgba(21, 20, 18, 0.82);
+.arkflight-component-line {
+  padding: 10px;
+  border: 1px solid #4e452f;
+  background: rgba(29, 26, 20, 0.7);
 }
 
-.arkflight-ship-proof-grid h2 {
-  margin: 0 0 14px;
-  color: #c7a75f;
-  font-size: 16px;
+.arkflight-component-line > span,
+.arkflight-component-line > strong,
+.arkflight-component-line > small {
+  display: block;
 }
 
-.arkflight-ship-proof-grid dl {
+.arkflight-component-line > span {
+  color: #8d7e60;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.arkflight-component-line > strong {
+  margin-top: 3px;
+  color: #ead9a8;
+}
+
+.arkflight-component-line > small {
+  margin-top: 2px;
+  color: #8fa3a5;
+}
+
+.arkflight-profile-subsection {
+  margin-top: 13px;
+}
+
+.arkflight-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.arkflight-chip {
+  padding: 3px 6px;
+  border: 1px solid #5b5038;
+  color: #c6b582;
+  background: rgba(49, 42, 29, 0.4);
+  font-size: 9px;
+}
+
+.arkflight-capability-chip {
+  border-color: #355e68;
+  color: #a9d6df;
+  background: rgba(25, 67, 77, 0.25);
+}
+
+.arkflight-empty-text {
+  color: #746f65;
+  font-size: 10px;
+  font-style: italic;
+}
+
+.arkflight-validation-box p {
+  margin: 4px 0;
+  color: #d7a78f;
+  font-size: 10px;
+}
+
+.arkflight-validation-box p.is-warning {
+  color: #c8b378;
+}
+
+.arkflight-station-card {
   display: grid;
-  grid-template-columns: 110px minmax(0, 1fr);
-  gap: 8px 12px;
-  margin: 0;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+  min-height: 54px;
+  padding: 7px;
+  border: 1px solid #3e4849;
+  background: rgba(16, 25, 27, 0.65);
 }
 
-.arkflight-ship-proof-grid dt {
-  color: #9e8c67;
-  font-weight: 700;
+.arkflight-station-emblem {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #56727a;
+  color: #9ed4df;
+  background: radial-gradient(circle, rgba(42, 95, 106, 0.28), rgba(8, 13, 14, 0.9));
 }
 
-.arkflight-ship-proof-grid dd {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
+.arkflight-station-card strong,
+.arkflight-station-card span {
+  display: block;
 }
 
-.arkflight-ship-proof-footer {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-top: 1px solid #3c3429;
+.arkflight-station-card strong {
+  color: #d8c592;
   font-size: 12px;
+}
+
+.arkflight-station-card span {
+  margin-top: 2px;
+  color: #8d9b9c;
+  font-size: 10px;
+}
+
+.arkflight-ship-footer {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-top: 1px solid #594b30;
+  color: #c4a65e;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.arkflight-ship-footer .is-future {
+  color: #56534b;
+}
+
+.arkflight-ship-footer small {
+  margin-left: auto;
+  color: #5d6464;
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+@media (max-width: 920px) {
+  .arkflight-ship-header {
+    grid-template-columns: 90px minmax(0, 1fr);
+  }
+  .arkflight-ship-portrait {
+    width: 90px;
+    height: 90px;
+  }
+  .arkflight-ship-header-actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+  }
+  .arkflight-resource-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .arkflight-stat-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .arkflight-command-grid {
+    grid-template-columns: 1fr;
+  }
+  .arkflight-command-panel {
+    min-height: 0;
+  }
 }
