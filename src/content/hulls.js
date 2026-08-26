@@ -1,6 +1,14 @@
 import { component, COMPONENT_TYPES } from "../ship/component-rules.js";
 const C=["arkengine-chamber","helm","crew-quarters","galley-and-mess","cargo-hold","officer-wardroom"];
-const h=(id,name,description,tier,tags,baseStats,preferredArkengine,allowedArkengines,districtScale=false)=>component({id,name,type:COMPONENT_TYPES.HULL,description,tags:["core-hull",...tags],traits:["core-hull",...tags],data:{tier,baseStats,coreRooms:C,districtScale,preferredArkengine,allowedArkengines}});
+const CORE_MASTERY=Object.freeze({
+ captain:["captain-carry-the-deed","captain-set-the-pace","captain-not-like-this"],
+ engineer:["engineer-redline-the-arkengine","engineer-keep-her-breathing","engineer-crosswire-the-systems"],
+ navigator:["navigator-impossible-passage","navigator-find-another-way","navigator-read-the-current"],
+ battlewatch:["battlewatch-call-the-true-opening","battlewatch-nothing-surprises-me","battlewatch-exploit-the-break"],
+ veilwarden:["veilwarden-stand-between","veilwarden-seal-the-impossible","veilwarden-sanctuary"]
+});
+const coreUnlocks=()=>({stations:Object.fromEntries(Object.entries(CORE_MASTERY).map(([station,masteries])=>[station,{masteries:[...masteries]}]))});
+const h=(id,name,description,tier,tags,baseStats,preferredArkengine,allowedArkengines,districtScale=false)=>component({id,name,type:COMPONENT_TYPES.HULL,description,tags:["core-hull",...tags],traits:["core-hull",...tags],data:{tier,baseStats,coreRooms:C,districtScale,preferredArkengine,allowedArkengines},unlocks:coreUnlocks()});
 const m=(fore=[0,"small"],port=[0,"small"],starboard=[0,"small"],aft=[0,"small"])=>({fore:{count:fore[0],maxSize:fore[1]},port:{count:port[0],maxSize:port[1]},starboard:{count:starboard[0],maxSize:starboard[1]},aft:{count:aft[0],maxSize:aft[1]}});
 const s=(armorClass,hullIntegrity,lifeveilCapacity,strainCapacity,cargoCapacity,detection,combatSpeed,maneuverability,roomCapacity,crew,weaponMounts,physicalResistances)=>({armorClass,hullIntegrity,lifeveilCapacity,strainCapacity,cargoCapacity,detection,combatSpeed,maneuverability,roomCapacity,shipModCapacity:roomCapacity,arkengineModCapacity:0,crew,weaponMounts,physicalResistances});
 export const HULLS=Object.freeze(Object.fromEntries([
