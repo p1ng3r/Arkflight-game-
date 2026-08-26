@@ -18,7 +18,7 @@ test("Risk library contains at least 50 reusable benefits with extraordinary cri
 });
 
 test("all five stations have fallback actions", () => {
-  assert.deepEqual(Object.keys(FALLBACK_ACTIONS).sort(), ["captain", "engineer", "navigator", "veilwarden", "watchmaster"]);
+  assert.deepEqual(Object.keys(FALLBACK_ACTIONS).sort(), ["battlewatch", "captain", "engineer", "navigator", "veilwarden"]);
 });
 
 test("PF2e degree scoring uses the locked universal bands", () => {
