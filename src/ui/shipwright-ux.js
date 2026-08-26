@@ -17,6 +17,13 @@ const STAT_LABELS = Object.freeze({
   voyageSpeedTravelHexDays: "Travel Hex Days"
 });
 
+const SHIPWRIGHT_TABS = Object.freeze([
+  { key: "core", label: "Core Build", icon: "fa-ship" },
+  { key: "engine-mods", label: "Engine Mods", icon: "fa-gears" },
+  { key: "rooms", label: "Rooms", icon: "fa-door-open" },
+  { key: "ship-mods", label: "Ship Mods", icon: "fa-screwdriver-wrench" }
+]);
+
 function titleCase(value) {
   return String(value ?? "").replace(/[-_.]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -87,8 +94,32 @@ function stageKey(stage) {
   return null;
 }
 
-export function improveShipwright(root, { defaultSection = "engine-mods", onSectionChange = null } = {}) {
+function buildTabNav(main) {
+  let nav = main.querySelector(".arkflight-shipwright-subnav");
+  if (nav) return nav;
+
+  nav = document.createElement("nav");
+  nav.className = "arkflight-shipwright-subnav";
+  nav.setAttribute("role", "tablist");
+  nav.setAttribute("aria-label", "Shipwright sections");
+
+  for (const tab of SHIPWRIGHT_TABS) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.shipwrightSection = tab.key;
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", "false");
+    button.innerHTML = `<i class="fa-solid ${tab.icon}"></i><span>${tab.label}</span>`;
+    nav.append(button);
+  }
+
+  main.querySelector(".arkflight-panel-heading")?.insertAdjacentElement("afterend", nav);
+  return nav;
+}
+
+export function improveShipwright(root, { defaultSection = "core", onSectionChange = null } = {}) {
   if (!root?.matches?.(".arkflight-ship-shell") || !root.querySelector(".arkflight-commissioning-shell")) return;
+
   for (const card of root.querySelectorAll(".arkflight-fitting-card")) annotateFittingCard(card);
   for (const grid of root.querySelectorAll(".arkflight-fitting-grid")) sortInstalledFirst(grid);
 
@@ -97,34 +128,54 @@ export function improveShipwright(root, { defaultSection = "engine-mods", onSect
   const stages = [...main.querySelectorAll(".arkflight-commission-stage")];
   if (!stages.length) return;
 
-  let nav = main.querySelector(".arkflight-shipwright-subnav");
-  if (!nav) {
-    nav = document.createElement("nav");
-    nav.className = "arkflight-shipwright-subnav";
-    for (const [key, labelText] of [["core","Core Build"],["engine-mods","Engine Mods"],["rooms","Rooms"],["ship-mods","Ship Mods"]]) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.shipwrightSection = key;
-      button.textContent = labelText;
-      nav.append(button);
-    }
-    main.querySelector(".arkflight-panel-heading")?.insertAdjacentElement("afterend", nav);
+  const nav = buildTabNav(main);
+  const validKeys = SHIPWRIGHT_TABS.map((tab) => tab.key);
+
+  for (const stage of stages) {
+    const key = stageKey(stage);
+    if (!key) continue;
+    stage.dataset.shipwrightPanel = key;
+    stage.setAttribute("role", "tabpanel");
   }
 
-  const activate = (key) => {
-    const validKey = ["core", "engine-mods", "rooms", "ship-mods"].includes(key) ? key : "engine-mods";
+  const activate = (key, { focus = false } = {}) => {
+    const validKey = validKeys.includes(key) ? key : "core";
     root.dataset.shipwrightSection = validKey;
-    for (const stage of stages) stage.hidden = stageKey(stage) !== validKey;
-    for (const button of nav.querySelectorAll("button")) button.classList.toggle("is-active", button.dataset.shipwrightSection === validKey);
+
+    for (const stage of stages) {
+      const visible = stageKey(stage) === validKey;
+      stage.hidden = !visible;
+      stage.setAttribute("aria-hidden", visible ? "false" : "true");
+    }
+
+    for (const button of nav.querySelectorAll("[data-shipwright-section]")) {
+      const active = button.dataset.shipwrightSection === validKey;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", active ? "true" : "false");
+      button.tabIndex = active ? 0 : -1;
+      if (active && focus) button.focus();
+    }
+
     onSectionChange?.(validKey);
+    main.scrollTop = 0;
   };
 
-  for (const button of nav.querySelectorAll("button")) {
+  for (const button of nav.querySelectorAll("[data-shipwright-section]")) {
     button.onclick = (event) => {
       event.preventDefault();
       activate(button.dataset.shipwrightSection);
     };
+
+    button.onkeydown = (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const current = validKeys.indexOf(button.dataset.shipwrightSection);
+      const delta = event.key === "ArrowRight" ? 1 : -1;
+      const next = validKeys[(current + delta + validKeys.length) % validKeys.length];
+      activate(next, { focus: true });
+    };
   }
+
   activate(defaultSection);
 }
 
