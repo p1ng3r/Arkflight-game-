@@ -39,7 +39,8 @@
     "styles/station-icons.css",
     "styles/hold-log-ux.css",
     "styles/voyage-ship-binding.css",
-    "styles/opening-screen-css-textures.css"
+    "styles/opening-screen-css-textures.css",
+    "styles/unified-ship-state.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -52,6 +53,7 @@
     "src/ui/crew-ux.js",
     "src/ui/station-icon-ux.js",
     "src/ui/hold-log-ux.js",
-    "src/ui/voyage-ship-binding-ui.js"
+    "src/ui/voyage-ship-binding-ui.js",
+    "src/ui/unified-ship-state-ui.js"
   ]
 }
