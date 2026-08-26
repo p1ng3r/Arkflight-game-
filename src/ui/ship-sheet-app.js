@@ -2,6 +2,7 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip, syncResourceMaxima } from "../ship/derive-ship.js";
 import { createShip, SHIP_SYSTEM_KEYS, STATION_KEYS } from "../ship/ship-schema.js";
 import { validateShip } from "../ship/validate-ship.js";
+import { improveShipwright } from "./shipwright-ux.js";
 
 const MODULE_ID = "arkflight-game";
 export const ARKFLIGHT_SHIP_SHEET_ID = `${MODULE_ID}.ArkflightShipSheet`;
@@ -64,6 +65,7 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
     this.activeTab = "command";
     this._draftShip = null;
     this._draftDirty = false;
+    this.shipwrightSection = "engine-mods";
   }
 
   static get defaultOptions() {
@@ -199,6 +201,10 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
   activateListeners($html) {
     super.activateListeners($html);
     const html = $html[0];
+    improveShipwright(html.querySelector(".arkflight-ship-shell"), {
+      defaultSection: this.shipwrightSection,
+      onSectionChange: (section) => { this.shipwrightSection = section; }
+    });
 
     for (const button of html.querySelectorAll("[data-tab]")) {
       button.addEventListener("click", (event) => {
