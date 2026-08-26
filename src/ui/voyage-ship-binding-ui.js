@@ -3,6 +3,7 @@ import { deriveShip } from "../ship/derive-ship.js";
 
 const MODULE_ID = "arkflight-game";
 const ACTIVE_SHIP_SETTING = "activeVoyageShipUuid";
+const VOYAGE_VESSEL_ICON = "modules/arkflight-game/assets/ui/stations/voyage_vessel_icon.webp";
 
 function rootElement(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
@@ -95,7 +96,7 @@ function decorate(root) {
 
   if (!active || !data) {
     panel.innerHTML = `
-      <div class="arkflight-bound-vessel-empty" role="img" aria-label="Arkflight vessel emblem"></div>
+      <img class="arkflight-voyage-vessel-icon" src="${VOYAGE_VESSEL_ICON}" alt="Arkflight voyage vessel">
       <div class="arkflight-bound-vessel-copy">
         <span>ACTIVE VOYAGE VESSEL</span>
         <strong>No Vessel Selected</strong>
@@ -104,7 +105,7 @@ function decorate(root) {
       ${selector}`;
   } else {
     panel.innerHTML = `
-      <img src="${active.img}" alt="${active.name}">
+      <img class="arkflight-voyage-vessel-icon" src="${VOYAGE_VESSEL_ICON}" alt="${active.name} voyage vessel">
       <div class="arkflight-bound-vessel-copy">
         <span>ACTIVE VOYAGE VESSEL</span>
         <strong>${active.name}</strong>
