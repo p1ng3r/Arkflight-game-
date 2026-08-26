@@ -28,6 +28,30 @@ function resourceView(ship, key, label, icon) {
 function optionView(item, selectedId, extra = {}) {
   return { id: item.id, name: item.name, description: item.description, selected: item.id === selectedId, ...extra };
 }
+function fittingView(item, installedIds, used, max) {
+  const installed = installedIds.includes(item.id);
+  const cost = statValue(item.capacityCost);
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    installed,
+    cost,
+    tier: item.data?.tier ?? "—",
+    type: item.data?.modType ?? item.data?.roomType ?? "",
+    blocked: !installed && Number.isFinite(max) && used + cost > max
+  };
+}
+function capacityView(label, used, max) {
+  const finite = Number.isFinite(max);
+  return {
+    label,
+    used,
+    max: finite ? max : "∞",
+    full: finite && used >= max,
+    over: finite && used > max
+  };
+}
 
 export function isArkflightShip(actor) {
   return actor?.type === "vehicle" && actor?.flags?.[MODULE_ID]?.isArkflightShip === true;
@@ -59,13 +83,22 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
     return this._draftShip;
   }
 
-  _commissioningView(draft) {
+  _commissioningView(draft, persistent) {
     const hull = SHIP_CATALOGS.hulls?.[draft.hull?.chassisId] ?? null;
+    const engine = SHIP_CATALOGS.arkengines?.[draft.arkengine?.chassisId] ?? null;
     const allowedEngines = hull?.data?.allowedArkengines ?? [];
-    const compatibleEngines = Object.values(SHIP_CATALOGS.arkengines ?? {}).filter((engine) => !hull || !allowedEngines.length || allowedEngines.includes(engine.id));
+    const compatibleEngines = Object.values(SHIP_CATALOGS.arkengines ?? {}).filter((entry) => !hull || !allowedEngines.length || allowedEngines.includes(entry.id));
     const validation = validateShip(draft, SHIP_CATALOGS);
     const derived = validation.derived ?? deriveShip(draft, SHIP_CATALOGS);
     const stats = derived.stats ?? {};
+    const roomUsed = statValue(derived.usage?.rooms);
+    const roomMax = Number(stats.roomCapacity ?? 0);
+    const engineModUsed = statValue(derived.usage?.arkengineMods);
+    const engineModMax = Number(engine?.data?.modCapacity ?? stats.arkengineModCapacity ?? 0);
+    const shipModUsed = statValue(derived.usage?.shipMods);
+    const shipModMax = Number(stats.shipModCapacity ?? 0);
+    const coreRoomIds = hull?.data?.coreRooms ?? [];
+    const isExistingVessel = !!persistent?.hull?.chassisId && !!persistent?.arkengine?.chassisId;
 
     return {
       hulls: Object.values(SHIP_CATALOGS.hulls ?? {}).map((item) => optionView(item, draft.hull?.chassisId, {
@@ -81,8 +114,17 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
         fuelSlots: item.data?.fuelSlots ?? 0
       })),
       arkenginePatterns: Object.values(SHIP_CATALOGS.arkenginePatterns ?? {}).map((item) => optionView(item, draft.arkengine?.patternId)),
+      arkengineMods: Object.values(SHIP_CATALOGS.arkengineMods ?? {}).map((item) => fittingView(item, draft.arkengine?.modIds ?? [], engineModUsed, engineModMax)),
+      coreRooms: coreRoomIds.map((id) => SHIP_CATALOGS.rooms?.[id]).filter(Boolean).map((item) => ({ id: item.id, name: item.name, description: item.description })),
+      rooms: Object.values(SHIP_CATALOGS.rooms ?? {}).filter((item) => !item.data?.coreRoom).map((item) => fittingView(item, draft.rooms ?? [], roomUsed, roomMax)),
+      shipMods: Object.values(SHIP_CATALOGS.shipMods ?? {}).map((item) => fittingView(item, draft.shipMods ?? [], shipModUsed, shipModMax)),
+      capacities: {
+        arkengineMods: capacityView("Arkengine Mods", engineModUsed, engineModMax),
+        rooms: capacityView("Expansion Rooms", roomUsed, roomMax),
+        shipMods: capacityView("Ship Mods", shipModUsed, shipModMax)
+      },
       hasHull: !!hull,
-      hasEngine: !!SHIP_CATALOGS.arkengines?.[draft.arkengine?.chassisId],
+      hasEngine: !!engine,
       hullName: catalogName(SHIP_CATALOGS.hulls, draft.hull?.chassisId, "Choose Hull"),
       hullPatternName: draft.hull?.chassisId ? catalogName(SHIP_CATALOGS.hullPatterns, draft.hull?.patternId, "Choose Pattern") : "—",
       engineName: catalogName(SHIP_CATALOGS.arkengines, draft.arkengine?.chassisId, "Choose Arkengine"),
@@ -97,9 +139,10 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
         { label: "Maneuver", value: displayStat(stats.maneuverability) },
         { label: "Detection", value: displayStat(stats.detection) }
       ],
-      usage: derived.usage,
       validation: { ok: validation.ok, errors: [...validation.errors], warnings: [...validation.warnings] },
       canCommission: game.user.isGM && validation.ok,
+      commitLabel: isExistingVessel ? "APPLY REFIT" : "COMMISSION VESSEL",
+      noticeLabel: isExistingVessel ? "Changes remain staged until Apply Refit." : "Changes remain staged until Commission Vessel.",
       dirty: this._draftDirty
     };
   }
@@ -148,7 +191,7 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
         crew: { minimum: statValue(crew.minimum), recommended: statValue(crew.recommended), maximum: statValue(crew.maximum), specialists: ship.crew?.specialists?.length ?? 0 },
         systems, stations, tags: [...(derived.tags ?? [])], capabilities: [...(derived.capabilities ?? [])], conditions: [...(ship.conditions ?? [])],
         validation: { ok: validation.ok, statusClass: validation.ok ? "is-ready" : "is-incomplete", label: validation.ok ? "VOYAGE READY" : "COMMISSIONING REQUIRED", errors: [...validation.errors], warnings: [...validation.warnings] },
-        commissioning: this._commissioningView(draft)
+        commissioning: this._commissioningView(draft, ship)
       }
     };
   }
@@ -216,14 +259,36 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
           draft.hull.chassisId = id;
           const hull = SHIP_CATALOGS.hulls?.[id];
           const allowed = hull?.data?.allowedArkengines ?? [];
-          if (draft.arkengine.chassisId && allowed.length && !allowed.includes(draft.arkengine.chassisId)) draft.arkengine.chassisId = "";
+          if (draft.arkengine.chassisId && allowed.length && !allowed.includes(draft.arkengine.chassisId)) {
+            draft.arkengine.chassisId = "";
+            draft.arkengine.modIds = [];
+          }
         } else if (field === "hullPattern") {
           draft.hull.patternId = id;
         } else if (field === "arkengine") {
+          if (draft.arkengine.chassisId !== id) draft.arkengine.modIds = [];
           draft.arkengine.chassisId = id;
         } else if (field === "arkenginePattern") {
           draft.arkengine.patternId = id;
         } else return;
+        this._draftDirty = true;
+        this.activeTab = "shipwright";
+        this.render(false);
+      });
+    }
+
+    for (const button of html.querySelectorAll("[data-fitting-kind]")) {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (!game.user.isGM || event.currentTarget.disabled) return;
+        const kind = event.currentTarget.dataset.fittingKind;
+        const id = event.currentTarget.dataset.id;
+        const persistent = shipFlag(this.actor) ?? createShip({ identity: { name: this.actor.name || "Unnamed Vessel" } });
+        const draft = this._ensureDraft(persistent);
+        const list = kind === "arkengineMod" ? draft.arkengine.modIds : kind === "room" ? draft.rooms : kind === "shipMod" ? draft.shipMods : null;
+        if (!list) return;
+        const index = list.indexOf(id);
+        if (index >= 0) list.splice(index, 1); else list.push(id);
         this._draftDirty = true;
         this.activeTab = "shipwright";
         this.render(false);
@@ -242,16 +307,16 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
       if (!game.user.isGM || !this._draftShip) return;
       const validation = validateShip(this._draftShip, SHIP_CATALOGS);
       if (!validation.ok) {
-        ui.notifications?.warn("Arkflight vessel cannot be commissioned until all commissioning errors are resolved.");
+        ui.notifications?.warn("Arkflight vessel cannot be saved until all Shipwright errors are resolved.");
         return;
       }
-      const commissioned = syncResourceMaxima(clone(this._draftShip), validation.derived);
-      await this.actor.update({ [`flags.${MODULE_ID}.ship`]: commissioned });
-      this._draftShip = clone(commissioned);
+      const saved = syncResourceMaxima(clone(this._draftShip), validation.derived);
+      await this.actor.update({ [`flags.${MODULE_ID}.ship`]: saved });
+      this._draftShip = clone(saved);
       this._draftDirty = false;
       this.shipwrightMode = false;
       this.activeTab = "command";
-      ui.notifications?.info(`${this.actor.name} commissioned as an Arkflight vessel.`);
+      ui.notifications?.info(`${this.actor.name} Shipwright configuration saved.`);
       this.render(false);
     });
   }
@@ -266,6 +331,10 @@ export async function markVehicleAsArkflightShip(actor) {
   if (!actor || actor.type !== "vehicle") throw new Error("Arkflight ships must be PF2e Vehicle Actors.");
   const existingShip = shipFlag(actor);
   const ship = existingShip ?? createShip({ identity: { name: actor.name || "Unnamed Vessel" } });
-  await actor.update({ [`flags.${MODULE_ID}.isArkflightShip`]: true, [`flags.${MODULE_ID}.ship`]: ship, "flags.core.sheetClass": ARKFLIGHT_SHIP_SHEET_ID });
+  await actor.update({
+    [`flags.${MODULE_ID}.isArkflightShip`]: true,
+    [`flags.${MODULE_ID}.ship`]: ship,
+    "flags.core.sheetClass": ARKFLIGHT_SHIP_SHEET_ID
+  });
   return actor;
 }
