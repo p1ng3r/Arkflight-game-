@@ -1,5 +1,22 @@
-export const SHIP_SCHEMA_VERSION = 1;
+export const SHIP_SCHEMA_VERSION = 2;
 
+export const SHIP_AREA_KEYS = Object.freeze([
+  "hull",
+  "arkengine",
+  "rigging",
+  "lifeveil",
+  "morale"
+]);
+
+export const AREA_STATES = Object.freeze({
+  STABLE: "stable",
+  STRESSED: "stressed",
+  DAMAGED: "damaged",
+  CRITICAL: "critical",
+  DISABLED: "disabled"
+});
+
+// Deprecated compatibility exports. New code should use SHIP_AREA_KEYS / AREA_STATES.
 export const SHIP_SYSTEM_KEYS = Object.freeze([
   "hull",
   "arkengine",
@@ -9,7 +26,6 @@ export const SHIP_SYSTEM_KEYS = Object.freeze([
   "command",
   "weapons"
 ]);
-
 export const SYSTEM_STATES = Object.freeze({
   FUNCTIONAL: "functional",
   DAMAGED: "damaged",
@@ -21,81 +37,80 @@ export const STATION_KEYS = Object.freeze([
   "captain",
   "engineer",
   "navigator",
-  "watchmaster",
+  "battlewatch",
   "veilwarden"
 ]);
 
-function resource(value = 0, max = 0) {
-  return { value, max };
+export const LEGACY_STATION_ALIASES = Object.freeze({ watchmaster: "battlewatch" });
+
+function resource(value = 0, max = 0) { return { value, max }; }
+function area(state = AREA_STATES.STABLE) { return { state }; }
+
+function legacySystemToAreaState(value) {
+  if (value === "destroyed" || value === "disabled") return AREA_STATES.DISABLED;
+  if (value === "damaged") return AREA_STATES.DAMAGED;
+  return AREA_STATES.STABLE;
+}
+
+function migrateAreas(ship = {}) {
+  const existing = ship.areas ?? {};
+  const systems = ship.systems ?? {};
+  return {
+    hull: { ...area(), ...(existing.hull ?? {}), state: existing.hull?.state ?? legacySystemToAreaState(systems.hull) },
+    arkengine: { ...area(), ...(existing.arkengine ?? {}), state: existing.arkengine?.state ?? legacySystemToAreaState(systems.arkengine) },
+    rigging: { ...area(), ...(existing.rigging ?? {}), state: existing.rigging?.state ?? legacySystemToAreaState(systems.rigging ?? systems.helm) },
+    lifeveil: { ...area(), ...(existing.lifeveil ?? {}), state: existing.lifeveil?.state ?? legacySystemToAreaState(systems.lifeveil) },
+    morale: { ...area(), ...(existing.morale ?? {}), state: existing.morale?.state ?? legacySystemToAreaState(systems.command) }
+  };
+}
+
+function migrateStations(stations = {}) {
+  const next = { ...stations };
+  if (!next.battlewatch && next.watchmaster) next.battlewatch = next.watchmaster;
+  delete next.watchmaster;
+  return Object.fromEntries(STATION_KEYS.map((key) => [key, next[key] ?? null]));
 }
 
 export function createShip(overrides = {}) {
   const base = {
     schemaVersion: SHIP_SCHEMA_VERSION,
-    identity: {
-      name: "Unnamed Vessel",
-      registry: "",
-      callsign: "",
-      owner: "",
-      origin: "",
-      builder: "",
-      motto: "",
-      notes: ""
-    },
+    identity: { name: "Unnamed Vessel", registry: "", callsign: "", owner: "", origin: "", builder: "", motto: "", notes: "" },
     traits: [],
     hull: { chassisId: "", patternId: "standard" },
     arkengine: { chassisId: "", patternId: "standard", modIds: [] },
-    rooms: [],
-    shipMods: [],
-    weapons: [],
-    crew: {
-      stations: Object.fromEntries(STATION_KEYS.map((key) => [key, null])),
-      specialists: []
-    },
+    rooms: [], shipMods: [], weapons: [],
+    crew: { stations: Object.fromEntries(STATION_KEYS.map((key) => [key, null])), specialists: [] },
     cargo: { used: 0, notes: "" },
-    resources: {
-      hull: resource(),
-      lifeveil: resource(),
-      strain: resource(),
-      supplies: resource(),
-      morale: resource(3, 5)
-    },
-    systems: Object.fromEntries(SHIP_SYSTEM_KEYS.map((key) => [key, SYSTEM_STATES.FUNCTIONAL])),
+    resources: { hull: resource(), lifeveil: resource(), strain: resource(), supplies: resource(), morale: resource(3, 5) },
+    areas: Object.fromEntries(SHIP_AREA_KEYS.map((key) => [key, area()])),
     conditions: []
   };
+  return normalizeShip(mergeShip(base, overrides));
+}
 
-  return mergeShip(base, overrides);
+export function normalizeShip(ship = {}) {
+  const base = {
+    ...ship,
+    schemaVersion: SHIP_SCHEMA_VERSION,
+    crew: { ...(ship.crew ?? {}), stations: migrateStations(ship.crew?.stations), specialists: [...(ship.crew?.specialists ?? [])] },
+    areas: migrateAreas(ship),
+    conditions: [...(ship.conditions ?? [])]
+  };
+  delete base.systems;
+  return base;
 }
 
 function mergeShip(base, overrides) {
   return {
-    ...base,
-    ...overrides,
+    ...base, ...overrides,
     identity: { ...base.identity, ...(overrides.identity ?? {}) },
     hull: { ...base.hull, ...(overrides.hull ?? {}) },
-    arkengine: {
-      ...base.arkengine,
-      ...(overrides.arkengine ?? {}),
-      modIds: [...(overrides.arkengine?.modIds ?? base.arkengine.modIds)]
-    },
-    rooms: [...(overrides.rooms ?? base.rooms)],
-    shipMods: [...(overrides.shipMods ?? base.shipMods)],
-    weapons: [...(overrides.weapons ?? base.weapons)],
-    traits: [...(overrides.traits ?? base.traits)],
-    crew: {
-      ...base.crew,
-      ...(overrides.crew ?? {}),
-      stations: { ...base.crew.stations, ...(overrides.crew?.stations ?? {}) },
-      specialists: [...(overrides.crew?.specialists ?? base.crew.specialists)]
-    },
+    arkengine: { ...base.arkengine, ...(overrides.arkengine ?? {}), modIds: [...(overrides.arkengine?.modIds ?? base.arkengine.modIds)] },
+    rooms: [...(overrides.rooms ?? base.rooms)], shipMods: [...(overrides.shipMods ?? base.shipMods)], weapons: [...(overrides.weapons ?? base.weapons)], traits: [...(overrides.traits ?? base.traits)],
+    crew: { ...base.crew, ...(overrides.crew ?? {}), stations: { ...base.crew.stations, ...(overrides.crew?.stations ?? {}) }, specialists: [...(overrides.crew?.specialists ?? base.crew.specialists)] },
     cargo: { ...base.cargo, ...(overrides.cargo ?? {}) },
-    resources: Object.fromEntries(
-      Object.entries(base.resources).map(([key, value]) => [
-        key,
-        { ...value, ...(overrides.resources?.[key] ?? {}) }
-      ])
-    ),
-    systems: { ...base.systems, ...(overrides.systems ?? {}) },
+    resources: Object.fromEntries(Object.entries(base.resources).map(([key, value]) => [key, { ...value, ...(overrides.resources?.[key] ?? {}) }])),
+    areas: { ...base.areas, ...(overrides.areas ?? {}) },
     conditions: [...(overrides.conditions ?? base.conditions)]
   };
 }
