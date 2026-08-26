@@ -12,8 +12,8 @@
   position: absolute !important;
   z-index: 80 !important;
   pointer-events: none !important;
-  width: 240px !important;
-  height: 240px !important;
+  width: 480px !important;
+  height: 480px !important;
   border: 0 !important;
   box-shadow: none !important;
   opacity: 1 !important;
@@ -40,6 +40,7 @@
   right: auto !important;
   bottom: auto !important;
   transform: none !important;
+  transform-origin: top left !important;
 }
 
 .arkflight-opening-grid.arkflight-cinematic-opening::after {
@@ -69,36 +70,39 @@
   transform-origin: center !important;
 }
 
-/* PANEL CORNERS — deliberately much smaller than major frame hardware. */
+/* PANEL CORNERS — use the dedicated panel bracket, never an outer-frame corner. */
 .arkflight-opening-side-panel::before,
 .arkflight-opening-side-panel::after {
   content: "" !important;
   display: block !important;
   position: absolute !important;
-  z-index: 4 !important;
+  z-index: 12 !important;
   pointer-events: none !important;
-  width: 46px !important;
-  height: 46px !important;
+  width: 84px !important;
+  height: 84px !important;
   border: 0 !important;
-  opacity: .96 !important;
-  background-image: url("../assets/ui/trim/ui_panel_corner_top_left_brass.webp") !important;
-  background-position: center !important;
+  opacity: 1 !important;
+  background-image: url("../assets/ui/trim/ui_panel_corner_bracket.webp") !important;
+  background-position: top left !important;
   background-size: contain !important;
   background-repeat: no-repeat !important;
   box-shadow: none !important;
   filter: none !important;
+  image-rendering: auto !important;
 }
 
 .arkflight-opening-side-panel::before {
-  top: -3px !important;
-  left: -3px !important;
+  top: 0 !important;
+  left: 0 !important;
   transform: none !important;
+  transform-origin: center !important;
 }
 
 .arkflight-opening-side-panel::after {
-  right: -3px !important;
-  bottom: -3px !important;
+  right: 0 !important;
+  bottom: 0 !important;
   transform: rotate(180deg) !important;
+  transform-origin: center !important;
 }
 
 /* DIVIDERS — CSS rail plus centered brass ornament; never stretch the raster. */
@@ -187,13 +191,25 @@
   background: url("../assets/ui/controls/lock_closed_icon.webp") center / contain no-repeat !important;
 }
 
+/* Font Awesome draws its white glyph in ::before; remove it completely. */
+.arkflight-opening-begin > i.fa-lock::before,
+.arkflight-opening-begin > i.fa-solid.fa-lock::before {
+  content: none !important;
+  display: none !important;
+  visibility: hidden !important;
+  font-size: 0 !important;
+  color: transparent !important;
+}
+
 .arkflight-opening-begin:disabled > i.fa-lock {
   background-image: url("../assets/ui/controls/lock_open_icon.webp") !important;
-  opacity: .86 !important;
+  opacity: .92 !important;
 }
 
 /* Any stale injected second lock is always removed visually. */
-.arkflight-opening-begin > .arkflight-opening-lock-icon {
+.arkflight-opening-begin > .arkflight-opening-lock-icon,
+.arkflight-opening-begin > .arkflight-opening-lock-icon::before {
+  content: none !important;
   display: none !important;
   visibility: hidden !important;
 }
@@ -269,14 +285,14 @@
   .arkflight-opening-grid.arkflight-cinematic-opening::after,
   .arkflight-opening-art-column::before,
   .arkflight-opening-stakes-column::after {
-    width: 180px !important;
-    height: 180px !important;
+    width: 300px !important;
+    height: 300px !important;
   }
 
   .arkflight-opening-side-panel::before,
   .arkflight-opening-side-panel::after {
-    width: 38px !important;
-    height: 38px !important;
+    width: 64px !important;
+    height: 64px !important;
   }
 
   .arkflight-opening-begin {
