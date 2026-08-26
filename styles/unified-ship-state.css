@@ -1,0 +1,46 @@
+.arkflight-area-row .arkflight-system-state,
+.arkflight-persistent-status strong,
+.arkflight-persistent-state-inline strong { text-transform: uppercase; }
+
+.arkflight-area-row.is-stable,
+.arkflight-persistent-status.is-stable,
+.arkflight-persistent-state-inline.is-stable { border-color: rgba(132, 176, 143, .55); }
+.arkflight-area-row.is-stressed,
+.arkflight-persistent-status.is-stressed,
+.arkflight-persistent-state-inline.is-stressed { border-color: rgba(207, 162, 67, .65); }
+.arkflight-area-row.is-damaged,
+.arkflight-persistent-status.is-damaged,
+.arkflight-persistent-state-inline.is-damaged { border-color: rgba(197, 125, 77, .72); }
+.arkflight-area-row.is-critical,
+.arkflight-persistent-status.is-critical,
+.arkflight-persistent-state-inline.is-critical { border-color: rgba(194, 78, 70, .82); }
+.arkflight-area-row.is-disabled,
+.arkflight-persistent-status.is-disabled,
+.arkflight-persistent-state-inline.is-disabled { border-color: rgba(130, 130, 130, .72); opacity: .72; }
+
+.arkflight-station-responsibility {
+  display: block;
+  margin-top: 2px;
+  opacity: .72;
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.arkflight-status-strip .arkflight-persistent-status {
+  min-width: 84px;
+}
+
+.arkflight-status-strip .arkflight-persistent-status.is-strain {
+  border-color: rgba(207, 162, 67, .72);
+}
+
+.arkflight-round-opening-state .arkflight-persistent-state-inline {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.arkflight-round-state-summary .arkflight-persistent-state-inline {
+  min-width: 108px;
+}
