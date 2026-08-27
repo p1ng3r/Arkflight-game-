@@ -1,0 +1,8 @@
+.pa-hazards .pa-gm-restart { margin-left:auto; height:24px; padding:0 10px; border:1px solid #765327; background:#18120b; color:#d9b56f; display:inline-flex; align-items:center; gap:6px; cursor:pointer; font:700 10px Georgia,"Times New Roman",serif; letter-spacing:.04em; }
+.pa-hazards .pa-gm-restart:hover { border-color:#bd8535; background:#25180b; color:#f0d49a; }
+.pa-lock.pa-begin-resolution { border-color:#a96e27; background:linear-gradient(135deg,#2e1a08,#171007); color:#f0cd84; box-shadow:inset 0 0 0 1px rgba(213,153,62,.25),0 0 12px rgba(195,117,30,.15); }
+.pa-lock.pa-begin-resolution:hover { border-color:#d59a43; box-shadow:inset 0 0 0 1px rgba(235,176,80,.35),0 0 18px rgba(205,131,37,.22); }
+.pa-lock.pa-begin-resolution i { color:#e8a13c; }
+.pa-lock.pa-player-waiting { opacity:.7; cursor:default; }
+.arkflight-gm-confirm { padding:8px 4px; line-height:1.45; }
+.arkflight-gm-confirm p { margin:.4em 0; }
