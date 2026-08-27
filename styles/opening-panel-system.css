@@ -9,6 +9,8 @@
  * ---------------------------------------------------------------------- */
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-brand-logo {
+  position: absolute !important;
+  z-index: 16 !important;
   top: 20px !important;
   left: 50% !important;
   width: 88px !important;
@@ -19,11 +21,12 @@
   opacity: .96 !important;
   background: transparent !important;
   filter: drop-shadow(0 3px 6px rgba(0,0,0,.78)) !important;
+  pointer-events: none !important;
 }
 
-/* Opening vignette is centered inside the art safe area instead of touching
- * either ornamental corner rail. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette {
+  position: absolute !important;
+  z-index: 15 !important;
   left: 50% !important;
   right: auto !important;
   bottom: 184px !important;
@@ -36,6 +39,7 @@
   border: 1px solid rgba(161,120,54,.42) !important;
   border-left-color: rgba(205,155,69,.74) !important;
   box-shadow: 0 7px 20px rgba(0,0,0,.28) !important;
+  pointer-events: none !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette-label {
@@ -47,13 +51,20 @@
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette .arkflight-opening-story {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #e6dcc7 !important;
   font-size: 9.4px !important;
   line-height: 1.30 !important;
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
-/* Round panel is deliberately centered and lifted above the outer bottom
- * corner hardware. This keeps Round 1/title/situation clear of Foundry chrome. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption {
+  position: absolute !important;
+  z-index: 15 !important;
   left: 50% !important;
   right: auto !important;
   bottom: 58px !important;
@@ -67,6 +78,7 @@
   background: linear-gradient(90deg, rgba(4,7,11,.32), rgba(4,7,11,.88) 18%, rgba(4,7,11,.88) 82%, rgba(4,7,11,.32)) !important;
   border-top: 1px solid rgba(176,132,58,.45) !important;
   border-bottom: 1px solid rgba(176,132,58,.28) !important;
+  pointer-events: none !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption .round-label {
@@ -281,7 +293,6 @@
   line-height: 1.2 !important;
 }
 
-/* Decorative compass must clear the large physical bottom-right corner art. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
   position: relative !important;
   z-index: 4 !important;
