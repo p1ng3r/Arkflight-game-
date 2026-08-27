@@ -42,7 +42,8 @@
     "styles/opening-screen-css-textures.css",
     "styles/unified-ship-state.css",
     "styles/player-action-board.css",
-    "styles/player-action-board-order.css"
+    "styles/player-action-board-order.css",
+    "styles/player-action-board-cleanup.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -58,6 +59,7 @@
     "src/ui/voyage-ship-binding-ui.js",
     "src/ui/unified-ship-state-ui.js",
     "src/ui/player-action-board-ui.js",
-    "src/ui/player-action-board-order-ui.js"
+    "src/ui/player-action-board-order-ui.js",
+    "src/ui/player-action-board-cleanup-ui.js"
   ]
 }
