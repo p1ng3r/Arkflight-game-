@@ -53,6 +53,8 @@
   background-image: url("../assets/ui/stations/station_icon_navigator.webp") !important;
 }
 
+/* Battlewatch is canonical; watchmaster remains only as the legacy asset filename/key. */
+.arkflight-event-board.arkflight-opening-mode [data-opening-station="battlewatch"] .arkflight-opening-station-glyph,
 .arkflight-event-board.arkflight-opening-mode [data-opening-station="watchmaster"] .arkflight-opening-station-glyph {
   background-image: url("../assets/ui/stations/station_icon_watchmaster.webp") !important;
 }
