@@ -1,12 +1,11 @@
-/* Arkflight Opening Screen — final production fit layer.
+/* Arkflight Opening Screen — production fit + reusable 9-slice system.
  * Loaded after opening-screen-authoritative.css.
- * This file intentionally owns only the current left-art polish and reusable
- * 9-slice sidebar sizing. Legacy black-logo workarounds and duplicate center
- * layout overrides were removed; the authoritative stylesheet owns the center.
+ * This file owns left-art overlays, branding, right-side panel chrome, and
+ * sidebar finishing only. Core grid/center interaction remain authoritative.
  */
 
 /* -------------------------------------------------------------------------
- * LEFT ART: transparent simple mark + vignette + compact round caption
+ * LEFT ART: transparent mark + two centered overlays
  * ---------------------------------------------------------------------- */
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-brand-logo {
@@ -18,20 +17,24 @@
   object-fit: contain !important;
   transform: translateX(-50%) !important;
   opacity: .96 !important;
-  mix-blend-mode: normal !important;
   background: transparent !important;
   filter: drop-shadow(0 3px 6px rgba(0,0,0,.78)) !important;
 }
 
+/* Opening vignette is centered inside the art safe area instead of touching
+ * either ornamental corner rail. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette {
-  left: 22px !important;
-  right: 24px !important;
-  bottom: 170px !important;
-  max-height: 132px !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 184px !important;
+  width: calc(100% - 72px) !important;
+  max-height: 126px !important;
   padding: 8px 11px 9px !important;
   overflow: hidden !important;
-  background: linear-gradient(90deg, rgba(3,7,12,.88), rgba(3,7,12,.68) 82%, rgba(3,7,12,.12)) !important;
-  border-left: 2px solid rgba(205,155,69,.76) !important;
+  transform: translateX(-50%) !important;
+  background: linear-gradient(90deg, rgba(3,7,12,.86), rgba(3,7,12,.70), rgba(3,7,12,.86)) !important;
+  border: 1px solid rgba(161,120,54,.42) !important;
+  border-left-color: rgba(205,155,69,.74) !important;
   box-shadow: 0 7px 20px rgba(0,0,0,.28) !important;
 }
 
@@ -40,42 +43,53 @@
   font-size: 8px !important;
   line-height: 1 !important;
   letter-spacing: .20em !important;
+  text-align: left !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette .arkflight-opening-story {
-  font-size: 9.6px !important;
-  line-height: 1.32 !important;
+  font-size: 9.4px !important;
+  line-height: 1.30 !important;
 }
 
+/* Round panel is deliberately centered and lifted above the outer bottom
+ * corner hardware. This keeps Round 1/title/situation clear of Foundry chrome. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption {
-  left: 22px !important;
-  right: 24px !important;
-  bottom: 30px !important;
-  max-height: 66px !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: 58px !important;
+  width: calc(100% - 96px) !important;
+  max-height: 58px !important;
   min-height: 0 !important;
   padding: 6px 10px 7px !important;
   overflow: hidden !important;
-  background: linear-gradient(90deg, rgba(4,7,11,.86), rgba(4,7,11,.56), transparent) !important;
+  transform: translateX(-50%) !important;
+  text-align: center !important;
+  background: linear-gradient(90deg, rgba(4,7,11,.32), rgba(4,7,11,.88) 18%, rgba(4,7,11,.88) 82%, rgba(4,7,11,.32)) !important;
+  border-top: 1px solid rgba(176,132,58,.45) !important;
+  border-bottom: 1px solid rgba(176,132,58,.28) !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption .round-label {
   font-size: 7.5px !important;
   line-height: 1 !important;
+  text-align: center !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption h3 {
   margin: 1px 0 2px !important;
   font-size: 13px !important;
   line-height: 1.02 !important;
+  text-align: center !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption p {
   margin: 0 !important;
-  font-size: 8.5px !important;
-  line-height: 1.14 !important;
+  font-size: 8.2px !important;
+  line-height: 1.12 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+  text-align: center !important;
 }
 
 /* -------------------------------------------------------------------------
@@ -131,6 +145,27 @@
   background-size: contain !important;
 }
 
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__corner-top-left {
+  top: 0 !important;
+  left: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_corner_top_left.webp") !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__corner-top-right {
+  top: 0 !important;
+  right: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_corner_top_right.webp") !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__corner-bottom-left {
+  bottom: 0 !important;
+  left: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_corner_bottom_left.webp") !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__corner-bottom-right {
+  right: 0 !important;
+  bottom: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_corner_bottom_right.webp") !important;
+}
+
 .arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-top,
 .arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-bottom {
   left: var(--ark-panel-corner) !important;
@@ -139,9 +174,14 @@
   background-size: 100% 100% !important;
   background-position: center !important;
 }
-
-.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-top { top: 0 !important; }
-.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-bottom { bottom: 0 !important; }
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-top {
+  top: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_edge_top.webp") !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-bottom {
+  bottom: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_edge_bottom.webp") !important;
+}
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-left,
 .arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-right {
@@ -151,9 +191,14 @@
   background-size: 100% 100% !important;
   background-position: center !important;
 }
-
-.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-left { left: 0 !important; }
-.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-right { right: 0 !important; }
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-left {
+  left: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_edge_left.webp") !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice__edge-right {
+  right: 0 !important;
+  background-image: url("../assets/ui/panels/ui_panel_frame_edge_right.webp") !important;
+}
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice-panel h3 {
   margin: 0 0 8px !important;
@@ -162,7 +207,6 @@
   line-height: 1.08 !important;
 }
 
-/* Event Stakes: keep the second row clear of the bottom rail. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(1) {
   padding-bottom: 30px !important;
 }
@@ -185,7 +229,6 @@
   font-size: 13px !important;
 }
 
-/* Empty Hazards is deliberately shallow. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(2) {
   min-height: 82px !important;
   padding-top: 24px !important;
@@ -199,7 +242,6 @@
   text-align: center !important;
 }
 
-/* Scoring gets extra height and a protected two-column safe area. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(3) {
   min-height: 205px !important;
   padding: 28px 33px 27px !important;
@@ -239,6 +281,17 @@
   line-height: 1.2 !important;
 }
 
+/* Decorative compass must clear the large physical bottom-right corner art. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
+  position: relative !important;
+  z-index: 4 !important;
+  min-height: 72px !important;
+  margin-top: 4px !important;
+  transform: translateY(-52px) !important;
+  font-size: 56px !important;
+  pointer-events: none !important;
+}
+
 @media (max-width: 1100px) {
   .arkflight-event-board.arkflight-opening-mode .arkflight-nine-slice-panel {
     --ark-panel-corner: 36px;
@@ -248,6 +301,16 @@
   }
 
   .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette {
-    bottom: 156px !important;
+    bottom: 168px !important;
+    width: calc(100% - 60px) !important;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption {
+    bottom: 50px !important;
+    width: calc(100% - 78px) !important;
+  }
+
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
+    transform: translateY(-44px) !important;
   }
 }
