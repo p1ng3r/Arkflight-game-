@@ -1,0 +1,116 @@
+/* Arkflight Opening Screen — authoritative stylesheet entry point.
+ *
+ * Legacy opening-screen files are intentionally NOT loaded directly by module.json.
+ * They are imported here in one deterministic order while the opening screen is
+ * consolidated. The final rules below own frame chrome and neutralize legacy
+ * pseudo-element corner rules so vignette, corners, and panel trim cannot fight.
+ */
+
+@import url("./opening-screen.css");
+@import url("./opening-screen-pass1.css");
+@import url("./opening-screen-pass2.css");
+@import url("./opening-screen-pass3.css");
+@import url("./opening-screen-pass4.css");
+@import url("./opening-screen-polish.css");
+@import url("./opening-screen-large-desktop.css");
+@import url("./opening-screen-select-fix.css");
+@import url("./opening-screen-large-fit-fix.css");
+@import url("./opening-screen-branding.css");
+@import url("./opening-screen-status-fit.css");
+@import url("./opening-screen-center-scale-down.css");
+@import url("./opening-screen-final-layout-fix.css");
+@import url("./opening-screen-endcap-color-fix.css");
+@import url("./opening-screen-icon-assets.css");
+@import url("./opening-screen-assets.css");
+@import url("./opening-screen-css-textures.css");
+
+/* -------------------------------------------------------------------------
+ * AUTHORITATIVE CHROME OWNERSHIP
+ * ---------------------------------------------------------------------- */
+
+/* The texture stylesheet owns ::after as the full-board vignette.
+ * No pseudo-element is allowed to also masquerade as an outer corner. */
+.arkflight-event-board.arkflight-opening-mode
+  .arkflight-opening-grid.arkflight-cinematic-opening::before,
+.arkflight-event-board.arkflight-opening-mode
+  .arkflight-opening-art-column::before,
+.arkflight-event-board.arkflight-opening-mode
+  .arkflight-opening-stakes-column::after {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+}
+
+/* Interior side panels use their borders and dividers only.  The old panel
+ * pseudo-corners were being clipped into little brass triangles. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel::before,
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-side-panel::after {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+}
+
+/* Real outer frame corners injected by opening-chrome-ui.js. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner {
+  position: absolute !important;
+  z-index: 40 !important;
+  width: 190px !important;
+  height: 190px !important;
+  pointer-events: none !important;
+  opacity: 1 !important;
+  background-image: url("../assets/ui/trim/ui_outer_frame_corner_top_left_brass_ornament.webp") !important;
+  background-repeat: no-repeat !important;
+  background-position: top left !important;
+  background-size: contain !important;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.55));
+  transform-origin: center !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--tl {
+  top: 0 !important;
+  left: 0 !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--tr {
+  top: 0 !important;
+  right: 0 !important;
+  transform: rotate(90deg) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--br {
+  right: 0 !important;
+  bottom: 0 !important;
+  transform: rotate(180deg) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--bl {
+  left: 0 !important;
+  bottom: 0 !important;
+  transform: rotate(-90deg) !important;
+}
+
+/* Keep the board as the positioning context for physical frame hardware. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-grid.arkflight-cinematic-opening {
+  position: relative !important;
+  isolation: isolate !important;
+}
+
+/* Preserve the existing full-screen vignette; this is now its only job. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-cinematic-opening::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 20 !important;
+  pointer-events: none !important;
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(0,0,0,.12) 78%, rgba(0,0,0,.38) 100%) !important;
+  box-shadow: inset 0 0 1px rgba(224, 179, 90, .16) !important;
+}
+
+/* Never shrink physical corners into tiny ticks.  The content can compact;
+ * the frame remains visually consistent. */
+@media (max-width: 1100px) {
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner {
+    width: 170px !important;
+    height: 170px !important;
+  }
+}
