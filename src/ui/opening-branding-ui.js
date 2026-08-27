@@ -1,4 +1,4 @@
-const LOGO_PATH = "modules/arkflight-game/assets/ui/branding/arkflight_logo.webp";
+const LOGO_PATH = "modules/arkflight-game/assets/ui/branding/arkflight_logo_Simple.png";
 
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
@@ -13,14 +13,15 @@ function applyOpeningBranding(root) {
   const artColumn = root.querySelector(".arkflight-opening-art-column");
   if (!artColumn) return false;
 
-  if (!artColumn.querySelector(".arkflight-opening-brand-logo")) {
-    const logo = document.createElement("img");
+  let logo = artColumn.querySelector(".arkflight-opening-brand-logo");
+  if (!logo) {
+    logo = document.createElement("img");
     logo.className = "arkflight-opening-brand-logo";
-    logo.src = LOGO_PATH;
     logo.alt = "Arkflight";
     logo.draggable = false;
     artColumn.append(logo);
   }
+  logo.src = LOGO_PATH;
 
   for (const info of root.querySelectorAll(".arkflight-opening-mastery-info")) info.remove();
 
@@ -35,7 +36,7 @@ function applyOpeningBranding(root) {
 function queueBranding(root) {
   let tries = 0;
   const tick = () => {
-    if (applyOpeningBranding(root) || tries >= 8) return;
+    if (applyOpeningBranding(root) || tries >= 12) return;
     tries += 1;
     requestAnimationFrame(tick);
   };
