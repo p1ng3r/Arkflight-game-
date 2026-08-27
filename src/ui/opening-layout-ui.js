@@ -5,6 +5,8 @@ function boardRoot(app, element) {
   return app.element instanceof HTMLElement ? app.element : app.element?.[0] ?? null;
 }
 
+const LOGO_PATH = "modules/arkflight-game/assets/ui/branding/arkflight_logo_Simple.webp";
+
 const PANEL_PARTS = [
   "corner-top-left",
   "corner-top-right",
@@ -32,10 +34,40 @@ function ensurePanelChrome(panel) {
   panel.prepend(chrome);
 }
 
+function ensureOpeningLogo(artColumn) {
+  if (!artColumn) return false;
+  let logo = artColumn.querySelector(".arkflight-opening-brand-logo");
+  if (!logo) {
+    logo = document.createElement("img");
+    logo.className = "arkflight-opening-brand-logo";
+    logo.alt = "Arkflight";
+    logo.draggable = false;
+    artColumn.append(logo);
+  }
+  if (logo.getAttribute("src") !== LOGO_PATH) logo.src = LOGO_PATH;
+  return true;
+}
+
+function openingVignetteText() {
+  const controller = game.arkflight?.controller;
+  const event = controller?.getEvent?.();
+  return String(event?.openingVignette ?? "").trim();
+}
+
 function moveOpeningVignette(root) {
   const artColumn = root.querySelector(".arkflight-opening-art-column");
-  const story = root.querySelector(".arkflight-opening-command-column .arkflight-opening-story");
-  if (!artColumn || !story) return false;
+  if (!artColumn) return false;
+
+  let story = root.querySelector(".arkflight-opening-command-column .arkflight-opening-story")
+    ?? artColumn.querySelector(".arkflight-opening-art-vignette .arkflight-opening-story");
+
+  if (!story) {
+    const text = openingVignetteText();
+    if (!text) return false;
+    story = document.createElement("div");
+    story.className = "arkflight-opening-story";
+    story.textContent = text;
+  }
 
   let overlay = artColumn.querySelector(".arkflight-opening-art-vignette");
   if (!overlay) {
@@ -50,8 +82,10 @@ function moveOpeningVignette(root) {
   if (story.parentElement !== overlay) overlay.append(story);
 
   const caption = artColumn.querySelector(".arkflight-opening-art-caption");
-  if (caption) artColumn.insertBefore(overlay, caption);
-  else artColumn.append(overlay);
+  if (overlay.parentElement !== artColumn) {
+    if (caption) artColumn.insertBefore(overlay, caption);
+    else artColumn.append(overlay);
+  }
 
   return true;
 }
@@ -60,12 +94,14 @@ function applyOpeningLayout(root) {
   if (!root?.classList?.contains("arkflight-opening-mode")) return false;
 
   const board = root.querySelector(".arkflight-opening-grid.arkflight-cinematic-opening");
+  const artColumn = root.querySelector(".arkflight-opening-art-column");
   const commandColumn = root.querySelector(".arkflight-opening-command-column");
   const sidePanels = root.querySelectorAll(".arkflight-opening-stakes-column .arkflight-opening-side-panel");
-  if (!board || !commandColumn || sidePanels.length < 3) return false;
+  if (!board || !artColumn || !commandColumn || sidePanels.length < 3) return false;
 
   board.classList.add("arkflight-opening-layout-v2");
   commandColumn.classList.add("arkflight-opening-command-interactive");
+  ensureOpeningLogo(artColumn);
   moveOpeningVignette(root);
 
   for (const panel of sidePanels) {
@@ -79,7 +115,7 @@ function applyOpeningLayout(root) {
 function queueOpeningLayout(root) {
   let tries = 0;
   const tick = () => {
-    if (applyOpeningLayout(root) || tries >= 14) return;
+    if (applyOpeningLayout(root) || tries >= 30) return;
     tries += 1;
     requestAnimationFrame(tick);
   };
