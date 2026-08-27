@@ -16,6 +16,7 @@
     "styles/rewards.css",
     "styles/setup-mastery-fix.css",
     "styles/opening-screen-authoritative.css",
+    "styles/opening-panel-system.css",
     "styles/ship-sheet.css",
     "styles/ship-sheet-commissioning.css",
     "styles/shipwright-ux.css",
