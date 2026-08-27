@@ -1,4 +1,4 @@
-const LOGO_PATH = "modules/arkflight-game/assets/ui/branding/arkflight_logo_Simple.png";
+const LOGO_PATH = "modules/arkflight-game/assets/ui/branding/arkflight_logo_Simple.webp";
 
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
