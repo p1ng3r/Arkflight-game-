@@ -1,91 +1,113 @@
 /* Opening screen image-asset chrome.
-   Expects WebP trim assets in assets/ui/trim/. */
+   Uses the committed Arkflight UI trim library deliberately rather than
+   rotating one corner asset into every position. */
 
 :root {
   --arkflight-ui-trim: "modules/arkflight-game/assets/ui/trim";
 }
 
-/* OUTER FRAME HARDWARE */
-.arkflight-opening-grid.arkflight-cinematic-opening::before {
-  content: "" !important;
-  position: absolute !important;
-  z-index: 20 !important;
-  pointer-events: none !important;
-  top: -4px !important;
-  left: -4px !important;
-  width: 118px !important;
-  height: 118px !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  opacity: 1 !important;
-  background: url("../assets/ui/trim/ui_outer_frame_corner_top_left.webp") top left / contain no-repeat !important;
-}
-
-.arkflight-opening-grid.arkflight-cinematic-opening::after {
-  content: "" !important;
-  position: absolute !important;
-  z-index: 20 !important;
-  pointer-events: none !important;
-  right: -4px !important;
-  bottom: -4px !important;
-  width: 118px !important;
-  height: 118px !important;
-  border: 0 !important;
-  box-shadow: none !important;
-  opacity: 1 !important;
-  transform: rotate(180deg);
-  background: url("../assets/ui/trim/ui_outer_frame_corner_top_left.webp") top left / contain no-repeat !important;
-}
-
-/* Use the two column shells for the other two reusable rotated corners. */
+/* -------------------------------------------------------------------------
+ * OUTER FRAME HARDWARE
+ *
+ * Each corner uses a different committed trim treatment.  These are large
+ * ornamental frame pieces on purpose: they should read as physical brass /
+ * bronze hardware, not tiny corner ticks.  Do not shrink them responsively.
+ * ---------------------------------------------------------------------- */
+.arkflight-opening-grid.arkflight-cinematic-opening::before,
+.arkflight-opening-grid.arkflight-cinematic-opening::after,
 .arkflight-opening-art-column::before,
 .arkflight-opening-stakes-column::after {
-  content: "";
-  position: absolute;
-  z-index: 19;
-  pointer-events: none;
-  width: 104px;
-  height: 104px;
-  background: url("../assets/ui/trim/ui_outer_frame_corner_top_left.webp") top left / contain no-repeat;
+  content: "" !important;
+  position: absolute !important;
+  z-index: 20 !important;
+  pointer-events: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  opacity: .98 !important;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  transform-origin: center !important;
 }
 
-.arkflight-opening-art-column::before {
-  left: -4px;
-  bottom: -4px;
-  transform: rotate(-90deg);
-  transform-origin: center;
+/* Top-left: ornate brass corner — largest visual anchor. */
+.arkflight-opening-grid.arkflight-cinematic-opening::before {
+  top: -12px !important;
+  left: -12px !important;
+  width: 276px !important;
+  height: 276px !important;
+  background-image: url("../assets/ui/trim/ui_outer_frame_corner_top_left_brass_ornament.webp") !important;
+  background-position: top left !important;
 }
 
+/* Top-right: lighter gold-trim corner. */
 .arkflight-opening-stakes-column::after {
-  right: -4px;
-  top: -4px;
-  transform: rotate(90deg);
-  transform-origin: center;
+  right: -12px !important;
+  top: -12px !important;
+  width: 244px !important;
+  height: 244px !important;
+  background-image: url("../assets/ui/trim/ui_outer_frame_corner_top_left_gold_trim.webp") !important;
+  background-position: top left !important;
+  transform: rotate(90deg) !important;
 }
 
-/* PHYSICAL PANEL CORNER BRACKETS */
+/* Bottom-left: heavier bronze corner. */
+.arkflight-opening-art-column::before {
+  left: -12px !important;
+  bottom: -12px !important;
+  width: 252px !important;
+  height: 252px !important;
+  background-image: url("../assets/ui/trim/ui_outer_frame_corner_top_left_bronze.webp") !important;
+  background-position: top left !important;
+  transform: rotate(-90deg) !important;
+}
+
+/* Bottom-right: canonical forged corner, rotated into place. */
+.arkflight-opening-grid.arkflight-cinematic-opening::after {
+  right: -12px !important;
+  bottom: -12px !important;
+  width: 264px !important;
+  height: 264px !important;
+  background-image: url("../assets/ui/trim/ui_outer_frame_corner_top_left.webp") !important;
+  background-position: top left !important;
+  transform: rotate(180deg) !important;
+}
+
+/* -------------------------------------------------------------------------
+ * PHYSICAL PANEL CORNERS
+ *
+ * Inner panels use the smaller panel-specific assets; never the outer-frame
+ * hardware.  The two treatments intentionally differ so the UI does not look
+ * stamped from one repeated decoration.
+ * ---------------------------------------------------------------------- */
 .arkflight-opening-side-panel::before,
 .arkflight-opening-side-panel::after {
   content: "" !important;
   position: absolute !important;
-  z-index: 4;
-  pointer-events: none;
-  width: 34px !important;
-  height: 34px !important;
+  z-index: 4 !important;
+  pointer-events: none !important;
   border: 0 !important;
-  background: url("../assets/ui/trim/ui_panel_corner_bracket.webp") center / contain no-repeat !important;
-  opacity: .9;
+  background-repeat: no-repeat !important;
+  background-size: contain !important;
+  background-position: center !important;
 }
 
 .arkflight-opening-side-panel::before {
-  top: -2px !important;
-  left: -2px !important;
+  top: -4px !important;
+  left: -4px !important;
+  width: 52px !important;
+  height: 52px !important;
+  opacity: .92 !important;
+  background-image: url("../assets/ui/trim/ui_panel_corner_top_left_brass.webp") !important;
 }
 
 .arkflight-opening-side-panel::after {
-  right: -2px !important;
-  bottom: -2px !important;
-  transform: rotate(180deg);
+  right: -4px !important;
+  bottom: -4px !important;
+  width: 44px !important;
+  height: 44px !important;
+  opacity: .84 !important;
+  background-image: url("../assets/ui/trim/ui_panel_corner_bracket.webp") !important;
+  transform: rotate(180deg) !important;
 }
 
 /* DECORATIVE DIVIDERS */
@@ -93,7 +115,7 @@
   width: 76% !important;
   height: 18px !important;
   margin: 0 auto 10px !important;
-  background: url("../assets/ui/trim/ui_divider_rail_horizontal.webp") center / 100% 100% no-repeat !important;
+  background: url("../assets/ui/trim/ui_divider_horizontal_brass.webp") center / 100% 100% no-repeat !important;
   filter: none !important;
 }
 
@@ -102,7 +124,7 @@
   height: 12px !important;
   border: 0 !important;
   background: url("../assets/ui/trim/ui_divider_rail_horizontal.webp") center / 100% 100% no-repeat !important;
-  opacity: .68;
+  opacity: .68 !important;
 }
 
 /* REAL COMPASS ORNAMENT */
@@ -119,7 +141,7 @@
   display: none !important;
 }
 
-/* PRIMARY COMMAND BUTTON — actual asset-backed construction. */
+/* PRIMARY COMMAND BUTTON — actual three-piece asset-backed construction. */
 .arkflight-opening-begin {
   isolation: isolate;
   min-height: 64px !important;
@@ -180,19 +202,10 @@
   position: relative;
 }
 
+/* At narrower layouts only the command button tightens.  Outer corner art
+   deliberately keeps its authored visual weight instead of collapsing back
+   to tiny 82–92px decorations. */
 @media (max-width: 1100px) {
-  .arkflight-opening-grid.arkflight-cinematic-opening::before,
-  .arkflight-opening-grid.arkflight-cinematic-opening::after {
-    width: 92px !important;
-    height: 92px !important;
-  }
-
-  .arkflight-opening-art-column::before,
-  .arkflight-opening-stakes-column::after {
-    width: 82px;
-    height: 82px;
-  }
-
   .arkflight-opening-begin {
     min-height: 58px !important;
     padding-inline: 62px !important;
