@@ -1,0 +1,11 @@
+.arkflight-player-action-mode .pa-order { display:none !important; }
+.arkflight-player-action-mode .pa-main { margin-top:7px; }
+.arkflight-player-action-mode .pa-station-row { cursor:grab; }
+.arkflight-player-action-mode .pa-station-row:active { cursor:grabbing; }
+.arkflight-player-action-mode .pa-station-row.is-dragging { opacity:.45; filter:saturate(.6); }
+.arkflight-player-action-mode .pa-station-row.is-drop-target { border-color:#e0a34b !important; box-shadow:inset 0 0 0 2px rgba(224,163,75,.45),0 0 12px rgba(224,163,75,.18); }
+.arkflight-player-action-mode .pa-station-row.pa-order-locked { cursor:pointer; }
+.arkflight-player-action-mode .pa-order-number { height:40px; border-radius:5px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; }
+.arkflight-player-action-mode .pa-order-number span { line-height:1; }
+.arkflight-player-action-mode .pa-order-number i { font-size:9px; opacity:.55; }
+.arkflight-player-action-mode .pa-station-row:hover .pa-order-number i { opacity:1; color:#dfaa55; }
