@@ -1,0 +1,12 @@
+.pa-hazards .pa-hazard-timer {
+  margin-left: auto;
+  color: #e7c778;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  line-height: 1;
+}
+
+.pa-hazards .pa-hazard-timer.expired {
+  color: #d9655c;
+}
