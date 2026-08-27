@@ -4,12 +4,13 @@ async function confirmBeginResolution() {
   const DialogV2 = foundry?.applications?.api?.DialogV2;
   if (DialogV2?.confirm) {
     try {
-      return await DialogV2.confirm({
+      const result = await DialogV2.confirm({
         window: { title: "Begin Arkflight Resolution?" },
         content: `<div class="arkflight-gm-confirm"><p>All five stations are locked.</p><p><strong>Begin Resolution now?</strong></p><p>The crew plan will remain locked and the first station in the current resolution order will become active.</p></div>`,
         yes: { label: "Begin Resolution", icon: "fa-solid fa-dice-d20" },
         no: { label: "Review Locked Plan", icon: "fa-solid fa-eye" }
       });
+      if (typeof result === "boolean") return result;
     } catch (error) {
       console.warn("Arkflight | DialogV2 confirmation failed; using browser confirmation.", error);
     }
@@ -19,6 +20,12 @@ async function confirmBeginResolution() {
 
 function getRoot(app, element) {
   return element instanceof HTMLElement ? element : element?.[0] ?? app?.element ?? null;
+}
+
+async function beginResolution(controller) {
+  if (controller.state?.phase !== "locked") throw new Error(`Cannot begin Arkflight Resolution from ${controller.state?.phase ?? "unknown"} phase.`);
+  await controller.beginResolution();
+  if (controller.state?.phase !== "resolution") throw new Error("Arkflight did not enter Resolution after GM approval.");
 }
 
 function installGmControls(root) {
@@ -34,9 +41,11 @@ function installGmControls(root) {
     restart.className = "pa-gm-restart";
     restart.dataset.paGmRestart = "true";
     restart.innerHTML = '<i class="fa-solid fa-rotate-left"></i><span>Restart Event</span>';
-    restart.title = "Restart this Event from Round 1 while preserving current crew assignments and Mastery selections.";
-    restart.addEventListener("click", async () => {
-      const ok = globalThis.confirm?.("Restart this Arkflight Event from Round 1? Current crew assignments and Mastery selections will be preserved.") ?? true;
+    restart.title = "Restart this Event from Round 1.";
+    restart.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const ok = globalThis.confirm?.("Restart this Arkflight Event from Round 1?") ?? true;
       if (!ok) return;
       try {
         await controller.command({ type: "restart-event" });
@@ -55,39 +64,36 @@ function installGmControls(root) {
     lock.disabled = false;
     lock.classList.add("pa-begin-resolution");
     lock.innerHTML = '<i class="fa-solid fa-dice-d20"></i><b>BEGIN RESOLUTION</b><span>GM approval required.</span>';
-    lock.onclick = async (event) => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (!(await confirmBeginResolution())) return;
-      try {
-        await controller.beginResolution();
-      } catch (error) {
-        console.error("Arkflight | Begin Resolution failed", error);
-        ui.notifications?.warn(error.message);
-      }
-    };
-    return;
+  } else {
+    lock.title = "GM: lock all five station choices.";
+    lock.classList.add("pa-gm-lock");
   }
 
-  // During Planning only the GM may lock the plan. The board's original listener still performs the lock.
-  lock.title = "GM: lock all five station choices.";
-  lock.classList.add("pa-gm-lock");
+  if (lock.dataset.paGmAuthoritativeBound) return;
+  lock.dataset.paGmAuthoritativeBound = "true";
 
-  // Capture the successful lock transition and immediately ask the GM whether to begin Resolution.
-  if (!lock.dataset.paGmConfirmBound) {
-    lock.dataset.paGmConfirmBound = "true";
-    lock.addEventListener("click", async () => {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      if (controller.state?.phase !== "locked") return;
-      if (!(await confirmBeginResolution())) return;
-      try {
-        await controller.beginResolution();
-      } catch (error) {
-        console.error("Arkflight | Begin Resolution after lock failed", error);
-        ui.notifications?.warn(error.message);
+  // Capture-phase ownership is deliberate: the base Player Action Board also binds this
+  // button. Stop that older listener before it can try to lock an already-locked plan.
+  lock.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    try {
+      const phase = controller.state?.phase;
+      if (phase === "planning") {
+        await controller.lockPlan();
+        if (controller.state?.phase !== "locked") return;
+      } else if (phase !== "locked") {
+        throw new Error(`Arkflight plan cannot advance from ${phase ?? "unknown"}.`);
       }
-    });
-  }
+
+      if (!(await confirmBeginResolution())) return;
+      await beginResolution(controller);
+    } catch (error) {
+      console.error("Arkflight | GM plan/resolution transition failed", error);
+      ui.notifications?.warn(error.message);
+    }
+  }, true);
 }
 
 function hidePlayerGmControls(root) {
