@@ -111,7 +111,11 @@ function controlsMarkup() {
       ${group("Per-Piece 9-Slice Chrome", chromeGroup("stakes","Event Stakes") + chromeGroup("hazards","Active Hazards") + chromeGroup("scoring","Round Scoring"))}
       ${group("Outer Frame Corners", targetMarkup("outerTL","Top Left Corner","size") + targetMarkup("outerTR","Top Right Corner","size") + targetMarkup("outerBR","Bottom Right Corner","size") + targetMarkup("outerBL","Bottom Left Corner","size"))}
     </div>
-    <footer><button data-af-reset-all><i class="fa-solid fa-rotate-left"></i> Reset All</button></footer>
+    <footer>
+      <button type="button" data-af-export-copy title="Copy the complete tuned layout as JSON to paste into ChatGPT"><i class="fa-solid fa-copy"></i> Copy JSON</button>
+      <button type="button" data-af-export-download title="Download the complete tuned layout as a JSON file"><i class="fa-solid fa-download"></i> Download</button>
+      <button type="button" data-af-reset-all><i class="fa-solid fa-rotate-left"></i> Reset All</button>
+    </footer>
   </section>`;
 }
 
@@ -120,6 +124,52 @@ function refreshReadouts(panel, state) {
     const el = panel.querySelector(`[data-af-readout="${target}"]`);
     if (el) el.textContent = readout(state,target);
   }
+}
+
+function exportPayload(state) {
+  return {
+    kind: "arkflight-opening-layout",
+    schemaVersion: 1,
+    tunerStorageKey: STORAGE_KEY,
+    exportedAt: new Date().toISOString(),
+    module: "arkflight-game",
+    branch: "feature/ship-event-strain-unification",
+    instructions: "Paste this entire JSON object into ChatGPT and ask to bake these tuner values into the Opening Screen production defaults.",
+    layout: JSON.parse(JSON.stringify(state))
+  };
+}
+
+async function copyLayoutExport(state) {
+  const text = JSON.stringify(exportPayload(state), null, 2);
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  }
+  ui.notifications?.info?.("Arkflight layout JSON copied. Paste it directly into ChatGPT.");
+}
+
+function downloadLayoutExport(state) {
+  const payload = JSON.stringify(exportPayload(state), null, 2);
+  const blob = new Blob([payload], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  anchor.href = url;
+  anchor.download = `arkflight-opening-layout-${stamp}.json`;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  ui.notifications?.info?.("Arkflight layout JSON downloaded.");
 }
 
 function bindTuner(root, wrapper, state) {
@@ -149,6 +199,8 @@ function bindTuner(root, wrapper, state) {
     state[target] = { ...DEFAULTS[target] };
     applyState(root,state); saveState(state); refreshReadouts(panel,state);
   });
+  panel.querySelector("[data-af-export-copy]")?.addEventListener("click", () => copyLayoutExport(state));
+  panel.querySelector("[data-af-export-download]")?.addEventListener("click", () => downloadLayoutExport(state));
   panel.querySelector("[data-af-reset-all]")?.addEventListener("click", () => {
     const fresh = cloneDefaults();
     for (const k of Object.keys(DEFAULTS)) state[k] = fresh[k];
