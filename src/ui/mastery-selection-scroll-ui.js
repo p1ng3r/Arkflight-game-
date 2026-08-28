@@ -3,6 +3,7 @@ import { STATIONS } from "../event/event-schema.js";
 import { stationPresentation } from "./station-presentation.js";
 
 const OPEN_CLASS = "arkflight-mastery-scroll-open";
+const promptedClaims = new Set();
 
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
@@ -17,6 +18,12 @@ function ownerLevel() {
 
 function ownsActor(actor) {
   return Boolean(actor?.isOwner || actor?.testUserPermission?.(game.user, ownerLevel()));
+}
+
+function ownedCharacters() {
+  return game.actors.contents
+    .filter((actor) => actor.type === "character" && ownsActor(actor))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function ownedStations(state) {
@@ -45,7 +52,7 @@ function masteryCards(stationId, selectedId = null) {
         <strong>${mastery.name}</strong>
         <small><b>WHEN:</b> ${mastery.triggerLabel ?? mastery.timing ?? "When its trigger occurs"}</small>
         <p>${mastery.description}</p>
-        <em>Ready this Mastery</em>
+        <em>${mastery.id === selectedId ? "Currently Readied — click to confirm" : "Ready this Mastery"}</em>
       </span>
     </button>`).join("");
 }
@@ -105,6 +112,52 @@ function openScroll(root, controller, stationId, { force = false } = {}) {
   overlay.querySelector("[data-af-mastery-scroll-close]")?.addEventListener("click", () => removeOverlay(root));
 }
 
+function playerActorOptions(state, stationId) {
+  const currentActorId = state?.assignments?.[stationId]?.actorId ?? null;
+  const occupiedElsewhere = new Set(
+    STATIONS
+      .filter((id) => id !== stationId)
+      .map((id) => state?.assignments?.[id]?.actorId)
+      .filter(Boolean)
+  );
+  return ownedCharacters().filter((actor) => actor.id === currentActorId || !occupiedElsewhere.has(actor.id));
+}
+
+function decoratePlayerClaim(row, state, stationId) {
+  const actorSelect = row.querySelector("select[data-ark-setup='actor']");
+  if (!actorSelect) return;
+
+  const assignedActorId = state?.assignments?.[stationId]?.actorId ?? null;
+  const assignedActor = assignedActorId ? game.actors.get(assignedActorId) : null;
+  const claimedByMe = Boolean(assignedActor && ownsActor(assignedActor));
+  const claimedByOther = Boolean(assignedActorId && !claimedByMe);
+
+  actorSelect.replaceChildren();
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = claimedByMe ? "— Release Station —" : "— Claim this Station —";
+  actorSelect.append(empty);
+
+  for (const actor of playerActorOptions(state, stationId)) {
+    const option = document.createElement("option");
+    option.value = actor.id;
+    option.textContent = actor.name;
+    option.selected = actor.id === assignedActorId;
+    actorSelect.append(option);
+  }
+
+  actorSelect.disabled = claimedByOther || (!claimedByMe && ownedCharacters().length === 0);
+  actorSelect.title = claimedByOther
+    ? `${assignedActor?.name ?? "Another officer"} has already claimed ${displayName(stationId)}.`
+    : claimedByMe
+      ? `You control ${displayName(stationId)} with ${assignedActor?.name}. Choose another owned character or release the station.`
+      : `Claim ${displayName(stationId)} with a PF2e character you own.`;
+
+  row.classList.toggle("arkflight-player-claimable", !claimedByOther);
+  row.classList.toggle("arkflight-player-owned-station", claimedByMe);
+  row.classList.toggle("arkflight-player-claimed-other", claimedByOther);
+}
+
 function decoratePlayerSetup(root, controller) {
   const state = controller?.state;
   if (!root || !state || state.phase !== "opening" || state.setupLocked || game.user?.isGM) return;
@@ -112,6 +165,8 @@ function decoratePlayerSetup(root, controller) {
   const mine = ownedStations(state);
   for (const row of root.querySelectorAll("[data-setup-station]")) {
     const stationId = row.dataset.setupStation;
+    decoratePlayerClaim(row, state, stationId);
+
     const masterySelect = row.querySelector("select[data-ark-setup='mastery']");
     if (!masterySelect) continue;
 
@@ -135,13 +190,22 @@ function decoratePlayerSetup(root, controller) {
       ? `<i class="fa-solid fa-star"></i><span><small>MASTERY READIED</small><strong>${current.name}</strong></span>`
       : owned
         ? `<i class="fa-solid fa-scroll"></i><span><small>YOUR STATION</small><strong>Choose Mastery</strong></span>`
-        : `<i class="fa-solid fa-lock"></i><span><small>OTHER OFFICER</small><strong>Mastery Choice</strong></span>`;
-    button.title = current?.description ?? (owned ? "Open your three Mastery choices." : "This Mastery belongs to the officer assigned to this station.");
+        : `<i class="fa-solid fa-lock"></i><span><small>${state.assignments?.[stationId]?.actorId ? "OTHER OFFICER" : "CLAIM STATION FIRST"}</small><strong>Mastery Choice</strong></span>`;
+    button.title = current?.description ?? (owned ? "Open your three Mastery choices." : "Claim this station with a character you own before choosing its Mastery.");
     button.onclick = () => owned && openScroll(root, controller, stationId, { force: true });
   }
 
-  const pending = mine.find((stationId) => !state.masterySelections?.[stationId]);
-  if (pending && !root.querySelector(".arkflight-mastery-scroll-overlay")) openScroll(root, controller, pending);
+  // A newly claimed station always gets the explanatory Mastery scroll once,
+  // even if an older persisted Event happened to carry a preselected mastery.
+  for (const stationId of mine) {
+    const key = `${state.eventId}:${stationId}`;
+    if (promptedClaims.has(key)) continue;
+    promptedClaims.add(key);
+    if (!root.querySelector(".arkflight-mastery-scroll-overlay")) {
+      openScroll(root, controller, stationId, { force: true });
+      break;
+    }
+  }
 }
 
 Hooks.on("renderApplicationV2", (app, element) => {
