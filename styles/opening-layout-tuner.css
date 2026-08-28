@@ -8,19 +8,41 @@
   --af-vignette-y: 0px;
   --af-vignette-width-delta: 0px;
   --af-vignette-height-delta: 0px;
+  --af-vignette-z-delta: 0;
 
   --af-round-x: 0px;
   --af-round-y: 0px;
   --af-round-width-delta: 0px;
   --af-round-height-delta: 0px;
+  --af-round-z-delta: 0;
 
   --af-compass-x: 0px;
   --af-compass-y: 0px;
   --af-compass-size-delta: 0px;
+  --af-compass-z-delta: 0;
 
   --af-logo-x: 0px;
   --af-logo-y: 0px;
   --af-logo-size-delta: 0px;
+  --af-logo-z-delta: 0;
+
+  --af-stakes-x: 0px;
+  --af-stakes-y: 0px;
+  --af-stakes-width-delta: 0px;
+  --af-stakes-height-delta: 0px;
+  --af-stakes-z-delta: 0;
+
+  --af-hazards-x: 0px;
+  --af-hazards-y: 0px;
+  --af-hazards-width-delta: 0px;
+  --af-hazards-height-delta: 0px;
+  --af-hazards-z-delta: 0;
+
+  --af-scoring-x: 0px;
+  --af-scoring-y: 0px;
+  --af-scoring-width-delta: 0px;
+  --af-scoring-height-delta: 0px;
+  --af-scoring-z-delta: 0;
 }
 
 /* Live target geometry. Positive X moves right; positive Y moves down. */
@@ -29,6 +51,7 @@
   bottom: calc(184px - var(--af-vignette-y)) !important;
   width: calc(100% - 72px + var(--af-vignette-width-delta)) !important;
   max-height: calc(126px + var(--af-vignette-height-delta)) !important;
+  z-index: calc(14 + var(--af-vignette-z-delta)) !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption {
@@ -36,14 +59,13 @@
   bottom: calc(58px - var(--af-round-y)) !important;
   width: calc(100% - 96px + var(--af-round-width-delta)) !important;
   max-height: calc(58px + var(--af-round-height-delta)) !important;
+  z-index: calc(14 + var(--af-round-z-delta)) !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
-  transform: translate(
-    var(--af-compass-x),
-    calc(-52px + var(--af-compass-y))
-  ) !important;
+  transform: translate(var(--af-compass-x), calc(-52px + var(--af-compass-y))) !important;
   font-size: calc(56px + var(--af-compass-size-delta)) !important;
+  z-index: calc(4 + var(--af-compass-z-delta)) !important;
 }
 
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-brand-logo {
@@ -51,6 +73,29 @@
   left: calc(50% + var(--af-logo-x)) !important;
   width: calc(88px + var(--af-logo-size-delta)) !important;
   height: calc(88px + var(--af-logo-size-delta)) !important;
+  z-index: calc(15 + var(--af-logo-z-delta)) !important;
+}
+
+/* Right-side panel shells can now be moved/resized individually. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(1) {
+  width: calc(100% + var(--af-stakes-width-delta)) !important;
+  min-height: calc(210px + var(--af-stakes-height-delta)) !important;
+  transform: translate(var(--af-stakes-x), var(--af-stakes-y)) !important;
+  z-index: calc(3 + var(--af-stakes-z-delta)) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(2) {
+  width: calc(100% + var(--af-hazards-width-delta)) !important;
+  min-height: calc(118px + var(--af-hazards-height-delta)) !important;
+  transform: translate(var(--af-hazards-x), var(--af-hazards-y)) !important;
+  z-index: calc(3 + var(--af-hazards-z-delta)) !important;
+}
+
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(3) {
+  width: calc(100% + var(--af-scoring-width-delta)) !important;
+  min-height: calc(205px + var(--af-scoring-height-delta)) !important;
+  transform: translate(var(--af-scoring-x), var(--af-scoring-y)) !important;
+  z-index: calc(3 + var(--af-scoring-z-delta)) !important;
 }
 
 /* -------------------------------------------------------------------------
@@ -67,9 +112,7 @@
 }
 
 .arkflight-opening-tuner-toggle,
-.arkflight-opening-tuner {
-  pointer-events: auto;
-}
+.arkflight-opening-tuner { pointer-events: auto; }
 
 .arkflight-opening-tuner-toggle {
   display: inline-flex;
@@ -92,12 +135,11 @@
   color: #f0d18a !important;
 }
 
-.arkflight-opening-tuner[hidden] {
-  display: none !important;
-}
+.arkflight-opening-tuner[hidden] { display: none !important; }
 
 .arkflight-opening-tuner {
-  width: 306px;
+  width: 320px;
+  max-height: calc(100vh - 150px);
   margin-top: 5px;
   padding: 9px;
   border: 1px solid #806330;
@@ -157,6 +199,24 @@
   height: 22px;
   min-height: 22px;
   padding: 0;
+}
+
+.arkflight-opening-tuner-scroll {
+  max-height: calc(100vh - 255px);
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.arkflight-opening-tuner-group-title {
+  margin: 8px 0 5px;
+  padding: 4px 6px;
+  border-top: 1px solid rgba(145,109,48,.4);
+  border-bottom: 1px solid rgba(145,109,48,.25);
+  color: #b89557;
+  font-family: var(--font-serif, serif);
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .arkflight-opening-tuner-target {
@@ -225,7 +285,7 @@
 .arkflight-opening-tuner > footer {
   display: flex;
   justify-content: flex-end;
-  padding-top: 1px;
+  padding-top: 5px;
 }
 
 .arkflight-opening-tuner > footer button {
@@ -234,9 +294,7 @@
 }
 
 @media (max-width: 1100px) {
-  .arkflight-opening-tuner-shell {
-    left: calc(29% + 8px);
-  }
+  .arkflight-opening-tuner-shell { left: calc(29% + 8px); }
 
   .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette {
     bottom: calc(168px - var(--af-vignette-y)) !important;
@@ -249,9 +307,6 @@
   }
 
   .arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
-    transform: translate(
-      var(--af-compass-x),
-      calc(-44px + var(--af-compass-y))
-    ) !important;
+    transform: translate(var(--af-compass-x), calc(-44px + var(--af-compass-y))) !important;
   }
 }
