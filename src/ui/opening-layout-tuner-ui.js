@@ -25,6 +25,52 @@ const DEFAULTS = (() => {
   return Object.freeze(d);
 })();
 
+const APPROVED_LAYOUT = Object.freeze({
+  vignette: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  round: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  compass: { x: 0, y: 0, size: 0, z: 0 },
+  logo: { x: 0, y: 0, size: 0, z: 0 },
+  begin: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  layoutButton: { x: 0, y: 0, size: 0, z: 0 },
+  stakes: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  hazards: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  scoring: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  outerTL: { x: -4, y: -5, size: 0, z: 0 },
+  outerTR: { x: 4, y: -5, size: 0, z: 0 },
+  outerBR: { x: 5, y: 6, size: 0, z: 0 },
+  outerBL: { x: -6, y: 4, size: 0, z: 0 },
+  stakesChromeMaster: { scale: 0, x: 0, y: 0, z: 0 },
+  stakesFill: { x: 0, y: 0, width: 0, height: 0, opacity: 0, z: 0 },
+  stakesTL: { x: 10, y: 10, width: 0, height: 0, scale: 60, z: 0 },
+  stakesTR: { x: 0, y: 0, width: 0, height: 0, scale: 45, z: 0 },
+  stakesBL: { x: 10, y: -6, width: 0, height: 0, scale: 62, z: 0 },
+  stakesBR: { x: -10, y: -6, width: 0, height: 0, scale: 60, z: 0 },
+  stakesTop: { x: 0, y: -10, width: 0, height: 0, scale: 0, z: 0 },
+  stakesBottom: { x: 0, y: 10, width: 0, height: 0, scale: -16, z: 0 },
+  stakesLeft: { x: -7, y: 0, width: 0, height: 0, scale: 0, z: 0 },
+  stakesRight: { x: 8, y: 0, width: 0, height: 0, scale: 0, z: 0 },
+  hazardsChromeMaster: { scale: 0, x: 0, y: 0, z: 0 },
+  hazardsFill: { x: 0, y: 0, width: 0, height: 0, opacity: 0, z: 0 },
+  hazardsTL: { x: 4, y: 4, width: 0, height: 0, scale: 30, z: 0 },
+  hazardsTR: { x: -4, y: 4, width: 0, height: 0, scale: 30, z: 0 },
+  hazardsBL: { x: 5, y: 0, width: 0, height: 0, scale: 30, z: 0 },
+  hazardsBR: { x: -4, y: 0, width: 0, height: 0, scale: 30, z: 0 },
+  hazardsTop: { x: 0, y: -10, width: 0, height: 0, scale: 0, z: 0 },
+  hazardsBottom: { x: 0, y: 10, width: 0, height: 0, scale: 0, z: 0 },
+  hazardsLeft: { x: -8, y: 0, width: 0, height: 0, scale: 0, z: 0 },
+  hazardsRight: { x: 9, y: 0, width: 0, height: 0, scale: 0, z: 0 },
+  scoringChromeMaster: { scale: 0, x: 0, y: 0, z: 0 },
+  scoringFill: { x: 0, y: 0, width: 0, height: 0, opacity: 0, z: 0 },
+  scoringTL: { x: 6, y: 6, width: 0, height: 0, scale: 40, z: 0 },
+  scoringTR: { x: -6, y: 6, width: 0, height: 0, scale: 40, z: 0 },
+  scoringBL: { x: 6, y: -2, width: 0, height: 0, scale: 40, z: 0 },
+  scoringBR: { x: -6, y: -2, width: 0, height: 0, scale: 40, z: 0 },
+  scoringTop: { x: 0, y: -10, width: 0, height: 0, scale: 0, z: 0 },
+  scoringBottom: { x: 0, y: 10, width: 0, height: 0, scale: 0, z: 0 },
+  scoringLeft: { x: -8, y: 0, width: 0, height: 0, scale: 0, z: 0 },
+  scoringRight: { x: 8, y: 0, width: 0, height: 0, scale: 0, z: 0 }
+});
+
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
   if (element instanceof HTMLElement) return element;
@@ -33,6 +79,7 @@ function boardRoot(app, element) {
 }
 
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
+const cloneApproved = () => JSON.parse(JSON.stringify(APPROVED_LAYOUT));
 function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
@@ -105,6 +152,7 @@ function controlsMarkup() {
     <header><strong>Opening Layout</strong><button type="button" data-af-tuner-close><i class="fa-solid fa-xmark"></i></button></header>
     <div class="arkflight-opening-tuner-step"><span>Step</span><button data-af-step="1">1</button><button data-af-step="4" class="active">4</button><button data-af-step="10">10</button><span>px</span></div>
     <div class="arkflight-opening-tuner-exportbar">
+      <button type="button" data-af-apply-approved title="Apply the approved layout preset exported on 2026-08-28"><i class="fa-solid fa-wand-magic-sparkles"></i> Approved Layout</button>
       <button type="button" data-af-export-copy title="Copy the complete tuned layout as JSON to paste into ChatGPT"><i class="fa-solid fa-copy"></i> Copy JSON</button>
       <button type="button" data-af-export-download title="Download the complete tuned layout as a JSON file"><i class="fa-solid fa-download"></i> Download JSON</button>
     </div>
@@ -174,6 +222,15 @@ function downloadLayoutExport(state) {
   ui.notifications?.info?.("Arkflight layout JSON downloaded.");
 }
 
+function applyApprovedLayout(root, panel, state) {
+  const approved = cloneApproved();
+  for (const key of Object.keys(DEFAULTS)) state[key] = approved[key] ?? { ...DEFAULTS[key] };
+  applyState(root, state);
+  saveState(state);
+  refreshReadouts(panel, state);
+  ui.notifications?.info?.("Approved Arkflight opening layout applied.");
+}
+
 function bindTuner(root, wrapper, state) {
   const toggle = wrapper.querySelector("[data-af-tuner-toggle]");
   const panel = wrapper.querySelector("[data-af-tuner]");
@@ -201,6 +258,7 @@ function bindTuner(root, wrapper, state) {
     state[target] = { ...DEFAULTS[target] };
     applyState(root,state); saveState(state); refreshReadouts(panel,state);
   });
+  panel.querySelector("[data-af-apply-approved]")?.addEventListener("click", () => applyApprovedLayout(root, panel, state));
   panel.querySelector("[data-af-export-copy]")?.addEventListener("click", () => copyLayoutExport(state));
   panel.querySelector("[data-af-export-download]")?.addEventListener("click", () => downloadLayoutExport(state));
   panel.querySelector("[data-af-reset-all]")?.addEventListener("click", () => {
