@@ -1,0 +1,54 @@
+.arkflight-gm-header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: 4px;
+  flex: 0 0 auto;
+}
+
+.arkflight-gm-header-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  height: 24px;
+  padding: 2px 8px;
+  border: 1px solid rgba(167, 128, 62, .72) !important;
+  border-radius: 2px;
+  background: rgba(9, 13, 18, .86) !important;
+  color: #cdb170 !important;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .45) !important;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.arkflight-gm-header-tool:hover,
+.arkflight-gm-header-tool.active {
+  border-color: #d3a857 !important;
+  color: #f2d48d !important;
+  background: rgba(27, 25, 19, .95) !important;
+}
+
+.arkflight-gm-header-tool i {
+  font-size: 10px;
+}
+
+/* The original tuner trigger stays as an internal hook only. The visible GM
+ * entry point now lives in Foundry's application header beside the close X. */
+.arkflight-opening-mode .arkflight-opening-tuner-toggle {
+  display: none !important;
+}
+
+/* With the old in-canvas toggle hidden, keep the tuner itself as a floating
+ * authoring panel inside the Event Board. */
+.arkflight-opening-mode .arkflight-opening-tuner-shell {
+  pointer-events: none;
+}
+
+.arkflight-opening-mode .arkflight-opening-tuner {
+  pointer-events: auto;
+}
