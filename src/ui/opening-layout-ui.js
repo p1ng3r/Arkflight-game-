@@ -18,6 +18,8 @@ const PANEL_PARTS = [
   "edge-right"
 ];
 
+const PANEL_NAMES = ["stakes", "hazards", "scoring"];
+
 function ensurePanelChrome(panel) {
   if (!panel || panel.querySelector(":scope > .arkflight-nine-slice")) return;
 
@@ -28,6 +30,7 @@ function ensurePanelChrome(panel) {
   for (const part of PANEL_PARTS) {
     const piece = document.createElement("span");
     piece.className = `arkflight-nine-slice__${part}`;
+    piece.dataset.afFramePart = part;
     chrome.append(piece);
   }
 
@@ -96,7 +99,7 @@ function applyOpeningLayout(root) {
   const board = root.querySelector(".arkflight-opening-grid.arkflight-cinematic-opening");
   const artColumn = root.querySelector(".arkflight-opening-art-column");
   const commandColumn = root.querySelector(".arkflight-opening-command-column");
-  const sidePanels = root.querySelectorAll(".arkflight-opening-stakes-column .arkflight-opening-side-panel");
+  const sidePanels = [...root.querySelectorAll(".arkflight-opening-stakes-column .arkflight-opening-side-panel")];
   if (!board || !artColumn || !commandColumn || sidePanels.length < 3) return false;
 
   board.classList.add("arkflight-opening-layout-v2");
@@ -104,9 +107,17 @@ function applyOpeningLayout(root) {
   ensureOpeningLogo(artColumn);
   moveOpeningVignette(root);
 
-  for (const panel of sidePanels) {
+  sidePanels.slice(0, 3).forEach((panel, index) => {
     panel.classList.add("arkflight-nine-slice-panel");
+    panel.dataset.afPanel = PANEL_NAMES[index];
     ensurePanelChrome(panel);
+  });
+
+  const begin = root.querySelector(".arkflight-opening-begin");
+  if (begin) begin.dataset.afAsset = "begin-button";
+
+  for (const corner of root.querySelectorAll(".arkflight-opening-frame-corner")) {
+    corner.dataset.afAsset = [...corner.classList].find((name) => name.startsWith("arkflight-opening-frame-corner--"))?.split("--")[1] ?? "corner";
   }
 
   return true;
