@@ -2,8 +2,7 @@ import { BASE_MASTERY } from "../content/base-mastery.js";
 import { STATIONS } from "../event/event-schema.js";
 import { stationPresentation } from "./station-presentation.js";
 
-const OPEN_CLASS = "arkflight-mastery-scroll-open";
-const promptedClaims = new Set();
+const OPEN_CLASS = "arkflight-arkcraft-scroll-open";
 
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
@@ -53,73 +52,73 @@ function actorName(state, stationId) {
   return actorId ? game.actors.get(actorId)?.name ?? "Assigned Officer" : "Assigned Officer";
 }
 
-function masteryCards(stationId, selectedId = null) {
-  return (BASE_MASTERY[stationId] ?? []).map((mastery) => `
-    <button type="button" class="arkflight-mastery-scroll-choice ${mastery.id === selectedId ? "selected" : ""}" data-af-mastery-choice="${mastery.id}">
-      <span class="arkflight-mastery-scroll-seal"><i class="fa-solid fa-star"></i></span>
-      <span class="arkflight-mastery-scroll-copy">
-        <strong>${mastery.name}</strong>
-        <small><b>WHEN:</b> ${mastery.triggerLabel ?? mastery.timing ?? "When its trigger occurs"}</small>
-        <p>${mastery.description}</p>
-        <em>${mastery.id === selectedId ? "Currently Readied — choose again to confirm" : "Ready this Mastery"}</em>
+function arkcraftCards(stationId, selectedId = null) {
+  return (BASE_MASTERY[stationId] ?? []).map((arkcraft) => `
+    <button type="button" class="arkflight-arkcraft-choice ${arkcraft.id === selectedId ? "selected" : ""}" data-af-arkcraft-choice="${arkcraft.id}">
+      <span class="arkflight-arkcraft-seal"><i class="fa-solid fa-star"></i></span>
+      <span class="arkflight-arkcraft-copy">
+        <strong>${arkcraft.name}</strong>
+        <small><b>WHEN:</b> ${arkcraft.triggerLabel ?? arkcraft.timing ?? "When its trigger occurs"}</small>
+        <p>${arkcraft.description}</p>
+        <em>${arkcraft.id === selectedId ? "Currently Readied" : "Choose this Arkcraft Skill"}</em>
       </span>
     </button>`).join("");
 }
 
 function removeOverlay(root) {
-  root?.querySelector(".arkflight-mastery-scroll-overlay")?.remove();
+  root?.querySelector(".arkflight-arkcraft-scroll-overlay")?.remove();
   root?.classList?.remove(OPEN_CLASS);
 }
 
-async function chooseMastery(root, controller, stationId, masteryId) {
+async function chooseArkcraft(root, controller, stationId, arkcraftId) {
   try {
-    await controller.command({ type: "select-mastery", station: stationId, masteryId });
+    await controller.command({ type: "select-mastery", station: stationId, masteryId: arkcraftId });
     removeOverlay(root);
-    ui.notifications?.info?.(`${displayName(stationId)} Mastery readied.`);
+    ui.notifications?.info?.(`${displayName(stationId)} Arkcraft Skill readied.`);
   } catch (error) {
-    console.error("Arkflight | Mastery scroll selection failed", error);
+    console.error("Arkflight | Arkcraft Skill selection failed", error);
     ui.notifications?.warn?.(error.message);
   }
 }
 
-function openScroll(root, controller, stationId, { force = false } = {}) {
+function openArkcraftScroll(root, controller, stationId) {
   const state = controller?.state;
   if (!root || !state || state.phase !== "opening" || state.setupLocked) return;
   if (!game.user?.isGM && !ownedStations(state).includes(stationId)) return;
 
   const current = state.masterySelections?.[stationId] ?? null;
-  if (current && !force) return;
-
-  removeOverlay(root);
   const data = presentation(stationId);
+  removeOverlay(root);
+
   const overlay = document.createElement("section");
-  overlay.className = "arkflight-mastery-scroll-overlay";
+  overlay.className = "arkflight-arkcraft-scroll-overlay";
   overlay.dataset.station = stationId;
   overlay.innerHTML = `
-    <div class="arkflight-mastery-scroll-backdrop"></div>
-    <article class="arkflight-mastery-scroll" role="dialog" aria-modal="true" aria-label="Choose ${displayName(stationId)} Mastery">
-      <div class="arkflight-mastery-scroll-roll arkflight-mastery-scroll-roll--top"></div>
-      <header>
-        <div class="arkflight-mastery-scroll-kicker">${displayName(stationId).toUpperCase()} · ${actorName(state, stationId)}</div>
-        <h2>Choose Your Mastery</h2>
-        <p><strong>Mastery</strong> is a once-per-Event station technique granted by the ship. Ready one now. When its trigger occurs, Arkflight will surface the opportunity to use it. Once used, it is expended for that Event.</p>
-        <div class="arkflight-mastery-scroll-station-note"><strong>${displayName(stationId)}</strong> — ${data.description}<br><span>Typical skills: ${(data.typicalSkills ?? []).join(", ")}</span></div>
-      </header>
-      <div class="arkflight-mastery-scroll-rule"><span></span><i class="fa-solid fa-diamond"></i><span></span></div>
-      <div class="arkflight-mastery-scroll-options">${masteryCards(stationId, current)}</div>
-      <footer>
-        <span><i class="fa-solid fa-circle-info"></i> Pick the technique that best fits how you want to support the crew this Event.</span>
-        <button type="button" data-af-mastery-scroll-close>Choose Later</button>
-      </footer>
-      <div class="arkflight-mastery-scroll-roll arkflight-mastery-scroll-roll--bottom"></div>
+    <div class="arkflight-arkcraft-scroll-backdrop"></div>
+    <article class="arkflight-arkcraft-scroll" role="dialog" aria-modal="true" aria-label="Choose ${displayName(stationId)} Arkcraft Skill">
+      <div class="arkflight-arkcraft-scroll-content">
+        <header>
+          <div class="arkflight-arkcraft-kicker">${displayName(stationId).toUpperCase()} · ${actorName(state, stationId)}</div>
+          <h2>Choose Your Arkcraft Skill</h2>
+          <p>An <strong>Arkcraft Skill</strong> is a specialized station technique used aboard an Arkflight vessel. Choose one to ready for this Event. You may return here and choose a different one until Crew Muster is locked.</p>
+          <div class="arkflight-arkcraft-station-note"><strong>${displayName(stationId)}</strong> — ${data.description}<br><span>Typical PF2e skills: ${(data.typicalSkills ?? []).join(", ")}</span></div>
+        </header>
+        <div class="arkflight-arkcraft-rule"><span></span><i class="fa-solid fa-diamond"></i><span></span></div>
+        <div class="arkflight-arkcraft-options">${arkcraftCards(stationId, current)}</div>
+        <footer>
+          <span><i class="fa-solid fa-circle-info"></i> Your choice remains changeable until the Event setup is locked.</span>
+          <button type="button" data-af-arkcraft-close>Return to Muster</button>
+        </footer>
+      </div>
     </article>`;
 
   root.append(overlay);
   root.classList.add(OPEN_CLASS);
-  for (const button of overlay.querySelectorAll("[data-af-mastery-choice]")) {
-    button.addEventListener("click", () => chooseMastery(root, controller, stationId, button.dataset.afMasteryChoice));
+
+  for (const button of overlay.querySelectorAll("[data-af-arkcraft-choice]")) {
+    button.addEventListener("click", () => chooseArkcraft(root, controller, stationId, button.dataset.afArkcraftChoice));
   }
-  overlay.querySelector("[data-af-mastery-scroll-close]")?.addEventListener("click", () => removeOverlay(root));
+  overlay.querySelector("[data-af-arkcraft-close]")?.addEventListener("click", () => removeOverlay(root));
 }
 
 function availableOwnedCharacters(state, stationId) {
@@ -185,9 +184,8 @@ function decoratePlayerClaim(row, root, controller, stationId) {
     el.disabled = true;
     try {
       await controller.command({ type: "assign-actor", station: stationId, actorId });
-      if (actorId) {
-        ui.notifications?.info?.(`${displayName(stationId)} claim sent to the GM.`);
-      } else {
+      if (actorId) ui.notifications?.info?.(`${displayName(stationId)} claim sent to the GM.`);
+      else {
         ui.notifications?.info?.(`${displayName(stationId)} released.`);
         removeOverlay(root);
       }
@@ -204,33 +202,28 @@ function decoratePlayerClaim(row, root, controller, stationId) {
   row.classList.toggle("arkflight-player-claimed-other", claimedByOther);
 }
 
-function decorateMasteryArea(row, root, controller, stationId) {
+function decorateArkcraftArea(row, root, controller, stationId) {
   const state = controller.state;
-  const masterySelect = row.querySelector("select[data-ark-setup='mastery']");
-  const existingButton = row.querySelector("[data-af-open-mastery-scroll]");
-  if (!masterySelect && !existingButton) return;
-
-  let button = existingButton;
-  if (!button) {
-    button = document.createElement("button");
-    button.type = "button";
-    button.className = "arkflight-mastery-scroll-open-button";
-    button.dataset.afOpenMasteryScroll = "";
-    masterySelect.insertAdjacentElement("afterend", button);
-  }
-  masterySelect?.remove();
+  const slot = row.querySelector(`[data-af-arkcraft-slot="${stationId}"]`);
+  if (!slot) return;
 
   const currentId = state.masterySelections?.[stationId] ?? null;
   const current = (BASE_MASTERY[stationId] ?? []).find((entry) => entry.id === currentId);
   const canChoose = game.user?.isGM || ownedStations(state).includes(stationId);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "arkflight-arkcraft-skill-link";
+  button.dataset.afOpenArkcraft = stationId;
   button.disabled = !canChoose;
   button.innerHTML = current
-    ? `<i class="fa-solid fa-star"></i><span><small>MASTERY</small><strong>${current.name}</strong></span>`
+    ? `<span><small>ARKCRAFT SKILL</small><strong>${current.name}</strong></span>`
     : canChoose
-      ? `<i class="fa-solid fa-scroll"></i><span><small>MASTERY</small><strong>Choose Mastery</strong></span>`
-      : `<i class="fa-solid fa-lock"></i><span><small>MASTERY</small><strong>${state.assignments?.[stationId]?.actorId ? "Officer Chooses" : "Claim Station First"}</strong></span>`;
-  button.title = current?.description ?? (canChoose ? "Open the three Mastery choices for this station." : "The assigned officer chooses this station's Mastery.");
-  button.onclick = () => canChoose && openScroll(root, controller, stationId, { force: true });
+      ? `<span><small>ARKCRAFT SKILL</small><strong>Choose Arkcraft Skill</strong></span>`
+      : `<span><small>ARKCRAFT SKILL</small><strong>${state.assignments?.[stationId]?.actorId ? "Officer Chooses" : "Claim Station First"}</strong></span>`;
+  button.title = current?.description ?? (canChoose ? "Open this station's Arkcraft Skills." : "Claim this station before choosing an Arkcraft Skill.");
+  button.addEventListener("click", () => canChoose && openArkcraftScroll(root, controller, stationId));
+  slot.replaceChildren(button);
 }
 
 function decorateSetup(root, controller) {
@@ -240,23 +233,11 @@ function decorateSetup(root, controller) {
   const rows = [...root.querySelectorAll("[data-setup-station]")];
   if (rows.length !== STATIONS.length) return false;
 
-  const mine = ownedStations(state);
   for (const row of rows) {
     const stationId = row.dataset.setupStation;
     decorateStationHelp(row, stationId);
     if (!game.user?.isGM) decoratePlayerClaim(row, root, controller, stationId);
-    decorateMasteryArea(row, root, controller, stationId);
-  }
-
-  if (game.user?.isGM) return true;
-  for (const stationId of mine) {
-    const key = `${state.eventId}:${stationId}`;
-    if (promptedClaims.has(key)) continue;
-    promptedClaims.add(key);
-    if (!root.querySelector(".arkflight-mastery-scroll-overlay")) {
-      openScroll(root, controller, stationId, { force: true });
-      break;
-    }
+    decorateArkcraftArea(row, root, controller, stationId);
   }
   return true;
 }
