@@ -1,312 +1,156 @@
-/* Arkflight Opening Screen — GM-only live layout tuner.
- * This is a real design-time control surface, not a visual patch layer.
- * opening-layout-tuner-ui.js writes these variables on the Event Board root.
+/* Arkflight Opening Screen — GM live layout tuner.
+ * The tuner writes CSS variables on the Event Board root. All values are
+ * temporary browser-local design offsets; production defaults remain in CSS.
  */
 
 .arkflight-event-board.arkflight-opening-mode {
-  --af-vignette-x: 0px;
-  --af-vignette-y: 0px;
-  --af-vignette-width-delta: 0px;
-  --af-vignette-height-delta: 0px;
-  --af-vignette-z-delta: 0;
-
-  --af-round-x: 0px;
-  --af-round-y: 0px;
-  --af-round-width-delta: 0px;
-  --af-round-height-delta: 0px;
-  --af-round-z-delta: 0;
-
-  --af-compass-x: 0px;
-  --af-compass-y: 0px;
-  --af-compass-size-delta: 0px;
-  --af-compass-z-delta: 0;
-
-  --af-logo-x: 0px;
-  --af-logo-y: 0px;
-  --af-logo-size-delta: 0px;
-  --af-logo-z-delta: 0;
-
-  --af-stakes-x: 0px;
-  --af-stakes-y: 0px;
-  --af-stakes-width-delta: 0px;
-  --af-stakes-height-delta: 0px;
-  --af-stakes-z-delta: 0;
-
-  --af-hazards-x: 0px;
-  --af-hazards-y: 0px;
-  --af-hazards-width-delta: 0px;
-  --af-hazards-height-delta: 0px;
-  --af-hazards-z-delta: 0;
-
-  --af-scoring-x: 0px;
-  --af-scoring-y: 0px;
-  --af-scoring-width-delta: 0px;
-  --af-scoring-height-delta: 0px;
-  --af-scoring-z-delta: 0;
+  --af-vignette-x:0px; --af-vignette-y:0px; --af-vignette-width-delta:0px; --af-vignette-height-delta:0px; --af-vignette-z-delta:0;
+  --af-round-x:0px; --af-round-y:0px; --af-round-width-delta:0px; --af-round-height-delta:0px; --af-round-z-delta:0;
+  --af-compass-x:0px; --af-compass-y:0px; --af-compass-size-delta:0px; --af-compass-z-delta:0;
+  --af-logo-x:0px; --af-logo-y:0px; --af-logo-size-delta:0px; --af-logo-z-delta:0;
+  --af-begin-x:0px; --af-begin-y:0px; --af-begin-width-delta:0px; --af-begin-height-delta:0px; --af-begin-z-delta:0;
+  --af-layout-button-x:0px; --af-layout-button-y:0px; --af-layout-button-size-delta:0px; --af-layout-button-z-delta:0;
+  --af-stakes-x:0px; --af-stakes-y:0px; --af-stakes-width-delta:0px; --af-stakes-height-delta:0px; --af-stakes-z-delta:0;
+  --af-hazards-x:0px; --af-hazards-y:0px; --af-hazards-width-delta:0px; --af-hazards-height-delta:0px; --af-hazards-z-delta:0;
+  --af-scoring-x:0px; --af-scoring-y:0px; --af-scoring-width-delta:0px; --af-scoring-height-delta:0px; --af-scoring-z-delta:0;
+  --af-stakes-frame-x:0px; --af-stakes-frame-y:0px; --af-stakes-frame-corner-delta:0px; --af-stakes-frame-edge-delta:0px; --af-stakes-frame-z-delta:0;
+  --af-hazards-frame-x:0px; --af-hazards-frame-y:0px; --af-hazards-frame-corner-delta:0px; --af-hazards-frame-edge-delta:0px; --af-hazards-frame-z-delta:0;
+  --af-scoring-frame-x:0px; --af-scoring-frame-y:0px; --af-scoring-frame-corner-delta:0px; --af-scoring-frame-edge-delta:0px; --af-scoring-frame-z-delta:0;
+  --af-outer-t-l-x:0px; --af-outer-t-l-y:0px; --af-outer-t-l-size-delta:0px; --af-outer-t-l-z-delta:0;
+  --af-outer-t-r-x:0px; --af-outer-t-r-y:0px; --af-outer-t-r-size-delta:0px; --af-outer-t-r-z-delta:0;
+  --af-outer-b-r-x:0px; --af-outer-b-r-y:0px; --af-outer-b-r-size-delta:0px; --af-outer-b-r-z-delta:0;
+  --af-outer-b-l-x:0px; --af-outer-b-l-y:0px; --af-outer-b-l-size-delta:0px; --af-outer-b-l-z-delta:0;
 }
 
-/* Live target geometry. Positive X moves right; positive Y moves down. */
+/* Left art. Positive X = right, positive Y = down. */
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette {
-  left: calc(50% + var(--af-vignette-x)) !important;
-  bottom: calc(184px - var(--af-vignette-y)) !important;
-  width: calc(100% - 72px + var(--af-vignette-width-delta)) !important;
-  max-height: calc(126px + var(--af-vignette-height-delta)) !important;
-  z-index: calc(14 + var(--af-vignette-z-delta)) !important;
+  left:calc(50% + var(--af-vignette-x)) !important;
+  bottom:calc(184px - var(--af-vignette-y)) !important;
+  width:calc(100% - 72px + var(--af-vignette-width-delta)) !important;
+  max-height:calc(126px + var(--af-vignette-height-delta)) !important;
+  z-index:calc(14 + var(--af-vignette-z-delta)) !important;
 }
-
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption {
-  left: calc(50% + var(--af-round-x)) !important;
-  bottom: calc(58px - var(--af-round-y)) !important;
-  width: calc(100% - 96px + var(--af-round-width-delta)) !important;
-  max-height: calc(58px + var(--af-round-height-delta)) !important;
-  z-index: calc(14 + var(--af-round-z-delta)) !important;
+  left:calc(50% + var(--af-round-x)) !important;
+  bottom:calc(58px - var(--af-round-y)) !important;
+  width:calc(100% - 96px + var(--af-round-width-delta)) !important;
+  max-height:calc(58px + var(--af-round-height-delta)) !important;
+  z-index:calc(14 + var(--af-round-z-delta)) !important;
 }
-
-.arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
-  transform: translate(var(--af-compass-x), calc(-52px + var(--af-compass-y))) !important;
-  font-size: calc(56px + var(--af-compass-size-delta)) !important;
-  z-index: calc(4 + var(--af-compass-z-delta)) !important;
-}
-
 .arkflight-event-board.arkflight-opening-mode .arkflight-opening-brand-logo {
-  top: calc(20px + var(--af-logo-y)) !important;
-  left: calc(50% + var(--af-logo-x)) !important;
-  width: calc(88px + var(--af-logo-size-delta)) !important;
-  height: calc(88px + var(--af-logo-size-delta)) !important;
-  z-index: calc(15 + var(--af-logo-z-delta)) !important;
+  top:calc(20px + var(--af-logo-y)) !important;
+  left:calc(50% + var(--af-logo-x)) !important;
+  width:calc(88px + var(--af-logo-size-delta)) !important;
+  height:calc(88px + var(--af-logo-size-delta)) !important;
+  z-index:calc(15 + var(--af-logo-z-delta)) !important;
 }
 
-/* Right-side panel shells can now be moved/resized individually. */
-.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(1) {
-  width: calc(100% + var(--af-stakes-width-delta)) !important;
-  min-height: calc(210px + var(--af-stakes-height-delta)) !important;
-  transform: translate(var(--af-stakes-x), var(--af-stakes-y)) !important;
-  z-index: calc(3 + var(--af-stakes-z-delta)) !important;
+/* Compass: the user's Y +44 position is now the production base position.
+ * Old base was -52px; new base is -8px. Resetting the tuner keeps this spot. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
+  transform:translate(var(--af-compass-x), calc(-8px + var(--af-compass-y))) !important;
+  font-size:calc(56px + var(--af-compass-size-delta)) !important;
+  z-index:calc(4 + var(--af-compass-z-delta)) !important;
 }
 
-.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(2) {
-  width: calc(100% + var(--af-hazards-width-delta)) !important;
-  min-height: calc(118px + var(--af-hazards-height-delta)) !important;
-  transform: translate(var(--af-hazards-x), var(--af-hazards-y)) !important;
-  z-index: calc(3 + var(--af-hazards-z-delta)) !important;
+/* Main event button. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-begin {
+  position:relative !important;
+  transform:translate(var(--af-begin-x), var(--af-begin-y)) !important;
+  width:calc(min(92%, 660px) + var(--af-begin-width-delta)) !important;
+  min-height:calc(38px + var(--af-begin-height-delta)) !important;
+  z-index:calc(8 + var(--af-begin-z-delta)) !important;
 }
 
-.arkflight-event-board.arkflight-opening-mode .arkflight-opening-stakes-column .arkflight-opening-side-panel:nth-of-type(3) {
-  width: calc(100% + var(--af-scoring-width-delta)) !important;
-  min-height: calc(205px + var(--af-scoring-height-delta)) !important;
-  transform: translate(var(--af-scoring-x), var(--af-scoring-y)) !important;
-  z-index: calc(3 + var(--af-scoring-z-delta)) !important;
+/* Right panel shells. Data attributes avoid nth-of-type failures. */
+.arkflight-event-board.arkflight-opening-mode [data-af-panel="stakes"] {
+  position:relative !important; box-sizing:border-box !important;
+  width:calc(100% + var(--af-stakes-width-delta)) !important;
+  min-height:calc(210px + var(--af-stakes-height-delta)) !important;
+  transform:translate(var(--af-stakes-x), var(--af-stakes-y)) !important;
+  z-index:calc(3 + var(--af-stakes-z-delta)) !important;
+  --ark-panel-corner:calc(42px + var(--af-stakes-frame-corner-delta));
+  --ark-panel-edge:calc(24px + var(--af-stakes-frame-edge-delta));
+}
+.arkflight-event-board.arkflight-opening-mode [data-af-panel="hazards"] {
+  position:relative !important; box-sizing:border-box !important;
+  width:calc(100% + var(--af-hazards-width-delta)) !important;
+  min-height:calc(82px + var(--af-hazards-height-delta)) !important;
+  transform:translate(var(--af-hazards-x), var(--af-hazards-y)) !important;
+  z-index:calc(3 + var(--af-hazards-z-delta)) !important;
+  --ark-panel-corner:calc(42px + var(--af-hazards-frame-corner-delta));
+  --ark-panel-edge:calc(24px + var(--af-hazards-frame-edge-delta));
+}
+.arkflight-event-board.arkflight-opening-mode [data-af-panel="scoring"] {
+  position:relative !important; box-sizing:border-box !important;
+  width:calc(100% + var(--af-scoring-width-delta)) !important;
+  min-height:calc(205px + var(--af-scoring-height-delta)) !important;
+  transform:translate(var(--af-scoring-x), var(--af-scoring-y)) !important;
+  z-index:calc(3 + var(--af-scoring-z-delta)) !important;
+  --ark-panel-corner:calc(42px + var(--af-scoring-frame-corner-delta));
+  --ark-panel-edge:calc(24px + var(--af-scoring-frame-edge-delta));
+}
+.arkflight-event-board.arkflight-opening-mode [data-af-panel="stakes"] > .arkflight-nine-slice { transform:translate(var(--af-stakes-frame-x),var(--af-stakes-frame-y)) !important; z-index:calc(2 + var(--af-stakes-frame-z-delta)) !important; }
+.arkflight-event-board.arkflight-opening-mode [data-af-panel="hazards"] > .arkflight-nine-slice { transform:translate(var(--af-hazards-frame-x),var(--af-hazards-frame-y)) !important; z-index:calc(2 + var(--af-hazards-frame-z-delta)) !important; }
+.arkflight-event-board.arkflight-opening-mode [data-af-panel="scoring"] > .arkflight-nine-slice { transform:translate(var(--af-scoring-frame-x),var(--af-scoring-frame-y)) !important; z-index:calc(2 + var(--af-scoring-frame-z-delta)) !important; }
+
+/* All four outer frame corner assets. */
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--tl {
+  width:calc(190px + var(--af-outer-t-l-size-delta)) !important; height:calc(190px + var(--af-outer-t-l-size-delta)) !important;
+  transform:translate(var(--af-outer-t-l-x),var(--af-outer-t-l-y)) !important; z-index:calc(40 + var(--af-outer-t-l-z-delta)) !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--tr {
+  width:calc(190px + var(--af-outer-t-r-size-delta)) !important; height:calc(190px + var(--af-outer-t-r-size-delta)) !important;
+  transform:translate(var(--af-outer-t-r-x),var(--af-outer-t-r-y)) rotate(90deg) !important; z-index:calc(40 + var(--af-outer-t-r-z-delta)) !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--br {
+  width:calc(190px + var(--af-outer-b-r-size-delta)) !important; height:calc(190px + var(--af-outer-b-r-size-delta)) !important;
+  transform:translate(var(--af-outer-b-r-x),var(--af-outer-b-r-y)) rotate(180deg) !important; z-index:calc(40 + var(--af-outer-b-r-z-delta)) !important;
+}
+.arkflight-event-board.arkflight-opening-mode .arkflight-opening-frame-corner--bl {
+  width:calc(190px + var(--af-outer-b-l-size-delta)) !important; height:calc(190px + var(--af-outer-b-l-size-delta)) !important;
+  transform:translate(var(--af-outer-b-l-x),var(--af-outer-b-l-y)) rotate(-90deg) !important; z-index:calc(40 + var(--af-outer-b-l-z-delta)) !important;
 }
 
-/* -------------------------------------------------------------------------
- * GM tuning controls
- * ---------------------------------------------------------------------- */
-
+/* GM tuning controls. */
 .arkflight-opening-tuner-shell {
-  position: absolute;
-  z-index: 95;
-  top: 8px;
-  left: calc(30.5% + 10px);
-  pointer-events: none;
-  font-family: var(--font-primary, sans-serif);
+  position:absolute; z-index:calc(95 + var(--af-layout-button-z-delta)); top:8px; left:calc(30.5% + 10px);
+  transform:translate(var(--af-layout-button-x),var(--af-layout-button-y)); pointer-events:none; font-family:var(--font-primary,sans-serif);
 }
-
-.arkflight-opening-tuner-toggle,
-.arkflight-opening-tuner { pointer-events: auto; }
-
+.arkflight-opening-tuner-toggle,.arkflight-opening-tuner { pointer-events:auto; }
 .arkflight-opening-tuner-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 28px;
-  padding: 4px 9px;
-  border: 1px solid rgba(172,130,61,.86) !important;
-  border-radius: 2px;
-  background: rgba(7,12,17,.93) !important;
-  color: #d8b86f !important;
-  box-shadow: 0 3px 10px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.72);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
+  display:inline-flex; align-items:center; gap:6px;
+  min-height:calc(28px + var(--af-layout-button-size-delta)); padding:4px 9px;
+  font-size:calc(11px + (var(--af-layout-button-size-delta) / 4));
+  border:1px solid rgba(172,130,61,.86)!important; border-radius:2px; background:rgba(7,12,17,.93)!important; color:#d8b86f!important;
+  box-shadow:0 3px 10px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.72); font-weight:700; line-height:1;
 }
+.arkflight-opening-tuner-toggle:hover { border-color:#d2a95b!important; color:#f0d18a!important; }
+.arkflight-opening-tuner[hidden] { display:none!important; }
+.arkflight-opening-tuner { width:338px; max-height:calc(100vh - 145px); margin-top:5px; padding:9px; border:1px solid #806330; background:rgba(7,11,15,.98); color:#d8cfbb; box-shadow:0 12px 28px rgba(0,0,0,.72); }
+.arkflight-opening-tuner>header { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; padding:2px 3px 7px; border-bottom:1px solid rgba(155,117,52,.45); color:#e0bd72; font-family:var(--font-serif,serif); }
+.arkflight-opening-tuner>header button { width:24px; min-width:24px; height:24px; padding:0; }
+.arkflight-opening-tuner button { border:1px solid rgba(112,91,55,.85)!important; border-radius:2px; background:linear-gradient(#191d20,#101316)!important; color:#d5c49e!important; box-shadow:none!important; font-size:10px; }
+.arkflight-opening-tuner button:hover,.arkflight-opening-tuner button.active { border-color:#bd9145!important; color:#f0d38e!important; background:linear-gradient(#25231c,#171713)!important; }
+.arkflight-opening-tuner-step { display:flex; align-items:center; gap:4px; margin-bottom:8px; color:#8f8879; font-size:9px; }
+.arkflight-opening-tuner-step button { width:28px; min-width:28px; height:22px; padding:0; }
+.arkflight-opening-tuner-scroll { max-height:calc(100vh - 255px); overflow-y:auto; padding-right:4px; }
+.arkflight-opening-tuner-group-title { margin:8px 0 5px; padding:4px 6px; border-top:1px solid rgba(145,109,48,.4); border-bottom:1px solid rgba(145,109,48,.25); color:#b89557; font-family:var(--font-serif,serif); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.arkflight-opening-tuner-target { margin:0 0 7px; padding:7px; border:1px solid rgba(105,83,44,.55); background:rgba(17,20,21,.68); }
+.arkflight-opening-tuner-target-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:5px; }
+.arkflight-opening-tuner-target-head strong { color:#d7b770; font-family:var(--font-serif,serif); font-size:11px; }
+.arkflight-opening-tuner-target-head span { color:#777b78; font-family:monospace; font-size:7px; white-space:nowrap; }
+.arkflight-opening-tuner-row { display:flex; align-items:center; gap:4px; margin-top:4px; }
+.arkflight-opening-tuner-row .label { width:40px; color:#8f8879; font-size:9px; }
+.arkflight-opening-tuner-row .label.second { width:42px; margin-left:5px; }
+.arkflight-opening-tuner-row button { width:29px; min-width:29px; height:25px; min-height:25px; padding:0; }
+.arkflight-opening-tuner-reset { width:100%; min-height:22px!important; margin-top:5px; padding:2px 5px!important; color:#817b6e!important; font-size:8px!important; }
+.arkflight-opening-tuner>footer { display:flex; justify-content:flex-end; padding-top:5px; }
+.arkflight-opening-tuner>footer button { min-height:24px; padding:3px 7px; }
 
-.arkflight-opening-tuner-toggle:hover {
-  border-color: #d2a95b !important;
-  color: #f0d18a !important;
-}
-
-.arkflight-opening-tuner[hidden] { display: none !important; }
-
-.arkflight-opening-tuner {
-  width: 320px;
-  max-height: calc(100vh - 150px);
-  margin-top: 5px;
-  padding: 9px;
-  border: 1px solid #806330;
-  background: rgba(7,11,15,.975);
-  color: #d8cfbb;
-  box-shadow: 0 12px 28px rgba(0,0,0,.72), inset 0 0 0 1px rgba(204,157,71,.10);
-}
-
-.arkflight-opening-tuner > header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 7px;
-  padding: 2px 3px 7px;
-  border-bottom: 1px solid rgba(155,117,52,.45);
-  color: #e0bd72;
-  font-family: var(--font-serif, serif);
-  letter-spacing: .04em;
-}
-
-.arkflight-opening-tuner > header button {
-  width: 24px;
-  min-width: 24px;
-  height: 24px;
-  min-height: 24px;
-  padding: 0;
-}
-
-.arkflight-opening-tuner button {
-  border: 1px solid rgba(112,91,55,.85) !important;
-  border-radius: 2px;
-  background: linear-gradient(#191d20, #101316) !important;
-  color: #d5c49e !important;
-  box-shadow: none !important;
-  font-size: 10px;
-}
-
-.arkflight-opening-tuner button:hover,
-.arkflight-opening-tuner button.active {
-  border-color: #bd9145 !important;
-  color: #f0d38e !important;
-  background: linear-gradient(#25231c, #171713) !important;
-}
-
-.arkflight-opening-tuner-step {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
-  color: #8f8879;
-  font-size: 9px;
-}
-
-.arkflight-opening-tuner-step button {
-  width: 28px;
-  min-width: 28px;
-  height: 22px;
-  min-height: 22px;
-  padding: 0;
-}
-
-.arkflight-opening-tuner-scroll {
-  max-height: calc(100vh - 255px);
-  overflow-y: auto;
-  padding-right: 3px;
-}
-
-.arkflight-opening-tuner-group-title {
-  margin: 8px 0 5px;
-  padding: 4px 6px;
-  border-top: 1px solid rgba(145,109,48,.4);
-  border-bottom: 1px solid rgba(145,109,48,.25);
-  color: #b89557;
-  font-family: var(--font-serif, serif);
-  font-size: 10px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.arkflight-opening-tuner-target {
-  margin: 0 0 7px;
-  padding: 7px;
-  border: 1px solid rgba(105,83,44,.55);
-  background: rgba(17,20,21,.68);
-}
-
-.arkflight-opening-tuner-target-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-
-.arkflight-opening-tuner-target-head strong {
-  color: #d7b770;
-  font-family: var(--font-serif, serif);
-  font-size: 11px;
-}
-
-.arkflight-opening-tuner-target-head span {
-  color: #777b78;
-  font-family: monospace;
-  font-size: 8px;
-  white-space: nowrap;
-}
-
-.arkflight-opening-tuner-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.arkflight-opening-tuner-row .label {
-  width: 36px;
-  color: #8f8879;
-  font-size: 9px;
-}
-
-.arkflight-opening-tuner-row .label.second {
-  width: 40px;
-  margin-left: 5px;
-}
-
-.arkflight-opening-tuner-row button {
-  width: 29px;
-  min-width: 29px;
-  height: 25px;
-  min-height: 25px;
-  padding: 0;
-}
-
-.arkflight-opening-tuner-reset {
-  width: 100%;
-  min-height: 22px !important;
-  margin-top: 5px;
-  padding: 2px 5px !important;
-  color: #817b6e !important;
-  font-size: 8px !important;
-}
-
-.arkflight-opening-tuner > footer {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 5px;
-}
-
-.arkflight-opening-tuner > footer button {
-  min-height: 24px;
-  padding: 3px 7px;
-}
-
-@media (max-width: 1100px) {
-  .arkflight-opening-tuner-shell { left: calc(29% + 8px); }
-
-  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette {
-    bottom: calc(168px - var(--af-vignette-y)) !important;
-    width: calc(100% - 60px + var(--af-vignette-width-delta)) !important;
-  }
-
-  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption {
-    bottom: calc(50px - var(--af-round-y)) !important;
-    width: calc(100% - 78px + var(--af-round-width-delta)) !important;
-  }
-
-  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass {
-    transform: translate(var(--af-compass-x), calc(-44px + var(--af-compass-y))) !important;
-  }
+@media(max-width:1100px){
+  .arkflight-opening-tuner-shell{left:calc(29% + 8px)}
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-vignette{bottom:calc(168px - var(--af-vignette-y))!important;width:calc(100% - 60px + var(--af-vignette-width-delta))!important}
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-art-caption{bottom:calc(50px - var(--af-round-y))!important;width:calc(100% - 78px + var(--af-round-width-delta))!important}
+  .arkflight-event-board.arkflight-opening-mode .arkflight-opening-compass{transform:translate(var(--af-compass-x),calc(0px + var(--af-compass-y)))!important}
 }
