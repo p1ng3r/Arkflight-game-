@@ -28,17 +28,6 @@ function refreshPlayerActorSelect(select) {
   select.title = "Choose one of your PF2e characters to claim this Arkflight station for the Event.";
 }
 
-function refreshPlayerMasterySelect(select, stationId, controller) {
-  if (!select || game.user.isGM) return;
-  const actorId = controller?.state?.assignments?.[stationId]?.actorId ?? null;
-  const actor = actorId ? game.actors.get(actorId) : null;
-  const ownsStation = actorOwnedByCurrentUser(actor);
-  select.disabled = !ownsStation;
-  select.title = ownsStation
-    ? "Choose this officer's once-per-Event Mastery Technique."
-    : "Claim this station with one of your PF2e characters first.";
-}
-
 export function installPlayerSetupClaims() {
   Hooks.on("renderApplicationV2", (app, element) => {
     const root = rootElement(app, element);
@@ -46,8 +35,5 @@ export function installPlayerSetupClaims() {
     if (!root || !controller?.state || controller.state.phase !== "opening" || controller.state.setupLocked) return;
 
     for (const actorSelect of root.querySelectorAll('select[data-ark-setup="actor"]')) refreshPlayerActorSelect(actorSelect);
-    for (const masterySelect of root.querySelectorAll('select[data-ark-setup="mastery"]')) {
-      refreshPlayerMasterySelect(masterySelect, masterySelect.dataset.station, controller);
-    }
   });
 }
