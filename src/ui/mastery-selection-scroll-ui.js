@@ -132,81 +132,75 @@ function availableOwnedCharacters(state, stationId) {
   return ownedCharacters().filter((actor) => actor.id === currentActorId || !occupiedElsewhere.has(actor.id));
 }
 
-async function claimStation(controller, stationId) {
-  const state = controller.state;
-  const currentActorId = state?.assignments?.[stationId]?.actorId ?? null;
-  const currentActor = currentActorId ? game.actors.get(currentActorId) : null;
-  if (currentActorId && !ownsActor(currentActor)) {
-    ui.notifications?.warn?.(`${displayName(stationId)} is already claimed by another officer.`);
-    return;
-  }
-
-  const actors = availableOwnedCharacters(state, stationId);
-  if (!actors.length && !currentActorId) {
-    ui.notifications?.warn?.("You need ownership of a PF2e character before you can claim an Arkflight station.");
-    return;
-  }
-
-  const options = [
-    ...(currentActorId ? ['<option value="">Release this station</option>'] : []),
-    ...actors.map((actor) => `<option value="${actor.id}" ${actor.id === currentActorId ? "selected" : ""}>${actor.name}</option>`)
-  ].join("");
-
-  const result = await foundry.applications.api.DialogV2.input({
-    window: { title: `Claim ${displayName(stationId)}` },
-    classes: ["arkflight", "arkflight-station-claim-dialog"],
-    modal: true,
-    rejectClose: false,
-    content: `<div class="arkflight-station-claim-copy"><p>${presentation(stationId).description}</p><p><strong>Typical skills:</strong> ${(presentation(stationId).typicalSkills ?? []).join(", ")}</p></div><label>Officer<select name="actorId">${options}</select></label>`,
-    ok: { label: currentActorId ? "Update Station" : "Claim Station", icon: "fa-solid fa-user-check" }
-  });
-  if (!result) return;
-
-  try {
-    await controller.command({ type: "assign-actor", station: stationId, actorId: result.actorId || null });
-    if (result.actorId) ui.notifications?.info?.(`${displayName(stationId)} claim sent to the GM.`);
-  } catch (error) {
-    console.error("Arkflight | Station claim failed", error);
-    ui.notifications?.warn?.(error.message);
-  }
-}
-
 function decorateStationHelp(row, stationId) {
   const identity = row.querySelector(".arkflight-setup-station") ?? row;
   identity.title = stationHelp(stationId);
   identity.classList.add("arkflight-station-help-target");
 }
 
-function decoratePlayerClaim(row, controller, stationId) {
+function decoratePlayerClaim(row, root, controller, stationId) {
   const state = controller.state;
-  const actorSelect = row.querySelector("select[data-ark-setup='actor']");
-  if (!actorSelect) return;
-  actorSelect.hidden = true;
-  actorSelect.disabled = true;
+  const original = row.querySelector("select[data-ark-setup='actor']");
+  if (!original) return;
 
   const assignedActorId = state?.assignments?.[stationId]?.actorId ?? null;
   const assignedActor = assignedActorId ? game.actors.get(assignedActorId) : null;
   const claimedByMe = Boolean(assignedActor && ownsActor(assignedActor));
   const claimedByOther = Boolean(assignedActorId && !claimedByMe);
 
-  let button = row.querySelector("[data-af-claim-station]");
-  if (!button) {
-    button = document.createElement("button");
-    button.type = "button";
-    button.className = "arkflight-station-claim-button";
-    button.dataset.afClaimStation = "";
-    actorSelect.insertAdjacentElement("afterend", button);
+  const select = document.createElement("select");
+  select.className = "arkflight-player-station-select";
+  select.dataset.afStationClaim = stationId;
+  select.title = claimedByOther
+    ? `${displayName(stationId)} is already claimed by ${assignedActor?.name ?? "another officer"}.`
+    : stationHelp(stationId);
+
+  if (claimedByOther) {
+    const option = document.createElement("option");
+    option.value = assignedActorId;
+    option.textContent = `${assignedActor?.name ?? "Claimed"} — Claimed`;
+    option.selected = true;
+    select.append(option);
+    select.disabled = true;
+  } else {
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = claimedByMe ? "— Release Station —" : "— Choose Your Officer —";
+    blank.selected = !assignedActorId;
+    select.append(blank);
+
+    for (const actor of availableOwnedCharacters(state, stationId)) {
+      const option = document.createElement("option");
+      option.value = actor.id;
+      option.textContent = actor.name;
+      option.selected = actor.id === assignedActorId;
+      select.append(option);
+    }
+    select.disabled = ownedCharacters().length === 0;
   }
 
-  button.disabled = claimedByOther;
-  button.innerHTML = claimedByOther
-    ? `<i class="fa-solid fa-lock"></i><span><small>OFFICER</small><strong>${assignedActor?.name ?? "Claimed"}</strong></span>`
-    : claimedByMe
-      ? `<i class="fa-solid fa-user-check"></i><span><small>YOUR STATION</small><strong>${assignedActor?.name ?? "Officer"}</strong></span>`
-      : `<i class="fa-solid fa-hand"></i><span><small>OFFICER</small><strong>Claim Station</strong></span>`;
-  button.title = claimedByOther ? `${displayName(stationId)} is already claimed.` : `Claim or change ${displayName(stationId)}.\n\n${stationHelp(stationId)}`;
-  button.onclick = () => !claimedByOther && claimStation(controller, stationId);
+  select.addEventListener("change", async (event) => {
+    const el = event.currentTarget;
+    const actorId = el.value || null;
+    el.disabled = true;
+    try {
+      await controller.command({ type: "assign-actor", station: stationId, actorId });
+      if (actorId) {
+        ui.notifications?.info?.(`${displayName(stationId)} claim sent to the GM.`);
+        // Player commands are authoritative on the GM, so wait for the socket snapshot
+        // before opening Mastery. The next render will detect ownership and open the scroll.
+      } else {
+        ui.notifications?.info?.(`${displayName(stationId)} released.`);
+        removeOverlay(root);
+      }
+    } catch (error) {
+      console.error("Arkflight | Station claim failed", error);
+      ui.notifications?.warn?.(error.message);
+      el.disabled = false;
+    }
+  });
 
+  original.replaceWith(select);
   row.classList.toggle("arkflight-player-claimable", !claimedByOther);
   row.classList.toggle("arkflight-player-owned-station", claimedByMe);
   row.classList.toggle("arkflight-player-claimed-other", claimedByOther);
@@ -215,11 +209,10 @@ function decoratePlayerClaim(row, controller, stationId) {
 function decorateMasteryArea(row, root, controller, stationId) {
   const state = controller.state;
   const masterySelect = row.querySelector("select[data-ark-setup='mastery']");
-  if (!masterySelect) return;
-  masterySelect.hidden = true;
-  masterySelect.disabled = true;
+  const existingButton = row.querySelector("[data-af-open-mastery-scroll]");
+  if (!masterySelect && !existingButton) return;
 
-  let button = row.querySelector("[data-af-open-mastery-scroll]");
+  let button = existingButton;
   if (!button) {
     button = document.createElement("button");
     button.type = "button";
@@ -227,6 +220,8 @@ function decorateMasteryArea(row, root, controller, stationId) {
     button.dataset.afOpenMasteryScroll = "";
     masterySelect.insertAdjacentElement("afterend", button);
   }
+  // The old Mastery select is no longer part of the visible or interactive UI.
+  masterySelect?.remove();
 
   const currentId = state.masterySelections?.[stationId] ?? null;
   const current = (BASE_MASTERY[stationId] ?? []).find((entry) => entry.id === currentId);
@@ -249,7 +244,7 @@ function decorateSetup(root, controller) {
   for (const row of root.querySelectorAll("[data-setup-station]")) {
     const stationId = row.dataset.setupStation;
     decorateStationHelp(row, stationId);
-    if (!game.user?.isGM) decoratePlayerClaim(row, controller, stationId);
+    if (!game.user?.isGM) decoratePlayerClaim(row, root, controller, stationId);
     decorateMasteryArea(row, root, controller, stationId);
   }
 
