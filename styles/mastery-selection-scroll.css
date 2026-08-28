@@ -1,0 +1,26 @@
+.arkflight-event-board.arkflight-mastery-scroll-open .arkflight-board-shell{position:relative}
+.arkflight-mastery-scroll-overlay{position:absolute;inset:0;z-index:120;display:grid;place-items:center;padding:34px;pointer-events:auto}
+.arkflight-mastery-scroll-backdrop{position:absolute;inset:0;background:rgba(3,5,8,.72);backdrop-filter:blur(2px)}
+.arkflight-mastery-scroll{position:relative;width:min(820px,92%);max-height:calc(100% - 32px);overflow:auto;padding:42px 56px 38px;color:#2c2115;border:1px solid rgba(88,55,20,.82);box-shadow:0 20px 50px rgba(0,0,0,.72),inset 0 0 0 2px rgba(255,238,180,.16);background:
+ radial-gradient(circle at 50% 8%,rgba(255,248,205,.8),transparent 34%),
+ linear-gradient(90deg,rgba(96,57,24,.12),transparent 10%,transparent 90%,rgba(96,57,24,.12)),
+ repeating-linear-gradient(0deg,rgba(85,52,20,.025) 0 1px,transparent 1px 4px),
+ linear-gradient(#d9c28a,#c9ad70 48%,#d6bd83);
+font-family:Georgia,"Times New Roman",serif}
+.arkflight-mastery-scroll::before,.arkflight-mastery-scroll::after{content:"";position:absolute;left:26px;right:26px;height:1px;background:linear-gradient(90deg,transparent,#76501f 18%,#76501f 82%,transparent)}
+.arkflight-mastery-scroll::before{top:27px}.arkflight-mastery-scroll::after{bottom:25px}
+.arkflight-mastery-scroll-roll{position:absolute;left:14px;right:14px;height:22px;border:1px solid rgba(75,43,17,.55);background:linear-gradient(#927047,#c5a873 48%,#8a653d);box-shadow:0 3px 7px rgba(52,30,14,.4)}
+.arkflight-mastery-scroll-roll--top{top:5px}.arkflight-mastery-scroll-roll--bottom{bottom:5px}
+.arkflight-mastery-scroll header{text-align:center}
+.arkflight-mastery-scroll-kicker{font-size:10px;font-weight:800;letter-spacing:.2em;color:#69471e;text-transform:uppercase}
+.arkflight-mastery-scroll h2{margin:5px 0 8px;font-size:30px;line-height:1;color:#332114;text-transform:none;text-shadow:0 1px rgba(255,244,199,.6)}
+.arkflight-mastery-scroll header p{max-width:680px;margin:0 auto;font-size:13px;line-height:1.5;color:#493520}
+.arkflight-mastery-scroll-rule{display:flex;align-items:center;gap:8px;margin:16px 0 14px;color:#775321}.arkflight-mastery-scroll-rule span{height:1px;flex:1;background:#8d642b}
+.arkflight-mastery-scroll-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.arkflight-mastery-scroll-choice{display:flex;align-items:flex-start;gap:10px;min-height:190px;padding:15px 14px!important;border:1px solid rgba(77,48,20,.65)!important;border-radius:2px!important;background:linear-gradient(rgba(255,249,218,.5),rgba(168,132,75,.18))!important;color:#2b1d11!important;box-shadow:inset 0 0 0 1px rgba(255,246,199,.35),0 3px 7px rgba(58,34,16,.16)!important;text-align:left!important;cursor:pointer}
+.arkflight-mastery-scroll-choice:hover,.arkflight-mastery-scroll-choice.selected{transform:translateY(-2px);border-color:#5f3916!important;background:linear-gradient(rgba(255,251,221,.82),rgba(176,137,75,.3))!important;box-shadow:inset 0 0 0 1px rgba(255,246,199,.6),0 7px 14px rgba(58,34,16,.23)!important}
+.arkflight-mastery-scroll-seal{display:grid;place-items:center;flex:0 0 30px;width:30px;height:30px;border-radius:50%;background:#6c451e;color:#e8ce8a;border:2px solid #a98143;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.arkflight-mastery-scroll-copy{display:flex;flex-direction:column;min-width:0;height:100%}.arkflight-mastery-scroll-copy strong{font-size:16px;line-height:1.1;color:#372416}.arkflight-mastery-scroll-copy small{margin-top:7px;font-size:9px;line-height:1.25;color:#654920;text-transform:uppercase;letter-spacing:.04em}.arkflight-mastery-scroll-copy p{margin:9px 0 12px!important;font-size:11px!important;line-height:1.45!important;color:#493521!important}.arkflight-mastery-scroll-copy em{margin-top:auto;font-size:10px;font-style:normal;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5f3f1a}
+.arkflight-mastery-scroll footer{display:flex;justify-content:space-between;gap:14px;align-items:center;margin-top:16px;padding-top:11px;border-top:1px solid rgba(94,62,25,.45);font-size:10px;color:#5d4528}.arkflight-mastery-scroll footer button{min-height:28px;padding:4px 10px!important;border:1px solid #67441d!important;background:rgba(88,57,24,.13)!important;color:#4e351d!important;font-weight:700}
+.arkflight-mastery-scroll-open-button{display:flex!important;align-items:center!important;gap:8px!important;width:100%!important;min-height:42px!important;padding:5px 9px!important;border:1px solid rgba(207,162,67,.55)!important;background:rgba(86,61,22,.24)!important;color:#ead4a2!important;text-align:left!important}.arkflight-mastery-scroll-open-button>i{font-size:15px;color:#d7ae59}.arkflight-mastery-scroll-open-button span{display:flex;flex-direction:column}.arkflight-mastery-scroll-open-button small{font-size:8px;letter-spacing:.08em;opacity:.72}.arkflight-mastery-scroll-open-button strong{font-size:11px}.arkflight-mastery-scroll-open-button:disabled{opacity:.38;cursor:default}
+@media(max-width:900px){.arkflight-mastery-scroll-options{grid-template-columns:1fr}.arkflight-mastery-scroll{padding:38px 26px 34px}.arkflight-mastery-scroll-choice{min-height:0}}
