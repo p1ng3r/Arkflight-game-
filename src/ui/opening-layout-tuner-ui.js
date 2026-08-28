@@ -1,10 +1,13 @@
-const STORAGE_KEY = "arkflight.openingLayoutTuner.v1";
+const STORAGE_KEY = "arkflight.openingLayoutTuner.v2";
 
 const DEFAULTS = Object.freeze({
-  vignette: { x: 0, y: 0, width: 0, height: 0 },
-  round: { x: 0, y: 0, width: 0, height: 0 },
-  compass: { x: 0, y: 0, size: 0 },
-  logo: { x: 0, y: 0, size: 0 }
+  vignette: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  round: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  compass: { x: 0, y: 0, size: 0, z: 0 },
+  logo: { x: 0, y: 0, size: 0, z: 0 },
+  stakes: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  hazards: { x: 0, y: 0, width: 0, height: 0, z: 0 },
+  scoring: { x: 0, y: 0, width: 0, height: 0, z: 0 }
 });
 
 function boardRoot(app, element) {
@@ -14,121 +17,87 @@ function boardRoot(app, element) {
   return app.element instanceof HTMLElement ? app.element : app.element?.[0] ?? null;
 }
 
-function cloneDefaults() {
-  return JSON.parse(JSON.stringify(DEFAULTS));
-}
+function cloneDefaults() { return JSON.parse(JSON.stringify(DEFAULTS)); }
 
 function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     const state = cloneDefaults();
     if (!saved || typeof saved !== "object") return state;
-    for (const [target, values] of Object.entries(state)) {
-      Object.assign(values, saved[target] ?? {});
-    }
+    for (const [target, values] of Object.entries(state)) Object.assign(values, saved[target] ?? {});
     return state;
-  } catch {
-    return cloneDefaults();
-  }
+  } catch { return cloneDefaults(); }
 }
 
-function saveState(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function px(value) {
-  return `${Number(value) || 0}px`;
-}
+function saveState(state) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+function px(value) { return `${Number(value) || 0}px`; }
 
 function applyState(root, state) {
   const style = root.style;
-  style.setProperty("--af-vignette-x", px(state.vignette.x));
-  style.setProperty("--af-vignette-y", px(state.vignette.y));
-  style.setProperty("--af-vignette-width-delta", px(state.vignette.width));
-  style.setProperty("--af-vignette-height-delta", px(state.vignette.height));
+  const setBox = (prefix, values) => {
+    style.setProperty(`--af-${prefix}-x`, px(values.x));
+    style.setProperty(`--af-${prefix}-y`, px(values.y));
+    style.setProperty(`--af-${prefix}-width-delta`, px(values.width));
+    style.setProperty(`--af-${prefix}-height-delta`, px(values.height));
+    style.setProperty(`--af-${prefix}-z-delta`, String(Number(values.z) || 0));
+  };
+  const setSized = (prefix, values) => {
+    style.setProperty(`--af-${prefix}-x`, px(values.x));
+    style.setProperty(`--af-${prefix}-y`, px(values.y));
+    style.setProperty(`--af-${prefix}-size-delta`, px(values.size));
+    style.setProperty(`--af-${prefix}-z-delta`, String(Number(values.z) || 0));
+  };
 
-  style.setProperty("--af-round-x", px(state.round.x));
-  style.setProperty("--af-round-y", px(state.round.y));
-  style.setProperty("--af-round-width-delta", px(state.round.width));
-  style.setProperty("--af-round-height-delta", px(state.round.height));
-
-  style.setProperty("--af-compass-x", px(state.compass.x));
-  style.setProperty("--af-compass-y", px(state.compass.y));
-  style.setProperty("--af-compass-size-delta", px(state.compass.size));
-
-  style.setProperty("--af-logo-x", px(state.logo.x));
-  style.setProperty("--af-logo-y", px(state.logo.y));
-  style.setProperty("--af-logo-size-delta", px(state.logo.size));
+  setBox("vignette", state.vignette);
+  setBox("round", state.round);
+  setSized("compass", state.compass);
+  setSized("logo", state.logo);
+  setBox("stakes", state.stakes);
+  setBox("hazards", state.hazards);
+  setBox("scoring", state.scoring);
 }
 
 function valueReadout(state, target) {
   const v = state[target];
-  if (target === "vignette" || target === "round") {
-    return `X ${v.x}  Y ${v.y}  W ${v.width}  H ${v.height}`;
-  }
-  return `X ${v.x}  Y ${v.y}  SIZE ${v.size}`;
+  if ("width" in v) return `X ${v.x}  Y ${v.y}  W ${v.width}  H ${v.height}  Z ${v.z}`;
+  return `X ${v.x}  Y ${v.y}  SIZE ${v.size}  Z ${v.z}`;
 }
 
 function controlsMarkup() {
   return `
     <button type="button" class="arkflight-opening-tuner-toggle" data-af-tuner-toggle title="Opening layout controls">
-      <i class="fa-solid fa-up-down-left-right"></i>
-      <span>Layout</span>
+      <i class="fa-solid fa-up-down-left-right"></i><span>Layout</span>
     </button>
     <section class="arkflight-opening-tuner" data-af-tuner hidden>
-      <header>
-        <strong>Opening Layout</strong>
-        <button type="button" data-af-tuner-close title="Close"><i class="fa-solid fa-xmark"></i></button>
-      </header>
-      <div class="arkflight-opening-tuner-step">
-        <span>Step</span>
-        <button type="button" data-af-step="1">1</button>
-        <button type="button" data-af-step="4" class="active">4</button>
-        <button type="button" data-af-step="10">10</button>
-        <span>px</span>
+      <header><strong>Opening Layout</strong><button type="button" data-af-tuner-close title="Close"><i class="fa-solid fa-xmark"></i></button></header>
+      <div class="arkflight-opening-tuner-step"><span>Step</span><button type="button" data-af-step="1">1</button><button type="button" data-af-step="4" class="active">4</button><button type="button" data-af-step="10">10</button><span>px</span></div>
+      <div class="arkflight-opening-tuner-scroll">
+        <div class="arkflight-opening-tuner-group-title">Left Art</div>
+        ${targetMarkup("vignette", "Opening Vignette", "box")}
+        ${targetMarkup("round", "Round Caption", "box")}
+        ${targetMarkup("compass", "Compass", "size")}
+        ${targetMarkup("logo", "Logo", "size")}
+        <div class="arkflight-opening-tuner-group-title">Right Panels</div>
+        ${targetMarkup("stakes", "Event Stakes", "box")}
+        ${targetMarkup("hazards", "Active Hazards", "box")}
+        ${targetMarkup("scoring", "Round Scoring", "box")}
       </div>
-      ${targetMarkup("vignette", "Opening Vignette", true)}
-      ${targetMarkup("round", "Round Caption", true)}
-      ${targetMarkup("compass", "Compass", false)}
-      ${targetMarkup("logo", "Logo", false)}
-      <footer>
-        <button type="button" data-af-reset-all><i class="fa-solid fa-rotate-left"></i> Reset All</button>
-      </footer>
-    </section>
-  `;
+      <footer><button type="button" data-af-reset-all><i class="fa-solid fa-rotate-left"></i> Reset All</button></footer>
+    </section>`;
 }
 
-function targetMarkup(target, label, box) {
-  return `
-    <div class="arkflight-opening-tuner-target" data-af-target="${target}">
-      <div class="arkflight-opening-tuner-target-head">
-        <strong>${label}</strong>
-        <span data-af-readout="${target}"></span>
-      </div>
-      <div class="arkflight-opening-tuner-row">
-        <span class="label">Move</span>
-        <button type="button" data-af-adjust="x" data-af-dir="-1" title="Left"><i class="fa-solid fa-arrow-left"></i></button>
-        <button type="button" data-af-adjust="x" data-af-dir="1" title="Right"><i class="fa-solid fa-arrow-right"></i></button>
-        <button type="button" data-af-adjust="y" data-af-dir="-1" title="Up"><i class="fa-solid fa-arrow-up"></i></button>
-        <button type="button" data-af-adjust="y" data-af-dir="1" title="Down"><i class="fa-solid fa-arrow-down"></i></button>
-      </div>
-      ${box ? `
-        <div class="arkflight-opening-tuner-row">
-          <span class="label">Width</span>
-          <button type="button" data-af-adjust="width" data-af-dir="-1">−</button>
-          <button type="button" data-af-adjust="width" data-af-dir="1">+</button>
-          <span class="label second">Height</span>
-          <button type="button" data-af-adjust="height" data-af-dir="-1">−</button>
-          <button type="button" data-af-adjust="height" data-af-dir="1">+</button>
-        </div>` : `
-        <div class="arkflight-opening-tuner-row">
-          <span class="label">Size</span>
-          <button type="button" data-af-adjust="size" data-af-dir="-1">−</button>
-          <button type="button" data-af-adjust="size" data-af-dir="1">+</button>
-        </div>`}
-      <button type="button" class="arkflight-opening-tuner-reset" data-af-reset-target="${target}">Reset ${label}</button>
-    </div>
-  `;
+function targetMarkup(target, label, mode) {
+  const sizing = mode === "box" ? `
+    <div class="arkflight-opening-tuner-row"><span class="label">Width</span><button type="button" data-af-adjust="width" data-af-dir="-1">−</button><button type="button" data-af-adjust="width" data-af-dir="1">+</button><span class="label second">Height</span><button type="button" data-af-adjust="height" data-af-dir="-1">−</button><button type="button" data-af-adjust="height" data-af-dir="1">+</button></div>` : `
+    <div class="arkflight-opening-tuner-row"><span class="label">Size</span><button type="button" data-af-adjust="size" data-af-dir="-1">−</button><button type="button" data-af-adjust="size" data-af-dir="1">+</button></div>`;
+
+  return `<div class="arkflight-opening-tuner-target" data-af-target="${target}">
+    <div class="arkflight-opening-tuner-target-head"><strong>${label}</strong><span data-af-readout="${target}"></span></div>
+    <div class="arkflight-opening-tuner-row"><span class="label">Move</span><button type="button" data-af-adjust="x" data-af-dir="-1" title="Left"><i class="fa-solid fa-arrow-left"></i></button><button type="button" data-af-adjust="x" data-af-dir="1" title="Right"><i class="fa-solid fa-arrow-right"></i></button><button type="button" data-af-adjust="y" data-af-dir="-1" title="Up"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-af-adjust="y" data-af-dir="1" title="Down"><i class="fa-solid fa-arrow-down"></i></button></div>
+    ${sizing}
+    <div class="arkflight-opening-tuner-row"><span class="label">Layer</span><button type="button" data-af-adjust="z" data-af-dir="-1" title="Send backward">−</button><button type="button" data-af-adjust="z" data-af-dir="1" title="Bring forward">+</button></div>
+    <button type="button" class="arkflight-opening-tuner-reset" data-af-reset-target="${target}">Reset ${label}</button>
+  </div>`;
 }
 
 function refreshReadouts(panel, state) {
@@ -143,12 +112,8 @@ function bindTuner(root, wrapper, state) {
   const panel = wrapper.querySelector("[data-af-tuner]");
   let step = 4;
 
-  toggle?.addEventListener("click", () => {
-    panel.hidden = !panel.hidden;
-  });
-  panel.querySelector("[data-af-tuner-close]")?.addEventListener("click", () => {
-    panel.hidden = true;
-  });
+  toggle?.addEventListener("click", () => { panel.hidden = !panel.hidden; });
+  panel.querySelector("[data-af-tuner-close]")?.addEventListener("click", () => { panel.hidden = true; });
 
   for (const button of panel.querySelectorAll("[data-af-step]")) {
     button.addEventListener("click", () => {
@@ -164,7 +129,7 @@ function bindTuner(root, wrapper, state) {
         const field = button.dataset.afAdjust;
         const dir = Number(button.dataset.afDir) || 0;
         if (!(field in state[target])) return;
-        state[target][field] += step * dir;
+        state[target][field] += field === "z" ? dir : step * dir;
         applyState(root, state);
         saveState(state);
         refreshReadouts(panel, state);
