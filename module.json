@@ -18,6 +18,7 @@
     "styles/opening-screen-authoritative.css",
     "styles/opening-panel-system.css",
     "styles/opening-layout-tuner.css",
+    "styles/opening-layout-tuner-chrome.css",
     "styles/ship-sheet.css",
     "styles/ship-sheet-commissioning.css",
     "styles/shipwright-ux.css",
