@@ -1,4 +1,4 @@
-import { BASE_MASTERY, getMasteryTechnique } from "../content/base-mastery.js";
+import { getMasteryTechnique } from "../content/base-mastery.js";
 import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
 import { STATIONS } from "../event/event-schema.js";
 import { eventSetupReady } from "../event/planning-state.js";
@@ -25,7 +25,6 @@ function ensureStyles() {
     .arkflight-setup-row { display: grid; grid-template-columns: 140px minmax(180px,1fr) minmax(240px,1.25fr); gap: 8px; align-items: center; padding: 7px 8px; background: rgba(0,0,0,.18); border: 1px solid rgba(255,255,255,.08); border-radius: 5px; }
     .arkflight-setup-station { font-weight: 700; display:flex; gap:7px; align-items:center; }
     .arkflight-setup-row select { width:100%; min-height:30px; }
-    .arkflight-setup-row .arkflight-mastery-select { border-color: rgba(207,162,67,.55); }
     .arkflight-setup-ready { margin-top:9px; font-size:12px; font-weight:700; }
     .arkflight-setup-ready.ready { color:#d8b35d; }
     .arkflight-setup-ready.not-ready { color:#c98c79; }
@@ -63,15 +62,6 @@ function actorOptions(state, stationId) {
   return options.join("");
 }
 
-function masteryOptions(state, stationId) {
-  const selected = state.masterySelections?.[stationId] ?? "";
-  const rows = ['<option value="">— Ready one Mastery Technique —</option>'];
-  for (const mastery of BASE_MASTERY[stationId] ?? []) {
-    rows.push(`<option value="${mastery.id}" ${mastery.id === selected ? "selected" : ""} title="${mastery.description}">${mastery.name} — ${mastery.description}</option>`);
-  }
-  return rows.join("");
-}
-
 function decorateEventSetup(root, controller) {
   const state = controller.state;
   if (state?.phase !== "opening" || state.setupLocked) return;
@@ -81,19 +71,19 @@ function decorateEventSetup(root, controller) {
   const setup = document.createElement("section");
   setup.className = "arkflight-event-setup";
   setup.innerHTML = `
-    <h3><i class="fa-solid fa-users-gear"></i> Crew Muster & Station Mastery</h3>
-    <p class="arkflight-setup-help">Lock one different officer into each station for the entire Event. Each station also readies one Mastery Technique — the officer's once-per-Event special move.</p>
+    <h3><i class="fa-solid fa-users-gear"></i> Crew Muster & Arkcraft Skills</h3>
+    <p class="arkflight-setup-help">Lock one different officer into each station for the entire Event. Each assigned officer also chooses one Arkcraft Skill to ready before Round 1.</p>
     <div class="arkflight-setup-grid">
       ${STATIONS.map((stationId) => {
         const presentation = stationPresentation(stationId);
         return `<div class="arkflight-setup-row" data-setup-station="${stationId}">
           <div class="arkflight-setup-station"><i class="${presentation?.iconClass ?? "fa-solid fa-circle"}"></i> ${presentation?.displayName ?? stationId}</div>
           <select data-ark-setup="actor" data-station="${stationId}" ${game.user.isGM ? "" : "disabled"}>${actorOptions(state, stationId)}</select>
-          <select class="arkflight-mastery-select" data-ark-setup="mastery" data-station="${stationId}">${masteryOptions(state, stationId)}</select>
+          <div class="arkflight-arkcraft-slot" data-af-arkcraft-slot="${stationId}"></div>
         </div>`;
       }).join("")}
     </div>
-    <div class="arkflight-setup-ready ${eventSetupReady(state) ? "ready" : "not-ready"}">${eventSetupReady(state) ? "◆ CREW & MASTERY READY — Round 1 may begin." : "Complete all five officer assignments and Mastery choices before Round 1."}</div>
+    <div class="arkflight-setup-ready ${eventSetupReady(state) ? "ready" : "not-ready"}">${eventSetupReady(state) ? "◆ CREW & ARKCRAFT READY — Round 1 may begin." : "Complete all five officer assignments and Arkcraft Skill choices before Round 1."}</div>
   `;
 
   const begin = vignette.querySelector("[data-ark-action='begin-planning']");
@@ -101,18 +91,17 @@ function decorateEventSetup(root, controller) {
   else vignette.append(setup);
   if (begin) {
     begin.disabled = !eventSetupReady(state);
-    begin.title = eventSetupReady(state) ? "Lock Crew & Mastery and begin Round 1 planning" : "Complete Crew Muster & Mastery first";
-    begin.innerHTML = '<i class="fa-solid fa-lock"></i> Lock Crew & Mastery — Begin Round 1 Planning 3:00';
+    begin.title = eventSetupReady(state) ? "Lock Crew & Arkcraft Skills and begin Round 1 planning" : "Complete Crew Muster & Arkcraft Skills first";
+    begin.innerHTML = '<i class="fa-solid fa-lock"></i> Lock Crew & Arkcraft Skills — Begin Round 1 Planning 3:00';
   }
 
-  for (const select of setup.querySelectorAll("select[data-ark-setup]")) {
+  for (const select of setup.querySelectorAll("select[data-ark-setup='actor']")) {
     select.addEventListener("change", async (event) => {
       const el = event.currentTarget;
       try {
-        if (el.dataset.arkSetup === "actor") await controller.command({ type: "assign-actor", station: el.dataset.station, actorId: el.value || null });
-        if (el.dataset.arkSetup === "mastery") await controller.command({ type: "select-mastery", station: el.dataset.station, masteryId: el.value || null });
+        await controller.command({ type: "assign-actor", station: el.dataset.station, actorId: el.value || null });
       } catch (error) {
-        console.error("Arkflight | Event Setup selection failed", error);
+        console.error("Arkflight | Event Setup officer selection failed", error);
         ui.notifications?.warn(error.message);
       }
     });
