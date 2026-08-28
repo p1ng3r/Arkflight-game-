@@ -187,8 +187,6 @@ function decoratePlayerClaim(row, root, controller, stationId) {
       await controller.command({ type: "assign-actor", station: stationId, actorId });
       if (actorId) {
         ui.notifications?.info?.(`${displayName(stationId)} claim sent to the GM.`);
-        // Player commands are authoritative on the GM, so wait for the socket snapshot
-        // before opening Mastery. The next render will detect ownership and open the scroll.
       } else {
         ui.notifications?.info?.(`${displayName(stationId)} released.`);
         removeOverlay(root);
@@ -220,7 +218,6 @@ function decorateMasteryArea(row, root, controller, stationId) {
     button.dataset.afOpenMasteryScroll = "";
     masterySelect.insertAdjacentElement("afterend", button);
   }
-  // The old Mastery select is no longer part of the visible or interactive UI.
   masterySelect?.remove();
 
   const currentId = state.masterySelections?.[stationId] ?? null;
@@ -238,17 +235,20 @@ function decorateMasteryArea(row, root, controller, stationId) {
 
 function decorateSetup(root, controller) {
   const state = controller?.state;
-  if (!root || !state || state.phase !== "opening" || state.setupLocked) return;
+  if (!root || !state || state.phase !== "opening" || state.setupLocked) return false;
+
+  const rows = [...root.querySelectorAll("[data-setup-station]")];
+  if (rows.length !== STATIONS.length) return false;
 
   const mine = ownedStations(state);
-  for (const row of root.querySelectorAll("[data-setup-station]")) {
+  for (const row of rows) {
     const stationId = row.dataset.setupStation;
     decorateStationHelp(row, stationId);
     if (!game.user?.isGM) decoratePlayerClaim(row, root, controller, stationId);
     decorateMasteryArea(row, root, controller, stationId);
   }
 
-  if (game.user?.isGM) return;
+  if (game.user?.isGM) return true;
   for (const stationId of mine) {
     const key = `${state.eventId}:${stationId}`;
     if (promptedClaims.has(key)) continue;
@@ -258,11 +258,23 @@ function decorateSetup(root, controller) {
       break;
     }
   }
+  return true;
+}
+
+function queueDecorate(root, controller) {
+  let tries = 0;
+  const tick = () => {
+    if (!root?.isConnected || !controller?.state) return;
+    if (decorateSetup(root, controller)) return;
+    tries += 1;
+    if (tries < 45) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 Hooks.on("renderApplicationV2", (app, element) => {
   const root = boardRoot(app, element);
   const controller = game.arkflight?.controller;
   if (!root || !controller?.state) return;
-  requestAnimationFrame(() => decorateSetup(root, controller));
+  queueDecorate(root, controller);
 });
