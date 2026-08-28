@@ -104,6 +104,10 @@ function controlsMarkup() {
   <section class="arkflight-opening-tuner" data-af-tuner hidden>
     <header><strong>Opening Layout</strong><button type="button" data-af-tuner-close><i class="fa-solid fa-xmark"></i></button></header>
     <div class="arkflight-opening-tuner-step"><span>Step</span><button data-af-step="1">1</button><button data-af-step="4" class="active">4</button><button data-af-step="10">10</button><span>px</span></div>
+    <div class="arkflight-opening-tuner-exportbar">
+      <button type="button" data-af-export-copy title="Copy the complete tuned layout as JSON to paste into ChatGPT"><i class="fa-solid fa-copy"></i> Copy JSON</button>
+      <button type="button" data-af-export-download title="Download the complete tuned layout as a JSON file"><i class="fa-solid fa-download"></i> Download JSON</button>
+    </div>
     <div class="arkflight-opening-tuner-scroll">
       ${group("Left Art", targetMarkup("vignette","Opening Vignette","box") + targetMarkup("round","Round Caption","box") + targetMarkup("compass","Compass","size") + targetMarkup("logo","Logo","size"))}
       ${group("Controls", targetMarkup("begin","Begin Planning Button","box") + targetMarkup("layoutButton","Layout Tool Button","size"))}
@@ -112,8 +116,6 @@ function controlsMarkup() {
       ${group("Outer Frame Corners", targetMarkup("outerTL","Top Left Corner","size") + targetMarkup("outerTR","Top Right Corner","size") + targetMarkup("outerBR","Bottom Right Corner","size") + targetMarkup("outerBL","Bottom Left Corner","size"))}
     </div>
     <footer>
-      <button type="button" data-af-export-copy title="Copy the complete tuned layout as JSON to paste into ChatGPT"><i class="fa-solid fa-copy"></i> Copy JSON</button>
-      <button type="button" data-af-export-download title="Download the complete tuned layout as a JSON file"><i class="fa-solid fa-download"></i> Download</button>
       <button type="button" data-af-reset-all><i class="fa-solid fa-rotate-left"></i> Reset All</button>
     </footer>
   </section>`;
