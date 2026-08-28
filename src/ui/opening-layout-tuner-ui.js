@@ -1,4 +1,4 @@
-const STORAGE_KEY = "arkflight.openingLayoutTuner.v4";
+const STORAGE_KEY = "arkflight.openingLayoutTuner.v5";
 
 const baseBox = () => ({ x: 0, y: 0, width: 0, height: 0, z: 0 });
 const baseSize = () => ({ x: 0, y: 0, size: 0, z: 0 });
@@ -78,8 +78,8 @@ function boardRoot(app, element) {
   return app.element instanceof HTMLElement ? app.element : app.element?.[0] ?? null;
 }
 
-const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
 const cloneApproved = () => JSON.parse(JSON.stringify(APPROVED_LAYOUT));
+const cloneDefaults = () => cloneApproved();
 function readState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
@@ -152,7 +152,7 @@ function controlsMarkup() {
     <header><strong>Opening Layout</strong><button type="button" data-af-tuner-close><i class="fa-solid fa-xmark"></i></button></header>
     <div class="arkflight-opening-tuner-step"><span>Step</span><button data-af-step="1">1</button><button data-af-step="4" class="active">4</button><button data-af-step="10">10</button><span>px</span></div>
     <div class="arkflight-opening-tuner-exportbar">
-      <button type="button" data-af-apply-approved title="Apply the approved layout preset exported on 2026-08-28"><i class="fa-solid fa-wand-magic-sparkles"></i> Approved Layout</button>
+      <button type="button" data-af-apply-approved title="Restore the production-approved layout"><i class="fa-solid fa-wand-magic-sparkles"></i> Production Layout</button>
       <button type="button" data-af-export-copy title="Copy the complete tuned layout as JSON to paste into ChatGPT"><i class="fa-solid fa-copy"></i> Copy JSON</button>
       <button type="button" data-af-export-download title="Download the complete tuned layout as a JSON file"><i class="fa-solid fa-download"></i> Download JSON</button>
     </div>
@@ -164,7 +164,7 @@ function controlsMarkup() {
       ${group("Outer Frame Corners", targetMarkup("outerTL","Top Left Corner","size") + targetMarkup("outerTR","Top Right Corner","size") + targetMarkup("outerBR","Bottom Right Corner","size") + targetMarkup("outerBL","Bottom Left Corner","size"))}
     </div>
     <footer>
-      <button type="button" data-af-reset-all><i class="fa-solid fa-rotate-left"></i> Reset All</button>
+      <button type="button" data-af-reset-all><i class="fa-solid fa-rotate-left"></i> Reset to Production</button>
     </footer>
   </section>`;
 }
@@ -228,7 +228,7 @@ function applyApprovedLayout(root, panel, state) {
   applyState(root, state);
   saveState(state);
   refreshReadouts(panel, state);
-  ui.notifications?.info?.("Approved Arkflight opening layout applied.");
+  ui.notifications?.info?.("Production Arkflight opening layout restored.");
 }
 
 function bindTuner(root, wrapper, state) {
@@ -255,14 +255,14 @@ function bindTuner(root, wrapper, state) {
   }
   for (const button of panel.querySelectorAll("[data-af-reset-target]")) button.addEventListener("click", () => {
     const target = button.dataset.afResetTarget;
-    state[target] = { ...DEFAULTS[target] };
+    state[target] = { ...(APPROVED_LAYOUT[target] ?? DEFAULTS[target]) };
     applyState(root,state); saveState(state); refreshReadouts(panel,state);
   });
   panel.querySelector("[data-af-apply-approved]")?.addEventListener("click", () => applyApprovedLayout(root, panel, state));
   panel.querySelector("[data-af-export-copy]")?.addEventListener("click", () => copyLayoutExport(state));
   panel.querySelector("[data-af-export-download]")?.addEventListener("click", () => downloadLayoutExport(state));
   panel.querySelector("[data-af-reset-all]")?.addEventListener("click", () => {
-    const fresh = cloneDefaults();
+    const fresh = cloneApproved();
     for (const k of Object.keys(DEFAULTS)) state[k] = fresh[k];
     applyState(root,state); saveState(state); refreshReadouts(panel,state);
   });
@@ -270,12 +270,35 @@ function bindTuner(root, wrapper, state) {
 }
 
 function installTuner(root) {
-  if (!game.user?.isGM || !root?.classList?.contains("arkflight-opening-mode")) return false;
+  if (!root?.classList?.contains("arkflight-opening-mode")) return false;
   const board = root.querySelector(".arkflight-opening-grid.arkflight-cinematic-opening");
   if (!board) return false;
-  const state = readState(); applyState(root,state);
+
+  const state = game.user?.isGM ? readState() : cloneApproved();
+  applyState(root, state);
+
+  if (!game.user?.isGM) return true;
   if (board.querySelector(".arkflight-opening-tuner-shell")) return true;
-  const wrapper = document.createElement("div"); wrapper.className = "arkflight-opening-tuner-shell"; wrapper.innerHTML = controlsMarkup(); board.append(wrapper); bindTuner(root,wrapper,state); return true;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "arkflight-opening-tuner-shell";
+  wrapper.innerHTML = controlsMarkup();
+  board.append(wrapper);
+  bindTuner(root, wrapper, state);
+  return true;
 }
-function queueTuner(root) { let tries=0; const tick=()=>{ if (installTuner(root)||tries>=30) return; tries+=1; requestAnimationFrame(tick); }; requestAnimationFrame(tick); }
-Hooks.on("renderApplicationV2", (app,element)=>{ const root=boardRoot(app,element); if(root) queueTuner(root); });
+
+function queueTuner(root) {
+  let tries = 0;
+  const tick = () => {
+    if (installTuner(root) || tries >= 30) return;
+    tries += 1;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+Hooks.on("renderApplicationV2", (app, element) => {
+  const root = boardRoot(app, element);
+  if (root) queueTuner(root);
+});
