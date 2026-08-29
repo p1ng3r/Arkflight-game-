@@ -1,3 +1,5 @@
+import { combatEconomyBonuses } from "../ship/progression.js";
+
 export const COMBAT_STATIONS = Object.freeze(["captain", "engineer", "navigator", "battlewatch", "veilwarden"]);
 
 export const LEGACY_STATION_ALIASES = Object.freeze({
@@ -20,9 +22,6 @@ export const COMBAT_ACTION_TYPES = Object.freeze({
   REACTION: "reaction"
 });
 
-// Alpha combat economy. These values are intentionally isolated from hull data so
-// combat balancing can move without changing the persistent ship schema.
-// Larger hulls receive more baseline Actions; Reactions remain deliberately tight.
 export const HULL_COMBAT_PROFILES = Object.freeze({
   "void-skiff": Object.freeze({ actions: 2, reactions: 1 }),
   sloop: Object.freeze({ actions: 3, reactions: 1 }),
@@ -50,8 +49,9 @@ export function stationArea(station) {
 export function hullCombatProfile(ship, { actionBonus = 0, reactionBonus = 0 } = {}) {
   const hullId = ship?.hull?.chassisId;
   const base = HULL_COMBAT_PROFILES[hullId] ?? { actions: 3, reactions: 1 };
+  const progression = combatEconomyBonuses(ship);
   return Object.freeze({
-    actions: Math.max(1, Number(base.actions) + Number(actionBonus || 0)),
-    reactions: Math.max(0, Number(base.reactions) + Number(reactionBonus || 0))
+    actions: Math.max(1, Number(base.actions) + Number(progression.actions || 0) + Number(actionBonus || 0)),
+    reactions: Math.max(0, Number(base.reactions) + Number(progression.reactions || 0) + Number(reactionBonus || 0))
   });
 }
