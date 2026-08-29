@@ -80,11 +80,17 @@ export function deriveShip(ship, catalogs = {}) {
 }
 
 export function syncResourceMaxima(ship, derived) {
+  const existingSupplyMax = Number(ship.resources?.supplies?.max ?? 0);
+  const derivedSupplyMax = Number(derived.stats?.supplyCapacity ?? 0);
+  const supplyMax = derivedSupplyMax > 0 ? derivedSupplyMax : existingSupplyMax;
+  const existingMoraleMax = Number(ship.resources?.morale?.max ?? 5);
+  const derivedMoraleMax = Number(derived.stats?.moraleCapacity ?? 0);
+  const moraleMax = derivedMoraleMax > 0 ? derivedMoraleMax : existingMoraleMax;
   return { ...ship, resources: { ...ship.resources,
     hull: { value: Math.min(ship.resources.hull.value || derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
     lifeveil: { value: Math.min(ship.resources.lifeveil.value || derived.stats.lifeveilCapacity, derived.stats.lifeveilCapacity), max: derived.stats.lifeveilCapacity },
     strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity },
-    morale: { value: Math.min(ship.resources.morale?.value ?? derived.stats.moraleCapacity ?? 5, derived.stats.moraleCapacity ?? ship.resources.morale?.max ?? 5), max: derived.stats.moraleCapacity ?? ship.resources.morale?.max ?? 5 },
-    supplies: { value: ship.resources.supplies?.value ?? 0, max: derived.stats.supplyCapacity ?? ship.resources.supplies?.max ?? 0 }
+    morale: { value: Math.min(ship.resources.morale?.value ?? moraleMax, moraleMax), max: moraleMax },
+    supplies: { value: Math.min(ship.resources.supplies?.value ?? 0, supplyMax || Number.MAX_SAFE_INTEGER), max: supplyMax }
   } };
 }
