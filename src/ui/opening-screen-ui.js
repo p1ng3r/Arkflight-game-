@@ -75,7 +75,7 @@ function actorPortrait(state, stationId) {
 }
 
 function canChooseArkcraft(state, stationId) {
-  if (game.user?.isGM) return true;
+  if (game.user?.isGM) return Boolean(state.assignments?.[stationId]?.actorId);
   const actorId = state.assignments?.[stationId]?.actorId ?? null;
   return Boolean(actorId && ownsActor(game.actors.get(actorId)));
 }
@@ -84,12 +84,18 @@ function crewRows(state) {
   return STATIONS.map((stationId) => {
     const presentation = stationPresentation(stationId);
     const actorId = state.assignments?.[stationId]?.actorId ?? null;
-    const selectedId = state.masterySelections?.[stationId] ?? null;
-    const selected = getMasteryTechnique(stationId, selectedId);
+    const storedSelectedId = state.masterySelections?.[stationId] ?? null;
+    const selectedId = actorId ? storedSelectedId : null;
+    const selected = selectedId ? getMasteryTechnique(stationId, selectedId) : null;
     const ready = Boolean(actorId && selectedId);
     const canChoose = canChooseArkcraft(state, stationId);
-    const arkcraftLabel = selected?.name ?? (canChoose ? "Choose Arkcraft Skill" : actorId ? "Officer Chooses" : "Claim Station First");
-    const arkcraftTitle = selected?.description ?? (canChoose ? "Choose one Arkcraft Skill for this station." : "The assigned officer chooses this station's Arkcraft Skill.");
+    const locked = Boolean(selected);
+    const arkcraftLabel = selected?.name ?? "Choose Arkcraft Skill";
+    const arkcraftTitle = selected?.description ?? (canChoose
+      ? "Choose one Arkcraft Skill now. Once chosen, it is locked for this Event."
+      : actorId
+        ? "The assigned officer chooses this station's Arkcraft Skill."
+        : "Assign an officer before choosing an Arkcraft Skill.");
 
     return `
       <section class="arkflight-opening-station-card ${ready ? "ready" : "needs-setup"}" data-opening-station="${stationId}">
@@ -108,8 +114,8 @@ function crewRows(state) {
           <div class="arkflight-opening-mastery-field">
             <div class="arkflight-opening-field-stack">
               <span class="arkflight-opening-field-label">Arkcraft Skill</span>
-              <button type="button" class="arkflight-arkcraft-skill-link" data-opening-arkcraft="${stationId}" ${canChoose ? "" : "disabled"} title="${escapeHtml(arkcraftTitle)}">
-                <span><small>ARKCRAFT SKILL</small><strong>${escapeHtml(arkcraftLabel)}</strong></span>
+              <button type="button" class="arkflight-arkcraft-skill-link ${locked ? "locked" : ""}" data-opening-arkcraft="${stationId}" ${canChoose && !locked ? "" : "disabled"} title="${escapeHtml(arkcraftTitle)}">
+                <span><small>${locked ? "ARKCRAFT SKILL · LOCKED" : "ARKCRAFT SKILL"}</small><strong>${escapeHtml(arkcraftLabel)}</strong></span>
               </button>
             </div>
           </div>
@@ -123,15 +129,15 @@ function crewRows(state) {
   }).join("");
 }
 
-function arkcraftCards(stationId, selectedId = null) {
+function arkcraftCards(stationId) {
   return (BASE_MASTERY[stationId] ?? []).map((skill) => `
-    <button type="button" class="arkflight-arkcraft-choice ${skill.id === selectedId ? "selected" : ""}" data-opening-arkcraft-choice="${escapeHtml(skill.id)}">
+    <button type="button" class="arkflight-arkcraft-choice" data-opening-arkcraft-choice="${escapeHtml(skill.id)}">
       <span class="arkflight-arkcraft-seal"><i class="fa-solid fa-star"></i></span>
       <span class="arkflight-arkcraft-copy">
         <strong>${escapeHtml(skill.name)}</strong>
         <small><b>WHEN:</b> ${escapeHtml(skill.triggerLabel ?? skill.timing ?? "When its trigger occurs")}</small>
         <p>${escapeHtml(skill.description)}</p>
-        <em>${skill.id === selectedId ? "Currently Readied" : "Ready this Arkcraft Skill"}</em>
+        <em>Choose & Lock for this Event</em>
       </span>
     </button>`).join("");
 }
@@ -144,12 +150,12 @@ function closeArkcraftScroll(root) {
 function openArkcraftScroll(root, controller, stationId) {
   const state = controller?.state;
   if (!root || !state || state.phase !== "opening" || state.setupLocked || !canChooseArkcraft(state, stationId)) return;
+  if (state.masterySelections?.[stationId]) return;
 
   closeArkcraftScroll(root);
   const data = stationPresentation(stationId) ?? { displayName: titleCase(stationId), description: "Arkflight station.", typicalSkills: [] };
   const actorId = state.assignments?.[stationId]?.actorId ?? null;
   const actorName = actorId ? game.actors.get(actorId)?.name ?? "Assigned Officer" : "Assigned Officer";
-  const selectedId = state.masterySelections?.[stationId] ?? null;
 
   const overlay = document.createElement("section");
   overlay.className = "arkflight-arkcraft-scroll-overlay";
@@ -160,15 +166,11 @@ function openArkcraftScroll(root, controller, stationId) {
         <header>
           <div class="arkflight-arkcraft-kicker">${escapeHtml(data.displayName.toUpperCase())} · ${escapeHtml(actorName)}</div>
           <h2>Choose Your Arkcraft Skill</h2>
-          <p>An <strong>Arkcraft Skill</strong> is a specialized station technique used aboard an Arkflight vessel. Choose one to ready for this Event. Once used, it is expended for that Event.</p>
+          <p>An <strong>Arkcraft Skill</strong> is a specialized station technique used aboard an Arkflight vessel. Choose one now. Your choice is locked for this Event unless the station officer is released or changed.</p>
           <div class="arkflight-arkcraft-station-note"><strong>${escapeHtml(data.displayName)}</strong> — ${escapeHtml(data.description)}<br><span>Typical skills: ${escapeHtml((data.typicalSkills ?? []).join(", ") || "varies by Event")}</span></div>
         </header>
         <div class="arkflight-arkcraft-rule"><span></span><i class="fa-solid fa-diamond"></i><span></span></div>
-        <div class="arkflight-arkcraft-options">${arkcraftCards(stationId, selectedId)}</div>
-        <footer>
-          <span><i class="fa-solid fa-circle-info"></i> Choose the Arkcraft Skill you want ready for this Event.</span>
-          <button type="button" data-opening-arkcraft-close>Choose Later</button>
-        </footer>
+        <div class="arkflight-arkcraft-options">${arkcraftCards(stationId)}</div>
       </div>
     </article>`;
 
@@ -187,8 +189,6 @@ function openArkcraftScroll(root, controller, stationId) {
       }
     });
   }
-
-  overlay.querySelector("[data-opening-arkcraft-close]")?.addEventListener("click", () => closeArkcraftScroll(root));
 }
 
 function pressureValue(state, system) {
@@ -234,7 +234,7 @@ function openingMarkup(controller, imageSrc) {
 
       <section class="arkflight-opening-muster">
         <div class="arkflight-opening-section-title">Crew Muster &amp; Arkcraft Skills</div>
-        <p class="arkflight-opening-muster-help">Assign one officer to every station and choose one Arkcraft Skill for each station. The assigned officer may change that choice until setup locks.</p>
+        <p class="arkflight-opening-muster-help">Assign one officer to every station. The assigned officer chooses one Arkcraft Skill immediately; that choice is locked for the Event unless the station is released or reassigned.</p>
         <div class="arkflight-opening-crew-list">${crewRows(state)}</div>
         <div class="arkflight-opening-ready-message ${ready ? "ready" : ""}">${ready ? "◆ CREW & ARKCRAFT READY — the Event may begin." : "Complete all five officer assignments and Arkcraft Skill choices before Round 1."}</div>
       </section>
