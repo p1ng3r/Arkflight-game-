@@ -1,4 +1,5 @@
 import { AREA_STATES } from "./ship-schema.js";
+import { applyTalentProgression, progressionView } from "./progression.js";
 
 function getPath(object, path) { return path.split(".").reduce((value, key) => value?.[key], object); }
 function setPath(object, path, value) { const keys = path.split("."); const last = keys.pop(); let cursor = object; for (const key of keys) cursor = cursor[key] ??= {}; cursor[last] = value; }
@@ -40,7 +41,6 @@ function addStationUnlocks(target, component) {
     const station = canonicalStation(String(id).split("-")[0]);
     if (target[station]) target[station].masteries.add(id);
   }
-  // Legacy content may still call these signatures. Treat them as mastery ids during migration.
   for (const id of component.unlocks?.signatures ?? []) {
     const station = canonicalStation(String(id).split("-")[0]);
     if (target[station]) target[station].masteries.add(id);
@@ -54,7 +54,8 @@ function addStationUnlocks(target, component) {
 export function deriveShip(ship, catalogs = {}) {
   const components = installedComponents(ship, catalogs);
   const hull = lookup(catalogs.hulls, ship.hull.chassisId);
-  const derived = structuredClone(hull?.data?.baseStats ?? { armorClass: 0, hullIntegrity: 0, lifeveilCapacity: 0, strainCapacity: 0, cargoCapacity: 0, detection: 0, combatSpeed: 0, maneuverability: 0, roomCapacity: 0, shipModCapacity: 0, arkengineModCapacity: 0, crew: { minimum: 0, recommended: 0, maximum: 0 }, weaponMounts: {} });
+  const baseStats = structuredClone(hull?.data?.baseStats ?? { armorClass: 0, hullIntegrity: 0, lifeveilCapacity: 0, strainCapacity: 0, cargoCapacity: 0, detection: 0, combatSpeed: 0, maneuverability: 0, roomCapacity: 0, shipModCapacity: 0, arkengineModCapacity: 0, crew: { minimum: 0, recommended: 0, maximum: 0 }, weaponMounts: {} });
+  const derived = structuredClone(baseStats);
   const tags = new Set(ship.traits ?? []);
   const capabilities = new Set();
   const stationCapabilities = emptyStationCapabilities();
@@ -66,9 +67,12 @@ export function deriveShip(ship, catalogs = {}) {
     addStationUnlocks(stationCapabilities, item);
   }
 
+  applyTalentProgression(derived, baseStats, ship, stationCapabilities, capabilities);
+
   const frozenStationCapabilities = Object.fromEntries(Object.entries(stationCapabilities).map(([station, values]) => [station, Object.freeze({ masteries: Object.freeze([...values.masteries]), combatActions: Object.freeze([...values.combatActions]), passiveEffects: Object.freeze([...values.passiveEffects]) })]));
+  const progression = progressionView(ship);
   return Object.freeze({
-    stats: Object.freeze(derived), tags: Object.freeze([...tags]), capabilities: Object.freeze([...capabilities]),
+    stats: Object.freeze(derived), tags: Object.freeze([...tags]), capabilities: Object.freeze([...capabilities]), progression,
     stationCapabilities: Object.freeze(frozenStationCapabilities),
     unlocks: Object.freeze({ masteries: Object.freeze(Object.values(frozenStationCapabilities).flatMap((row) => row.masteries)), actions: Object.freeze(Object.values(frozenStationCapabilities).flatMap((row) => row.combatActions)) }),
     usage: Object.freeze({ rooms: (ship.rooms ?? []).reduce((sum, id) => sum + (catalogs.rooms?.[id]?.capacityCost ?? 0), 0), shipMods: (ship.shipMods ?? []).reduce((sum, id) => sum + (catalogs.shipMods?.[id]?.capacityCost ?? 0), 0), arkengineMods: (ship.arkengine.modIds ?? []).reduce((sum, id) => sum + (catalogs.arkengineMods?.[id]?.capacityCost ?? 0), 0) })
@@ -79,6 +83,8 @@ export function syncResourceMaxima(ship, derived) {
   return { ...ship, resources: { ...ship.resources,
     hull: { value: Math.min(ship.resources.hull.value || derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
     lifeveil: { value: Math.min(ship.resources.lifeveil.value || derived.stats.lifeveilCapacity, derived.stats.lifeveilCapacity), max: derived.stats.lifeveilCapacity },
-    strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity }
+    strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity },
+    morale: { value: Math.min(ship.resources.morale?.value ?? derived.stats.moraleCapacity ?? 5, derived.stats.moraleCapacity ?? ship.resources.morale?.max ?? 5), max: derived.stats.moraleCapacity ?? ship.resources.morale?.max ?? 5 },
+    supplies: { value: ship.resources.supplies?.value ?? 0, max: derived.stats.supplyCapacity ?? ship.resources.supplies?.max ?? 0 }
   } };
 }
