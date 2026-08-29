@@ -24,13 +24,38 @@ export function eventSetupReady(state) {
 
 export function startPlanning(state, now = Date.now()) {
   if (!state || !["opening", "round-opening"].includes(state.phase)) throw new Error("Planning may only start from an opening phase.");
-  if (state.phase === "opening" && !eventSetupReady(state)) throw new Error("Assign a different PF2e officer to every station and ready one Mastery Technique for each station before Round 1 begins.");
+  if (state.phase === "opening" && !eventSetupReady(state)) throw new Error("Assign a different PF2e officer to every station and ready one Arkcraft Skill for each station before Round 1 begins.");
   return { ...state, setupLocked: state.phase === "opening" ? true : Boolean(state.setupLocked), phase: "planning", planningStartedAt: now, planningEndsAt: now + (PLANNING_SECONDS * 1000), reopenedStations: {} };
 }
-
 export function planningSecondsRemaining(state, now = Date.now()) { if (!state?.planningEndsAt) return PLANNING_SECONDS; return Math.max(0, Math.ceil((state.planningEndsAt - now) / 1000)); }
-export function assignActor(state, station, actorId) { assertStation(station); if (!state || state.phase !== "opening" || state.setupLocked) throw new Error("Station officers are locked for the Event once Round 1 begins."); if (actorId) { const duplicate = STATIONS.find((other) => other !== station && state.assignments?.[other]?.actorId === actorId); if (duplicate) throw new Error("That PF2e character is already assigned to another Arkflight station for this Event."); } return { ...state, assignments: { ...(state.assignments ?? emptyAssignments()), [station]: { actorId: actorId || null } } }; }
-export function selectMastery(state, station, masteryId) { assertStation(station); if (!state || state.phase !== "opening" || state.setupLocked) throw new Error("Mastery is chosen during Event Setup before Round 1 begins."); const allowed = state.availableMasteries?.[station] ?? []; if (masteryId && allowed.length && !allowed.includes(masteryId)) throw new Error("That Mastery is not available from the bound Arkflight vessel."); return { ...state, masterySelections: { ...(state.masterySelections ?? emptyMasterySelections()), [station]: masteryId || null } }; }
+export function assignActor(state, station, actorId) {
+  assertStation(station);
+  if (!state || state.phase !== "opening" || state.setupLocked) throw new Error("Station officers are locked for the Event once Round 1 begins.");
+  if (actorId) {
+    const duplicate = STATIONS.find((other) => other !== station && state.assignments?.[other]?.actorId === actorId);
+    if (duplicate) throw new Error("That PF2e character is already assigned to another Arkflight station for this Event.");
+  }
+  const previousActorId = state.assignments?.[station]?.actorId ?? null;
+  const nextActorId = actorId || null;
+  const officerChanged = previousActorId !== nextActorId;
+  return {
+    ...state,
+    assignments: { ...(state.assignments ?? emptyAssignments()), [station]: { actorId: nextActorId } },
+    masterySelections: officerChanged
+      ? { ...(state.masterySelections ?? emptyMasterySelections()), [station]: null }
+      : (state.masterySelections ?? emptyMasterySelections())
+  };
+}
+export function selectMastery(state, station, masteryId) {
+  assertStation(station);
+  if (!state || state.phase !== "opening" || state.setupLocked) throw new Error("Arkcraft Skills are chosen during Event Setup before Round 1 begins.");
+  if (!state.assignments?.[station]?.actorId) throw new Error("Assign an officer to this station before choosing an Arkcraft Skill.");
+  const existing = state.masterySelections?.[station] ?? null;
+  if (existing) throw new Error("This station's Arkcraft Skill is already locked for the Event. Release or change the assigned officer to choose again.");
+  const allowed = state.availableMasteries?.[station] ?? [];
+  if (masteryId && allowed.length && !allowed.includes(masteryId)) throw new Error("That Arkcraft Skill is not available from the bound Arkflight vessel.");
+  return { ...state, masterySelections: { ...(state.masterySelections ?? emptyMasterySelections()), [station]: masteryId || null } };
+}
 export function selectAction(state, station, actionId) { assertStation(station); assertSelectionOpen(state, station); return updateSelection(state, station, { actionId, skillId: null, riskTier: null }); }
 export function selectSkill(state, station, skillId) { assertStation(station); assertSelectionOpen(state, station); if (!state.selections[station]?.actionId) throw new Error("Choose an action before choosing a skill."); return updateSelection(state, station, { skillId, riskTier: null }); }
 export function selectRiskTier(state, station, riskTier) { assertStation(station); assertSelectionOpen(state, station); if (!state.selections[station]?.skillId) throw new Error("Choose a skill before choosing a Risk Bid."); const normalized = riskTier === null || riskTier === 0 ? null : Number(riskTier); if (normalized !== null && ![2,5,8].includes(normalized)) throw new Error(`Unsupported Risk Bid tier: ${riskTier}`); return updateSelection(state, station, { riskTier: normalized }); }
