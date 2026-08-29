@@ -1,0 +1,74 @@
+<section class="arkflight-progression-shell">
+  <header class="arkflight-progression-header">
+    <div>
+      <span class="arkflight-progression-kicker">SHIP PROGRESSION</span>
+      <h1>{{actor.name}}</h1>
+      <p>Build the vessel by spending Talent Points. Foundation improves core performance; Specialist changes the operating envelope; Legendary changes action economy; Mythic breaks normal limits.</p>
+    </div>
+    <div class="arkflight-progression-level-card">
+      <label>SHIP LEVEL</label>
+      {{#if isGM}}
+        <input type="number" min="1" max="20" value="{{progression.level}}" data-ship-level>
+      {{else}}
+        <strong>{{progression.level}}</strong>
+      {{/if}}
+      <span>{{progression.tier.label}}</span>
+    </div>
+    <div class="arkflight-progression-points">
+      <div><span>TOTAL TP</span><strong>{{progression.budget}}</strong></div>
+      <div><span>SPENT</span><strong>{{progression.spent}}</strong></div>
+      <div><span>AVAILABLE</span><strong>{{progression.available}}</strong></div>
+    </div>
+  </header>
+
+  <div class="arkflight-progression-body">
+    <main class="arkflight-talent-board">
+      {{#each tiers as |tier|}}
+        <section class="arkflight-talent-tier tier-{{tier.id}} {{#unless tier.active}}is-locked{{/unless}}">
+          <div class="arkflight-tier-heading">
+            <div><span>{{tier.minLevel}}–{{tier.maxLevel}}</span><h2>{{tier.label}}</h2></div>
+            {{#unless tier.active}}<strong>UNLOCKS AT LEVEL {{tier.minLevel}}</strong>{{/unless}}
+          </div>
+          <div class="arkflight-talent-grid">
+            {{#each tier.talents as |talent|}}
+              <article class="arkflight-talent-card {{#if talent.owned}}is-owned{{/if}} {{#if talent.locked}}is-locked{{/if}}">
+                <div class="arkflight-talent-title"><h3>{{talent.name}}</h3><span>{{talent.cost}} TP</span></div>
+                <p>{{talent.description}}</p>
+                {{#if ../../canSpend}}
+                  <button type="button" data-talent-id="{{talent.id}}" {{#unless talent.owned}}{{#unless talent.canBuy}}disabled{{/unless}}{{/unless}}>
+                    {{talent.stateLabel}}
+                  </button>
+                {{else}}
+                  <div class="arkflight-talent-readonly">{{talent.stateLabel}}</div>
+                {{/if}}
+              </article>
+            {{/each}}
+          </div>
+        </section>
+      {{/each}}
+    </main>
+
+    <aside class="arkflight-progression-preview">
+      <div class="arkflight-preview-sticky">
+        <span class="arkflight-progression-kicker">LIVE DERIVED PREVIEW</span>
+        <h2>Current Vessel</h2>
+        <div class="arkflight-progression-stat-grid">
+          {{#each preview.core as |stat|}}<div><span>{{stat.label}}</span><strong>{{stat.value}}</strong></div>{{/each}}
+        </div>
+
+        <h3>Station Bonuses</h3>
+        <div class="arkflight-station-bonus-grid">
+          {{#each preview.stations as |station|}}
+            <div><strong>{{station.label}}</strong><span>Base {{station.base}}</span><span>Voyage {{station.voyage}}</span><span>Combat {{station.combat}}</span></div>
+          {{/each}}
+        </div>
+
+        <h3>Earned Mod Slots</h3>
+        <div class="arkflight-slot-bonus-grid">
+          {{#each preview.slots as |slot|}}<div><span>{{slot.label}}</span><strong>{{slot.value}}</strong></div>{{/each}}
+        </div>
+        <p class="arkflight-progression-note">Ship Mods already carry identities in the repository through their modType data. This panel shows additional typed slots earned through progression; Arkengine slots remain separate.</p>
+      </div>
+    </aside>
+  </div>
+</section>
