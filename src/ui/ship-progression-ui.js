@@ -1,6 +1,7 @@
 import { deriveShip, syncResourceMaxima } from "../ship/derive-ship.js";
 import { progressionView, clampShipLevel, validateProgression } from "../ship/progression.js";
 import { shipModSlotClass } from "../ship/ship-mod-slots.js";
+import { hullCombatProfile } from "../combat/combat-schema.js";
 import { SHIP_TALENT_TIERS } from "../content/ship-talents.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 
@@ -26,8 +27,9 @@ function talentRows(ship) {
   }));
 }
 
-function statPreview(derived) {
+function statPreview(derived, ship) {
   const stats = derived.stats ?? {};
+  const profile = hullCombatProfile(ship);
   const slots = stats.modSlotBonuses ?? {};
   const station = stats.stationBonuses ?? {};
   const pillar = stats.pillarBonuses ?? {};
@@ -35,8 +37,8 @@ function statPreview(derived) {
     core: [
       ["AC", stats.armorClass], ["Hull", stats.hullIntegrity], ["Lifeveil", stats.lifeveilCapacity],
       ["Speed", stats.combatSpeed], ["Maneuverability", stats.maneuverability], ["Strain Limit", stats.strainCapacity],
-      ["Weapon Attack", signed(stats.weaponAttackBonus)], ["Actions", signed(stats.actionBonus)],
-      ["Reactions", signed(stats.reactionBonus)], ["Crew Tactics", signed(stats.crewTacticCapacity)]
+      ["Hardness Bonus", signed(stats.hardness)], ["Weapon Attack", signed(stats.weaponAttackBonus)],
+      ["Actions / Round", profile.actions], ["Reactions / Round", profile.reactions], ["Crew Tactics", signed(stats.crewTacticCapacity)]
     ].map(([label, value]) => ({ label, value })),
     stations: ["captain", "engineer", "navigator", "battlewatch", "veilwarden"].map((id) => ({
       id, label: id.charAt(0).toUpperCase() + id.slice(1), base: signed(Number(station[id] || 0) + Number(stats.allStationBonus || 0)),
@@ -71,7 +73,7 @@ export class ArkflightShipProgressionApp extends HandlebarsApplication {
       canSpend: this.actor?.isOwner || game.user.isGM,
       progression,
       tiers: talentRows(ship),
-      preview: statPreview(derived),
+      preview: statPreview(derived, ship),
       selectedCount: ship?.progression?.talentIds?.length ?? 0
     };
   }
