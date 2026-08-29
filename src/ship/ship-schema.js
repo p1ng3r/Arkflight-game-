@@ -1,4 +1,4 @@
-export const SHIP_SCHEMA_VERSION = 2;
+export const SHIP_SCHEMA_VERSION = 3;
 
 export const SHIP_AREA_KEYS = Object.freeze([
   "hull",
@@ -71,6 +71,15 @@ function migrateStations(stations = {}) {
   return Object.fromEntries(STATION_KEYS.map((key) => [key, next[key] ?? null]));
 }
 
+function normalizeProgression(progression = {}) {
+  const level = Math.max(1, Math.min(20, Math.trunc(Number(progression.level) || 1)));
+  return {
+    level,
+    talentIds: [...new Set(progression.talentIds ?? [])],
+    arkcraftUpgrades: { ...(progression.arkcraftUpgrades ?? {}) }
+  };
+}
+
 export function createShip(overrides = {}) {
   const base = {
     schemaVersion: SHIP_SCHEMA_VERSION,
@@ -83,6 +92,7 @@ export function createShip(overrides = {}) {
     cargo: { used: 0, notes: "" },
     resources: { hull: resource(), lifeveil: resource(), strain: resource(), supplies: resource(), morale: resource(3, 5) },
     areas: Object.fromEntries(SHIP_AREA_KEYS.map((key) => [key, area()])),
+    progression: normalizeProgression(),
     conditions: []
   };
   return normalizeShip(mergeShip(base, overrides));
@@ -94,6 +104,7 @@ export function normalizeShip(ship = {}) {
     schemaVersion: SHIP_SCHEMA_VERSION,
     crew: { ...(ship.crew ?? {}), stations: migrateStations(ship.crew?.stations), specialists: [...(ship.crew?.specialists ?? [])] },
     areas: migrateAreas(ship),
+    progression: normalizeProgression(ship.progression),
     conditions: [...(ship.conditions ?? [])]
   };
   delete base.systems;
@@ -111,6 +122,7 @@ function mergeShip(base, overrides) {
     cargo: { ...base.cargo, ...(overrides.cargo ?? {}) },
     resources: Object.fromEntries(Object.entries(base.resources).map(([key, value]) => [key, { ...value, ...(overrides.resources?.[key] ?? {}) }])),
     areas: { ...base.areas, ...(overrides.areas ?? {}) },
+    progression: { ...base.progression, ...(overrides.progression ?? {}), talentIds: [...(overrides.progression?.talentIds ?? base.progression.talentIds)], arkcraftUpgrades: { ...base.progression.arkcraftUpgrades, ...(overrides.progression?.arkcraftUpgrades ?? {}) } },
     conditions: [...(overrides.conditions ?? base.conditions)]
   };
 }
