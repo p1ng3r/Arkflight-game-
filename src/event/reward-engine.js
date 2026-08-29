@@ -1,4 +1,8 @@
 import { CREW_EDGE_HAND_MAX, getCrewEdgeCard } from "../content/crew-edge-cards.js";
+import { SHIP_CATALOGS } from "../content/index.js";
+import { deriveShip } from "../ship/derive-ship.js";
+
+const MODULE_ID = "arkflight-game";
 
 function cloneList(value) {
   return Array.isArray(value) ? value.map((entry) => ({ ...entry })) : [];
@@ -46,19 +50,32 @@ export function resolveEventEnding(event, finalBandId) {
   return ending;
 }
 
+export function crewTacticHandMax() {
+  const actor = globalThis.game?.arkflight?.activeShip ?? null;
+  const ship = actor?.flags?.[MODULE_ID]?.ship ?? null;
+  if (!ship) return CREW_EDGE_HAND_MAX;
+  try {
+    const bonus = Number(deriveShip(ship, SHIP_CATALOGS).stats?.crewTacticCapacity ?? 0);
+    return Math.max(1, CREW_EDGE_HAND_MAX + bonus);
+  } catch (_error) {
+    return CREW_EDGE_HAND_MAX;
+  }
+}
+
 function awardTactics(state, tacticIds = []) {
+  const handMax = crewTacticHandMax();
   const currentHand = [...(state?.crewEdgeHand ?? [])].filter((id) => getCrewEdgeCard(id));
   const awardedEdgeCards = [];
   const overflowEdgeCards = [];
   for (const tacticId of tacticIds) {
-    if (currentHand.length < CREW_EDGE_HAND_MAX) {
+    if (currentHand.length < handMax) {
       currentHand.push(tacticId);
       awardedEdgeCards.push(tacticId);
     } else {
       overflowEdgeCards.push(tacticId);
     }
   }
-  return { crewEdgeHand: currentHand, awardedEdgeCards, overflowEdgeCards };
+  return { crewEdgeHand: currentHand, awardedEdgeCards, overflowEdgeCards, handMax };
 }
 
 export function applyRoundRewardPackageToState(state, rewards, { roundId = null, bandId = null } = {}) {
@@ -66,12 +83,14 @@ export function applyRoundRewardPackageToState(state, rewards, { roundId = null,
   return {
     ...state,
     crewEdgeHand: award.crewEdgeHand,
+    crewTacticHandMax: award.handMax,
     roundRewards: {
       ...(rewards ?? rewardPackage()),
       roundId,
       bandId,
       awardedEdgeCards: award.awardedEdgeCards,
-      overflowEdgeCards: award.overflowEdgeCards
+      overflowEdgeCards: award.overflowEdgeCards,
+      crewTacticHandMax: award.handMax
     }
   };
 }
@@ -81,10 +100,12 @@ export function applyRewardPackageToState(state, rewards) {
   return {
     ...state,
     crewEdgeHand: award.crewEdgeHand,
+    crewTacticHandMax: award.handMax,
     eventRewards: {
       ...(rewards ?? rewardPackage()),
       awardedEdgeCards: award.awardedEdgeCards,
       overflowEdgeCards: award.overflowEdgeCards,
+      crewTacticHandMax: award.handMax,
       granted: false
     }
   };
@@ -105,9 +126,10 @@ export function rewardRows(rewards) {
     const tactic = getCrewEdgeCard(tacticId);
     if (tactic) rows.push({ type: "edge", label: `Crew Tactic — ${tactic.name}`, detail: `${tactic.trigger} ${tactic.effect}` });
   }
+  const handMax = Number(rewards.crewTacticHandMax ?? CREW_EDGE_HAND_MAX);
   for (const tacticId of rewards.overflowEdgeCards ?? []) {
     const tactic = getCrewEdgeCard(tacticId);
-    if (tactic) rows.push({ type: "edge-overflow", label: `Crew Tactic Overflow — ${tactic.name}`, detail: "The shared Tactics pool is full (3); replace or discard a Tactic before keeping this reward." });
+    if (tactic) rows.push({ type: "edge-overflow", label: `Crew Tactic Overflow — ${tactic.name}`, detail: `The shared Tactics pool is full (${handMax}); replace or discard a Tactic before keeping this reward.` });
   }
   return rows;
 }
