@@ -23,6 +23,7 @@
     "styles/ship-sheet.css",
     "styles/ship-sheet-commissioning.css",
     "styles/shipwright-ux.css",
+    "styles/ship-progression.css",
     "styles/armory-ux.css",
     "styles/crew-ux.css",
     "styles/station-icons.css",
@@ -55,6 +56,7 @@
     "src/ui/player-action-board-ui.js",
     "src/ui/player-action-board-order-ui.js",
     "src/ui/player-action-board-cleanup-ui.js",
-    "src/ui/player-action-board-gm-ui.js"
+    "src/ui/player-action-board-gm-ui.js",
+    "src/ui/ship-progression-ui.js"
   ]
 }
