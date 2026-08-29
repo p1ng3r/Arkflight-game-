@@ -1,5 +1,6 @@
 import { deriveShip, syncResourceMaxima } from "../ship/derive-ship.js";
 import { progressionView, clampShipLevel, validateProgression } from "../ship/progression.js";
+import { shipModSlotClass } from "../ship/ship-mod-slots.js";
 import { SHIP_TALENT_TIERS } from "../content/ship-talents.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 
@@ -135,11 +136,46 @@ function sheetElement(html) {
   return null;
 }
 
+function repairShipwrightCapacity(app, root, actor) {
+  const draft = app?._draftShip ?? shipFlag(actor);
+  if (!draft?.hull?.chassisId) return;
+  let derived;
+  try { derived = deriveShip(draft, SHIP_CATALOGS); } catch (_error) { return; }
+
+  const engine = SHIP_CATALOGS.arkengines?.[draft.arkengine?.chassisId] ?? null;
+  const engineMax = Number(engine?.data?.modCapacity ?? 0) + Number(derived.stats?.arkengineModCapacity ?? 0);
+  const engineUsed = Number(derived.usage?.arkengineMods ?? 0);
+  const engineButtons = [...root.querySelectorAll('[data-fitting-kind="arkengineMod"]')];
+  for (const button of engineButtons) {
+    const id = button.dataset.id;
+    const installed = draft.arkengine?.modIds?.includes(id);
+    const cost = Number(SHIP_CATALOGS.arkengineMods?.[id]?.capacityCost ?? 1);
+    button.disabled = !installed && engineUsed + cost > engineMax;
+    const state = button.querySelector(".arkflight-fitting-state");
+    if (state && !installed) state.textContent = button.disabled ? "CAPACITY FULL" : "INSTALL";
+  }
+  const engineMeter = engineButtons[0]?.closest(".arkflight-commission-stage")?.querySelector(".arkflight-capacity-meter strong");
+  if (engineMeter) engineMeter.textContent = `${engineUsed} / ${engineMax}`;
+
+  for (const button of root.querySelectorAll('[data-fitting-kind="shipMod"]')) {
+    const id = button.dataset.id;
+    const mod = SHIP_CATALOGS.shipMods?.[id];
+    if (!mod) continue;
+    const slotClass = shipModSlotClass(mod);
+    button.dataset.slotClass = slotClass;
+    const small = button.querySelector("small");
+    if (small && !small.textContent.includes("slot class")) small.textContent = `${small.textContent} · ${slotClass} slot class`;
+  }
+}
+
 Hooks.on("renderActorSheet", (app, html) => {
   const actor = app?.actor ?? app?.document;
   if (!isShip(actor)) return;
   const root = sheetElement(html);
-  if (!root || root.querySelector("[data-action='arkflight-progression']")) return;
+  if (!root) return;
+  repairShipwrightCapacity(app, root, actor);
+
+  if (root.querySelector("[data-action='arkflight-progression']")) return;
   const header = root.querySelector(".arkflight-ship-header-actions") ?? root.querySelector(".window-content") ?? root;
   const button = document.createElement("button");
   button.type = "button";
