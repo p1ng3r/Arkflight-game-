@@ -4,6 +4,7 @@ export { ARKENGINES } from "./arkengines.js";
 export { ARKENGINE_PATTERNS } from "./arkengine-patterns.js";
 export { ARKENGINE_MODS } from "./arkengine-mods.js";
 export { SHIP_MODS } from "./ship-mods.js";
+export { SHIP_TALENTS, SHIP_TALENT_LIST, SHIP_TALENT_TIERS, SHIP_TALENT_TIER } from "./ship-talents.js";
 export { ROOMS } from "./rooms.js";
 export { WEAPONS } from "./weapons.js";
 export { CREW_SPECIALISTS } from "./crew-specialists.js";
@@ -18,6 +19,7 @@ import { ARKENGINES } from "./arkengines.js";
 import { ARKENGINE_PATTERNS } from "./arkengine-patterns.js";
 import { ARKENGINE_MODS } from "./arkengine-mods.js";
 import { SHIP_MODS } from "./ship-mods.js";
+import { SHIP_TALENTS } from "./ship-talents.js";
 import { ROOMS } from "./rooms.js";
 import { WEAPONS } from "./weapons.js";
 import { CREW_SPECIALISTS } from "./crew-specialists.js";
@@ -29,6 +31,7 @@ export const SHIP_CATALOGS = Object.freeze({
   arkenginePatterns: ARKENGINE_PATTERNS,
   arkengineMods: ARKENGINE_MODS,
   shipMods: SHIP_MODS,
+  shipTalents: SHIP_TALENTS,
   rooms: ROOMS,
   weapons: WEAPONS,
   crewSpecialists: CREW_SPECIALISTS
