@@ -41,14 +41,12 @@ export function validateProgression(ship) {
   const ids = [...new Set(ship?.progression?.talentIds ?? [])];
   const errors = [];
   let spent = 0;
-
   for (const id of ids) {
     const talent = SHIP_TALENTS[id];
     if (!talent) { errors.push(`Unknown ship talent: ${id}`); continue; }
     if (!canAccessTalent(level, talent)) errors.push(`${talent.name} is not available until ${SHIP_TALENT_TIERS[talent.tier].label} tier (level ${SHIP_TALENT_TIERS[talent.tier].minLevel}).`);
     spent += Number(talent.cost || 0);
   }
-
   const budget = talentPointsForLevel(level);
   if (spent > budget) errors.push(`Talent build spends ${spent} TP but level ${level} provides ${budget} TP.`);
   return Object.freeze({ ok: errors.length === 0, errors: Object.freeze(errors), level, tier: tierForLevel(level), budget, spent, available: Math.max(0, budget - spent) });
@@ -94,8 +92,8 @@ function ensureProgressionStats(stats) {
 export function applyTalentProgression(stats, baseStats, ship, stationCapabilities, capabilities) {
   ensureProgressionStats(stats);
   const talents = selectedTalents(ship);
-
   for (const talent of talents) {
+    const explicitlyAddsShipCapacity = (talent.effects ?? []).some((effect) => effect.mode === "add" && effect.target === "shipModCapacity");
     for (const effect of talent.effects ?? []) {
       if (effect.mode === "add") {
         setPath(stats, effect.target, Number(getPath(stats, effect.target) ?? 0) + Number(effect.value ?? 0));
@@ -107,7 +105,9 @@ export function applyTalentProgression(stats, baseStats, ship, stationCapabiliti
       } else if (effect.mode === "pillarBonus") {
         stats.pillarBonuses[effect.pillar] = Number(stats.pillarBonuses[effect.pillar] ?? 0) + Number(effect.value ?? 0);
       } else if (effect.mode === "modSlot") {
-        stats.modSlotBonuses[effect.slotType] = Number(stats.modSlotBonuses[effect.slotType] ?? 0) + Number(effect.value ?? 0);
+        const value = Number(effect.value ?? 0);
+        stats.modSlotBonuses[effect.slotType] = Number(stats.modSlotBonuses[effect.slotType] ?? 0) + value;
+        if (effect.slotType !== "arkengine" && !explicitlyAddsShipCapacity) stats.shipModCapacity = Number(stats.shipModCapacity ?? 0) + value;
       } else if (effect.mode === "unlockArkcraft") {
         const station = stationCapabilities?.[effect.station];
         if (station) for (const id of effect.ids ?? []) station.masteries.add(id);
@@ -118,7 +118,6 @@ export function applyTalentProgression(stats, baseStats, ship, stationCapabiliti
     }
     for (const capability of talent.capabilities ?? []) capabilities?.add(capability);
   }
-
   return stats;
 }
 
