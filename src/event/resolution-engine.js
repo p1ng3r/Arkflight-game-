@@ -1,22 +1,36 @@
 import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
+import { SHIP_CATALOGS } from "../content/index.js";
+import { deriveShip } from "../ship/derive-ship.js";
 import { rollPf2eStatistic } from "../pf2e/check-runner.js";
 import { activeStationId, recordStationResult } from "./resolution-state.js";
 import { applyEarnedRiskBenefit, checkAdjustments, consumeCheckAdjustments } from "./round-runtime.js";
 
+const MODULE_ID = "arkflight-game";
 function normalizedOutcomeSlug(outcome) { return String(outcome ?? "").trim().replace(/([a-z0-9])([A-Z])/g, "$1-$2").replaceAll("_", "-").replace(/\s+/g, "-").toLowerCase(); }
 function normalizeOutcome(outcome) { const slug = normalizedOutcomeSlug(outcome); if (slug === "critical-success" || slug === "criticalsuccess") return "criticalSuccess"; if (slug === "success") return "success"; if (slug === "failure") return "failure"; if (slug === "critical-failure" || slug === "criticalfailure") return "criticalFailure"; throw new Error(`Unsupported PF2e outcome: ${outcome}`); }
 function liftDegree(degreeKey, amount = 0) { const order = ["criticalFailure", "failure", "success", "criticalSuccess"]; const index = order.indexOf(degreeKey); if (index < 0 || amount <= 0) return degreeKey; return order[Math.min(order.length - 1, index + amount)]; }
 function reducedRiskIncrease(tier) { const n = Number(tier ?? 0); if (n === 2) return 0; if (n === 5) return 2; if (n === 8) return 5; return n; }
 
-export function selectedResolution(event, state, stationId, { shipRollBonus = 0 } = {}) {
+function boundVoyageShipBonus(stationId) {
+  const actor = globalThis.game?.arkflight?.activeShip ?? null;
+  const ship = actor?.flags?.[MODULE_ID]?.ship ?? null;
+  if (!ship) return 0;
+  try {
+    const stats = deriveShip(ship, SHIP_CATALOGS).stats ?? {};
+    return Number(stats.stationBonuses?.[stationId] ?? 0) + Number(stats.allStationBonus ?? 0) + Number(stats.pillarBonuses?.voyage ?? 0);
+  } catch (_error) { return 0; }
+}
+function resolvedShipRollBonus(stationId, supplied) { return supplied === null || supplied === undefined ? boundVoyageShipBonus(stationId) : Number(supplied || 0); }
+
+export function selectedResolution(event, state, stationId, { shipRollBonus = null } = {}) {
   const round = event?.rounds?.[state?.roundIndex ?? 0]; const selection = state?.selections?.[stationId]; if (!round || !selection) return null;
   const fallback = FALLBACK_ACTIONS[stationId]; const actions = [fallback, ...(round.stationActions?.[stationId] ?? [])].filter(Boolean); const action = actions.find((entry) => entry.id === selection.actionId) ?? null; const skill = action?.skills?.find((entry) => entry.id === selection.skillId) ?? null; const riskBid = skill?.riskBids?.find((entry) => Number(entry.tier) === Number(selection.riskTier)) ?? null; const riskBenefit = riskBid ? getRiskBenefit(riskBid.benefitId) : null; if (!action || !skill) return null;
   const adjustments = checkAdjustments(state, stationId); const authoredRiskIncrease = Number(riskBid?.tier ?? 0); const riskReducedByMastery = Boolean(state?.masteryRiskTierReductions?.[stationId] && riskBid); const riskIncrease = riskReducedByMastery ? reducedRiskIncrease(authoredRiskIncrease) : authoredRiskIncrease; const baseDc = Number(skill.dc); const preAdjustmentDc = baseDc + riskIncrease; const momentumBonus = Math.max(0, Math.min(3, Number(state?.encounter?.momentum ?? 0)));
-  return { stationId, selection, action, skill, riskBid, riskBenefit, momentumBonus, shipRollBonus: Number(shipRollBonus || 0), checkBonus: adjustments.bonus, checkBonusSources: adjustments.bonusSources, dcAdjustment: adjustments.dc, dcAdjustmentSources: adjustments.dcSources, degreeLift: adjustments.degreeLift, degreeLiftSources: adjustments.degreeLiftSources, authoredRiskIncrease, riskIncrease, riskReducedByMastery, preAdjustmentDc, finalDc: Math.max(0, preAdjustmentDc + Number(adjustments.dc ?? 0)) };
+  return { stationId, selection, action, skill, riskBid, riskBenefit, momentumBonus, shipRollBonus: resolvedShipRollBonus(stationId, shipRollBonus), checkBonus: adjustments.bonus, checkBonusSources: adjustments.bonusSources, dcAdjustment: adjustments.dc, dcAdjustmentSources: adjustments.dcSources, degreeLift: adjustments.degreeLift, degreeLiftSources: adjustments.degreeLiftSources, authoredRiskIncrease, riskIncrease, riskReducedByMastery, preAdjustmentDc, finalDc: Math.max(0, preAdjustmentDc + Number(adjustments.dc ?? 0)) };
 }
 
-export async function rollSelectedStation({ event, state, actor, shipRollBonus = 0 }) {
+export async function rollSelectedStation({ event, state, actor, shipRollBonus = null }) {
   const stationId = activeStationId(state); if (!stationId) throw new Error("No station is waiting to resolve."); const chosen = selectedResolution(event, state, stationId, { shipRollBonus }); if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`); if (!actor) throw new Error("The assigned PF2e actor is unavailable.");
   const modifiers = [];
   if (chosen.momentumBonus) modifiers.push({ slug: "arkflight-momentum", label: "Arkflight Momentum", modifier: chosen.momentumBonus, type: "untyped", source: `Crew Momentum ${chosen.momentumBonus}/3` });
@@ -26,7 +40,7 @@ export async function rollSelectedStation({ event, state, actor, shipRollBonus =
   return { stationId, chosen, roll };
 }
 
-export function applyStationRollResult({ event, state, actor, roll, shipRollBonus = 0 }) {
+export function applyStationRollResult({ event, state, actor, roll, shipRollBonus = null }) {
   const stationId = activeStationId(state); if (!stationId) throw new Error("No station is waiting to resolve."); const chosen = selectedResolution(event, state, stationId, { shipRollBonus }); if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`); if (!actor) throw new Error("The assigned PF2e actor is unavailable."); if (!roll || !Number.isFinite(Number(roll.total)) || !roll.outcome) throw new Error("Arkflight received an invalid PF2e roll result.");
   const rawDegreeKey = normalizeOutcome(roll.outcome); const degreeKey = liftDegree(rawDegreeKey, chosen.degreeLift); const riskEarned = Boolean(chosen.riskBid && (degreeKey === "success" || degreeKey === "criticalSuccess")); const riskText = riskEarned ? (degreeKey === "criticalSuccess" ? chosen.riskBenefit?.criticalSuccess : chosen.riskBenefit?.success) ?? "Heroic/Risk benefit earned." : null;
   let nextState = recordStationResult(state, stationId, { actorId: actor.id, actorName: actor.name, actionId: chosen.action.id, actionName: chosen.action.name, skillId: chosen.skill.id, skillSlug: chosen.skill.skill, baseDc: Number(chosen.skill.dc), riskTier: chosen.riskBid?.tier ?? null, authoredRiskIncrease: chosen.authoredRiskIncrease, riskIncrease: chosen.riskIncrease, riskReducedByMastery: chosen.riskReducedByMastery, preAdjustmentDc: chosen.preAdjustmentDc, dcAdjustment: chosen.dcAdjustment, dcAdjustmentSources: chosen.dcAdjustmentSources, momentumBonus: chosen.momentumBonus, shipRollBonus: chosen.shipRollBonus, checkBonus: chosen.checkBonus, checkBonusSources: chosen.checkBonusSources, finalDc: chosen.finalDc, total: Number(roll.total), outcome: roll.outcome, rawDegreeKey, degreeKey, degreeLiftApplied: chosen.degreeLift, degreeLiftSources: chosen.degreeLiftSources, messageId: roll.messageId ?? null, riskBenefitId: chosen.riskBid?.benefitId ?? null, riskBenefitName: chosen.riskBenefit?.name ?? null, riskEarned, riskText });
@@ -42,4 +56,4 @@ export function applyStationRollResult({ event, state, actor, roll, shipRollBonu
   return { nextState, stationId, chosen, roll };
 }
 
-export async function resolveActiveStation({ event, state, actor, shipRollBonus = 0 }) { const rolled = await rollSelectedStation({ event, state, actor, shipRollBonus }); return applyStationRollResult({ event, state, actor, roll: rolled.roll, shipRollBonus }); }
+export async function resolveActiveStation({ event, state, actor, shipRollBonus = null }) { const rolled = await rollSelectedStation({ event, state, actor, shipRollBonus }); return applyStationRollResult({ event, state, actor, roll: rolled.roll, shipRollBonus }); }
