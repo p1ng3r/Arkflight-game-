@@ -10,7 +10,20 @@ This document exists only to show the intended shape of ship progression before 
 
 Ship level does **not** increase base statistics.
 
-Each level after 1 grants 1 Talent Point.
+A level 1 ship begins with **1 Talent Point** and may purchase one Foundation talent immediately. Each later ship level grants **1 additional Talent Point**.
+
+This means:
+
+| Ship Level | Total Earned Talent Points |
+|---:|---:|
+| 1 | 1 |
+| 2 | 2 |
+| 5 | 5 |
+| 10 | 10 |
+| 15 | 15 |
+| 20 | 20 |
+
+The level-1 talent is the first meaningful customization of an otherwise off-the-lot vessel. It does not increase stats merely because the ship is level 1; the player must deliberately spend the point on a talent.
 
 Special milestone abilities occur at:
 
@@ -18,6 +31,8 @@ Special milestone abilities occur at:
 - **Level 10 — Signature Ability**: choose a specialization inside that Calling.
 - **Level 15 — Legendary Ability**: major identity-defining vessel ability.
 - **Level 20 — Mythic Keystone**: final unique capstone from the ship's developed talent path.
+
+Milestone abilities are progression rewards and are **not** intended to consume the normal Talent Point for that level unless later balance testing explicitly changes that rule.
 
 The normal talent tree remains available between milestone levels.
 
@@ -28,24 +43,30 @@ The normal talent tree remains available between milestone levels.
 ```text
 LEVEL 1
 Off-the-lot vessel
-No earned talent points
+Gain 1 Talent Point
+Choose 1 Foundation Talent
         |
         v
 LEVEL 2
-Choose Foundation Talent
+Gain 1 Talent Point
+Choose / save Foundation Talent
         |
         v
 LEVEL 3
+Gain 1 Talent Point
 Choose Foundation Talent
         |
         v
 LEVEL 4
+Gain 1 Talent Point
 Choose Foundation Talent / branch
         |
         v
 LEVEL 5  ===== CALLING =====
+Gain 1 Talent Point
 Choose ship identity:
 Voyager / Battle Ship / Explorer / Trader / Raider / Expedition
+Calling ability is granted separately
         |
         v
 LEVEL 6
@@ -69,7 +90,9 @@ Specialist Talent / prerequisite setup
                       |
                       v
 LEVEL 10 ===== SIGNATURE ABILITY =====
+Gain normal Talent Point
 Choose one Calling specialization
+Signature ability is granted separately
                       |
              +--------+--------+
              |                 |
@@ -96,7 +119,8 @@ Prepare legendary identity path
                       |
                       v
 LEVEL 15 ===== LEGENDARY ABILITY =====
-Calling-specific legendary ability
+Gain normal Talent Point
+Calling-specific legendary ability granted separately
                       |
                       v
 LEVEL 16
@@ -119,7 +143,8 @@ Final prerequisite / cross-branch choice
                       |
                       v
 LEVEL 20 ===== MYTHIC KEYSTONE =====
-Ship-defining capstone
+Gain normal Talent Point
+Ship-defining capstone granted separately
 ```
 
 ---
@@ -604,6 +629,8 @@ The intended tree is not:
 It is:
 
 ```text
+Choose a Foundation Talent at level 1
+        |
 Choose what the ship is good at
         |
 Branch into how it does that
@@ -637,5 +664,7 @@ This mockup intentionally does **not** lock:
 - final Level 20 keystones
 - exact number of talents in each branch
 - whether every level requires spending its Talent Point immediately
+
+The current draft **does** assume level 1 starts with 1 Talent Point and each level thereafter grants 1 more, for 20 total earned Talent Points at level 20.
 
 These should be reviewed after the overall tree shape is approved.
