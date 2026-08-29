@@ -1,5 +1,6 @@
 import { deriveShip } from "./derive-ship.js";
 import { validateProgression } from "./progression.js";
+import { shipModSlotSummary } from "./ship-mod-slots.js";
 
 const SIZE_RANK = Object.freeze({ small: 1, medium: 2, large: 3 });
 
@@ -56,6 +57,11 @@ export function validateShip(ship, catalogs = {}) {
 
   if (!districtScale && Number.isFinite(roomCapacity) && derived.usage.rooms > roomCapacity) errors.push(`Room capacity exceeded: ${derived.usage.rooms}/${roomCapacity}.`);
   if (!districtScale && Number.isFinite(shipModCapacity) && derived.usage.shipMods > shipModCapacity) errors.push(`Ship Mod capacity exceeded: ${derived.usage.shipMods}/${shipModCapacity}.`);
+
+  const slotSummary = shipModSlotSummary(ship, catalogs, derived);
+  if (!districtScale && !slotSummary.legal && slotSummary.totalUsed <= slotSummary.totalCapacity) {
+    errors.push(`Earned typed Ship Mod slots cannot support the installed refits. General slots: ${slotSummary.generic}; typed overflow required: ${slotSummary.overflow}; matching typed/flexible slots: ${slotSummary.matchedOverflow}.`);
+  }
 
   const engineCapacity = Number(engine?.data?.modCapacity ?? 0) + Number(derived.stats.arkengineModCapacity ?? 0);
   if (Number.isFinite(engineCapacity) && derived.usage.arkengineMods > engineCapacity) errors.push(`Arkengine Mod capacity exceeded: ${derived.usage.arkengineMods}/${engineCapacity}.`);
