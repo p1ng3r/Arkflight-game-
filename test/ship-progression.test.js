@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { createShip } from "../src/ship/ship-schema.js";
 import { deriveShip } from "../src/ship/derive-ship.js";
 import { talentPointsForLevel, validateProgression } from "../src/ship/progression.js";
+import { validateShip } from "../src/ship/validate-ship.js";
 import { hullCombatProfile } from "../src/combat/combat-schema.js";
+import { getMasteryTechnique } from "../src/content/base-mastery.js";
 import { SHIP_CATALOGS } from "../src/content/index.js";
 
 function sloop(overrides = {}) {
@@ -62,4 +64,30 @@ test("progression budget rejects overspending", () => {
   const check = validateProgression(ship);
   assert.equal(check.ok, false);
   assert.match(check.errors.join(" "), /spends 2 TP/);
+});
+
+test("Specialist Arkcraft talent adds a selectable technique", () => {
+  const ship = sloop({ progression: { level: 6, talentIds: ["advanced-captain-arkcraft"], arkcraftUpgrades: {} } });
+  const derived = deriveShip(ship, SHIP_CATALOGS);
+  assert.ok(derived.stationCapabilities.captain.masteries.includes("captain-command-the-moment"));
+  assert.equal(getMasteryTechnique("captain", "captain-command-the-moment")?.name, "Command the Moment");
+});
+
+test("typed progression mod slot supports matching overflow", () => {
+  const ship = sloop({
+    progression: { level: 6, talentIds: ["expanded-structural-bay"], arkcraftUpgrades: {} },
+    shipMods: ["reinforced-bulkhead-network", "deep-void-reinforcement", "arc-conduit-stabilizers"]
+  });
+  const check = validateShip(ship, SHIP_CATALOGS);
+  assert.equal(check.ok, true, check.errors.join(" "));
+});
+
+test("typed progression mod slot rejects nonmatching overflow", () => {
+  const ship = sloop({
+    progression: { level: 6, talentIds: ["expanded-structural-bay"], arkcraftUpgrades: {} },
+    shipMods: ["deep-void-reinforcement", "arc-conduit-stabilizers", "occult-signal-refractors"]
+  });
+  const check = validateShip(ship, SHIP_CATALOGS);
+  assert.equal(check.ok, false);
+  assert.match(check.errors.join(" "), /typed Ship Mod slots/);
 });
