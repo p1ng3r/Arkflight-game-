@@ -54,6 +54,19 @@ export function validateProgression(ship) {
   return Object.freeze({ ok: errors.length === 0, errors: Object.freeze(errors), level, tier: tierForLevel(level), budget, spent, available: Math.max(0, budget - spent) });
 }
 
+export function combatEconomyBonuses(ship) {
+  let actions = 0;
+  let reactions = 0;
+  for (const talent of selectedTalents(ship)) {
+    for (const effect of talent.effects ?? []) {
+      if (effect.mode !== "add") continue;
+      if (effect.target === "actionBonus") actions += Number(effect.value || 0);
+      if (effect.target === "reactionBonus") reactions += Number(effect.value || 0);
+    }
+  }
+  return Object.freeze({ actions, reactions });
+}
+
 function getPath(object, path) { return path.split(".").reduce((value, key) => value?.[key], object); }
 function setPath(object, path, value) { const keys = path.split("."); const last = keys.pop(); let cursor = object; for (const key of keys) cursor = cursor[key] ??= {}; cursor[last] = value; }
 
