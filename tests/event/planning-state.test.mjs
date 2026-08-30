@@ -56,7 +56,8 @@ test("actor, action, and skill are required while Risk Bid remains optional", ()
 test("an unassigned station prevents Round 1 planning from starting", () => {
   let state = createPlanningState({ eventId: "event", roundId: "round" });
   for (const station of STATIONS) {
-    if (station !== "veilwarden") state = assignActor(state, station, `${station}-actor`);
+    if (station === "veilwarden") continue;
+    state = assignActor(state, station, `${station}-actor`);
     state = selectMastery(state, station, `${station}.mastery`);
   }
   assert.throws(() => startPlanning(state), /Assign a different PF2e officer/);
