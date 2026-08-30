@@ -7,11 +7,11 @@ import { BASE_MASTERY } from "../src/content/base-mastery.js";
 import { applyMasteryTechnique } from "../src/event/mastery-engine.js";
 import { applyCrewTactic } from "../src/event/tactics-engine.js";
 
-function readySetup() {
+function readySetup(overrides = {}) {
   let state = createPlanningState({ eventId: "test-event", roundId: "r1" });
   STATIONS.forEach((stationId, index) => {
     state = assignActor(state, stationId, `actor-${index + 1}`);
-    state = selectMastery(state, stationId, BASE_MASTERY[stationId][0].id);
+    state = selectMastery(state, stationId, overrides[stationId] ?? BASE_MASTERY[stationId][0].id);
   });
   return state;
 }
@@ -27,8 +27,7 @@ test("event setup requires five unique officers and one mastery per station", ()
 });
 
 test("station mastery applies its effect and becomes expended for the event", () => {
-  let state = readySetup();
-  state = selectMastery(state, "navigator", "navigator-find-another-way");
+  let state = readySetup({ navigator: "navigator-find-another-way" });
   state = startPlanning(state, 1000);
   state = {
     ...state,
