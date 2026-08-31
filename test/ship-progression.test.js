@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createShip } from "../src/ship/ship-schema.js";
 import { deriveShip } from "../src/ship/derive-ship.js";
 import { talentPointsForLevel, validateProgression } from "../src/ship/progression.js";
+import { addShipExperience, setShipExperience, shipExperienceView, SHIP_XP_PER_LEVEL } from "../src/ship/ship-xp.js";
 import { validateShip } from "../src/ship/validate-ship.js";
 import { hullCombatProfile } from "../src/combat/combat-schema.js";
 import { getMasteryTechnique } from "../src/content/base-mastery.js";
@@ -22,6 +23,40 @@ test("talent point milestones grant bonus TP at 5/10/15/20", () => {
   assert.equal(talentPointsForLevel(10), 12);
   assert.equal(talentPointsForLevel(15), 18);
   assert.equal(talentPointsForLevel(20), 24);
+});
+
+test("ship XP uses a flat 1000 XP per level", () => {
+  const ship = sloop({ progression: { level: 8, xp: 375, talentIds: [], arkcraftUpgrades: {} } });
+  const view = shipExperienceView(ship);
+  assert.equal(SHIP_XP_PER_LEVEL, 1000);
+  assert.equal(view.level, 8);
+  assert.equal(view.xp, 375);
+  assert.equal(view.max, 1000);
+  assert.equal(view.nextLevel, 9);
+  assert.equal(view.percent, 37.5);
+});
+
+test("ship XP levels at 1000 and carries overflow toward the next level", () => {
+  const ship = sloop({ progression: { level: 8, xp: 900, talentIds: [], arkcraftUpgrades: {} } });
+  const advanced = addShipExperience(ship, 250);
+  assert.equal(advanced.progression.level, 9);
+  assert.equal(advanced.progression.xp, 150);
+});
+
+test("setting more than one level of XP can advance multiple ship levels", () => {
+  const ship = sloop({ progression: { level: 8, xp: 0, talentIds: [], arkcraftUpgrades: {} } });
+  const advanced = setShipExperience(ship, 2450);
+  assert.equal(advanced.progression.level, 10);
+  assert.equal(advanced.progression.xp, 450);
+});
+
+test("ship XP stops advancing past level 20", () => {
+  const ship = sloop({ progression: { level: 19, xp: 950, talentIds: [], arkcraftUpgrades: {} } });
+  const advanced = addShipExperience(ship, 500);
+  const view = shipExperienceView(advanced);
+  assert.equal(view.level, 20);
+  assert.equal(view.nextLevel, null);
+  assert.equal(view.atMaximum, true);
 });
 
 test("Foundation toughness scales from base Hull percentage", () => {
