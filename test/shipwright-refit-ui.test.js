@@ -20,7 +20,7 @@ test("Part 4 Shipwright UI source parses as valid JavaScript", () => {
 
 test("Available Parts are bound to physical inventory rather than catalog visibility", () => {
   assert.match(uiSource, /inventory\?\.\[meta\.inventory\]/);
-  assert.match(uiSource, /data-refit-inventory-quantity/);
+  assert.match(uiSource, /refitInventoryQuantity/);
   assert.match(cssSource, /data-refit-inventory-quantity="0"/);
 });
 
