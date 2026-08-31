@@ -46,6 +46,37 @@ export function queueInstallDraft(ship, draft, catalogs, { method = REFIT_METHOD
   return Object.freeze({ ok: true, ship: next, jobs: Object.freeze(jobs), partsSpent: totalParts });
 }
 
+export function recordCrewInstallComplication(ship, assignment, catalogs, {
+  workerActorUuid = "", outcome = "criticalFailure", createdAt = null, idFactory = idFactoryDefault
+} = {}) {
+  const normalized = normalizeShip(ship);
+  const item = catalogFor(catalogs, assignment?.family)?.[assignment?.componentId];
+  if (!item) return { ok: false, reason: "unknown-component", ship: normalized };
+  const spec = item.data?.refit?.install;
+  const job = createRefitJob({
+    id: idFactory(),
+    type: REFIT_JOB_TYPES.INSTALL,
+    method: REFIT_METHODS.CREW,
+    componentFamily: assignment.family,
+    componentId: assignment.componentId,
+    socketIndices: assignment.socketIndices ?? [],
+    craftingDC: spec?.dc ?? 0,
+    partsCost: 0,
+    durationHours: 0,
+    remainingHours: 0,
+    status: REFIT_JOB_STATES.COMPLICATION,
+    reservation: { partsSpent: 0, componentHeld: false },
+    result: {
+      outcome,
+      workerActorUuid,
+      engineeringSkill: "crafting",
+      complication: "installation-complication"
+    },
+    createdAt: nowIso(createdAt)
+  });
+  return { ok: true, ship: addJob(normalized, job), job };
+}
+
 export function queueBuildJob(ship, family, componentId, catalogs, { method = REFIT_METHODS.CREW, createdAt = null, idFactory = idFactoryDefault } = {}) {
   const normalized = normalizeShip(ship); const item = catalogFor(catalogs, family)?.[componentId];
   if (!item) return { ok: false, reason: "unknown-component", ship: normalized };
