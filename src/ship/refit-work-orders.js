@@ -1,6 +1,7 @@
 import { normalizeShip } from "./ship-schema.js";
 import { consumeComponent, grantComponent, spendSalvageParts, knowsBlueprint } from "./refit-state.js";
 import { createRefitJob, REFIT_JOB_STATES, REFIT_JOB_TYPES, REFIT_METHODS } from "./refit-rules.js";
+import { validateRefitSocketAssignment } from "./refit-sockets.js";
 
 function catalogFor(catalogs, family) {
   if (family === "shipMod") return catalogs?.shipMods ?? {};
@@ -18,10 +19,26 @@ function withInstallArray(ship, family, values) {
 function addJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: [...(ship.refit?.workOrders ?? []), job] } }); }
 function replaceJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: (ship.refit?.workOrders ?? []).map((entry) => entry.id === job.id ? job : entry) } }); }
 
+function validateInstallAssignments(ship, assignments, catalogs) {
+  const staged = { assignments: [] };
+  for (const assignment of assignments) {
+    const item = catalogFor(catalogs, assignment.family)?.[assignment.componentId];
+    if (!item) return { ok: false, reason: "unknown-component" };
+    const check = validateRefitSocketAssignment(ship, catalogs, assignment, staged);
+    if (!check.ok) return check;
+    staged.assignments.push(assignment);
+  }
+  return { ok: true };
+}
+
 export function queueInstallDraft(ship, draft, catalogs, { method = REFIT_METHODS.CREW, createdAt = null, idFactory = idFactoryDefault } = {}) {
   let next = normalizeShip(ship);
   const assignments = [...(draft?.assignments ?? [])];
   if (!assignments.length) return Object.freeze({ ok: false, reason: "empty-draft", ship: next, jobs: [] });
+
+  const socketValidation = validateInstallAssignments(next, assignments, catalogs);
+  if (!socketValidation.ok) return Object.freeze({ ...socketValidation, ship: next, jobs: [] });
+
   const totalParts = assignments.reduce((sum, a) => sum + Number(catalogFor(catalogs, a.family)?.[a.componentId]?.data?.refit?.install?.partsCost ?? 0), 0);
   const spent = spendSalvageParts(next, totalParts);
   if (!spent.ok) return Object.freeze({ ...spent, jobs: [] });
@@ -29,7 +46,6 @@ export function queueInstallDraft(ship, draft, catalogs, { method = REFIT_METHOD
   const jobs = [];
   for (const assignment of assignments) {
     const item = catalogFor(catalogs, assignment.family)?.[assignment.componentId];
-    if (!item) return Object.freeze({ ok: false, reason: "unknown-component", ship: normalizeShip(ship), jobs: [] });
     const consumed = consumeComponent(next, assignment.family, assignment.componentId, 1);
     if (!consumed.ok) return Object.freeze({ ok: false, reason: consumed.reason, ship: normalizeShip(ship), jobs: [] });
     next = consumed.ship;
@@ -131,7 +147,15 @@ export function completeRefitJob(ship, jobId, catalogs, { completedAt = null, re
   if (!found) return { ok: false, reason: "job-not-found", ship: next };
   if (![REFIT_JOB_STATES.PLANNED, REFIT_JOB_STATES.WORKING].includes(found.status)) return { ok: false, reason: "job-not-active", ship: next };
   if (found.type === REFIT_JOB_TYPES.BUILD) next = grantComponent(next, found.componentFamily, found.componentId, found.quantity);
-  if (found.type === REFIT_JOB_TYPES.INSTALL) next = withInstallArray(next, found.componentFamily, [...installArray(next, found.componentFamily), found.componentId]);
+  if (found.type === REFIT_JOB_TYPES.INSTALL) {
+    const socketValidation = validateRefitSocketAssignment(next, catalogs, {
+      family: found.componentFamily,
+      componentId: found.componentId,
+      socketIndices: found.socketIndices
+    });
+    if (!socketValidation.ok) return { ...socketValidation, ship: next };
+    next = withInstallArray(next, found.componentFamily, [...installArray(next, found.componentFamily), found.componentId]);
+  }
   if (found.type === REFIT_JOB_TYPES.REMOVE) {
     const arr = [...installArray(next, found.componentFamily)]; const index = arr.indexOf(found.componentId); if (index < 0) return { ok: false, reason: "component-not-installed", ship: next };
     arr.splice(index, 1); next = grantComponent(withInstallArray(next, found.componentFamily, arr), found.componentFamily, found.componentId, 1);
