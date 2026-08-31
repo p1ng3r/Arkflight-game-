@@ -1,0 +1,335 @@
+.arkflight-ship-sheet .window-content {
+  background: #071016;
+}
+
+.arkflight-ship-command-polished {
+  --af-gold: #caa75d;
+  --af-gold-dim: #7a6335;
+  --af-cyan: #7bd6ee;
+  --af-navy: #07151d;
+  --af-panel: rgba(8, 19, 25, 0.94);
+  --af-panel-soft: rgba(12, 26, 33, 0.86);
+  padding: 10px;
+  background:
+    linear-gradient(rgba(4, 12, 17, .84), rgba(4, 12, 17, .94)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center / 520px auto repeat;
+}
+
+.arkflight-ship-command-polished .arkflight-ship-header {
+  position: relative;
+  grid-template-columns: 138px minmax(0, 1fr) 230px;
+  min-height: 166px;
+  gap: 18px;
+  overflow: hidden;
+  border: 1px solid var(--af-gold-dim);
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 190, 96, .08),
+    inset 0 0 48px rgba(0, 0, 0, .62),
+    0 0 22px rgba(0, 0, 0, .45);
+  background:
+    linear-gradient(90deg, rgba(5, 17, 24, .96), rgba(7, 19, 26, .93) 65%, rgba(13, 22, 28, .88)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center / cover;
+}
+
+.arkflight-ship-command-polished .arkflight-ship-header::before,
+.arkflight-ship-command-polished .arkflight-command-panel::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  pointer-events: none;
+  border: 1px solid rgba(202, 167, 93, .14);
+}
+
+.arkflight-ship-command-polished .arkflight-header-watermark {
+  position: absolute;
+  right: 260px;
+  top: 12px;
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  opacity: .055;
+  filter: sepia(.7) saturate(.8);
+  pointer-events: none;
+}
+
+.arkflight-ship-portrait-frame {
+  position: relative;
+  width: 138px;
+  min-height: 138px;
+  padding: 7px;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #9b7d3d;
+  background:
+    linear-gradient(rgba(7, 15, 20, .3), rgba(4, 7, 9, .72)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center / cover;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.8), 0 0 0 2px rgba(46, 35, 17, .8);
+}
+
+.arkflight-ship-command-polished .arkflight-ship-portrait {
+  width: 100%;
+  height: 122px;
+  margin: 0;
+  border: 0;
+  object-fit: cover;
+  background: #030608;
+  box-shadow: inset 0 0 22px rgba(0,0,0,.9);
+}
+
+.arkflight-portrait-caption {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 7px;
+  padding: 3px 5px;
+  color: #c6a65f;
+  background: rgba(3, 10, 14, .82);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-align: center;
+}
+
+.arkflight-ship-command-polished .arkflight-ship-identity {
+  position: relative;
+  z-index: 1;
+  padding-top: 5px;
+}
+
+.arkflight-ship-command-polished .arkflight-ship-name-row h1 {
+  color: #f3ddb0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  letter-spacing: .015em;
+  text-shadow: 0 2px 1px #000, 0 0 13px rgba(209, 164, 78, .08);
+}
+
+.arkflight-ship-command-polished .arkflight-ship-name-row {
+  padding-bottom: 7px;
+  border-bottom: 1px solid rgba(172, 124, 50, .48);
+}
+
+.arkflight-ship-command-polished .arkflight-tier {
+  border-color: #8b6f37;
+  color: #e1c27a;
+  background: rgba(35, 28, 17, .56);
+}
+
+.arkflight-command-motto {
+  max-width: 720px;
+  margin-top: 14px;
+  color: #8e9ca0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.arkflight-ship-command-polished .arkflight-ship-header-actions {
+  position: relative;
+  z-index: 2;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
+.arkflight-ship-command-polished .arkflight-readiness,
+.arkflight-ship-command-polished .arkflight-shipwright-toggle,
+.arkflight-ship-command-polished .arkflight-ship-header-actions button {
+  border: 1px solid #735c31;
+  box-shadow: inset 0 0 0 1px rgba(216, 176, 91, .05);
+  background: linear-gradient(180deg, rgba(24, 38, 43, .95), rgba(8, 18, 23, .98));
+  color: #dac17e;
+}
+
+.arkflight-ship-command-polished .arkflight-readiness.is-ready {
+  border-color: #3b7458;
+  background: linear-gradient(180deg, rgba(23, 65, 48, .9), rgba(10, 34, 27, .95));
+  color: #b9e8c8;
+}
+
+.arkflight-ship-command-polished .arkflight-resource-strip,
+.arkflight-ship-command-polished .arkflight-stat-strip {
+  gap: 6px;
+}
+
+.arkflight-ship-command-polished .arkflight-resource-card,
+.arkflight-ship-command-polished .arkflight-stat-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #584727;
+  box-shadow: inset 0 0 20px rgba(0,0,0,.42);
+  background:
+    linear-gradient(180deg, rgba(11, 30, 38, .90), rgba(5, 15, 20, .95)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center / 260px auto;
+}
+
+.arkflight-ship-command-polished .arkflight-resource-card::after,
+.arkflight-ship-command-polished .arkflight-stat-card::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(195, 157, 80, .09);
+  pointer-events: none;
+}
+
+.arkflight-ship-command-polished .arkflight-resource-label {
+  color: #c6a65f;
+}
+
+.arkflight-ship-command-polished .arkflight-resource-values,
+.arkflight-ship-command-polished .arkflight-stat-card strong {
+  color: #e7f4f6;
+  text-shadow: 0 0 8px rgba(104, 204, 230, .12);
+}
+
+.arkflight-ship-command-polished .arkflight-resource-card[data-resource-kind="strain"] {
+  border-color: #6c5631;
+}
+
+.arkflight-ship-command-polished .arkflight-resource-card[data-resource-kind="lifeveil"] {
+  box-shadow: inset 0 0 18px rgba(41, 110, 130, .11);
+}
+
+.arkflight-ship-command-polished .arkflight-command-grid {
+  grid-template-columns: minmax(245px, .9fr) minmax(390px, 1.38fr) minmax(250px, .86fr);
+  gap: 8px;
+}
+
+.arkflight-ship-command-polished .arkflight-command-panel {
+  position: relative;
+  min-height: 390px;
+  overflow: hidden;
+  border: 1px solid #66502d;
+  box-shadow: inset 0 0 35px rgba(0,0,0,.55);
+  background:
+    linear-gradient(180deg, rgba(8, 24, 31, .92), rgba(4, 15, 20, .96)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center / 420px auto repeat;
+}
+
+.arkflight-ship-command-polished .arkflight-panel-heading {
+  position: relative;
+  z-index: 2;
+  padding: 2px 4px 9px;
+  border-bottom: 1px solid rgba(161, 118, 48, .52);
+}
+
+.arkflight-ship-command-polished .arkflight-panel-heading h2 {
+  color: #e2c47e;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  text-shadow: 0 1px #000;
+}
+
+.arkflight-ship-command-polished .arkflight-system-list,
+.arkflight-ship-command-polished .arkflight-station-list,
+.arkflight-ship-command-polished .arkflight-component-stack,
+.arkflight-ship-command-polished .arkflight-profile-subsection,
+.arkflight-ship-command-polished .arkflight-validation-box,
+.arkflight-ship-command-polished .arkflight-condition-box {
+  position: relative;
+  z-index: 2;
+}
+
+.arkflight-ship-command-polished .arkflight-system-row {
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
+  min-height: 39px;
+  border-color: #46525a;
+  background: linear-gradient(90deg, rgba(10, 27, 34, .88), rgba(8, 18, 23, .88));
+}
+
+.arkflight-system-icon {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #6c5731;
+  color: #caa75d;
+  background: radial-gradient(circle, rgba(65, 99, 108, .17), rgba(5, 12, 15, .88));
+}
+
+.arkflight-ship-command-polished .arkflight-system-name {
+  color: #e6ddc5;
+}
+
+.arkflight-ship-command-polished .arkflight-component-line {
+  border-color: #59482b;
+  background: rgba(9, 23, 29, .76);
+}
+
+.arkflight-ship-command-polished .arkflight-component-line > strong {
+  color: #e9cf8c;
+}
+
+.arkflight-ship-command-polished .arkflight-chip {
+  border-color: #6a5530;
+  color: #cfb77c;
+  background: rgba(18, 31, 31, .82);
+}
+
+.arkflight-ship-command-polished .arkflight-capability-chip {
+  border-color: #336775;
+  color: #92d8e7;
+  background: rgba(13, 48, 58, .62);
+}
+
+.arkflight-ship-command-polished .arkflight-station-card {
+  min-height: 60px;
+  grid-template-columns: 50px minmax(0,1fr);
+  gap: 10px;
+  border-color: #465d62;
+  background: linear-gradient(90deg, rgba(7, 27, 34, .93), rgba(6, 18, 23, .88));
+}
+
+.arkflight-ship-command-polished .arkflight-station-emblem {
+  width: 48px;
+  height: 48px;
+  padding: 2px;
+  border: 1px solid #806a38;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle, rgba(21, 67, 79, .55), rgba(5, 11, 14, .95));
+}
+
+.arkflight-ship-command-polished .arkflight-station-emblem img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border: 0;
+}
+
+.arkflight-ship-command-polished .arkflight-station-card strong {
+  color: #e2c77f;
+  font-size: 13px;
+}
+
+.arkflight-vessel-art-hook {
+  position: absolute;
+  right: -36px;
+  bottom: -42px;
+  width: 210px;
+  height: 210px;
+  opacity: .045;
+  background: url("../assets/ui/branding/arkflight_logo_Simple.webp") center / contain no-repeat;
+  pointer-events: none;
+}
+
+.arkflight-ship-command-polished .arkflight-ship-footer {
+  border-top-color: #70572f;
+  background: rgba(4, 14, 19, .72);
+}
+
+@media (max-width: 920px) {
+  .arkflight-ship-command-polished .arkflight-ship-header {
+    grid-template-columns: 106px minmax(0, 1fr);
+  }
+  .arkflight-ship-portrait-frame {
+    width: 106px;
+    min-height: 106px;
+  }
+  .arkflight-ship-command-polished .arkflight-ship-portrait {
+    height: 92px;
+  }
+  .arkflight-ship-command-polished .arkflight-header-watermark {
+    display: none;
+  }
+}
