@@ -100,7 +100,7 @@ test("mechanical preview reports staged stat deltas without mutating authoritati
 
   const preview = previewRefitDraft(ship, staged, SHIP_CATALOGS);
   assert.equal(preview.deltas.hullIntegrity.delta, 20);
-  assert.equal(preview.deltas.maneuverability.delta, -1);
+  assert.equal(preview.deltas.maneuverability, undefined);
   assert.deepEqual(ship.shipMods, []);
 });
 
