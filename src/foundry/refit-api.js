@@ -19,7 +19,8 @@ import {
   queueRepairJob,
   startRefitJob,
   completeRefitJob,
-  recordCrewInstallComplication
+  recordCrewInstallComplication,
+  recordCrewInstallFailure
 } from "../ship/refit-work-orders.js";
 
 const MODULE_ID = "arkflight-game";
@@ -77,6 +78,10 @@ Hooks.once("init", () => {
     async beginInstallDraft(actor, draft, options = {}) {
       requireGM(); const target = requireShipActor(actor);
       return persistResult(target, queueInstallDraft(shipPayload(target), draft, SHIP_CATALOGS, options));
+    },
+    async recordInstallFailure(actor, assignment, options = {}) {
+      requireGM(); const target = requireShipActor(actor);
+      return persistResult(target, recordCrewInstallFailure(shipPayload(target), assignment, SHIP_CATALOGS, options));
     },
     async recordInstallComplication(actor, assignment, options = {}) {
       requireGM(); const target = requireShipActor(actor);
