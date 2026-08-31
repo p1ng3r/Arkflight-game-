@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/ship-event-strain-unification
+      - feature/refit-alpha
   pull_request:
   workflow_dispatch:
 
