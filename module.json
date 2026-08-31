@@ -45,7 +45,8 @@
     "styles/player-action-board-cleanup.css",
     "styles/player-action-board-gm.css",
     "styles/shipwright-nav-compact.css",
-    "styles/ship-portrait.css"
+    "styles/ship-portrait.css",
+    "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -85,6 +86,7 @@
     "src/ui/shipwright-refit-draft-ui.js",
     "src/ui/shipwright-refit-work-order-ui.js",
     "src/ui/shipwright-refit-section-lifecycle-ui.js",
-    "src/ui/shipwright-inspector-readability-ui.js"
+    "src/ui/shipwright-inspector-readability-ui.js",
+    "src/ui/refit-alpha-cleanup-ui.js"
   ]
 }
