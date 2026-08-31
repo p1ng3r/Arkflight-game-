@@ -134,6 +134,13 @@ function stagedItemName(assignment) {
   return catalogForFamily(assignment.family)?.[assignment.componentId]?.name ?? assignment.componentId;
 }
 
+function shipyardGoldForDraft(draft) {
+  return [...(draft?.assignments ?? [])].reduce((sum, assignment) => {
+    const item = catalogForFamily(assignment.family)?.[assignment.componentId];
+    return sum + Math.max(0, Number(item?.data?.refit?.install?.shipyardGold ?? 0));
+  }, 0);
+}
+
 function renderSocketAssignments(root, draft) {
   for (const socket of root.querySelectorAll(".arkflight-bay-socket")) {
     socket.classList.remove("is-refit-staged", "is-refit-staged-linked");
@@ -186,7 +193,7 @@ function renderPreview(root, ship, draft) {
   }
 
   if (!draft.assignments.length) {
-    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>INSTALLATION</span><strong>No staged mod</strong></div><p>Drag an owned fitting into a compatible socket. Parts and time are only spent after a successful Engineering check.</p>`;
+    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>INSTALLATION</span><strong>No staged mod</strong></div><p>Drag an owned fitting into a compatible socket. Crew installation uses Engineering; shipyard installation is guaranteed.</p>`;
     return;
   }
 
@@ -197,6 +204,7 @@ function renderPreview(root, ship, draft) {
     return;
   }
   const installParts = refitDraftInstallParts(draft, SHIP_CATALOGS);
+  const shipyardGold = shipyardGoldForDraft(draft);
   const rows = Object.entries(preview.deltas).map(([key, delta]) => {
     const label = STAT_LABELS[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2");
     const sign = delta.delta >= 0 ? "+" : "";
@@ -204,17 +212,18 @@ function renderPreview(root, ship, draft) {
   }).join("");
   panel.innerHTML = `
     <div class="arkflight-bay-section-title"><span>INSTALLATION</span><strong>${draft.assignments.length} ${draft.assignments.length === 1 ? "mod" : "mods"} staged</strong></div>
-    <div class="arkflight-refit-draft-cost"><span><i class="fa-solid fa-toolbox"></i>Install Parts on Success</span><strong>${installParts}</strong></div>
+    <div class="arkflight-refit-draft-cost"><span><i class="fa-solid fa-toolbox"></i>Install Parts</span><strong>${installParts}</strong></div>
+    <div class="arkflight-refit-draft-cost"><span><i class="fa-solid fa-coins"></i>Shipyard Labor</span><strong>${shipyardGold} gp</strong></div>
     <div class="arkflight-refit-draft-list">${draft.assignments.map((assignment) => `<span><i class="fa-solid fa-thumbtack"></i>${stagedItemName(assignment)}</span>`).join("")}</div>
     ${rows ? `<ul class="arkflight-refit-stat-deltas">${rows}</ul>` : `<p>No direct derived-stat change; this fitting may grant a capability, signature, or event hook.</p>`}`;
 }
 
-function fireInstall(app) {
+function fireInstall(app, method = "crew") {
   const actor = shipActor(app);
   const currentDraft = draftFor(actor);
   if (!currentDraft.assignments.length) return;
   const preview = previewRefitDraft(shipPayload(actor), currentDraft, SHIP_CATALOGS);
-  Hooks.callAll("arkflightRefitInstallRequested", { actor, draft: currentDraft, preview });
+  Hooks.callAll("arkflightRefitInstallRequested", { actor, draft: currentDraft, preview, method });
 }
 
 function installDraftActions(app, root, ship, draft) {
@@ -226,11 +235,25 @@ function installDraftActions(app, root, ship, draft) {
       legacyApply.hidden = false;
       legacyApply.disabled = !draft.assignments.length;
       legacyApply.dataset.refitDraftAction = "install";
-      legacyApply.innerHTML = `<i class="fa-solid fa-screwdriver-wrench"></i> INSTALL MOD`;
-      legacyApply.title = "Roll the assigned Engineer's Crafting check. On success, spend installation Parts, install the mod, and advance the required time.";
+      legacyApply.dataset.refitInstallMethod = "crew";
+      legacyApply.innerHTML = `<i class="fa-solid fa-screwdriver-wrench"></i> INSTALL MOD — CREW`;
+      legacyApply.title = "Roll the assigned Engineer's Crafting check. Parts and time are spent on every attempt; success installs the Mod.";
     }
 
     actions.querySelector('[data-refit-draft-action="begin"]')?.remove();
+
+    let shipyard = actions.querySelector('[data-refit-draft-action="shipyard"]');
+    if (!shipyard) {
+      shipyard = document.createElement("button");
+      shipyard.type = "button";
+      shipyard.dataset.refitDraftAction = "shipyard";
+      shipyard.dataset.refitInstallMethod = "shipyard";
+      actions.append(shipyard);
+    }
+    const gold = shipyardGoldForDraft(draft);
+    shipyard.disabled = !draft.assignments.length;
+    shipyard.innerHTML = `<i class="fa-solid fa-building"></i> INSTALL MOD — SHIPYARD`;
+    shipyard.title = `Guaranteed professional installation. Spend installation Parts, record ${gold} gp labor, and advance the full installation time.`;
 
     let reset = actions.querySelector('[data-refit-draft-action="reset"]');
     if (!reset) {
@@ -264,11 +287,11 @@ function wireDraftInteraction(app, root) {
   root.dataset.refitDraftWired = "true";
 
   root.addEventListener("click", (event) => {
-    const install = event.target.closest?.('[data-bay-action="apply"], [data-refit-draft-action="install"]');
+    const install = event.target.closest?.('[data-bay-action="apply"], [data-refit-draft-action="install"], [data-refit-draft-action="shipyard"]');
     if (install && (root.querySelector(".arkflight-bay-schematic.is-ship") || root.querySelector(".arkflight-bay-schematic.is-engine"))) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      fireInstall(app);
+      fireInstall(app, install.dataset.refitInstallMethod ?? "crew");
       return;
     }
 
