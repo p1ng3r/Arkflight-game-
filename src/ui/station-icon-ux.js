@@ -23,7 +23,7 @@ function eventStationAsset(key) {
 }
 
 function decorateCard(card) {
-  if (!card) return;
+  if (!card || card.dataset.stationIconDecorated === "true") return;
   const key = stationKeyFromCard(card);
   if (!key) return;
   const holder = card.querySelector(".arkflight-station-emblem,.arkflight-crew-station-icon");
