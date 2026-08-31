@@ -1,0 +1,225 @@
+.arkflight-ship-shell .arkflight-fitting-card[data-arkflight-fitting="true"] {
+  position: relative;
+  cursor: grab;
+  transition: border-color 140ms ease, background-color 140ms ease, transform 140ms ease, opacity 140ms ease;
+}
+
+.arkflight-ship-shell .arkflight-fitting-card[data-arkflight-fitting="true"]:active {
+  cursor: grabbing;
+}
+
+.arkflight-ship-shell .arkflight-fitting-card.is-dragging {
+  opacity: 0.48;
+  transform: scale(0.985);
+}
+
+.arkflight-ship-shell .arkflight-fitting-card.is-located {
+  border-color: #77d9ef !important;
+  box-shadow: inset 0 0 0 1px rgba(80, 190, 216, 0.35), 0 0 18px rgba(54, 151, 175, 0.22);
+}
+
+.arkflight-drag-grip {
+  position: absolute;
+  top: 7px;
+  left: 7px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  color: #7f9fa4;
+  border: 1px solid rgba(93, 128, 135, 0.42);
+  background: rgba(5, 16, 19, 0.82);
+  pointer-events: none;
+}
+
+.arkflight-fitting-card > strong,
+.arkflight-fitting-card > small,
+.arkflight-fitting-card > p,
+.arkflight-fitting-card > .arkflight-fitting-state {
+  margin-left: 26px;
+}
+
+.arkflight-fitting-dock {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border: 1px solid #7a6231;
+  background:
+    linear-gradient(rgba(4, 16, 20, 0.84), rgba(4, 11, 14, 0.92)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center / cover;
+  box-shadow: inset 0 0 0 1px rgba(211, 169, 79, 0.08), inset 0 0 28px rgba(0, 0, 0, 0.72);
+}
+
+.arkflight-fitting-dock-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(157, 124, 55, 0.48);
+}
+
+.arkflight-fitting-dock-head > div {
+  display: grid;
+  gap: 2px;
+}
+
+.arkflight-fitting-dock-head span {
+  color: #7ebed0;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+}
+
+.arkflight-fitting-dock-head strong {
+  color: #e0c47d;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.arkflight-fitting-dock-head small {
+  max-width: 48%;
+  color: #7f9699;
+  font-size: 9px;
+  text-align: right;
+}
+
+.arkflight-fitting-sockets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.arkflight-fitting-socket {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 0;
+  text-align: left;
+}
+
+.arkflight-fitting-socket > i {
+  grid-row: 1 / 3;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+}
+
+.arkflight-fitting-socket > span {
+  align-self: end;
+  overflow: hidden;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arkflight-fitting-socket > small {
+  align-self: start;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.arkflight-fitting-socket.is-empty {
+  color: #74939a;
+  border: 1px dashed #46616a;
+  background: rgba(5, 24, 29, 0.56);
+}
+
+.arkflight-fitting-socket.is-empty i {
+  color: #67c5dc;
+  border: 1px solid rgba(91, 182, 204, 0.42);
+}
+
+.arkflight-fitting-socket.is-empty small {
+  color: #4f747d;
+}
+
+.arkflight-fitting-socket.is-empty:hover,
+.arkflight-fitting-socket.is-drag-over {
+  color: #dff9ff;
+  border-color: #75d8ee;
+  background: rgba(25, 92, 106, 0.32);
+  box-shadow: inset 0 0 18px rgba(65, 184, 210, 0.13);
+}
+
+.arkflight-fitting-socket.is-occupied {
+  color: #ead9a8;
+  border: 1px solid #6a5730;
+  background: linear-gradient(180deg, rgba(54, 45, 27, 0.72), rgba(20, 24, 23, 0.9));
+}
+
+.arkflight-fitting-socket.is-occupied i {
+  color: #d3a84f;
+  border: 1px solid rgba(184, 139, 53, 0.5);
+  background: rgba(62, 43, 13, 0.46);
+}
+
+.arkflight-fitting-socket.is-occupied small {
+  color: #8aa9ad;
+}
+
+.arkflight-fitting-remove {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 9px 10px;
+  color: #9a876c;
+  border: 1px dashed #5b4936;
+  background: rgba(28, 19, 14, 0.52);
+}
+
+.arkflight-fitting-remove > i {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #b58b50;
+  border: 1px solid #65472d;
+  background: rgba(55, 31, 17, 0.55);
+}
+
+.arkflight-fitting-remove strong,
+.arkflight-fitting-remove span {
+  display: block;
+}
+
+.arkflight-fitting-remove strong {
+  color: #c8aa75;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+
+.arkflight-fitting-remove span {
+  margin-top: 2px;
+  color: #806e5d;
+  font-size: 9px;
+}
+
+.arkflight-fitting-remove.is-drag-over {
+  color: #ffd7bd;
+  border-color: #bd7047;
+  background: rgba(92, 42, 22, 0.35);
+  box-shadow: inset 0 0 20px rgba(172, 74, 35, 0.12);
+}
+
+@media (max-width: 760px) {
+  .arkflight-fitting-dock-head {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .arkflight-fitting-dock-head small {
+    max-width: none;
+    text-align: left;
+  }
+}
