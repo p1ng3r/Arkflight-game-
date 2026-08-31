@@ -1,4 +1,4 @@
-export const SHIP_SCHEMA_VERSION = 4;
+export const SHIP_SCHEMA_VERSION = 5;
 
 export const SHIP_AREA_KEYS = Object.freeze([
   "hull",
@@ -44,6 +44,7 @@ export const STATION_KEYS = Object.freeze([
 export const LEGACY_STATION_ALIASES = Object.freeze({ watchmaster: "battlewatch" });
 
 function resource(value = 0, max = 0) { return { value, max }; }
+function counter(value = 0) { return { value: Math.max(0, Math.trunc(Number(value) || 0)) }; }
 function area(state = AREA_STATES.STABLE) { return { state }; }
 
 function legacySystemToAreaState(value) {
@@ -82,6 +83,51 @@ function normalizeProgression(progression = {}) {
   };
 }
 
+function normalizeIdList(values = []) {
+  return [...new Set((values ?? []).filter((value) => typeof value === "string" && value.trim()).map((value) => value.trim()))];
+}
+
+function normalizeComponentCounts(values = {}) {
+  const normalized = {};
+  for (const [id, quantity] of Object.entries(values ?? {})) {
+    if (!id) continue;
+    const count = Math.max(0, Math.trunc(Number(quantity) || 0));
+    if (count > 0) normalized[id] = count;
+  }
+  return normalized;
+}
+
+function normalizeBlueprints(blueprints = {}) {
+  return {
+    shipModIds: normalizeIdList(blueprints.shipModIds),
+    arkengineModIds: normalizeIdList(blueprints.arkengineModIds)
+  };
+}
+
+function normalizeInventory(inventory = {}) {
+  return {
+    shipMods: normalizeComponentCounts(inventory.shipMods),
+    arkengineMods: normalizeComponentCounts(inventory.arkengineMods)
+  };
+}
+
+function normalizeRefit(refit = {}) {
+  return {
+    workOrders: (refit.workOrders ?? []).filter((entry) => entry && typeof entry === "object").map((entry) => ({ ...entry }))
+  };
+}
+
+function normalizeResources(resources = {}) {
+  return {
+    hull: { ...resource(), ...(resources.hull ?? {}) },
+    lifeveil: { ...resource(), ...(resources.lifeveil ?? {}) },
+    strain: { ...resource(), ...(resources.strain ?? {}) },
+    supplies: { ...resource(), ...(resources.supplies ?? {}) },
+    morale: { ...resource(3, 5), ...(resources.morale ?? {}) },
+    salvageParts: counter(resources.salvageParts?.value ?? resources.salvageParts ?? 0)
+  };
+}
+
 export function createShip(overrides = {}) {
   const base = {
     schemaVersion: SHIP_SCHEMA_VERSION,
@@ -92,7 +138,10 @@ export function createShip(overrides = {}) {
     rooms: [], shipMods: [], weapons: [],
     crew: { stations: Object.fromEntries(STATION_KEYS.map((key) => [key, null])), specialists: [] },
     cargo: { used: 0, notes: "" },
-    resources: { hull: resource(), lifeveil: resource(), strain: resource(), supplies: resource(), morale: resource(3, 5) },
+    resources: { hull: resource(), lifeveil: resource(), strain: resource(), supplies: resource(), morale: resource(3, 5), salvageParts: counter() },
+    blueprints: { shipModIds: [], arkengineModIds: [] },
+    inventory: { shipMods: {}, arkengineMods: {} },
+    refit: { workOrders: [] },
     areas: Object.fromEntries(SHIP_AREA_KEYS.map((key) => [key, area()])),
     progression: normalizeProgression(),
     conditions: []
@@ -105,6 +154,10 @@ export function normalizeShip(ship = {}) {
     ...ship,
     schemaVersion: SHIP_SCHEMA_VERSION,
     crew: { ...(ship.crew ?? {}), stations: migrateStations(ship.crew?.stations), specialists: [...(ship.crew?.specialists ?? [])] },
+    resources: normalizeResources(ship.resources),
+    blueprints: normalizeBlueprints(ship.blueprints),
+    inventory: normalizeInventory(ship.inventory),
+    refit: normalizeRefit(ship.refit),
     areas: migrateAreas(ship),
     progression: normalizeProgression(ship.progression),
     conditions: [...(ship.conditions ?? [])]
@@ -122,7 +175,10 @@ function mergeShip(base, overrides) {
     rooms: [...(overrides.rooms ?? base.rooms)], shipMods: [...(overrides.shipMods ?? base.shipMods)], weapons: [...(overrides.weapons ?? base.weapons)], traits: [...(overrides.traits ?? base.traits)],
     crew: { ...base.crew, ...(overrides.crew ?? {}), stations: { ...base.crew.stations, ...(overrides.crew?.stations ?? {}) }, specialists: [...(overrides.crew?.specialists ?? base.crew.specialists)] },
     cargo: { ...base.cargo, ...(overrides.cargo ?? {}) },
-    resources: Object.fromEntries(Object.entries(base.resources).map(([key, value]) => [key, { ...value, ...(overrides.resources?.[key] ?? {}) }])),
+    resources: { ...base.resources, ...(overrides.resources ?? {}) },
+    blueprints: { ...base.blueprints, ...(overrides.blueprints ?? {}), shipModIds: [...(overrides.blueprints?.shipModIds ?? base.blueprints.shipModIds)], arkengineModIds: [...(overrides.blueprints?.arkengineModIds ?? base.blueprints.arkengineModIds)] },
+    inventory: { ...base.inventory, ...(overrides.inventory ?? {}), shipMods: { ...base.inventory.shipMods, ...(overrides.inventory?.shipMods ?? {}) }, arkengineMods: { ...base.inventory.arkengineMods, ...(overrides.inventory?.arkengineMods ?? {}) } },
+    refit: { ...base.refit, ...(overrides.refit ?? {}), workOrders: [...(overrides.refit?.workOrders ?? base.refit.workOrders)] },
     areas: { ...base.areas, ...(overrides.areas ?? {}) },
     progression: { ...base.progression, ...(overrides.progression ?? {}), talentIds: [...(overrides.progression?.talentIds ?? base.progression.talentIds)], arkcraftUpgrades: { ...base.progression.arkcraftUpgrades, ...(overrides.progression?.arkcraftUpgrades ?? {}) } },
     conditions: [...(overrides.conditions ?? base.conditions)]
