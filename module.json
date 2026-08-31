@@ -69,7 +69,6 @@
     "src/ui/ship-progression-eligibility-ui.js",
     "src/ui/ship-level-reset-fix-ui.js",
     "src/ui/ship-sheet-polish-ui.js",
-    "src/ui/shipwright-fantasy-ui.js",
     "src/ui/shipwright-bay-ui.js",
     "src/ui/shipwright-arkengine-socket-ui.js",
     "src/ui/shipwright-inspector-readability-ui.js"
