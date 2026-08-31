@@ -47,6 +47,7 @@
   "esmodules": [
     "src/foundry/arkflight.js",
     "src/foundry/refit-api.js",
+    "src/foundry/refit-diagnostics.js",
     "src/foundry/combat-api.js",
     "src/ui/mastery-clarity-ui.js",
     "src/ui/event-board-large-desktop.js",
