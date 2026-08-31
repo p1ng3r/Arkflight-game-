@@ -37,13 +37,8 @@ function shellFrom(app, html) {
 
 function categoryForMod(id) {
   const mod = ARKENGINE_MODS[id];
-  const modType = String(mod?.data?.modType ?? "").toLowerCase();
-  const tags = new Set((mod?.tags ?? []).map((entry) => String(entry).toLowerCase()));
-
-  if (modType === "lifeveil" || modType === "harmonic" || modType === "ritual" || tags.has("lifeveil")) return "lifeveil";
-  if (["overcharge", "hardburn", "speed"].includes(modType) || tags.has("overcharge") || tags.has("hard-burn") || tags.has("speed")) return "power";
-  if (["stability", "voidstability", "deepvoid", "corestability"].includes(modType) || tags.has("stability") || tags.has("core-stability")) return "stability";
-  return "utility";
+  const slotClass = String(mod?.data?.refit?.slotClass ?? "utility").toLowerCase();
+  return SOCKET_META[slotClass] ? slotClass : "utility";
 }
 
 function selectedCategory(root) {
