@@ -2,6 +2,54 @@
 .arkflight-persistent-status strong,
 .arkflight-persistent-state-inline strong { text-transform: uppercase; }
 
+/* Persistent Area rows are rebuilt after the base Command sheet renders. Give
+   them their own layout contract so they do not inherit the old seven-system
+   icon/name/state grid and collapse on the first sheet open. */
+.arkflight-system-row.arkflight-area-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  column-gap: 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 42px !important;
+  padding: 8px 12px !important;
+  box-sizing: border-box !important;
+  text-align: left !important;
+}
+
+.arkflight-system-row.arkflight-area-row .arkflight-system-name,
+.arkflight-system-row.arkflight-area-row .arkflight-system-state {
+  position: static !important;
+  inset: auto !important;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
+  line-height: 1.2 !important;
+}
+
+.arkflight-system-row.arkflight-area-row .arkflight-system-name {
+  justify-self: start !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arkflight-system-row.arkflight-area-row .arkflight-system-state {
+  justify-self: end !important;
+  white-space: nowrap;
+  font-size: 10px !important;
+  letter-spacing: .08em !important;
+}
+
+.arkflight-system-row.arkflight-area-row .arkflight-condition-count {
+  position: absolute;
+  right: 7px;
+  bottom: 3px;
+}
+
 .arkflight-area-row.is-stable,
 .arkflight-persistent-status.is-stable,
 .arkflight-persistent-state-inline.is-stable { border-color: rgba(132, 176, 143, .55); }
