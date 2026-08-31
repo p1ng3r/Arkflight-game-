@@ -74,7 +74,7 @@ test("GM reset refunds talents from tiers no longer unlocked", () => {
   const ship = sloop({ progression: { level: 8, xp: 200, talentIds: ["toughness", "responsive-rigging", "expanded-tactical-doctrine"], arkcraftUpgrades: {} } });
   const result = resetShipLevel(ship, 5);
   assert.deepEqual(result.ship.progression.talentIds, ["toughness"]);
-  assert.deepEqual(result.refundedTalentIds.sort(), ["expanded-tactical-doctrine", "responsive-rigging"].sort());
+  assert.deepEqual([...result.refundedTalentIds].sort(), ["expanded-tactical-doctrine", "responsive-rigging"].sort());
   assert.equal(validateProgression(result.ship).ok, true);
 });
 
