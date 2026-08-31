@@ -21,10 +21,17 @@ function catalogForFamily(family) {
 async function resolveActorReference(reference) {
   if (!reference) return null;
   if (reference?.documentName === "Actor") return reference;
+
+  if (typeof reference === "object") {
+    const nested = reference.actorUuid ?? reference.uuid ?? reference.actorId ?? reference.id ?? reference.name ?? null;
+    return nested ? resolveActorReference(nested) : null;
+  }
+
   const direct = game.actors?.get?.(reference)
     ?? game.actors?.contents?.find?.((actor) => actor.uuid === reference || actor.name === reference)
     ?? null;
   if (direct) return direct;
+
   if (typeof reference !== "string") return null;
   try {
     const resolved = await fromUuid(reference);
@@ -119,9 +126,6 @@ async function installStagedMod(actor, draft) {
     return;
   }
 
-  // Only after a successful PF2e Crafting check do we reserve/spend Parts and the
-  // physical fitting. The universal work-order engine then records and completes
-  // the successful installation as one resolved crew job.
   const queued = await game.arkflight?.refit?.beginInstallDraft?.(actor, { assignments: [assignment] }, { method: "crew" });
   if (!queued?.ok || !queued.jobs?.length) {
     const detail = queued?.reason === "insufficient-salvage-parts"
@@ -144,7 +148,7 @@ async function installStagedMod(actor, draft) {
   Hooks.callAll("arkflightRefitModInstalled", { actor, engineer, assignment, job: completed.job, outcome: check.outcome });
 }
 
-Hooks.on("arkflightRefitDraftReady", async ({ actor, draft }) => {
+Hooks.on("arkflightRefitInstallRequested", async ({ actor, draft }) => {
   if (!actor || !draft?.assignments?.length) return;
   if (!game.user?.isGM) {
     ui.notifications?.warn?.("Only the GM can resolve Engineering installation checks during Refit Alpha.");
@@ -159,18 +163,6 @@ Hooks.on("arkflightRefitDraftReady", async ({ actor, draft }) => {
 });
 
 function clarifyRefitLanguage(root) {
-  const install = root.querySelector('[data-refit-draft-action="begin"]');
-  if (install) {
-    install.innerHTML = `<i class="fa-solid fa-screwdriver-wrench"></i> INSTALL MOD`;
-    install.title = "Roll the assigned Engineer's PF2e Crafting check. On success, spend installation Parts, install the fitting, and advance its work time.";
-  }
-
-  const legacyApply = root.querySelector('[data-bay-action="apply"]');
-  if (legacyApply) {
-    legacyApply.hidden = true;
-    legacyApply.disabled = true;
-  }
-
   const coreSave = root.querySelector('[data-action="commission-vessel"]');
   if (coreSave && /apply refit/i.test(coreSave.textContent ?? "")) {
     coreSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> SAVE CORE BUILD`;
