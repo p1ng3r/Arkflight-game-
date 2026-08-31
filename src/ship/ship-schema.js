@@ -1,4 +1,4 @@
-export const SHIP_SCHEMA_VERSION = 3;
+export const SHIP_SCHEMA_VERSION = 4;
 
 export const SHIP_AREA_KEYS = Object.freeze([
   "hull",
@@ -73,8 +73,10 @@ function migrateStations(stations = {}) {
 
 function normalizeProgression(progression = {}) {
   const level = Math.max(1, Math.min(20, Math.trunc(Number(progression.level) || 1)));
+  const xp = Math.max(0, Math.trunc(Number(progression.xp) || 0));
   return {
     level,
+    xp: level >= 20 ? Math.min(1000, xp) : Math.min(999, xp),
     talentIds: [...new Set(progression.talentIds ?? [])],
     arkcraftUpgrades: { ...(progression.arkcraftUpgrades ?? {}) }
   };
