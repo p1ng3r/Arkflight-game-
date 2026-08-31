@@ -15,7 +15,7 @@
   display: grid;
   justify-items: center;
   gap: 2px;
-  width: 92px;
+  width: 104px;
   pointer-events: none;
   color: #f1cf82;
   text-align: center;
@@ -23,15 +23,16 @@
 }
 
 .arkflight-refit-staged-label i {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .arkflight-refit-staged-label small {
-  max-width: 88px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 8px;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
 }
 
@@ -126,11 +127,11 @@
   font-weight: 700;
 }
 
-.arkflight-refit-draft-actions [data-bay-action="apply"] {
-  display: none !important;
-}
-
-.arkflight-refit-draft-actions [data-refit-draft-action="begin"] {
+.arkflight-refit-draft-actions [data-bay-action="apply"][data-refit-draft-action="install"] {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border-color: rgba(216, 167, 71, .72);
   background: rgba(90, 60, 16, .52);
   color: #f0d18a;
