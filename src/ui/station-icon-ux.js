@@ -2,39 +2,48 @@ import { stationPresentation } from "./station-presentation.js";
 
 const MODULE_ID = "arkflight-game";
 const STATION_ICON_BASE = `modules/${MODULE_ID}/assets/ui/stations`;
-const STATION_KEYS = Object.freeze(["captain", "engineer", "navigator", "watchmaster", "veilwarden"]);
+const STATION_KEYS = Object.freeze(["captain", "engineer", "navigator", "battlewatch", "watchmaster", "veilwarden"]);
+
+function canonicalStationKey(value) {
+  const key = String(value ?? "").trim().toLowerCase();
+  return key === "watchmaster" ? "battlewatch" : key;
+}
 
 function stationKeyFromCard(card) {
-  const explicit = card?.dataset?.station ?? card?.dataset?.crewStation ?? null;
+  const explicit = canonicalStationKey(card?.dataset?.station ?? card?.dataset?.crewStation ?? null);
   if (STATION_KEYS.includes(explicit)) return explicit;
   const text = card?.textContent?.toLowerCase() ?? "";
-  return STATION_KEYS.find((key) => text.includes(key)) ?? null;
+  if (text.includes("battlewatch") || text.includes("watchmaster")) return "battlewatch";
+  return ["captain", "engineer", "navigator", "veilwarden"].find((key) => text.includes(key)) ?? null;
 }
 
 function eventStationAsset(key) {
-  return `${STATION_ICON_BASE}/station_icon_${key}.webp`;
+  const assetKey = canonicalStationKey(key) === "battlewatch" ? "watchmaster" : canonicalStationKey(key);
+  return `${STATION_ICON_BASE}/station_icon_${assetKey}.webp`;
 }
 
 function decorateCard(card) {
-  if (!card || card.dataset.stationIconDecorated === "true") return;
+  if (!card) return;
   const key = stationKeyFromCard(card);
   if (!key) return;
   const holder = card.querySelector(".arkflight-station-emblem,.arkflight-crew-station-icon");
   if (!holder) return;
 
-  holder.dataset.station = key;
+  const canonical = canonicalStationKey(key);
+  holder.dataset.station = canonical;
   holder.innerHTML = "";
 
   const image = document.createElement("img");
   image.className = "arkflight-station-icon-image";
-  image.src = eventStationAsset(key);
-  image.alt = `${stationPresentation(key)?.displayName ?? key} station`;
+  image.src = eventStationAsset(canonical);
+  image.alt = `${stationPresentation(canonical)?.displayName ?? canonical} station`;
   image.addEventListener("error", () => {
-    const fallback = stationPresentation(key)?.iconClass ?? "fa-solid fa-circle";
+    const fallback = stationPresentation(canonical)?.iconClass ?? "fa-solid fa-circle";
     holder.innerHTML = `<i class="${fallback}"></i>`;
   }, { once: true });
 
   holder.append(image);
+  card.dataset.station = canonical;
   card.dataset.stationIconDecorated = "true";
 }
 
