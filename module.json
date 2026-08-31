@@ -28,6 +28,7 @@
     "styles/shipwright-arkengine-sockets.css",
     "styles/shipwright-workshop.css",
     "styles/shipwright-refit-inventory.css",
+    "styles/shipwright-refit-draft.css",
     "styles/ship-progression.css",
     "styles/ship-progression-lore.css",
     "styles/ship-progression-eligibility.css",
@@ -74,6 +75,7 @@
     "src/ui/shipwright-bay-ui.js",
     "src/ui/shipwright-arkengine-socket-ui.js",
     "src/ui/shipwright-refit-inventory-ui.js",
+    "src/ui/shipwright-refit-draft-ui.js",
     "src/ui/shipwright-inspector-readability-ui.js"
   ]
 }
