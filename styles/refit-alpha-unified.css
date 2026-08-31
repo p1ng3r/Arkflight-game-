@@ -1,0 +1,140 @@
+:root {
+  --arkflight-ui-workspace: #07111a;
+  --arkflight-ui-panel: #0b1823;
+  --arkflight-ui-panel-raised: #102331;
+  --arkflight-ui-iron: #17232d;
+  --arkflight-ui-brass: #a8874b;
+  --arkflight-ui-brass-soft: rgba(168, 135, 75, 0.55);
+  --arkflight-ui-cyan: #8fe8ff;
+  --arkflight-ui-cyan-soft: rgba(143, 232, 255, 0.22);
+  --arkflight-ui-amber: #d7a24d;
+  --arkflight-ui-red: #b85a50;
+  --arkflight-ui-text: #e8eef2;
+  --arkflight-ui-muted: #8fa2ad;
+}
+
+/* Final Alpha presentation authority. Loaded last on purpose. */
+.arkflight-ship-shell,
+.arkflight-event-board,
+.arkflight-event-manager,
+.arkflight-commissioning-shell,
+.arkflight-shipwright-bay {
+  --arkflight-workspace: var(--arkflight-ui-workspace);
+  --arkflight-panel: var(--arkflight-ui-panel);
+  --arkflight-panel-raised: var(--arkflight-ui-panel-raised);
+  --arkflight-brass: var(--arkflight-ui-brass);
+  --arkflight-cyan: var(--arkflight-ui-cyan);
+  --arkflight-amber: var(--arkflight-ui-amber);
+  --arkflight-danger: var(--arkflight-ui-red);
+  color: var(--arkflight-ui-text);
+}
+
+.arkflight-ship-shell .arkflight-command-panel,
+.arkflight-ship-shell .arkflight-resource-card,
+.arkflight-ship-shell .arkflight-stat-card,
+.arkflight-commissioning-shell .arkflight-bay-left,
+.arkflight-commissioning-shell .arkflight-bay-center,
+.arkflight-commissioning-shell .arkflight-bay-right,
+.arkflight-refit-draft-preview,
+.arkflight-refit-work-orders {
+  background: linear-gradient(180deg, rgba(16, 35, 49, 0.96), rgba(7, 17, 26, 0.98));
+  border-color: var(--arkflight-ui-brass-soft);
+}
+
+.arkflight-ship-shell h1,
+.arkflight-ship-shell h2,
+.arkflight-ship-shell h3,
+.arkflight-commissioning-shell h2,
+.arkflight-commissioning-shell h3,
+.arkflight-event-board h2,
+.arkflight-event-board h3 {
+  color: var(--arkflight-ui-text);
+}
+
+.arkflight-ship-kicker,
+.arkflight-kicker,
+.arkflight-bay-section-title,
+.arkflight-refit-blueprint-tabs,
+.arkflight-refit-inventory-tabs {
+  color: var(--arkflight-ui-brass);
+}
+
+/* Cyan means active/valid/confirmed. */
+.arkflight-ship-shell button.is-active,
+.arkflight-commissioning-shell button.is-active,
+.arkflight-bay-socket.is-category-compatible,
+.arkflight-bay-socket.is-selected,
+.arkflight-readiness.is-ready {
+  border-color: var(--arkflight-ui-cyan);
+  box-shadow: 0 0 0 1px var(--arkflight-ui-cyan-soft), 0 0 14px rgba(143, 232, 255, 0.10);
+}
+
+/* Amber means staged/pending/work in progress. */
+.arkflight-bay-socket.is-refit-staged,
+.arkflight-refit-work-order,
+.arkflight-refit-draft-preview {
+  border-color: rgba(215, 162, 77, 0.72);
+}
+
+/* Red is reserved for invalid/critical states, never normal navigation. */
+.arkflight-bay-socket.is-category-incompatible,
+.arkflight-validation-box,
+.arkflight-readiness.is-incomplete {
+  border-color: rgba(184, 90, 80, 0.76);
+}
+
+/* Refit action hierarchy: reset is quiet, crew/shipyard are explicit primary choices. */
+.arkflight-refit-draft-actions {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.8fr) minmax(160px, 1fr) minmax(160px, 1fr);
+  gap: 8px;
+}
+
+.arkflight-refit-draft-actions button {
+  min-height: 34px;
+  height: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.arkflight-refit-draft-actions [data-refit-install-method="crew"],
+.arkflight-refit-draft-actions [data-refit-install-method="shipyard"] {
+  border-color: rgba(143, 232, 255, 0.62);
+  background: linear-gradient(180deg, rgba(18, 50, 65, 0.95), rgba(8, 27, 38, 0.98));
+}
+
+.arkflight-refit-draft-actions [data-refit-draft-action="reset"] {
+  color: var(--arkflight-ui-muted);
+  border-color: rgba(143, 162, 173, 0.35);
+}
+
+/* Keep compact Shipwright section navigation authoritative across every bay. */
+.arkflight-shipwright-nav,
+.arkflight-shipwright-section-nav,
+.arkflight-commissioning-nav {
+  gap: 6px;
+}
+
+.arkflight-shipwright-nav button,
+.arkflight-shipwright-section-nav button,
+.arkflight-commissioning-nav button {
+  min-height: 30px !important;
+  padding: 5px 9px !important;
+  background: linear-gradient(180deg, rgba(16, 35, 49, 0.98), rgba(7, 17, 26, 0.98)) !important;
+  color: var(--arkflight-ui-text) !important;
+  border-color: var(--arkflight-ui-brass-soft) !important;
+}
+
+.arkflight-shipwright-nav button.is-active,
+.arkflight-shipwright-section-nav button.is-active,
+.arkflight-commissioning-nav button.is-active {
+  color: var(--arkflight-ui-cyan) !important;
+  border-color: rgba(143, 232, 255, 0.72) !important;
+}
+
+@media (max-width: 900px) {
+  .arkflight-refit-draft-actions {
+    grid-template-columns: 1fr;
+  }
+}
