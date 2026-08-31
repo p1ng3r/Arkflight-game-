@@ -64,7 +64,14 @@ export function stageRefitComponent(ship, draft, catalogs, {
     return Object.freeze({ ok: false, reason: "wrong-slot-count", required: slotCost, provided: indices.length, draft: createRefitDraft(draft) });
   }
 
-  const socketCheck = validateRefitSocketAssignment(normalized, catalogs, { family, componentId, socketIndices: indices }, draft);
+  const draftOccupied = new Set((draft?.assignments ?? [])
+    .filter((entry) => entry.family === family)
+    .flatMap((entry) => entry.socketIndices ?? []));
+  if (indices.some((index) => draftOccupied.has(index))) {
+    return Object.freeze({ ok: false, reason: "draft-socket-occupied", draft: createRefitDraft(draft) });
+  }
+
+  const socketCheck = validateRefitSocketAssignment(normalized, catalogs, { family, componentId, socketIndices: indices });
   if (!socketCheck.ok) {
     return Object.freeze({ ...socketCheck, draft: createRefitDraft(draft) });
   }
