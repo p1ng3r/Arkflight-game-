@@ -7,6 +7,7 @@ const moduleJson = JSON.parse(fs.readFileSync(new URL("../module.json", import.m
 const uiPath = new URL("../src/ui/shipwright-refit-draft-ui.js", import.meta.url);
 const uiSource = fs.readFileSync(uiPath, "utf8");
 const cssSource = fs.readFileSync(new URL("../styles/shipwright-refit-draft.css", import.meta.url), "utf8");
+const workOrderSource = fs.readFileSync(new URL("../src/ui/shipwright-refit-work-order-ui.js", import.meta.url), "utf8");
 
 test("Part 5 staged refit assets are loaded after the inventory and socket layers", () => {
   const draftIndex = moduleJson.esmodules.indexOf("src/ui/shipwright-refit-draft-ui.js");
@@ -24,19 +25,29 @@ test("valid socket click and drop are intercepted into staging instead of legacy
   assert.match(uiSource, /stageRefitComponent/);
   assert.match(uiSource, /stopImmediatePropagation\(\)/);
   assert.match(uiSource, /root\.addEventListener\("drop"/);
-  assert.doesNotMatch(uiSource, /\.click\(\).*install/i);
 });
 
-test("draft UI exposes projected install cost and mechanical stat deltas", () => {
+test("draft UI exposes install cost and mechanical stat deltas", () => {
   assert.match(uiSource, /refitDraftInstallParts/);
   assert.match(uiSource, /previewRefitDraft/);
-  assert.match(uiSource, /Projected Install Parts/);
+  assert.match(uiSource, /Install Parts on Success/);
   assert.match(uiSource, /arkflight-refit-stat-deltas/);
 });
 
-test("legacy Apply Refit is hidden behind Reset Draft and Begin Refit", () => {
-  assert.match(uiSource, /data-refit-draft-action=\"reset\"/);
-  assert.match(uiSource, /data-refit-draft-action=\"begin\"/);
-  assert.match(uiSource, /legacyApply\.hidden = true/);
-  assert.match(cssSource, /data-bay-action="apply"/);
+test("visible legacy apply control is repurposed as Install Mod and old click is intercepted", () => {
+  assert.match(uiSource, /INSTALL MOD/);
+  assert.match(uiSource, /dataRefitDraftAction|refitDraftAction/);
+  assert.match(uiSource, /arkflightRefitInstallRequested/);
+  assert.match(uiSource, /event\.stopImmediatePropagation\(\)/);
+  assert.match(cssSource, /data-refit-draft-action="install"/);
+  assert.doesNotMatch(cssSource, /data-bay-action="apply"\][^{]*\{[^}]*display:\s*none/i);
+});
+
+test("Install Mod request is wired to PF2e Crafting resolution", () => {
+  assert.match(workOrderSource, /arkflightRefitInstallRequested/);
+  assert.match(workOrderSource, /skills\?\.crafting/);
+  assert.match(workOrderSource, /skill\.check\.roll/);
+  assert.match(workOrderSource, /beginInstallDraft/);
+  assert.match(workOrderSource, /completeWork/);
+  assert.match(workOrderSource, /game\.time\?\.advance/);
 });
