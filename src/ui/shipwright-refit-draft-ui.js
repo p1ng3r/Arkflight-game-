@@ -139,8 +139,7 @@ function renderSocketAssignments(root, draft) {
     socket.classList.remove("is-refit-staged", "is-refit-staged-linked");
     delete socket.dataset.refitStagedFamily;
     delete socket.dataset.refitStagedId;
-    const stagedLabel = socket.querySelector(".arkflight-refit-staged-label");
-    stagedLabel?.remove();
+    socket.querySelector(".arkflight-refit-staged-label")?.remove();
   }
 
   for (const assignment of draft.assignments) {
@@ -187,14 +186,14 @@ function renderPreview(root, ship, draft) {
   }
 
   if (!draft.assignments.length) {
-    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>REFIT DRAFT</span><strong>No staged changes</strong></div><p>Drag an owned fitting into a compatible socket. Nothing is installed or consumed until a later work order completes.</p>`;
+    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>INSTALLATION</span><strong>No staged mod</strong></div><p>Drag an owned fitting into a compatible socket. Parts and time are only spent after a successful Engineering check.</p>`;
     return;
   }
 
   let preview;
   try { preview = previewRefitDraft(ship, draft, SHIP_CATALOGS); }
   catch (error) {
-    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>REFIT DRAFT</span><strong>${draft.assignments.length} staged</strong></div><p>Mechanical preview unavailable: ${error.message}</p>`;
+    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>INSTALLATION</span><strong>${draft.assignments.length} staged</strong></div><p>Mechanical preview unavailable: ${error.message}</p>`;
     return;
   }
   const installParts = refitDraftInstallParts(draft, SHIP_CATALOGS);
@@ -204,52 +203,49 @@ function renderPreview(root, ship, draft) {
     return `<li><span>${label}</span><strong>${delta.before} → ${delta.after}</strong><small>${sign}${delta.delta}</small></li>`;
   }).join("");
   panel.innerHTML = `
-    <div class="arkflight-bay-section-title"><span>REFIT DRAFT</span><strong>${draft.assignments.length} ${draft.assignments.length === 1 ? "fitting" : "fittings"} staged</strong></div>
-    <div class="arkflight-refit-draft-cost"><span><i class="fa-solid fa-toolbox"></i>Projected Install Parts</span><strong>${installParts}</strong></div>
+    <div class="arkflight-bay-section-title"><span>INSTALLATION</span><strong>${draft.assignments.length} ${draft.assignments.length === 1 ? "mod" : "mods"} staged</strong></div>
+    <div class="arkflight-refit-draft-cost"><span><i class="fa-solid fa-toolbox"></i>Install Parts on Success</span><strong>${installParts}</strong></div>
     <div class="arkflight-refit-draft-list">${draft.assignments.map((assignment) => `<span><i class="fa-solid fa-thumbtack"></i>${stagedItemName(assignment)}</span>`).join("")}</div>
     ${rows ? `<ul class="arkflight-refit-stat-deltas">${rows}</ul>` : `<p>No direct derived-stat change; this fitting may grant a capability, signature, or event hook.</p>`}`;
 }
 
+function fireInstall(app) {
+  const actor = shipActor(app);
+  const currentDraft = draftFor(actor);
+  if (!currentDraft.assignments.length) return;
+  const preview = previewRefitDraft(shipPayload(actor), currentDraft, SHIP_CATALOGS);
+  Hooks.callAll("arkflightRefitInstallRequested", { actor, draft: currentDraft, preview });
+}
+
 function installDraftActions(app, root, ship, draft) {
-  const actions = root.querySelector(".arkflight-shipwright-bay-active .arkflight-bay-actions") ?? root.querySelector(".arkflight-bay-actions");
-  if (!actions) return;
-  actions.classList.add("arkflight-refit-draft-actions");
-  const legacyApply = actions.querySelector('[data-bay-action="apply"]');
-  if (legacyApply) {
-    legacyApply.disabled = true;
-    legacyApply.hidden = true;
+  const actionGroups = [...root.querySelectorAll(".arkflight-bay-actions")];
+  for (const actions of actionGroups) {
+    actions.classList.add("arkflight-refit-draft-actions");
+    const legacyApply = actions.querySelector('[data-bay-action="apply"]');
+    if (legacyApply) {
+      legacyApply.hidden = false;
+      legacyApply.disabled = !draft.assignments.length;
+      legacyApply.dataset.refitDraftAction = "install";
+      legacyApply.innerHTML = `<i class="fa-solid fa-screwdriver-wrench"></i> INSTALL MOD`;
+      legacyApply.title = "Roll the assigned Engineer's Crafting check. On success, spend installation Parts, install the mod, and advance the required time.";
+    }
+
+    actions.querySelector('[data-refit-draft-action="begin"]')?.remove();
+
+    let reset = actions.querySelector('[data-refit-draft-action="reset"]');
+    if (!reset) {
+      reset = document.createElement("button");
+      reset.type = "button";
+      reset.dataset.refitDraftAction = "reset";
+      reset.innerHTML = `<i class="fa-solid fa-rotate-left"></i> RESET STAGED MOD`;
+      actions.prepend(reset);
+      reset.addEventListener("click", () => {
+        setDraft(shipActor(app), resetRefitDraft(draftFor(shipActor(app))));
+        renderDraft(app, root);
+      });
+    }
+    reset.disabled = !draft.assignments.length;
   }
-  let reset = actions.querySelector('[data-refit-draft-action="reset"]');
-  if (!reset) {
-    reset = document.createElement("button");
-    reset.type = "button";
-    reset.dataset.refitDraftAction = "reset";
-    reset.innerHTML = `<i class="fa-solid fa-rotate-left"></i> RESET DRAFT`;
-    actions.append(reset);
-    reset.addEventListener("click", () => {
-      setDraft(shipActor(app), resetRefitDraft(draftFor(shipActor(app))));
-      renderDraft(app, root);
-    });
-  }
-  let begin = actions.querySelector('[data-refit-draft-action="begin"]');
-  if (!begin) {
-    begin = document.createElement("button");
-    begin.type = "button";
-    begin.className = "is-primary";
-    begin.dataset.refitDraftAction = "begin";
-    begin.innerHTML = `<i class="fa-solid fa-hammer"></i> BEGIN REFIT`;
-    actions.append(begin);
-    begin.addEventListener("click", () => {
-      const actor = shipActor(app);
-      const currentDraft = draftFor(actor);
-      if (!currentDraft.assignments.length) return;
-      const preview = previewRefitDraft(shipPayload(actor), currentDraft, SHIP_CATALOGS);
-      Hooks.callAll("arkflightRefitDraftReady", { actor, draft: currentDraft, preview });
-      ui.notifications?.info?.("Refit draft is ready for work-order resolution. No fitting has been installed yet.");
-    });
-  }
-  reset.disabled = !draft.assignments.length;
-  begin.disabled = !draft.assignments.length;
 }
 
 function renderDraft(app, root) {
@@ -268,6 +264,14 @@ function wireDraftInteraction(app, root) {
   root.dataset.refitDraftWired = "true";
 
   root.addEventListener("click", (event) => {
+    const install = event.target.closest?.('[data-bay-action="apply"], [data-refit-draft-action="install"]');
+    if (install && (root.querySelector(".arkflight-bay-schematic.is-ship") || root.querySelector(".arkflight-bay-schematic.is-engine"))) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      fireInstall(app);
+      return;
+    }
+
     const socket = event.target.closest?.(".arkflight-bay-schematic.is-engine .arkflight-bay-socket, .arkflight-bay-schematic.is-ship .arkflight-bay-socket");
     if (!socket) return;
     const actor = shipActor(app);
