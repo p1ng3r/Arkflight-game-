@@ -1,0 +1,188 @@
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine {
+  position: relative;
+  min-height: 560px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(25, 111, 146, 0.13), transparent 45%),
+    rgba(2, 12, 18, 0.72);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-blueprint-art {
+  position: absolute;
+  inset: 8px 12px 38px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-schematic-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.78;
+  filter: saturate(0.82) brightness(0.82) contrast(1.08);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-core-status {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 2px;
+  min-width: 112px;
+  padding: 5px 9px;
+  border: 1px solid rgba(98, 209, 235, 0.42);
+  background: rgba(2, 15, 22, 0.78);
+  box-shadow: inset 0 0 14px rgba(65, 188, 219, 0.12), 0 0 12px rgba(39, 184, 224, 0.08);
+  text-align: center;
+  color: #d8c58e;
+  letter-spacing: .09em;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-core-status span {
+  font-size: 8px;
+  color: #a8925c;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-core-status strong {
+  font-size: 10px;
+  color: #8fe8ff;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket-layer {
+  position: absolute;
+  inset: 8px 12px 38px;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket {
+  --arkflight-socket-accent: #6fcce6;
+  position: absolute !important;
+  width: 86px !important;
+  height: 86px !important;
+  min-width: 86px !important;
+  min-height: 86px !important;
+  transform: translate(-50%, -50%) !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  pointer-events: auto;
+  color: #d7e8ec;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-socket-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  filter: saturate(.65) brightness(.72);
+  opacity: .83;
+  transition: filter 120ms ease, opacity 120ms ease, transform 120ms ease;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-socket-marker {
+  position: absolute;
+  inset: 17px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  border-radius: 50%;
+  background: rgba(3, 14, 20, .78);
+  border: 1px solid color-mix(in srgb, var(--arkflight-socket-accent) 65%, transparent);
+  box-shadow: inset 0 0 12px color-mix(in srgb, var(--arkflight-socket-accent) 20%, transparent);
+  color: var(--arkflight-socket-accent);
+  pointer-events: none;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--arkflight-socket-accent) 50%, transparent);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-socket-marker i {
+  font-size: 15px;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-socket-marker small {
+  max-width: 54px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket > i,
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket > span:not(.arkflight-engine-socket-marker) {
+  display: none !important;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-socket-flexible { --arkflight-socket-accent: #d1ad58; }
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-socket-power { --arkflight-socket-accent: #58c8ff; }
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-socket-stability { --arkflight-socket-accent: #e2a849; }
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-socket-lifeveil { --arkflight-socket-accent: #b88cff; }
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-socket-utility { --arkflight-socket-accent: #c49a55; }
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-category-compatible:not(.is-occupied) .arkflight-engine-socket-art,
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-drop-ready .arkflight-engine-socket-art {
+  filter: saturate(1.08) brightness(1.08) drop-shadow(0 0 10px var(--arkflight-socket-accent));
+  opacity: 1;
+  transform: scale(1.08);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-category-compatible:not(.is-occupied) .arkflight-engine-socket-marker {
+  background: rgba(4, 24, 31, .86);
+  border-color: var(--arkflight-socket-accent);
+  box-shadow: inset 0 0 16px color-mix(in srgb, var(--arkflight-socket-accent) 35%, transparent), 0 0 12px color-mix(in srgb, var(--arkflight-socket-accent) 28%, transparent);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-category-incompatible:not(.is-occupied) {
+  opacity: .23;
+  filter: grayscale(.8);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-occupied .arkflight-engine-socket-art {
+  filter: saturate(.45) brightness(.52);
+  opacity: .76;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-occupied .arkflight-engine-socket-marker {
+  background: rgba(16, 11, 5, .86);
+  border-color: #b99851;
+  color: #d9c17d;
+  box-shadow: inset 0 0 14px rgba(197, 161, 75, .2);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-occupied .arkflight-engine-socket-marker::after {
+  content: "BOLTED";
+  position: absolute;
+  bottom: -11px;
+  font-size: 6px;
+  color: #c8aa63;
+  letter-spacing: .1em;
+}
+
+@media (max-width: 1350px), (max-height: 820px) {
+  .arkflight-ship-shell .arkflight-bay-schematic.is-engine {
+    min-height: 470px;
+  }
+
+  .arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket {
+    width: 70px !important;
+    height: 70px !important;
+    min-width: 70px !important;
+    min-height: 70px !important;
+  }
+
+  .arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-engine-socket-marker {
+    inset: 14px;
+  }
+}
