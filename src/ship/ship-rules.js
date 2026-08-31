@@ -31,6 +31,25 @@ export const INSTALLED_HARDWARE_CARGO_EXEMPT = Object.freeze([
   "installedWeapons"
 ]);
 
+export const HULL_REPAIR = Object.freeze({
+  skill: "crafting",
+  hullPerSalvagePart: 10,
+  criticalMultiplier: 2
+});
+
+export const HULL_REPAIR_DEGREES = Object.freeze({
+  CRITICAL_SUCCESS: "criticalSuccess",
+  SUCCESS: "success",
+  FAILURE: "failure",
+  CRITICAL_FAILURE: "criticalFailure"
+});
+
+export const WRECK_RECOMMISSION = Object.freeze({
+  requiresShipyard: true,
+  allowedInVoid: false,
+  restoredFractionOfBaseMax: 0.10
+});
+
 function clampInteger(value, min, max) {
   const number = Math.trunc(Number(value) || 0);
   return Math.max(min, Math.min(max, number));
@@ -61,4 +80,54 @@ export function isCargoBearingCategory(category) {
 
 export function isInstalledHardwareCargoExempt(category) {
   return INSTALLED_HARDWARE_CARGO_EXEMPT.includes(category);
+}
+
+/**
+ * Resolve one at-sea Hull HP repair attempt.
+ *
+ * A caller supplies how many physical Salvage Parts are committed and may pass
+ * explicit permanent modifiers from installed Mods/Talents. The base rule stays
+ * centralized here instead of being copied into UI, Event, or GM code.
+ */
+export function resolveHullRepair({
+  degree,
+  salvagePartsCommitted = 1,
+  hullPerPartBonus = 0,
+  repairMultiplier = 1
+} = {}) {
+  const parts = Math.max(0, Math.trunc(Number(salvagePartsCommitted) || 0));
+  const perPart = Math.max(0, HULL_REPAIR.hullPerSalvagePart + Number(hullPerPartBonus || 0));
+  const permanentMultiplier = Math.max(0, Number(repairMultiplier) || 0);
+
+  switch (degree) {
+    case HULL_REPAIR_DEGREES.CRITICAL_SUCCESS:
+      return Object.freeze({
+        success: true,
+        hullRestored: Math.floor(parts * perPart * permanentMultiplier * HULL_REPAIR.criticalMultiplier),
+        salvagePartsConsumed: parts
+      });
+    case HULL_REPAIR_DEGREES.SUCCESS:
+      return Object.freeze({
+        success: true,
+        hullRestored: Math.floor(parts * perPart * permanentMultiplier),
+        salvagePartsConsumed: parts
+      });
+    case HULL_REPAIR_DEGREES.FAILURE:
+      return Object.freeze({ success: false, hullRestored: 0, salvagePartsConsumed: 0 });
+    case HULL_REPAIR_DEGREES.CRITICAL_FAILURE:
+      return Object.freeze({ success: false, hullRestored: 0, salvagePartsConsumed: parts });
+    default:
+      throw new Error(`Unknown Hull repair degree: ${degree}`);
+  }
+}
+
+export function canRecommissionWreck({ atShipyard = false, inVoid = false } = {}) {
+  if (inVoid && !WRECK_RECOMMISSION.allowedInVoid) return false;
+  if (WRECK_RECOMMISSION.requiresShipyard && !atShipyard) return false;
+  return true;
+}
+
+export function recommissionHullValue(baseMaxHull) {
+  const base = Math.max(0, Number(baseMaxHull) || 0);
+  return Math.max(1, Math.floor(base * WRECK_RECOMMISSION.restoredFractionOfBaseMax));
 }
