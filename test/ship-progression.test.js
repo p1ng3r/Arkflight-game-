@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createShip } from "../src/ship/ship-schema.js";
 import { deriveShip } from "../src/ship/derive-ship.js";
 import { talentPointsForLevel, validateProgression } from "../src/ship/progression.js";
-import { addShipExperience, setShipExperience, shipExperienceView, SHIP_XP_PER_LEVEL } from "../src/ship/ship-xp.js";
+import { addShipExperience, resetShipLevel, setShipExperience, shipExperienceView, SHIP_XP_PER_LEVEL } from "../src/ship/ship-xp.js";
 import { validateShip } from "../src/ship/validate-ship.js";
 import { hullCombatProfile } from "../src/combat/combat-schema.js";
 import { getMasteryTechnique } from "../src/content/base-mastery.js";
@@ -57,6 +57,35 @@ test("ship XP stops advancing past level 20", () => {
   assert.equal(view.level, 20);
   assert.equal(view.nextLevel, null);
   assert.equal(view.atMaximum, true);
+});
+
+test("GM reset lowers ship level and clears current XP", () => {
+  const ship = sloop({ progression: { level: 9, xp: 640, talentIds: ["toughness", "engineers-vessel"], arkcraftUpgrades: {} } });
+  const result = resetShipLevel(ship, 5);
+  assert.equal(result.previousLevel, 9);
+  assert.equal(result.level, 5);
+  assert.equal(result.ship.progression.level, 5);
+  assert.equal(result.ship.progression.xp, 0);
+  assert.deepEqual(result.ship.progression.talentIds, ["toughness", "engineers-vessel"]);
+  assert.equal(validateProgression(result.ship).ok, true);
+});
+
+test("GM reset refunds talents from tiers no longer unlocked", () => {
+  const ship = sloop({ progression: { level: 8, xp: 200, talentIds: ["toughness", "responsive-rigging", "expanded-tactical-doctrine"], arkcraftUpgrades: {} } });
+  const result = resetShipLevel(ship, 5);
+  assert.deepEqual(result.ship.progression.talentIds, ["toughness"]);
+  assert.deepEqual(result.refundedTalentIds.sort(), ["expanded-tactical-doctrine", "responsive-rigging"].sort());
+  assert.equal(validateProgression(result.ship).ok, true);
+});
+
+test("GM reset refunds newest legal talents until the lower TP budget is legal", () => {
+  const ship = sloop({ progression: { level: 5, xp: 500, talentIds: ["toughness", "engineers-vessel", "voyage-trained", "battle-trained"], arkcraftUpgrades: {} } });
+  const result = resetShipLevel(ship, 2);
+  assert.equal(result.ship.progression.level, 2);
+  assert.equal(result.ship.progression.xp, 0);
+  assert.deepEqual(result.ship.progression.talentIds, ["toughness", "engineers-vessel"]);
+  assert.deepEqual(result.refundedTalentIds, ["battle-trained", "voyage-trained"]);
+  assert.equal(validateProgression(result.ship).ok, true);
 });
 
 test("Foundation toughness scales from base Hull percentage", () => {
