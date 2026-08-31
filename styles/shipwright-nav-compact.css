@@ -1,0 +1,68 @@
+/* Final Shipwright section navigation override.
+ * Keeps Core Build / Engine Mods / Rooms / Ship Mods visually identical across
+ * commissioning and fitting bays, and prevents the section selector from
+ * consuming excessive vertical space.
+ */
+
+.arkflight-ship-shell .arkflight-shipwright-subnav {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 8px 0 10px !important;
+  padding: 4px !important;
+  border: 1px solid rgba(145, 112, 57, .58) !important;
+  background: #020910 !important;
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, .48) !important;
+}
+
+.arkflight-ship-shell .arkflight-shipwright-subnav button,
+.arkflight-ship-shell .arkflight-shipwright-subnav button:hover,
+.arkflight-ship-shell .arkflight-shipwright-subnav button:focus {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 28px !important;
+  height: 28px !important;
+  margin: 0 !important;
+  padding: 3px 8px !important;
+  border: 1px solid rgba(78, 117, 128, .52) !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  color: #aebbc0 !important;
+  background: linear-gradient(180deg, #081a24, #04111a) !important;
+  box-shadow: none !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  line-height: 20px !important;
+  letter-spacing: .035em !important;
+  text-align: center !important;
+  text-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+.arkflight-ship-shell .arkflight-shipwright-subnav button:hover,
+.arkflight-ship-shell .arkflight-shipwright-subnav button:focus-visible {
+  border-color: rgba(111, 188, 205, .76) !important;
+  color: #f0d99d !important;
+  background: linear-gradient(180deg, #0d2a36, #071823) !important;
+}
+
+.arkflight-ship-shell .arkflight-shipwright-subnav button.is-active {
+  border-color: #69c9dc !important;
+  color: #d9f8ff !important;
+  background: linear-gradient(180deg, #124050, #09232f) !important;
+  box-shadow: inset 0 -3px 0 #68c9dc !important;
+}
+
+.arkflight-ship-shell .arkflight-shipwright-subnav button i {
+  margin-right: 5px !important;
+  color: inherit !important;
+  font-size: 10px !important;
+}
+
+@media (max-width: 760px) {
+  .arkflight-ship-shell .arkflight-shipwright-subnav {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
