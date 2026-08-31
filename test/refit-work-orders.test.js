@@ -5,7 +5,7 @@ import { SHIP_CATALOGS } from "../src/content/index.js";
 import { grantComponent, grantSalvageParts, salvageParts, unlockBlueprint, componentQuantity } from "../src/ship/refit-state.js";
 import { createRefitDraft } from "../src/ship/refit-draft.js";
 import { REFIT_JOB_STATES, REFIT_METHODS } from "../src/ship/refit-rules.js";
-import { queueInstallDraft, queueBuildJob, queueRemoveJob, queueRepairJob, startRefitJob, completeRefitJob, recordCrewInstallComplication } from "../src/ship/refit-work-orders.js";
+import { queueInstallDraft, queueBuildJob, queueRemoveJob, queueRepairJob, startRefitJob, completeRefitJob, recordCrewInstallComplication, recordCrewInstallFailure } from "../src/ship/refit-work-orders.js";
 
 const ids = (() => { let n = 0; return () => `job-${++n}`; })();
 
@@ -36,12 +36,34 @@ test("install completion is the boundary that makes a fitting mechanically insta
   assert.deepEqual(completed.ship.arkengine.modIds, ["pressure-lattice-tuning"]);
 });
 
-test("critical engineering failure records a complication without consuming Parts or fitting", () => {
+test("failed engineering install spends install Parts but preserves fitting", () => {
+  let ship = grantComponent(createShip(), "shipMod", "reinforced-structural-ribbing", 1);
+  ship = grantSalvageParts(ship, 5);
+  const assignment = { family: "shipMod", componentId: "reinforced-structural-ribbing", socketIndices: [0] };
+  const result = recordCrewInstallFailure(ship, assignment, SHIP_CATALOGS, {
+    workerActorUuid: "Actor.engineer",
+    outcome: "failure",
+    elapsedHours: 4,
+    idFactory: ids,
+    createdAt: "2026-08-31T14:00:00Z"
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.job.status, REFIT_JOB_STATES.COMPLETE);
+  assert.equal(result.job.result.outcome, "failure");
+  assert.equal(result.job.result.elapsedHours, 4);
+  assert.equal(result.job.reservation.partsSpent, 1);
+  assert.equal(componentQuantity(result.ship, "shipMod", "reinforced-structural-ribbing"), 1);
+  assert.equal(salvageParts(result.ship), 4);
+  assert.deepEqual(result.ship.shipMods, []);
+});
+
+test("critical engineering failure spends install Parts, preserves fitting, and records complication", () => {
   let ship = grantComponent(createShip(), "shipMod", "reinforced-structural-ribbing", 1);
   ship = grantSalvageParts(ship, 5);
   const assignment = { family: "shipMod", componentId: "reinforced-structural-ribbing", socketIndices: [0] };
   const result = recordCrewInstallComplication(ship, assignment, SHIP_CATALOGS, {
     workerActorUuid: "Actor.engineer",
+    elapsedHours: 4,
     idFactory: ids,
     createdAt: "2026-08-31T14:00:00Z"
   });
@@ -49,10 +71,11 @@ test("critical engineering failure records a complication without consuming Part
   assert.equal(result.job.status, REFIT_JOB_STATES.COMPLICATION);
   assert.equal(result.job.result.outcome, "criticalFailure");
   assert.equal(result.job.result.workerActorUuid, "Actor.engineer");
-  assert.equal(result.job.reservation.partsSpent, 0);
+  assert.equal(result.job.result.elapsedHours, 4);
+  assert.equal(result.job.reservation.partsSpent, 1);
   assert.equal(result.job.reservation.componentHeld, false);
   assert.equal(componentQuantity(result.ship, "shipMod", "reinforced-structural-ribbing"), 1);
-  assert.equal(salvageParts(result.ship), 5);
+  assert.equal(salvageParts(result.ship), 4);
   assert.deepEqual(result.ship.shipMods, []);
 });
 
