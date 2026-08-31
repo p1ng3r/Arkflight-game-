@@ -4,6 +4,7 @@ import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
+import { ArkflightGMOperations } from "../ui/gm-operations-app.js";
 import { installMasteryTacticsUI } from "../ui/mastery-tactics-ui.js";
 import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 import { installPlayerResolutionUI } from "../ui/player-resolution-ui.js";
@@ -14,6 +15,7 @@ const MODULE_ID = "arkflight-game";
 let controller = null;
 let board = null;
 let rewardSummary = null;
+let gmOperations = null;
 let lastRoundRewardKey = null;
 let lastEventRewardKey = null;
 let lastEventActive = false;
@@ -22,6 +24,12 @@ function ensureBoard() {
   if (!controller) return null;
   if (!board) board = new ArkflightEventBoard(controller);
   return board;
+}
+
+function ensureGMOperations() {
+  if (!game.user.isGM) return null;
+  if (!gmOperations) gmOperations = new ArkflightGMOperations();
+  return gmOperations;
 }
 
 function decorateEventCompleteBoard() {
@@ -69,12 +77,9 @@ function showRewardSummary() {
   rewardSummary.render({ force: true });
 }
 
-function openGMOperations() {
+function openGMOperations(options = {}) {
   if (!game.user.isGM) return null;
-  const gmOperations = game.arkflight?.gmOperations;
-  if (gmOperations && typeof gmOperations.open === "function") return gmOperations.open();
-  ui.notifications?.info("Arkflight GM Operations is not available yet.");
-  return null;
+  return ensureGMOperations()?.open(options) ?? null;
 }
 
 function showActiveEventChoice() {
@@ -94,7 +99,7 @@ function showActiveEventChoice() {
         action: "operations",
         label: "Open GM Operations",
         icon: "fa-solid fa-screwdriver-wrench",
-        callback: () => openGMOperations()
+        callback: () => openGMOperations({ section: "operations" })
       }
     ]
   }).render({ force: true });
@@ -139,6 +144,7 @@ Hooks.once("init", () => {
     events: ARKFLIGHT_EVENTS,
     stationOptions: baseStationOptions(),
     get controller() { return controller; },
+    get gmOperations() { return ensureGMOperations(); },
     openBoard() { renderBoard(); return board; },
     openRewards() { showRewardSummary(); return rewardSummary; },
     openGMOperations,
@@ -165,6 +171,7 @@ Hooks.once("ready", () => {
         ui.controls?.render();
       }
       if (board?.rendered) renderBoard();
+      if (gmOperations?.rendered) gmOperations.render({ force: true });
       announceStateRewards(state);
     }
   });
