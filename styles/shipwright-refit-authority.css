@@ -40,3 +40,53 @@
 .arkflight-fitting-card[data-refit-physical-clone="true"] .arkflight-fitting-state {
   color: #d8fbff;
 }
+
+.arkflight-refit-overcapacity-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 8px 12px 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(222, 82, 67, .72);
+  background: rgba(68, 15, 14, .78);
+  box-shadow: inset 0 0 14px rgba(180, 42, 34, .12);
+  color: #f4d5ce;
+}
+
+.arkflight-refit-overcapacity-warning > i {
+  margin-top: 2px;
+  color: #ff8a76;
+}
+
+.arkflight-refit-overcapacity-warning div {
+  display: grid;
+  gap: 3px;
+}
+
+.arkflight-refit-overcapacity-warning strong,
+.arkflight-refit-overcapacity-label {
+  color: #ff9a84;
+  font-weight: 800;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+}
+
+.arkflight-refit-overcapacity-warning span {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.arkflight-fitting-card.is-over-capacity {
+  border-color: rgba(222, 82, 67, .78) !important;
+  box-shadow: inset 0 0 18px rgba(166, 35, 30, .16) !important;
+}
+
+.arkflight-refit-overcapacity-label {
+  display: block;
+  margin-top: 6px;
+  font-size: 9px;
+}
+
+.arkflight-bay-socket.is-refit-installed {
+  cursor: default;
+}
