@@ -21,6 +21,7 @@
     "styles/event-board-gm-header-tools.css",
     "styles/arkcraft-skill-scroll.css",
     "styles/ship-sheet.css",
+    "styles/ship-sheet-polish.css",
     "styles/ship-sheet-commissioning.css",
     "styles/shipwright-ux.css",
     "styles/ship-progression.css",
@@ -63,6 +64,7 @@
     "src/ui/ship-progression-ui.js",
     "src/ui/ship-xp-ui.js",
     "src/ui/ship-progression-eligibility-ui.js",
-    "src/ui/ship-level-reset-fix-ui.js"
+    "src/ui/ship-level-reset-fix-ui.js",
+    "src/ui/ship-sheet-polish-ui.js"
   ]
 }
