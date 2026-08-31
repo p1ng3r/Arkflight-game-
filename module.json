@@ -43,7 +43,8 @@
     "styles/player-action-board.css",
     "styles/player-action-board-order.css",
     "styles/player-action-board-cleanup.css",
-    "styles/player-action-board-gm.css"
+    "styles/player-action-board-gm.css",
+    "styles/shipwright-nav-compact.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
