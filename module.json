@@ -24,6 +24,7 @@
     "styles/ship-sheet-commissioning.css",
     "styles/shipwright-ux.css",
     "styles/ship-progression.css",
+    "styles/ship-progression-lore.css",
     "styles/ship-xp.css",
     "styles/armory-ux.css",
     "styles/crew-ux.css",
