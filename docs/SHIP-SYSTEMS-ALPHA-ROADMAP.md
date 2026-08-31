@@ -95,7 +95,7 @@ Ordinary Hull HP damage does **not** automatically degrade the Hull Area.
 
 Hull Area degradation comes from the shared Strain threshold system, authored critical/catastrophic effects, or another explicit rule. This prevents Hull HP and Hull Area state from becoming duplicate damage tracks.
 
-### At-sea Hull HP repair
+### Hull HP repair
 
 Hull HP repair uses the assigned repairer's native PF2e **Crafting** check and physical **Salvage Parts**.
 
@@ -105,12 +105,16 @@ Base repair economy:
 - Critical Success repairs twice the normal amount: 20 Hull per Salvage Part.
 - Failure repairs nothing and does not consume the committed Salvage Parts.
 - Critical Failure repairs nothing and consumes the committed Salvage Parts.
+- Base repair time is **1 hour per Salvage Part committed**.
+- Critical Success improves repaired Hull, not the base time.
 
-Installed Mods, Ship Talents, Rooms, specialists, or other authored permanent effects may explicitly improve Hull repaired per Part, efficiency, or other repair parameters. They modify the shared Hull repair rule rather than creating parallel repair systems.
+Hull repair may not be performed while the ship is **underway in the Void**. The ship must be in a valid safe repair situation such as landed, docked, anchored, berthed, or another GM-authorized secure repair site.
+
+The repair check uses the standard PF2e level-based DC for **ship level + 5**. Do not add ship level to a DC a second time after resolving the level-based DC.
+
+Installed Mods, Ship Talents, Rooms, specialists, or other authored permanent effects may explicitly improve Hull repaired per Part, repair time, efficiency, or other repair parameters. They modify the shared Hull repair rule rather than creating parallel repair systems.
 
 Hull HP repair is separate from Area repair. Hull HP repair restores numerical structural integrity; Hull Area repair improves the persistent `Stable -> Disabled` readiness condition.
-
-Exact base repair time and Crafting DC are deferred until the remaining Hull repair workflow is locked.
 
 ### Zero Hull and wreck recommissioning
 
@@ -118,9 +122,16 @@ Exact base repair time and Crafting DC are deferred until the remaining Hull rep
 
 A Wrecked vessel cannot be brought back through ordinary emergency Hull patching and cannot be recommissioned in the Void.
 
-Recommissioning requires a proper **shipyard**, meaningful cost, and significant time. Exact cost/time values are deferred until explicitly locked.
+Recommissioning requires a proper **shipyard**.
 
-Successful recommissioning restores the ship to **10% of Base Max Hull**. Normal Hull HP repairs may then continue from that value.
+Locked base recommission rules:
+
+- Time: **7 days**.
+- Cost: **25% of the vessel's level-appropriate replacement/refit value**.
+- Check: **none**; this represents professional shipyard reconstruction.
+- Restored Hull: **10% of Base Max Hull**.
+
+Normal Hull HP repairs may continue after recommissioning.
 
 Recommissioning does not automatically repair degraded Areas, clear Strain, refill Lifeveil, restore Supplies, or otherwise reset the ship.
 
