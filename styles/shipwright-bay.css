@@ -1,0 +1,529 @@
+.arkflight-ship-sheet .arkflight-shipwright-bay-active {
+  --arkflight-bay-gold: #caa55b;
+  --arkflight-bay-brass: #80632e;
+  --arkflight-bay-cyan: #67d9ef;
+  --arkflight-bay-cyan-dim: rgba(72, 185, 207, 0.24);
+  --arkflight-bay-ink: #071014;
+}
+
+.arkflight-shipwright-bay-active .arkflight-commissioning-shell {
+  grid-template-columns: 1fr;
+  min-height: 690px;
+  background:
+    linear-gradient(rgba(5, 13, 17, 0.94), rgba(5, 11, 14, 0.98)),
+    url('../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp') center/520px auto repeat;
+  border: 1px solid rgba(165, 126, 58, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(218, 176, 84, 0.08), inset 0 0 42px rgba(0, 0, 0, 0.72);
+}
+
+.arkflight-shipwright-bay-active .arkflight-commissioning-main {
+  max-height: none;
+  overflow: visible;
+  padding: 10px 12px 14px;
+}
+
+.arkflight-shipwright-bay-active .arkflight-commissioning-main > .arkflight-panel-heading {
+  padding: 4px 10px 11px;
+}
+
+.arkflight-shipwright-bay-active .arkflight-shipwright-subnav {
+  margin: 0 0 10px;
+}
+
+.arkflight-shipwright-bay-active .arkflight-bay-original-summary {
+  display: none !important;
+}
+
+.arkflight-bay-three-panel {
+  display: grid;
+  grid-template-columns: minmax(290px, 0.84fr) minmax(420px, 1.18fr) minmax(300px, 0.9fr);
+  gap: 10px;
+  min-height: 600px;
+  margin-top: 8px;
+}
+
+.arkflight-bay-panel {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(145, 109, 51, 0.66);
+  background:
+    linear-gradient(180deg, rgba(9, 25, 31, 0.92), rgba(5, 13, 17, 0.97)),
+    url('../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp') center/390px auto repeat;
+  box-shadow: inset 0 0 0 1px rgba(202, 165, 91, 0.05), inset 0 0 28px rgba(0, 0, 0, 0.5);
+}
+
+.arkflight-bay-stockpile,
+.arkflight-bay-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.arkflight-bay-stockpile-head,
+.arkflight-bay-center-head,
+.arkflight-bay-section-title,
+.arkflight-bay-vessel-summary {
+  border-bottom: 1px solid rgba(136, 101, 46, 0.58);
+}
+
+.arkflight-bay-stockpile-head,
+.arkflight-bay-center-head {
+  padding: 13px 14px 10px;
+}
+
+.arkflight-bay-stockpile-head > div > span,
+.arkflight-bay-center-head > span,
+.arkflight-bay-section-title span,
+.arkflight-bay-vessel-summary > span,
+.arkflight-bay-selection-preview > span {
+  display: block;
+  color: #9f834d;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+.arkflight-bay-stockpile-head h2,
+.arkflight-bay-center-head h2,
+.arkflight-bay-vessel-summary h2 {
+  margin: 2px 0 4px;
+  color: #ead49a;
+  font-size: 20px;
+  line-height: 1.05;
+}
+
+.arkflight-bay-center-head {
+  text-align: center;
+}
+
+.arkflight-bay-center-head h2 {
+  font-size: 23px;
+  letter-spacing: 0.04em;
+}
+
+.arkflight-bay-center-head p {
+  max-width: 560px;
+  margin: 5px auto 0;
+  color: #8fa4a8;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.arkflight-bay-stockpile-head label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  padding: 0 9px;
+  border: 1px solid rgba(79, 112, 119, 0.52);
+  background: rgba(3, 13, 17, 0.76);
+  color: #77aeba;
+}
+
+.arkflight-bay-stockpile-head input {
+  width: 100%;
+  height: 32px;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  color: #d9edf1;
+  font-size: 11px;
+}
+
+.arkflight-bay-available,
+.arkflight-bay-installed {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.arkflight-bay-available {
+  flex: 1 1 auto;
+  max-height: 512px;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.arkflight-bay-available .arkflight-fitting-card,
+.arkflight-bay-installed .arkflight-fitting-card {
+  position: relative;
+  width: 100%;
+  min-height: 88px;
+  padding: 10px 10px 9px 29px;
+  border: 1px solid rgba(79, 103, 107, 0.64);
+  background: linear-gradient(180deg, rgba(14, 31, 36, 0.95), rgba(10, 21, 24, 0.98));
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.arkflight-bay-available .arkflight-fitting-card:hover {
+  border-color: rgba(102, 214, 235, 0.74);
+  background: linear-gradient(180deg, rgba(17, 45, 52, 0.98), rgba(10, 26, 31, 0.98));
+}
+
+.arkflight-bay-available .arkflight-fitting-card.is-bay-selected {
+  border-color: var(--arkflight-bay-cyan);
+  box-shadow: inset 3px 0 0 rgba(91, 218, 239, 0.8), 0 0 18px rgba(61, 191, 213, 0.16);
+  background: linear-gradient(180deg, rgba(18, 53, 62, 0.98), rgba(10, 28, 34, 0.99));
+}
+
+.arkflight-bay-available .arkflight-fitting-card.is-bay-selected::after {
+  content: "READY TO FIT";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 5px;
+  border: 1px solid rgba(105, 217, 239, 0.7);
+  color: #c8f8ff;
+  background: rgba(9, 59, 68, 0.76);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.arkflight-bay-available .arkflight-fitting-card[disabled] {
+  opacity: .45;
+  filter: saturate(.5);
+}
+
+.arkflight-bay-center {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.arkflight-bay-schematic {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 455px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at center, rgba(41, 108, 120, 0.14), transparent 36%),
+    repeating-linear-gradient(0deg, transparent 0 23px, rgba(69, 112, 119, 0.06) 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(69, 112, 119, 0.05) 24px);
+}
+
+.arkflight-bay-schematic::before,
+.arkflight-bay-schematic::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.arkflight-bay-schematic::before {
+  inset: 20px;
+  border: 1px solid rgba(150, 112, 49, 0.18);
+}
+
+.arkflight-bay-schematic::after {
+  inset: 0;
+  background: linear-gradient(90deg, rgba(202, 165, 91, 0.06), transparent 18%, transparent 82%, rgba(202, 165, 91, 0.06));
+}
+
+.arkflight-bay-schematic-art {
+  position: absolute;
+  inset: 8% 20% 11%;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(123, 96, 49, 0.35);
+  background: linear-gradient(180deg, rgba(8, 19, 23, 0.76), rgba(5, 13, 17, 0.18));
+  opacity: .96;
+}
+
+.arkflight-bay-schematic.is-ship .arkflight-bay-schematic-art {
+  inset: 5% 31% 8%;
+  clip-path: polygon(50% 0, 68% 11%, 79% 29%, 84% 59%, 75% 86%, 61% 100%, 39% 100%, 25% 86%, 16% 59%, 21% 29%, 32% 11%);
+  border: 0;
+  background:
+    linear-gradient(90deg, transparent 48%, rgba(96, 193, 211, .22) 49%, rgba(96, 193, 211, .22) 51%, transparent 52%),
+    repeating-linear-gradient(0deg, rgba(145, 111, 54, .18) 0 1px, transparent 1px 39px),
+    linear-gradient(180deg, rgba(54, 44, 28, .74), rgba(14, 24, 27, .82));
+  box-shadow: inset 0 0 24px rgba(0,0,0,.8);
+}
+
+.arkflight-bay-schematic.is-engine .arkflight-bay-schematic-art {
+  inset: 16% 20%;
+  border-radius: 50%;
+  border: 3px double rgba(169, 126, 53, .58);
+  background:
+    repeating-radial-gradient(circle, transparent 0 31px, rgba(105, 197, 213, .08) 32px 33px),
+    repeating-conic-gradient(from 0deg, rgba(173, 130, 54, .2) 0 8deg, transparent 8deg 28deg),
+    radial-gradient(circle, rgba(41, 153, 176, .18), rgba(6, 18, 22, .92) 58%);
+}
+
+.arkflight-bay-schematic.is-rooms .arkflight-bay-schematic-art {
+  inset: 11% 13%;
+  background:
+    linear-gradient(rgba(7,19,24,.7), rgba(7,19,24,.84)),
+    repeating-linear-gradient(0deg, transparent 0 24%, rgba(171,129,55,.34) 24% 25%),
+    repeating-linear-gradient(90deg, transparent 0 32%, rgba(171,129,55,.34) 32% 33%);
+}
+
+.arkflight-bay-schematic-core {
+  width: 92px;
+  height: 92px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(169, 129, 57, .55);
+  border-radius: 50%;
+  color: #8edff0;
+  background: radial-gradient(circle, rgba(37, 127, 146, .28), rgba(7, 14, 18, .92) 65%);
+  box-shadow: 0 0 28px rgba(59, 187, 209, .14), inset 0 0 18px rgba(0,0,0,.8);
+  font-size: 34px;
+}
+
+.arkflight-bay-socket-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
+.arkflight-bay-socket {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid rgba(155, 119, 50, .72);
+  color: #bda76f;
+  background: radial-gradient(circle, rgba(40, 37, 28, .96), rgba(7, 14, 17, .98) 68%);
+  box-shadow: 0 0 0 4px rgba(54, 42, 25, .72), inset 0 0 12px rgba(0,0,0,.92);
+  z-index: 4;
+}
+
+.arkflight-bay-socket i {
+  font-size: 14px;
+}
+
+.arkflight-bay-socket span {
+  position: absolute;
+  bottom: 3px;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.arkflight-bay-socket.is-open {
+  border-color: rgba(75, 156, 172, .72);
+  color: #79cfe0;
+  box-shadow: 0 0 0 4px rgba(29, 61, 66, .7), 0 0 13px rgba(69, 191, 213, .13), inset 0 0 12px rgba(0,0,0,.9);
+}
+
+.arkflight-bay-center.is-fitting-active .arkflight-bay-socket.is-open,
+.arkflight-bay-socket.is-drop-ready,
+.arkflight-bay-available:has(.is-bay-selected) ~ * .arkflight-bay-socket.is-open {
+  border-color: #79e5f8;
+  color: #d5fbff;
+  box-shadow: 0 0 0 4px rgba(28, 92, 102, .82), 0 0 22px rgba(80, 217, 239, .48), inset 0 0 15px rgba(0,0,0,.92);
+}
+
+.arkflight-bay-socket.is-occupied {
+  border-color: rgba(193, 147, 58, .92);
+  color: #e6c981;
+  background: radial-gradient(circle, rgba(108, 76, 28, .4), rgba(10, 15, 17, .98) 69%);
+}
+
+.arkflight-bay-socket.is-drop-ready {
+  transform: translate(-50%, -50%) scale(1.12);
+}
+
+.arkflight-bay-drop-instruction {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid rgba(90, 128, 134, .38);
+  color: #779ba2;
+  background: rgba(5, 13, 16, .78);
+  font-size: 9px;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.arkflight-bay-capacity {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 10px;
+  padding: 9px 13px 11px;
+  border-top: 1px solid rgba(136, 101, 46, .58);
+  color: #a68b54;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.arkflight-bay-capacity strong {
+  color: #e3d09b;
+  font-size: 12px;
+}
+
+.arkflight-bay-capacity > div {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(102, 82, 48, .7);
+  background: #050a0c;
+}
+
+.arkflight-bay-capacity > div i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #376f7b, #78dcef);
+}
+
+.arkflight-bay-installed-section,
+.arkflight-bay-selection-preview,
+.arkflight-bay-stats,
+.arkflight-bay-capacity-summary,
+.arkflight-bay-vessel-summary {
+  padding: 11px 12px;
+}
+
+.arkflight-bay-section-title {
+  margin: -3px 0 8px;
+  padding-bottom: 7px;
+}
+
+.arkflight-bay-section-title strong,
+.arkflight-bay-selection-preview > strong {
+  display: block;
+  margin-top: 2px;
+  color: #ddc483;
+  font-size: 13px;
+}
+
+.arkflight-bay-installed {
+  max-height: 174px;
+  overflow-y: auto;
+}
+
+.arkflight-bay-installed .arkflight-fitting-card {
+  min-height: 68px;
+  padding: 8px 8px 7px 25px;
+  border-color: rgba(146, 110, 50, .58);
+  background: linear-gradient(180deg, rgba(36, 31, 20, .88), rgba(15, 20, 20, .96));
+}
+
+.arkflight-bay-installed .arkflight-fitting-card::after {
+  content: "BOLTED IN";
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  color: #aa8e51;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .09em;
+}
+
+.arkflight-bay-empty-installed {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 10px;
+  color: #66777a;
+  border: 1px dashed rgba(90, 105, 105, .38);
+  font-size: 10px;
+}
+
+.arkflight-bay-selection-preview {
+  margin: 0 12px 9px;
+  padding: 10px;
+  border: 1px solid rgba(73, 126, 137, .52);
+  background: rgba(9, 30, 35, .62);
+}
+
+.arkflight-bay-selection-preview p,
+.arkflight-bay-vessel-summary p {
+  margin: 5px 0;
+  color: #9aa9a8;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.arkflight-bay-selection-preview small {
+  color: #76afbb;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.arkflight-bay-vessel-summary h2 {
+  margin-top: 4px;
+}
+
+.arkflight-bay-stats .arkflight-preview-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.arkflight-bay-stats .arkflight-preview-grid > div {
+  padding: 7px;
+  border: 1px solid rgba(53, 71, 72, .66);
+  background: rgba(8, 18, 21, .8);
+}
+
+.arkflight-bay-capacity-summary .arkflight-summary-capacities {
+  margin-top: 0;
+}
+
+.arkflight-bay-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 8px;
+  margin-top: auto;
+  padding: 10px 12px 12px;
+  border-top: 1px solid rgba(136, 101, 46, .58);
+}
+
+.arkflight-bay-actions button {
+  min-height: 38px;
+  border: 1px solid #66502e;
+  color: #c8b172;
+  background: linear-gradient(180deg, #1c1914, #0d0f10);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+
+.arkflight-bay-actions button.is-primary {
+  border-color: #56818a;
+  color: #d7f8ff;
+  background: linear-gradient(180deg, rgba(31, 83, 94, .82), rgba(13, 40, 47, .96));
+}
+
+.arkflight-bay-actions button.is-primary:hover {
+  border-color: #83d5e5;
+  box-shadow: 0 0 14px rgba(80, 196, 219, .18);
+}
+
+@media (max-width: 1320px) {
+  .arkflight-bay-three-panel {
+    grid-template-columns: minmax(260px, .9fr) minmax(390px, 1.2fr) minmax(280px, .9fr);
+  }
+  .arkflight-bay-schematic { min-height: 420px; }
+}
+
+@media (max-width: 1120px) {
+  .arkflight-bay-three-panel {
+    grid-template-columns: 1fr 1.2fr;
+  }
+  .arkflight-bay-right {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .arkflight-bay-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arkflight-bay-available .arkflight-fitting-card,
+  .arkflight-bay-socket {
+    transition: none;
+  }
+}
