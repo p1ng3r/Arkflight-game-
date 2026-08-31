@@ -24,6 +24,36 @@ test("Begin Refit reserves Parts and physical fittings without installing them",
   assert.deepEqual(result.ship.shipMods, []);
 });
 
+test("one physical Ship Mod can reserve exactly one installation", () => {
+  let ship = grantComponent(createShip(), "shipMod", "reinforced-structural-ribbing", 1);
+  ship = grantSalvageParts(ship, 10);
+  const first = createRefitDraft({ assignments: [{ family: "shipMod", componentId: "reinforced-structural-ribbing", socketIndices: [0] }] });
+  const queued = queueInstallDraft(ship, first, SHIP_CATALOGS, { idFactory: ids });
+  assert.equal(queued.ok, true);
+  assert.equal(componentQuantity(queued.ship, "shipMod", "reinforced-structural-ribbing"), 0);
+
+  const second = createRefitDraft({ assignments: [{ family: "shipMod", componentId: "reinforced-structural-ribbing", socketIndices: [1] }] });
+  const rejected = queueInstallDraft(queued.ship, second, SHIP_CATALOGS, { idFactory: ids });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.reason, "component-not-available");
+  assert.equal(rejected.jobs.length, 0);
+});
+
+test("one physical Arkengine Mod can reserve exactly one installation", () => {
+  let ship = grantComponent(createShip(), "arkengineMod", "pressure-lattice-tuning", 1);
+  ship = grantSalvageParts(ship, 10);
+  const first = createRefitDraft({ assignments: [{ family: "arkengineMod", componentId: "pressure-lattice-tuning", socketIndices: [0] }] });
+  const queued = queueInstallDraft(ship, first, SHIP_CATALOGS, { idFactory: ids });
+  assert.equal(queued.ok, true);
+  assert.equal(componentQuantity(queued.ship, "arkengineMod", "pressure-lattice-tuning"), 0);
+
+  const second = createRefitDraft({ assignments: [{ family: "arkengineMod", componentId: "pressure-lattice-tuning", socketIndices: [1] }] });
+  const rejected = queueInstallDraft(queued.ship, second, SHIP_CATALOGS, { idFactory: ids });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.reason, "component-not-available");
+  assert.equal(rejected.jobs.length, 0);
+});
+
 test("install completion is the boundary that makes a fitting mechanically installed", () => {
   let ship = grantSalvageParts(grantComponent(createShip(), "arkengineMod", "pressure-lattice-tuning", 1), 3);
   const draft = createRefitDraft({ assignments: [{ family: "arkengineMod", componentId: "pressure-lattice-tuning", socketIndices: [0] }] });
