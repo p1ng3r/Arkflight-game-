@@ -3,15 +3,19 @@ import assert from "node:assert/strict";
 
 import {
   CARGO_BEARING_CATEGORIES,
+  HULL_REPAIR,
   HULL_REPAIR_DEGREES,
   HULL_ZERO_STATE,
   INSTALLED_HARDWARE_CARGO_EXEMPT,
   WRECK_RECOMMISSION,
+  canAttemptHullRepair,
   canRecommissionWreck,
   hullOperationalState,
+  hullRepairDcLevel,
   isCargoBearingCategory,
   isInstalledHardwareCargoExempt,
   moraleBand,
+  recommissionCost,
   recommissionHullValue,
   resolveHullRepair
 } from "../src/ship/ship-rules.js";
@@ -81,18 +85,18 @@ test("ordinary Hull damage does not automatically degrade the Hull Area", () => 
 
 test("Hull repair uses one Salvage Part per 10 Hull on success and 20 on critical success", () => {
   const success = resolveHullRepair({ degree: HULL_REPAIR_DEGREES.SUCCESS, salvagePartsCommitted: 1 });
-  assert.deepEqual(success, { success: true, hullRestored: 10, salvagePartsConsumed: 1 });
+  assert.deepEqual(success, { success: true, hullRestored: 10, salvagePartsConsumed: 1, timeHours: 1 });
 
   const critical = resolveHullRepair({ degree: HULL_REPAIR_DEGREES.CRITICAL_SUCCESS, salvagePartsCommitted: 1 });
-  assert.deepEqual(critical, { success: true, hullRestored: 20, salvagePartsConsumed: 1 });
+  assert.deepEqual(critical, { success: true, hullRestored: 20, salvagePartsConsumed: 1, timeHours: 1 });
 });
 
 test("Hull repair failure preserves Salvage Parts while critical failure loses them", () => {
   const failure = resolveHullRepair({ degree: HULL_REPAIR_DEGREES.FAILURE, salvagePartsCommitted: 2 });
-  assert.deepEqual(failure, { success: false, hullRestored: 0, salvagePartsConsumed: 0 });
+  assert.deepEqual(failure, { success: false, hullRestored: 0, salvagePartsConsumed: 0, timeHours: 2 });
 
   const criticalFailure = resolveHullRepair({ degree: HULL_REPAIR_DEGREES.CRITICAL_FAILURE, salvagePartsCommitted: 2 });
-  assert.deepEqual(criticalFailure, { success: false, hullRestored: 0, salvagePartsConsumed: 2 });
+  assert.deepEqual(criticalFailure, { success: false, hullRestored: 0, salvagePartsConsumed: 2, timeHours: 2 });
 });
 
 test("Mods and Talents can augment Hull repair without replacing the base rule", () => {
@@ -100,9 +104,25 @@ test("Mods and Talents can augment Hull repair without replacing the base rule",
     degree: HULL_REPAIR_DEGREES.SUCCESS,
     salvagePartsCommitted: 2,
     hullPerPartBonus: 5,
-    repairMultiplier: 2
+    repairMultiplier: 2,
+    hoursPerPartModifier: -0.5
   });
-  assert.deepEqual(result, { success: true, hullRestored: 60, salvagePartsConsumed: 2 });
+  assert.deepEqual(result, { success: true, hullRestored: 60, salvagePartsConsumed: 2, timeHours: 1 });
+});
+
+test("Hull repair requires a safe repair site and cannot be performed underway in the Void", () => {
+  assert.equal(HULL_REPAIR.requiresSafeRepairSite, true);
+  assert.equal(HULL_REPAIR.allowedWhileUnderwayInVoid, false);
+  assert.equal(canAttemptHullRepair({ safeRepairSite: false, underwayInVoid: false }), false);
+  assert.equal(canAttemptHullRepair({ safeRepairSite: true, underwayInVoid: true }), false);
+  assert.equal(canAttemptHullRepair({ safeRepairSite: true, underwayInVoid: false }), true);
+});
+
+test("Hull repair DC uses PF2e level-based DC at ship level plus five", () => {
+  assert.equal(HULL_REPAIR.dcShipLevelOffset, 5);
+  assert.equal(hullRepairDcLevel(1), 6);
+  assert.equal(hullRepairDcLevel(10), 15);
+  assert.equal(hullRepairDcLevel(20), 25);
 });
 
 test("wreck recommission requires a shipyard and is forbidden in the Void", () => {
@@ -113,7 +133,10 @@ test("wreck recommission requires a shipyard and is forbidden in the Void", () =
   assert.equal(canRecommissionWreck({ atShipyard: true, inVoid: false }), true);
 });
 
-test("successful wreck recommission restores 10 percent of Base Max Hull", () => {
+test("wreck recommission takes seven days, costs 25 percent, needs no roll, and restores 10 percent Hull", () => {
+  assert.equal(WRECK_RECOMMISSION.days, 7);
+  assert.equal(WRECK_RECOMMISSION.requiresCraftingCheck, false);
+  assert.equal(recommissionCost(1000), 250);
   assert.equal(recommissionHullValue(200), 20);
   assert.equal(recommissionHullValue(155), 15);
 });
