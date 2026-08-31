@@ -27,15 +27,17 @@ test("valid socket click and drop are intercepted into staging instead of legacy
   assert.match(uiSource, /root\.addEventListener\("drop"/);
 });
 
-test("draft UI exposes install cost and mechanical stat deltas", () => {
+test("draft UI exposes install cost, shipyard labor, and mechanical stat deltas", () => {
   assert.match(uiSource, /refitDraftInstallParts/);
   assert.match(uiSource, /previewRefitDraft/);
-  assert.match(uiSource, /Install Parts on Success/);
+  assert.match(uiSource, /Install Parts/);
+  assert.match(uiSource, /Shipyard Labor/);
   assert.match(uiSource, /arkflight-refit-stat-deltas/);
 });
 
-test("visible legacy apply control is repurposed as Install Mod and old click is intercepted", () => {
-  assert.match(uiSource, /INSTALL MOD/);
+test("visible legacy apply control is repurposed as Crew Install and old click is intercepted", () => {
+  assert.match(uiSource, /INSTALL MOD — CREW/);
+  assert.match(uiSource, /INSTALL MOD — SHIPYARD/);
   assert.match(uiSource, /dataRefitDraftAction|refitDraftAction/);
   assert.match(uiSource, /arkflightRefitInstallRequested/);
   assert.match(uiSource, /event\.stopImmediatePropagation\(\)/);
@@ -43,11 +45,17 @@ test("visible legacy apply control is repurposed as Install Mod and old click is
   assert.doesNotMatch(cssSource, /data-bay-action="apply"\][^{]*\{[^}]*display:\s*none/i);
 });
 
-test("Install Mod request is wired to PF2e Crafting resolution", () => {
+test("Crew Install request is wired to PF2e Crafting resolution", () => {
   assert.match(workOrderSource, /arkflightRefitInstallRequested/);
   assert.match(workOrderSource, /skills\?\.crafting/);
   assert.match(workOrderSource, /skill\.check\.roll/);
   assert.match(workOrderSource, /beginInstallDraft/);
   assert.match(workOrderSource, /completeWork/);
   assert.match(workOrderSource, /game\.time\?\.advance/);
+});
+
+test("Shipyard Install uses guaranteed shipyard method and records labor gold", () => {
+  assert.match(workOrderSource, /installStagedModAtShipyard/);
+  assert.match(workOrderSource, /method: "shipyard"/);
+  assert.match(workOrderSource, /laborGold: job\.goldCost/);
 });
