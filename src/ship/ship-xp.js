@@ -1,4 +1,5 @@
-import { SHIP_LEVEL_MAX, clampShipLevel } from "./progression.js";
+import { SHIP_TALENTS } from "../content/ship-talents.js";
+import { SHIP_LEVEL_MAX, clampShipLevel, canAccessTalent, talentPointsForLevel } from "./progression.js";
 
 export const SHIP_XP_PER_LEVEL = 1000;
 
@@ -44,4 +45,48 @@ export function addShipExperience(ship, amount) {
   const gain = Math.trunc(Number(amount) || 0);
   if (gain <= 0 || current.atMaximum) return structuredClone(ship);
   return setShipExperience(ship, current.xp + gain);
+}
+
+/**
+ * GM-facing de-level operation.
+ *
+ * Lowering a vessel's level resets XP to zero and keeps as much of the current
+ * build as remains legal. Talents from locked tiers are refunded first. If the
+ * surviving build still exceeds the lower level's TP budget, the most recently
+ * purchased talents (the end of talentIds) are refunded until the build is legal.
+ */
+export function resetShipLevel(ship, targetLevel) {
+  const next = structuredClone(ship);
+  next.progression ??= { level: 1, xp: 0, talentIds: [], arkcraftUpgrades: {} };
+
+  const previousLevel = clampShipLevel(next.progression.level ?? 1);
+  const level = clampShipLevel(targetLevel);
+  const originalIds = [...new Set(next.progression.talentIds ?? [])];
+  const refundedTalentIds = [];
+
+  let keptIds = originalIds.filter((id) => {
+    const talent = SHIP_TALENTS[id];
+    const legal = Boolean(talent && canAccessTalent(level, talent));
+    if (!legal) refundedTalentIds.push(id);
+    return legal;
+  });
+
+  const budget = talentPointsForLevel(level);
+  let spent = keptIds.reduce((sum, id) => sum + Number(SHIP_TALENTS[id]?.cost || 0), 0);
+  while (spent > budget && keptIds.length) {
+    const id = keptIds.pop();
+    refundedTalentIds.push(id);
+    spent -= Number(SHIP_TALENTS[id]?.cost || 0);
+  }
+
+  next.progression.level = level;
+  next.progression.xp = 0;
+  next.progression.talentIds = keptIds;
+
+  return Object.freeze({
+    ship: next,
+    previousLevel,
+    level,
+    refundedTalentIds: Object.freeze([...refundedTalentIds])
+  });
 }
