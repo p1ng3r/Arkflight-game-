@@ -14,7 +14,7 @@ export function resolveEngineeringInstallOutcome(outcome, baseHours) {
     return Object.freeze({ outcome, install: true, complication: false, timeHours: hours, timeMultiplier: 1 });
   }
   if (outcome === ENGINEERING_OUTCOMES.CRITICAL_FAILURE) {
-    return Object.freeze({ outcome, install: false, complication: true, timeHours: 0, timeMultiplier: 0 });
+    return Object.freeze({ outcome, install: false, complication: true, timeHours: hours, timeMultiplier: 1 });
   }
-  return Object.freeze({ outcome: ENGINEERING_OUTCOMES.FAILURE, install: false, complication: false, timeHours: 0, timeMultiplier: 0 });
+  return Object.freeze({ outcome: ENGINEERING_OUTCOMES.FAILURE, install: false, complication: false, timeHours: hours, timeMultiplier: 1 });
 }
