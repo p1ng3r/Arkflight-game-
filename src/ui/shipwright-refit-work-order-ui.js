@@ -86,14 +86,24 @@ async function advanceInstallTime(hours) {
   await game.time.advance(Math.round(amount * 3600));
 }
 
-async function recordCriticalFailure(actor, engineer, assignment, item) {
-  const complication = await game.arkflight?.refit?.recordInstallComplication?.(actor, assignment, {
+async function settleFailedInstall(actor, engineer, assignment, item, outcome) {
+  const settled = await game.arkflight?.refit?.recordInstallFailure?.(actor, assignment, {
     workerActorUuid: engineer.uuid,
-    outcome: "criticalFailure"
+    outcome: outcome.outcome,
+    elapsedHours: outcome.timeHours
   });
-  if (!complication?.ok) throw new Error(`Engineering complication could not be recorded: ${complication?.reason ?? "unknown error"}.`);
-  ui.notifications?.warn?.(`${engineer.name} critically failed the Engineering Check for ${item.name}. The Mod remains intact and no Parts were spent, but an installation complication was recorded.`);
+  if (!settled?.ok) {
+    const detail = settled?.reason === "insufficient-salvage-parts"
+      ? `Need ${settled.required} Salvage Parts; only ${settled.available} remain.`
+      : `Failed installation could not be recorded: ${settled?.reason ?? "unknown error"}.`;
+    throw new Error(detail);
+  }
+
+  await advanceInstallTime(outcome.timeHours);
+  const complicationText = outcome.complication ? " An installation complication was recorded." : "";
+  ui.notifications?.warn?.(`${item.name} was not installed. ${settled.partsSpent} Salvage Parts were spent and ${outcome.timeHours} hours passed.${complicationText}`);
   actor.sheet?.render?.({ force: true });
+  return settled;
 }
 
 async function installStagedMod(actor, draft) {
@@ -131,12 +141,8 @@ async function installStagedMod(actor, draft) {
   const outcome = resolveEngineeringInstallOutcome(check.outcome, spec.timeHours);
 
   if (!outcome.install) {
-    if (outcome.complication) {
-      await recordCriticalFailure(actor, engineer, assignment, item);
-    } else {
-      ui.notifications?.warn?.(`${item.name} was not installed. No Salvage Parts were spent, no time passed, and the fitting remains staged.`);
-    }
-    Hooks.callAll("arkflightRefitEngineeringResolved", { actor, engineer, assignment, outcome, installed: false });
+    const settled = await settleFailedInstall(actor, engineer, assignment, item, outcome);
+    Hooks.callAll("arkflightRefitEngineeringResolved", { actor, engineer, assignment, outcome, installed: false, job: settled.job });
     return;
   }
 
