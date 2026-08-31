@@ -1,0 +1,142 @@
+.arkflight-bay-socket.is-refit-staged {
+  outline: 2px solid rgba(229, 177, 72, .95) !important;
+  box-shadow: 0 0 18px rgba(225, 154, 42, .45) !important;
+}
+
+.arkflight-bay-socket.is-refit-staged-linked {
+  outline-style: dashed !important;
+}
+
+.arkflight-refit-staged-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 92px;
+  pointer-events: none;
+  color: #f1cf82;
+  text-align: center;
+  text-shadow: 0 1px 2px #000;
+}
+
+.arkflight-refit-staged-label i {
+  font-size: 13px;
+}
+
+.arkflight-refit-staged-label small {
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.arkflight-fitting-card.is-refit-all-staged {
+  opacity: .42;
+}
+
+.arkflight-refit-draft-preview {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid rgba(202, 155, 70, .38);
+  background: rgba(10, 22, 31, .84);
+}
+
+.arkflight-refit-draft-preview p {
+  margin: 0;
+  color: #aeb9bf;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.arkflight-refit-draft-cost {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 7px;
+  border: 1px solid rgba(113, 200, 218, .28);
+  background: rgba(10, 47, 58, .35);
+  color: #cceff4;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.arkflight-refit-draft-cost span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.arkflight-refit-draft-cost strong {
+  font-size: 14px;
+}
+
+.arkflight-refit-draft-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.arkflight-refit-draft-list span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid rgba(197, 155, 77, .3);
+  background: rgba(63, 46, 19, .34);
+  color: #dbc48e;
+  font-size: 9px;
+}
+
+.arkflight-refit-stat-deltas {
+  list-style: none;
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+}
+
+.arkflight-refit-stat-deltas li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(170, 175, 177, .12);
+  color: #b8c2c6;
+  font-size: 9px;
+}
+
+.arkflight-refit-stat-deltas li strong {
+  color: #e6e2d7;
+  font-size: 10px;
+}
+
+.arkflight-refit-stat-deltas li small {
+  min-width: 34px;
+  text-align: right;
+  color: #9de0ea;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.arkflight-refit-draft-actions [data-bay-action="apply"] {
+  display: none !important;
+}
+
+.arkflight-refit-draft-actions [data-refit-draft-action="begin"] {
+  border-color: rgba(216, 167, 71, .72);
+  background: rgba(90, 60, 16, .52);
+  color: #f0d18a;
+}
+
+.arkflight-refit-draft-actions button:disabled {
+  opacity: .42;
+  cursor: default;
+}
