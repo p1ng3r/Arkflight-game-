@@ -21,8 +21,6 @@ function slotCost(catalogs, family, componentId) {
 }
 
 export function refitSocketCapacity(ship, catalogs, family) {
-  // Bare createShip() fixtures and not-yet-commissioned vessels have no physical
-  // frame to enforce yet. Real commissioned ships always have a hull chassis.
   if (!ship?.hull?.chassisId) return UNCOMMISSIONED_CAPACITY;
 
   const derived = deriveShip(ship, catalogs);
@@ -39,11 +37,17 @@ export function refitSocketCapacity(ship, catalogs, family) {
 }
 
 function completedInstallJobs(ship, family) {
+  const removedSources = new Set((ship?.refit?.workOrders ?? [])
+    .filter((job) => job?.type === "remove" && job?.status === "complete" && job?.componentFamily === family)
+    .map((job) => job?.result?.sourceInstallJobId)
+    .filter(Boolean));
+
   return (ship?.refit?.workOrders ?? []).filter((job) =>
     job?.type === "install"
     && job?.status === "complete"
     && job?.componentFamily === family
     && job?.result?.installed !== false
+    && !removedSources.has(job.id)
   );
 }
 
