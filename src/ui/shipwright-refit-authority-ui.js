@@ -65,15 +65,34 @@ function componentSlotClass(family, id) {
   return componentCatalog(family)?.[id]?.data?.refit?.slotClass ?? "general";
 }
 
-function pendingRemoval(ship, family, placement) {
-  return (ship?.refit?.workOrders ?? []).find((job) => {
-    if (job?.type !== "remove" || job?.componentFamily !== family || job?.componentId !== placement.componentId) return false;
-    if (!["planned", "working"].includes(job.status)) return false;
-    if (placement.sourceJobId && job?.result?.sourceInstallJobId) return job.result.sourceInstallJobId === placement.sourceJobId;
-    const a = [...(job.socketIndices ?? [])].sort((x, y) => x - y).join(",");
-    const b = [...(placement.socketIndices ?? [])].sort((x, y) => x - y).join(",");
-    return a && a === b;
-  }) ?? null;
+function pendingRemoval(ship, family, placement, usedJobIds = new Set()) {
+  const jobs = (ship?.refit?.workOrders ?? []).filter((job) =>
+    job?.type === "remove"
+    && job?.componentFamily === family
+    && job?.componentId === placement.componentId
+    && ["planned", "working"].includes(job.status)
+    && !usedJobIds.has(job.id)
+  );
+
+  let matched = null;
+  if (placement.sourceJobId) {
+    matched = jobs.find((job) => job?.result?.sourceInstallJobId === placement.sourceJobId) ?? null;
+  }
+
+  if (!matched && placement.socketIndices?.length) {
+    const target = [...placement.socketIndices].sort((x, y) => x - y).join(",");
+    matched = jobs.find((job) => [...(job.socketIndices ?? [])].sort((x, y) => x - y).join(",") === target) ?? null;
+  }
+
+  // Legacy/over-capacity fittings have no socket assignment or source install
+  // job. Their removal jobs therefore also carry no socket indices. Match one
+  // unused empty-socket removal job so the row correctly renders REMOVING.
+  if (!matched && (!placement.socketIndices?.length || placement.overCapacity)) {
+    matched = jobs.find((job) => !(job.socketIndices ?? []).length && !job?.result?.sourceInstallJobId) ?? null;
+  }
+
+  if (matched?.id) usedJobIds.add(matched.id);
+  return matched;
 }
 
 function socketLabel(placement) {
@@ -130,9 +149,10 @@ function renderAuthoritativeInstalledList(root, stage, legacyInstalledList, acto
     return;
   }
 
+  const usedRemovalJobIds = new Set();
   layout.placements.forEach((placement, placementIndex) => {
     const tone = (placement.socketIndices[0] ?? placementIndex) % 4;
-    const pending = pendingRemoval(ship, family, placement);
+    const pending = pendingRemoval(ship, family, placement, usedRemovalJobIds);
     const row = document.createElement("article");
     row.className = `arkflight-refit-installed-row tone-${tone}${placement.overCapacity ? " is-over-capacity" : ""}${pending ? " is-removing" : ""}`;
     row.dataset.componentId = placement.componentId;
@@ -141,7 +161,7 @@ function renderAuthoritativeInstalledList(root, stage, legacyInstalledList, acto
       <div class="arkflight-refit-installed-copy">
         <strong>${componentName(family, placement.componentId)}</strong>
         <span>${componentSlotClass(family, placement.componentId)} · ${placement.slotCost} ${placement.slotCost === 1 ? "slot" : "slots"} · ${socketLabel(placement)}</span>
-        ${placement.overCapacity ? `<em>UNSLOTTED — OVER CAPACITY</em>` : pending ? `<em>REMOVAL IN PROGRESS — ${pending.remainingHours}h</em>` : ""}
+        ${pending ? `<em>REMOVAL IN PROGRESS — ${pending.remainingHours}h</em>` : placement.overCapacity ? `<em>UNSLOTTED — OVER CAPACITY</em>` : ""}
       </div>
       <button type="button" class="arkflight-refit-remove-button" ${pending ? "disabled" : ""} title="${pending ? "Removal already in progress" : `Remove ${componentName(family, placement.componentId)}`}">
         <i class="fa-solid fa-arrow-right-from-bracket"></i><span>${pending ? "REMOVING" : `REMOVE ${FAMILY_META[family].noun}`}</span>
