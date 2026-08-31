@@ -16,6 +16,7 @@ let board = null;
 let rewardSummary = null;
 let lastRoundRewardKey = null;
 let lastEventRewardKey = null;
+let lastEventActive = false;
 
 function ensureBoard() {
   if (!controller) return null;
@@ -68,6 +69,37 @@ function showRewardSummary() {
   rewardSummary.render({ force: true });
 }
 
+function openGMOperations() {
+  if (!game.user.isGM) return null;
+  const gmOperations = game.arkflight?.gmOperations;
+  if (gmOperations && typeof gmOperations.open === "function") return gmOperations.open();
+  ui.notifications?.info("Arkflight GM Operations is not available yet.");
+  return null;
+}
+
+function showActiveEventChoice() {
+  const DialogV2 = foundry.applications.api.DialogV2;
+  return new DialogV2({
+    window: { title: "Arkflight Operations" },
+    content: "<p>An Arkflight event is already active. Resume the Event Board or open GM Operations.</p>",
+    buttons: [
+      {
+        action: "resume",
+        label: "Resume Event",
+        icon: "fa-solid fa-compass",
+        default: true,
+        callback: () => renderBoard()
+      },
+      {
+        action: "operations",
+        label: "Open GM Operations",
+        icon: "fa-solid fa-screwdriver-wrench",
+        callback: () => openGMOperations()
+      }
+    ]
+  }).render({ force: true });
+}
+
 function baseStationOptions() {
   return Object.fromEntries(Object.entries(BASE_MASTERY).map(([stationId, masteries]) => [stationId, { masteries: [...masteries], signatures: [], componentAbilities: [] }]));
 }
@@ -109,6 +141,7 @@ Hooks.once("init", () => {
     get controller() { return controller; },
     openBoard() { renderBoard(); return board; },
     openRewards() { showRewardSummary(); return rewardSummary; },
+    openGMOperations,
     async openEvent(eventId = "glassback-cinderwake") {
       if (!controller) throw new Error("Arkflight is not ready yet.");
       await controller.openEvent(eventId);
@@ -126,30 +159,44 @@ Hooks.once("init", () => {
 Hooks.once("ready", () => {
   controller = new PlanningController({
     onStateChange: (state) => {
+      const eventActive = Boolean(state?.eventId);
+      if (eventActive !== lastEventActive) {
+        lastEventActive = eventActive;
+        ui.controls?.render();
+      }
       if (board?.rendered) renderBoard();
       announceStateRewards(state);
     }
   });
   controller.activateSockets();
+  lastEventActive = Boolean(controller.state?.eventId);
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!controls.tokens?.tools) return;
+  const eventActive = Boolean(controller?.state?.eventId);
   controls.tokens.tools.arkflightEvent = {
     name: "arkflightEvent",
-    title: "Arkflight Event Board",
+    title: game.user.isGM ? "Arkflight GM Operations" : "Arkflight Event Board",
     icon: "fa-solid fa-compass",
     order: Object.keys(controls.tokens.tools).length,
     button: true,
-    visible: true,
+    visible: game.user.isGM || eventActive,
     onChange: async () => {
       if (!controller) return;
-      if (!controller.state?.eventId) {
-        if (!game.user.isGM) { ui.notifications?.info("Waiting for the GM to launch an Arkflight Event."); return; }
-        await game.arkflight.openEvent("glassback-cinderwake");
+      const active = Boolean(controller.state?.eventId);
+
+      if (!game.user.isGM) {
+        if (active) renderBoard();
         return;
       }
-      renderBoard();
+
+      if (active) {
+        showActiveEventChoice();
+        return;
+      }
+
+      openGMOperations();
     }
   };
 });
