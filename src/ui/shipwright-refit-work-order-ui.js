@@ -1,4 +1,5 @@
 import { SHIP_CATALOGS } from "../content/index.js";
+import { resolveEngineeringInstallOutcome } from "../ship/refit-engineering.js";
 
 const MODULE_ID = "arkflight-game";
 
@@ -85,8 +86,14 @@ async function advanceInstallTime(hours) {
   await game.time.advance(Math.round(amount * 3600));
 }
 
-function successfulOutcome(outcome) {
-  return outcome === "success" || outcome === "criticalSuccess";
+async function recordCriticalFailure(actor, engineer, assignment, item) {
+  const complication = await game.arkflight?.refit?.recordInstallComplication?.(actor, assignment, {
+    workerActorUuid: engineer.uuid,
+    outcome: "criticalFailure"
+  });
+  if (!complication?.ok) throw new Error(`Engineering complication could not be recorded: ${complication?.reason ?? "unknown error"}.`);
+  ui.notifications?.warn?.(`${engineer.name} critically failed the Engineering Check for ${item.name}. The Mod remains intact and no Parts were spent, but an installation complication was recorded.`);
+  actor.sheet?.render?.({ force: true });
 }
 
 async function installStagedMod(actor, draft) {
@@ -121,8 +128,15 @@ async function installStagedMod(actor, draft) {
 
   ui.notifications?.info?.(`${engineer.name} attempts an Engineering Check (Crafting DC ${spec.dc}) to install ${item.name}.`);
   const check = await rollEngineeringCheck(engineer, assignment);
-  if (!successfulOutcome(check.outcome)) {
-    ui.notifications?.warn?.(`${item.name} was not installed. No Salvage Parts were spent and the fitting remains staged.`);
+  const outcome = resolveEngineeringInstallOutcome(check.outcome, spec.timeHours);
+
+  if (!outcome.install) {
+    if (outcome.complication) {
+      await recordCriticalFailure(actor, engineer, assignment, item);
+    } else {
+      ui.notifications?.warn?.(`${item.name} was not installed. No Salvage Parts were spent, no time passed, and the fitting remains staged.`);
+    }
+    Hooks.callAll("arkflightRefitEngineeringResolved", { actor, engineer, assignment, outcome, installed: false });
     return;
   }
 
@@ -137,14 +151,23 @@ async function installStagedMod(actor, draft) {
 
   const job = queued.jobs[0];
   const completed = await game.arkflight.refit.completeWork(actor, job.id, {
-    result: { outcome: check.outcome, workerActorUuid: engineer.uuid, engineeringSkill: "crafting" }
+    result: {
+      outcome: check.outcome,
+      workerActorUuid: engineer.uuid,
+      engineeringSkill: "crafting",
+      baseDurationHours: job.durationHours,
+      elapsedHours: outcome.timeHours,
+      timeMultiplier: outcome.timeMultiplier
+    }
   });
   if (!completed?.ok) throw new Error(`Installation work order could not complete: ${completed?.reason ?? "unknown error"}.`);
 
-  await advanceInstallTime(job.durationHours);
+  await advanceInstallTime(outcome.timeHours);
   rootForActor(actor)?.querySelector?.('[data-refit-draft-action="reset"]')?.click();
-  ui.notifications?.info?.(`${item.name} installed by ${engineer.name}. ${job.partsCost} Salvage Parts spent; ${job.durationHours} hours pass.`);
+  const speedText = check.outcome === "criticalSuccess" ? " Critical Success halves the installation time." : "";
+  ui.notifications?.info?.(`${item.name} installed by ${engineer.name}. ${job.partsCost} Salvage Parts spent; ${outcome.timeHours} hours pass.${speedText}`);
   actor.sheet?.render?.({ force: true });
+  Hooks.callAll("arkflightRefitEngineeringResolved", { actor, engineer, assignment, outcome, installed: true, job: completed.job });
   Hooks.callAll("arkflightRefitModInstalled", { actor, engineer, assignment, job: completed.job, outcome: check.outcome });
 }
 
