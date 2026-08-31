@@ -6,8 +6,8 @@
 
 ## Locked execution order
 
-1. Authoritative Ship Rules Contract
-2. Hull & Damage
+1. Authoritative Ship Rules Contract ✅
+2. Hull & Damage ✅
 3. Lifeveil
 4. Strain & Area Readiness
 5. Morale
@@ -86,3 +86,44 @@ The Morale Area remains the persistent degradation/readiness state. Morale resou
 The character sheet displays persistent/derived state. Domain rules determine state.
 
 The Ship Sheet, GM Operations generator, Ship Combat, Refit, Voyage/Event Manager, and future downtime systems must consume the same ship-domain rules instead of maintaining parallel copies.
+
+## Part 2 — Hull & Damage
+
+### Hull HP and Hull Area are related but distinct
+
+Ordinary Hull HP damage does **not** automatically degrade the Hull Area.
+
+Hull Area degradation comes from the shared Strain threshold system, authored critical/catastrophic effects, or another explicit rule. This prevents Hull HP and Hull Area state from becoming duplicate damage tracks.
+
+### At-sea Hull HP repair
+
+Hull HP repair uses the assigned repairer's native PF2e **Crafting** check and physical **Salvage Parts**.
+
+Base repair economy:
+
+- 1 Salvage Part repairs 10 Hull on Success.
+- Critical Success repairs twice the normal amount: 20 Hull per Salvage Part.
+- Failure repairs nothing and does not consume the committed Salvage Parts.
+- Critical Failure repairs nothing and consumes the committed Salvage Parts.
+
+Installed Mods, Ship Talents, Rooms, specialists, or other authored permanent effects may explicitly improve Hull repaired per Part, efficiency, or other repair parameters. They modify the shared Hull repair rule rather than creating parallel repair systems.
+
+Hull HP repair is separate from Area repair. Hull HP repair restores numerical structural integrity; Hull Area repair improves the persistent `Stable -> Disabled` readiness condition.
+
+Exact base repair time and Crafting DC are deferred until the remaining Hull repair workflow is locked.
+
+### Zero Hull and wreck recommissioning
+
+0 Hull means **Wrecked**.
+
+A Wrecked vessel cannot be brought back through ordinary emergency Hull patching and cannot be recommissioned in the Void.
+
+Recommissioning requires a proper **shipyard**, meaningful cost, and significant time. Exact cost/time values are deferred until explicitly locked.
+
+Successful recommissioning restores the ship to **10% of Base Max Hull**. Normal Hull HP repairs may then continue from that value.
+
+Recommissioning does not automatically repair degraded Areas, clear Strain, refill Lifeveil, restore Supplies, or otherwise reset the ship.
+
+### Zero-value persistence bug guard
+
+Derived-stat synchronization must preserve a legitimate current Hull value of `0`; recalculating maximum Hull from components must never treat zero as an uninitialized value and heal a Wrecked ship back to maximum. The same guard is applied to Lifeveil zero values ahead of Part 3.
