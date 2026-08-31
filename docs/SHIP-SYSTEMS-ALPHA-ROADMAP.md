@@ -8,7 +8,7 @@
 
 1. Authoritative Ship Rules Contract ✅
 2. Hull & Damage ✅
-3. Lifeveil
+3. Lifeveil ✅
 4. Strain & Area Readiness
 5. Morale
 6. Supplies, Cargo & Salvage Economy
@@ -138,3 +138,35 @@ Recommissioning does not automatically repair degraded Areas, clear Strain, refi
 ### Zero-value persistence bug guard
 
 Derived-stat synchronization must preserve a legitimate current Hull value of `0`; recalculating maximum Hull from components must never treat zero as an uninitialized value and heal a Wrecked ship back to maximum. The same guard is applied to Lifeveil zero values ahead of Part 3.
+
+## Part 3 — Lifeveil
+
+### Identity
+
+Lifeveil is the vessel's **atmospheric/environmental envelope and magical shielding**. It protects the crew from Void exposure, hostile environments, aetheric hazards, and authored magical/energy threats. It is not merely a temporary-hit-point buffer.
+
+### Lifeveil at zero
+
+At **0 Lifeveil**, the Lifeveil is **Offline**.
+
+The vessel may still move if Hull, Arkengine, and Rigging permit, but the environmental envelope and magical shielding are unavailable. Everyone aboard is exposed to the outside environment. In a safe atmosphere this may be harmless; in the Void or another hostile environment it becomes an immediate serious hazard resolved by the applicable Event, Combat, environmental, or GM-authored rules.
+
+### Base stabilization / recovery
+
+Base Lifeveil recovery requires **1 hour** of stabilization by the Veilwarden using one of:
+
+- Arcana,
+- Religion,
+- Nature,
+- Occultism.
+
+Base degree results:
+
+- Critical Success: restore **20% of Base Max Lifeveil**.
+- Success: restore **10% of Base Max Lifeveil**.
+- Failure: restore nothing.
+- Critical Failure: restore nothing and gain **+1 Strain**.
+
+Base stabilization consumes **no Supplies or other consumable resource**.
+
+Installed Ship Mods, Arkengine Mods, Rooms, specialists, Ship Talents, or other authored permanent effects may explicitly improve recovery percentage, stabilization time, permitted skills, Strain risk, or other parameters. They modify the shared Lifeveil recovery rule rather than creating a parallel recovery system.
