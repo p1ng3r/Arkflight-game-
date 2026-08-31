@@ -18,12 +18,6 @@ function inventoryForFamily(ship, family) {
   throw new Error(`Unknown Arkflight refit draft family: ${family}`);
 }
 
-function installedKey(family) {
-  if (family === REFIT_DRAFT_FAMILIES.SHIP_MOD) return "shipMods";
-  if (family === REFIT_DRAFT_FAMILIES.ARKENGINE_MOD) return "arkengineMods";
-  throw new Error(`Unknown Arkflight refit draft family: ${family}`);
-}
-
 function positiveInteger(value, fallback = 1) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.max(1, Math.trunc(number)) : fallback;
@@ -95,13 +89,21 @@ export function resetRefitDraft(draft) {
 
 export function proposedShipFromDraft(ship, draft) {
   const normalized = normalizeShip(ship);
-  const next = { ...normalized };
-  for (const family of Object.values(REFIT_DRAFT_FAMILIES)) {
-    const key = installedKey(family);
-    const additions = (draft?.assignments ?? []).filter((entry) => entry.family === family).map((entry) => entry.componentId);
-    next[key] = [...(normalized[key] ?? []), ...additions];
-  }
-  return normalizeShip(next);
+  const shipModAdditions = (draft?.assignments ?? [])
+    .filter((entry) => entry.family === REFIT_DRAFT_FAMILIES.SHIP_MOD)
+    .map((entry) => entry.componentId);
+  const engineModAdditions = (draft?.assignments ?? [])
+    .filter((entry) => entry.family === REFIT_DRAFT_FAMILIES.ARKENGINE_MOD)
+    .map((entry) => entry.componentId);
+
+  return normalizeShip({
+    ...normalized,
+    shipMods: [...(normalized.shipMods ?? []), ...shipModAdditions],
+    arkengine: {
+      ...normalized.arkengine,
+      modIds: [...(normalized.arkengine?.modIds ?? []), ...engineModAdditions]
+    }
+  });
 }
 
 export function previewRefitDraft(ship, draft, catalogs) {
