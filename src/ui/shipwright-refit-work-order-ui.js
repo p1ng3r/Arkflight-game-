@@ -106,7 +106,7 @@ async function settleFailedInstall(actor, engineer, assignment, item, outcome) {
   return settled;
 }
 
-async function installStagedMod(actor, draft) {
+async function installStagedModByCrew(actor, draft) {
   const ship = shipPayload(actor);
   if (!ship || !draft?.assignments?.length) return;
   if (draft.assignments.length !== 1) {
@@ -177,14 +177,71 @@ async function installStagedMod(actor, draft) {
   Hooks.callAll("arkflightRefitModInstalled", { actor, engineer, assignment, job: completed.job, outcome: check.outcome });
 }
 
-Hooks.on("arkflightRefitInstallRequested", async ({ actor, draft }) => {
+async function installStagedModAtShipyard(actor, draft) {
+  const ship = shipPayload(actor);
+  if (!ship || !draft?.assignments?.length) return;
+  if (draft.assignments.length !== 1) {
+    ui.notifications?.warn?.("Install one staged Mod at a time so each shipyard job has a clear labor cost and duration.");
+    return;
+  }
+
+  const assignment = draft.assignments[0];
+  const item = catalogForFamily(assignment.family)?.[assignment.componentId];
+  const spec = installationSpec(assignment);
+  if (!item || !spec) {
+    ui.notifications?.warn?.("That staged fitting has no installation specification.");
+    return;
+  }
+  if (physicalCount(ship, assignment) < 1) {
+    ui.notifications?.warn?.(`${item.name} is no longer available in the physical fitting inventory.`);
+    return;
+  }
+  if (salvageParts(ship) < Number(spec.partsCost ?? 0)) {
+    ui.notifications?.warn?.(`Shipyard installation of ${item.name} needs ${spec.partsCost} Salvage Parts; only ${salvageParts(ship)} are available.`);
+    return;
+  }
+
+  const queued = await game.arkflight?.refit?.beginInstallDraft?.(actor, { assignments: [assignment] }, { method: "shipyard" });
+  if (!queued?.ok || !queued.jobs?.length) {
+    const detail = queued?.reason === "insufficient-salvage-parts"
+      ? `Need ${queued.required} Salvage Parts; only ${queued.available} remain.`
+      : `Could not create the shipyard work order: ${queued?.reason ?? "unknown error"}.`;
+    ui.notifications?.warn?.(detail);
+    return;
+  }
+
+  const job = queued.jobs[0];
+  const completed = await game.arkflight.refit.completeWork(actor, job.id, {
+    result: {
+      outcome: "shipyard",
+      workerActorUuid: "",
+      engineeringSkill: "",
+      baseDurationHours: job.durationHours,
+      elapsedHours: job.durationHours,
+      timeMultiplier: 1,
+      laborGold: job.goldCost,
+      paymentStatus: "recorded"
+    }
+  });
+  if (!completed?.ok) throw new Error(`Shipyard installation could not complete: ${completed?.reason ?? "unknown error"}.`);
+
+  await advanceInstallTime(job.durationHours);
+  rootForActor(actor)?.querySelector?.('[data-refit-draft-action="reset"]')?.click();
+  ui.notifications?.info?.(`${item.name} installed at a shipyard. ${job.partsCost} Salvage Parts spent; ${job.durationHours} hours pass; ${job.goldCost} gp labor recorded.`);
+  actor.sheet?.render?.({ force: true });
+  Hooks.callAll("arkflightRefitShipyardResolved", { actor, assignment, installed: true, job: completed.job });
+  Hooks.callAll("arkflightRefitModInstalled", { actor, engineer: null, assignment, job: completed.job, outcome: "shipyard" });
+}
+
+Hooks.on("arkflightRefitInstallRequested", async ({ actor, draft, method = "crew" }) => {
   if (!actor || !draft?.assignments?.length) return;
   if (!game.user?.isGM) {
-    ui.notifications?.warn?.("Only the GM can resolve Engineering installation checks during Refit Alpha.");
+    ui.notifications?.warn?.("Only the GM can resolve Refit installations during Refit Alpha.");
     return;
   }
   try {
-    await installStagedMod(actor, draft);
+    if (method === "shipyard") await installStagedModAtShipyard(actor, draft);
+    else await installStagedModByCrew(actor, draft);
   } catch (error) {
     console.error("Arkflight | Could not resolve Mod installation", error);
     ui.notifications?.error?.(error.message ?? "Could not install Mod.");
@@ -195,12 +252,12 @@ function clarifyRefitLanguage(root) {
   const coreSave = root.querySelector('[data-action="commission-vessel"]');
   if (coreSave && /apply refit/i.test(coreSave.textContent ?? "")) {
     coreSave.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> SAVE CORE BUILD`;
-    coreSave.title = "Save hull, pattern, Arkengine, and other core vessel configuration. Mods are installed with INSTALL MOD.";
+    coreSave.title = "Save hull, pattern, Arkengine, and other core vessel configuration. Mods are installed with the Crew or Shipyard install actions.";
   }
 
   const notice = root.querySelector(".arkflight-commissioning-main > .arkflight-panel-heading small");
   if (notice && /apply refit/i.test(notice.textContent ?? "")) {
-    notice.textContent = "Core-build changes use Save Core Build. Staged fittings use Install Mod.";
+    notice.textContent = "Core-build changes use Save Core Build. Staged fittings use Crew or Shipyard Install.";
   }
 }
 
@@ -222,7 +279,7 @@ Hooks.on("renderActorSheet", (app, html) => {
     if (!active.length) return;
     const panel = document.createElement("section");
     panel.className = "arkflight-refit-work-orders";
-    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>WORK ORDERS</span><strong>${active.length} active</strong></div>${active.map((job) => `<div class="arkflight-refit-work-order"><span>${String(job.type).toUpperCase()}</span><strong>${job.componentId || "Ship repair"}</strong><small>${job.status} · ${job.remainingHours}h · ${job.partsCost} Parts</small></div>`).join("")}`;
+    panel.innerHTML = `<div class="arkflight-bay-section-title"><span>WORK ORDERS</span><strong>${active.length} active</strong></div>${active.map((job) => `<div class="arkflight-refit-work-order"><span>${String(job.type).toUpperCase()}</span><strong>${job.componentId || "Ship repair"}</strong><small>${job.status} · ${job.remainingHours}h · ${job.partsCost} Parts${job.goldCost ? ` · ${job.goldCost} gp` : ""}</small></div>`).join("")}`;
     const actions = right.querySelector(".arkflight-bay-actions");
     if (actions) actions.before(panel); else right.append(panel);
   }));
