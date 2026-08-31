@@ -117,14 +117,27 @@ export function queueBuildJob(ship, family, componentId, catalogs, { method = RE
   return { ok: true, ship: addJob(spent.ship, job), job };
 }
 
-export function queueRemoveJob(ship, family, componentId, catalogs, { method = REFIT_METHODS.CREW, createdAt = null, idFactory = idFactoryDefault } = {}) {
+export function queueRemoveJob(ship, family, componentId, catalogs, {
+  method = REFIT_METHODS.CREW,
+  socketIndices = [],
+  sourceInstallJobId = "",
+  createdAt = null,
+  idFactory = idFactoryDefault
+} = {}) {
   const normalized = normalizeShip(ship); const item = catalogFor(catalogs, family)?.[componentId];
   if (!item) return { ok: false, reason: "unknown-component", ship: normalized };
   const installed = installArray(normalized, family).filter((id) => id === componentId).length;
-  const pending = (normalized.refit?.workOrders ?? []).filter((j) => j.type === REFIT_JOB_TYPES.REMOVE && j.componentFamily === family && j.componentId === componentId && j.status !== REFIT_JOB_STATES.COMPLETE).length;
+  const pending = (normalized.refit?.workOrders ?? []).filter((j) => j.type === REFIT_JOB_TYPES.REMOVE && j.componentFamily === family && j.componentId === componentId && ![REFIT_JOB_STATES.COMPLETE, REFIT_JOB_STATES.COMPLICATION].includes(j.status)).length;
   if (pending >= installed) return { ok: false, reason: "component-not-installed", ship: normalized };
   const spec = item.data.refit; const duration = Math.max(1, Math.ceil(spec.install.timeHours / 2));
-  const job = createRefitJob({ id: idFactory(), type: REFIT_JOB_TYPES.REMOVE, method, componentFamily: family, componentId, durationHours: duration, craftingDC: spec.install.dc, createdAt: nowIso(createdAt) });
+  const job = createRefitJob({
+    id: idFactory(), type: REFIT_JOB_TYPES.REMOVE, method,
+    componentFamily: family, componentId,
+    socketIndices,
+    durationHours: duration, craftingDC: spec.install.dc,
+    result: sourceInstallJobId ? { sourceInstallJobId: String(sourceInstallJobId) } : null,
+    createdAt: nowIso(createdAt)
+  });
   return { ok: true, ship: addJob(normalized, job), job };
 }
 
@@ -160,6 +173,7 @@ export function completeRefitJob(ship, jobId, catalogs, { completedAt = null, re
     const arr = [...installArray(next, found.componentFamily)]; const index = arr.indexOf(found.componentId); if (index < 0) return { ok: false, reason: "component-not-installed", ship: next };
     arr.splice(index, 1); next = grantComponent(withInstallArray(next, found.componentFamily, arr), found.componentFamily, found.componentId, 1);
   }
-  const job = createRefitJob({ ...found, status: REFIT_JOB_STATES.COMPLETE, remainingHours: 0, result, completedAt: nowIso(completedAt) });
+  const mergedResult = Object.freeze({ ...(found.result ?? {}), ...(result ?? {}) });
+  const job = createRefitJob({ ...found, status: REFIT_JOB_STATES.COMPLETE, remainingHours: 0, result: mergedResult, completedAt: nowIso(completedAt) });
   next = replaceJob(next, job); return { ok: true, ship: next, job };
 }
