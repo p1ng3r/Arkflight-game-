@@ -86,9 +86,11 @@ export function syncResourceMaxima(ship, derived) {
   const existingMoraleMax = Number(ship.resources?.morale?.max ?? 5);
   const derivedMoraleMax = Number(derived.stats?.moraleCapacity ?? 0);
   const moraleMax = derivedMoraleMax > 0 ? derivedMoraleMax : existingMoraleMax;
+  const hullValue = ship.resources?.hull?.value;
+  const lifeveilValue = ship.resources?.lifeveil?.value;
   return { ...ship, resources: { ...ship.resources,
-    hull: { value: Math.min(ship.resources.hull.value || derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
-    lifeveil: { value: Math.min(ship.resources.lifeveil.value || derived.stats.lifeveilCapacity, derived.stats.lifeveilCapacity), max: derived.stats.lifeveilCapacity },
+    hull: { value: Math.min(hullValue ?? derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
+    lifeveil: { value: Math.min(lifeveilValue ?? derived.stats.lifeveilCapacity, derived.stats.lifeveilCapacity), max: derived.stats.lifeveilCapacity },
     strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity },
     morale: { value: Math.min(ship.resources.morale?.value ?? moraleMax, moraleMax), max: moraleMax },
     supplies: { value: Math.min(ship.resources.supplies?.value ?? 0, supplyMax || Number.MAX_SAFE_INTEGER), max: supplyMax }
