@@ -124,9 +124,13 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", () => {
-  controller = new PlanningController({ onStateChange: (state) => { renderBoard(); announceStateRewards(state); } });
+  controller = new PlanningController({
+    onStateChange: (state) => {
+      if (board?.rendered) renderBoard();
+      announceStateRewards(state);
+    }
+  });
   controller.activateSockets();
-  if (controller.state?.eventId) { renderBoard(); announceStateRewards(controller.state); }
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
