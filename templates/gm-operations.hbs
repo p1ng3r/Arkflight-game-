@@ -1,0 +1,88 @@
+<section class="arkflight-gm-shell">
+  <aside class="arkflight-gm-rail" aria-label="Arkflight GM Operations navigation">
+    <div class="arkflight-gm-brand">
+      <i class="fa-solid fa-screwdriver-wrench"></i>
+      <span>GM Operations</span>
+    </div>
+
+    <nav class="arkflight-gm-nav">
+      {{#each sections}}
+        <button type="button" class="arkflight-gm-nav-button {{#if active}}active{{/if}}" data-gm-section="{{id}}">
+          <i class="{{icon}}"></i>
+          <span>{{label}}</span>
+          {{#if status}}<span class="arkflight-gm-nav-status" title="Active operation"></span>{{/if}}
+        </button>
+      {{/each}}
+    </nav>
+  </aside>
+
+  <main class="arkflight-gm-workspace">
+    <header class="arkflight-gm-workspace-header">
+      <div>
+        <div class="arkflight-gm-kicker">ARKFLIGHT COMMAND DESK</div>
+        <h1>{{sectionTitle}}</h1>
+      </div>
+      <div class="arkflight-gm-operation-state">
+        {{#if eventActive}}
+          <span class="arkflight-gm-state-chip active"><i class="fa-solid fa-compass"></i> Voyage Active</span>
+        {{/if}}
+        {{#if combatActive}}
+          <span class="arkflight-gm-state-chip danger"><i class="fa-solid fa-burst"></i> Combat Active</span>
+        {{/if}}
+        {{#unless eventActive}}{{#unless combatActive}}
+          <span class="arkflight-gm-state-chip"><i class="fa-solid fa-circle-check"></i> No Active Operation</span>
+        {{/unless}}{{/unless}}
+      </div>
+    </header>
+
+    <div class="arkflight-gm-context-tabs" aria-label="Context controls">
+      {{#if command}}<button type="button" class="active">Overview</button><button type="button" disabled>Alerts</button>{{/if}}
+      {{#if ships}}<button type="button" class="active">Fleet</button><button type="button" disabled>Selected Ship</button>{{/if}}
+      {{#if generate}}<button type="button" class="active">Ship Generator</button><button type="button" disabled>Preview</button>{{/if}}
+      {{#if operations}}<button type="button" class="active">Active</button><button type="button" disabled>Voyage Events</button><button type="button" disabled>Ship Combat</button>{{/if}}
+      {{#if timeWork}}<button type="button" class="active">World Time</button><button type="button" disabled>Work Orders</button>{{/if}}
+      {{#if salvage}}<button type="button" class="active">Loot & Salvage</button><button type="button" disabled>Recovery</button>{{/if}}
+      {{#if library}}<button type="button" class="active">Ships</button><button type="button" disabled>Crew Templates</button>{{/if}}
+    </div>
+
+    <section class="arkflight-gm-content">
+      {{#if command}}
+        <div class="arkflight-gm-placeholder-grid">
+          <article class="arkflight-gm-panel"><h2>World</h2><p>World time, advancement, and completion forecasts will live here.</p></article>
+          <article class="arkflight-gm-panel"><h2>Active Ship</h2><p>Selected Arkflight ship readiness and shortcuts will live here.</p></article>
+          <article class="arkflight-gm-panel"><h2>Active Operations</h2><p>Voyage, combat, and Work Order state will surface here.</p></article>
+          <article class="arkflight-gm-panel"><h2>Alerts</h2><p>Only actionable GM warnings will appear here.</p></article>
+        </div>
+      {{/if}}
+
+      {{#if operations}}
+        {{#if activeEvent}}
+          <article class="arkflight-gm-panel arkflight-gm-active-operation">
+            <div>
+              <div class="arkflight-gm-kicker">ACTIVE VOYAGE</div>
+              <h2>{{activeEvent.name}}</h2>
+              <p>Round {{activeEvent.round}} · {{activeEvent.phase}}</p>
+            </div>
+            <button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-compass"></i> Resume Event</button>
+          </article>
+        {{else}}
+          <article class="arkflight-gm-panel arkflight-gm-empty-state">
+            <i class="fa-solid fa-compass"></i>
+            <h2>No active Voyage</h2>
+            <p>Event selection and launch controls will be added here next.</p>
+          </article>
+        {{/if}}
+
+        {{#if combatActive}}
+          <article class="arkflight-gm-panel"><h2>Active Ship Combat</h2><p>Combat controls will connect to the authoritative Arkflight combat API.</p></article>
+        {{/if}}
+      {{/if}}
+
+      {{#if ships}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Ships</h2><p>Fleet roster and selected-ship operations are the next ship-facing layer.</p></article>{{/if}}
+      {{#if generate}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Generate</h2><p>Configure → Generate Preview → Review/Edit → Commit will live here.</p></article>{{/if}}
+      {{#if timeWork}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Time & Work</h2><p>World-time advancement and Work Orders will live here.</p></article>{{/if}}
+      {{#if salvage}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Salvage</h2><p>Personal loot, cargo, and Arkflight salvage will live here.</p></article>{{/if}}
+      {{#if library}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Library</h2><p>Curated ship presets and reusable templates will live here.</p></article>{{/if}}
+    </section>
+  </main>
+</section>
