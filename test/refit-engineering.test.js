@@ -17,16 +17,18 @@ test("success installs in listed time", () => {
   assert.equal(result.timeMultiplier, 1);
 });
 
-test("failure spends no installation time", () => {
+test("failure consumes listed installation time without installing", () => {
   const result = resolveEngineeringInstallOutcome("failure", 4);
   assert.equal(result.install, false);
   assert.equal(result.complication, false);
-  assert.equal(result.timeHours, 0);
+  assert.equal(result.timeHours, 4);
+  assert.equal(result.timeMultiplier, 1);
 });
 
-test("critical failure creates a complication outcome without installing", () => {
+test("critical failure consumes listed time and creates a complication outcome", () => {
   const result = resolveEngineeringInstallOutcome("criticalFailure", 4);
   assert.equal(result.install, false);
   assert.equal(result.complication, true);
-  assert.equal(result.timeHours, 0);
+  assert.equal(result.timeHours, 4);
+  assert.equal(result.timeMultiplier, 1);
 });
