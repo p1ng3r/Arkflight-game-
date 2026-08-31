@@ -24,6 +24,7 @@
     "styles/ship-sheet-polish.css",
     "styles/ship-sheet-commissioning.css",
     "styles/shipwright-ux.css",
+    "styles/shipwright-interaction.css",
     "styles/ship-progression.css",
     "styles/ship-progression-lore.css",
     "styles/ship-progression-eligibility.css",
