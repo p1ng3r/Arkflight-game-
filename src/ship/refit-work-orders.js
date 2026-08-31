@@ -46,13 +46,19 @@ export function queueInstallDraft(ship, draft, catalogs, { method = REFIT_METHOD
   return Object.freeze({ ok: true, ship: next, jobs: Object.freeze(jobs), partsSpent: totalParts });
 }
 
-export function recordCrewInstallComplication(ship, assignment, catalogs, {
-  workerActorUuid = "", outcome = "criticalFailure", createdAt = null, idFactory = idFactoryDefault
+export function recordCrewInstallFailure(ship, assignment, catalogs, {
+  workerActorUuid = "", outcome = "failure", elapsedHours = null, createdAt = null, idFactory = idFactoryDefault
 } = {}) {
   const normalized = normalizeShip(ship);
   const item = catalogFor(catalogs, assignment?.family)?.[assignment?.componentId];
   if (!item) return { ok: false, reason: "unknown-component", ship: normalized };
   const spec = item.data?.refit?.install;
+  const partsCost = Math.max(0, Math.trunc(Number(spec?.partsCost ?? 0)));
+  const spent = spendSalvageParts(normalized, partsCost);
+  if (!spent.ok) return spent;
+  const durationHours = Math.max(0, Number(spec?.timeHours ?? 0));
+  const actualHours = Math.max(0, Number(elapsedHours ?? durationHours));
+  const complication = outcome === "criticalFailure";
   const job = createRefitJob({
     id: idFactory(),
     type: REFIT_JOB_TYPES.INSTALL,
@@ -61,20 +67,29 @@ export function recordCrewInstallComplication(ship, assignment, catalogs, {
     componentId: assignment.componentId,
     socketIndices: assignment.socketIndices ?? [],
     craftingDC: spec?.dc ?? 0,
-    partsCost: 0,
-    durationHours: 0,
+    partsCost,
+    durationHours,
     remainingHours: 0,
-    status: REFIT_JOB_STATES.COMPLICATION,
-    reservation: { partsSpent: 0, componentHeld: false },
+    status: complication ? REFIT_JOB_STATES.COMPLICATION : REFIT_JOB_STATES.COMPLETE,
+    reservation: { partsSpent: partsCost, componentHeld: false },
     result: {
       outcome,
       workerActorUuid,
       engineeringSkill: "crafting",
-      complication: "installation-complication"
+      baseDurationHours: durationHours,
+      elapsedHours: actualHours,
+      timeMultiplier: durationHours > 0 ? actualHours / durationHours : 1,
+      installed: false,
+      ...(complication ? { complication: "installation-complication" } : {})
     },
-    createdAt: nowIso(createdAt)
+    createdAt: nowIso(createdAt),
+    completedAt: complication ? null : nowIso(createdAt)
   });
-  return { ok: true, ship: addJob(normalized, job), job };
+  return { ok: true, ship: addJob(spent.ship, job), job, partsSpent: partsCost };
+}
+
+export function recordCrewInstallComplication(ship, assignment, catalogs, options = {}) {
+  return recordCrewInstallFailure(ship, assignment, catalogs, { ...options, outcome: options.outcome ?? "criticalFailure" });
 }
 
 export function queueBuildJob(ship, family, componentId, catalogs, { method = REFIT_METHODS.CREW, createdAt = null, idFactory = idFactoryDefault } = {}) {
