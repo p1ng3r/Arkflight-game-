@@ -44,7 +44,8 @@
     "styles/player-action-board-order.css",
     "styles/player-action-board-cleanup.css",
     "styles/player-action-board-gm.css",
-    "styles/shipwright-nav-compact.css"
+    "styles/shipwright-nav-compact.css",
+    "styles/ship-portrait.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -75,6 +76,7 @@
     "src/ui/ship-progression-eligibility-ui.js",
     "src/ui/ship-level-reset-fix-ui.js",
     "src/ui/ship-sheet-polish-ui.js",
+    "src/ui/ship-portrait-ui.js",
     "src/ui/shipwright-bay-ui.js",
     "src/ui/shipwright-arkengine-socket-ui.js",
     "src/ui/shipwright-refit-inventory-ui.js",
