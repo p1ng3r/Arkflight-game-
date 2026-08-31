@@ -1,0 +1,223 @@
+.arkflight-refit-economy-controls {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 10px;
+  padding: 8px;
+  border: 1px solid rgba(190, 150, 78, 0.34);
+  background: rgba(4, 14, 25, 0.76);
+}
+
+.arkflight-refit-parts {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: #d8c28f;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.arkflight-refit-parts strong {
+  min-width: 36px;
+  text-align: center;
+  padding: 3px 8px;
+  border: 1px solid rgba(115, 215, 231, 0.45);
+  background: rgba(16, 64, 74, 0.35);
+  color: #d8fbff;
+  font-size: 14px;
+}
+
+.arkflight-refit-bench-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.arkflight-refit-bench-tabs button {
+  min-height: 30px;
+  border: 1px solid rgba(177, 143, 76, .32);
+  background: rgba(11, 25, 37, .9);
+  color: #b9b5aa;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.arkflight-refit-bench-tabs button.is-active {
+  border-color: rgba(217, 178, 91, .8);
+  color: #f0d89c;
+  box-shadow: inset 0 0 12px rgba(190, 139, 44, .12);
+}
+
+.arkflight-refit-blueprints {
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.arkflight-refit-blueprint-card {
+  display: grid;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(164, 132, 72, .34);
+  background: linear-gradient(180deg, rgba(16, 28, 40, .95), rgba(7, 16, 25, .95));
+}
+
+.arkflight-refit-blueprint-title {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: center;
+  gap: 7px;
+}
+
+.arkflight-refit-blueprint-title > i {
+  color: #d4b66e;
+  font-size: 20px;
+  text-align: center;
+}
+
+.arkflight-refit-blueprint-title strong,
+.arkflight-refit-blueprint-title small {
+  display: block;
+}
+
+.arkflight-refit-blueprint-title strong {
+  color: #f0e5c9;
+  font-size: 12px;
+}
+
+.arkflight-refit-blueprint-title small {
+  color: #a9b4bc;
+  margin-top: 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.arkflight-refit-blueprint-card p {
+  margin: 0;
+  color: #b9c2c7;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.arkflight-refit-blueprint-costs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.arkflight-refit-blueprint-costs span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 3px;
+  border: 1px solid rgba(115, 156, 170, .24);
+  background: rgba(9, 30, 40, .55);
+  color: #c6d6da;
+  font-size: 9px;
+}
+
+.arkflight-refit-build-button {
+  min-height: 30px;
+  border: 1px solid rgba(194, 153, 72, .62);
+  background: rgba(86, 59, 20, .34);
+  color: #efd28a;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+}
+
+.arkflight-refit-build-button:disabled {
+  opacity: .48;
+  filter: grayscale(.4);
+}
+
+.arkflight-refit-empty {
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  padding: 24px 12px;
+  border: 1px dashed rgba(160, 140, 95, .3);
+  color: #8f9aa0;
+  text-align: center;
+}
+
+.arkflight-refit-empty i {
+  color: #a88e58;
+  font-size: 24px;
+}
+
+.arkflight-refit-empty strong {
+  color: #c7b98f;
+}
+
+.arkflight-refit-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 5px 0;
+}
+
+.arkflight-refit-badge-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border: 1px solid rgba(151, 158, 158, .28);
+  background: rgba(8, 22, 31, .7);
+  color: #c7d0d2;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.arkflight-refit-slot-badge.is-weapon { color: #e3c0a0; }
+.arkflight-refit-slot-badge.is-structural { color: #d0d6d9; }
+.arkflight-refit-slot-badge.is-rigging { color: #c9b789; }
+.arkflight-refit-slot-badge.is-lifeveil { color: #ceb9ef; }
+.arkflight-refit-slot-badge.is-support { color: #c6d8c0; }
+.arkflight-refit-slot-badge.is-utility { color: #e0c789; }
+.arkflight-refit-slot-badge.is-power { color: #bceeff; }
+.arkflight-refit-slot-badge.is-stability { color: #e6d3a0; }
+
+.arkflight-ship-socket-marker {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 2px);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  color: #aeb9be;
+  font-size: 8px;
+  text-shadow: 0 1px 2px #000;
+}
+
+.arkflight-bay-socket.is-ship-socket-weapon { --arkflight-socket-accent: 205, 145, 91; }
+.arkflight-bay-socket.is-ship-socket-structural { --arkflight-socket-accent: 190, 200, 205; }
+.arkflight-bay-socket.is-ship-socket-rigging { --arkflight-socket-accent: 190, 164, 95; }
+.arkflight-bay-socket.is-ship-socket-lifeveil { --arkflight-socket-accent: 163, 124, 218; }
+.arkflight-bay-socket.is-ship-socket-support { --arkflight-socket-accent: 142, 185, 137; }
+.arkflight-bay-socket.is-ship-socket-utility,
+.arkflight-bay-socket.is-ship-socket-flexible,
+.arkflight-bay-socket.is-ship-socket-generic { --arkflight-socket-accent: 91, 194, 216; }
+
+.arkflight-bay-schematic.is-ship .arkflight-bay-socket:not(.is-occupied) {
+  border-color: rgba(var(--arkflight-socket-accent, 91, 194, 216), .55);
+  box-shadow: 0 0 9px rgba(var(--arkflight-socket-accent, 91, 194, 216), .12);
+}
+
+.arkflight-bay-socket.is-category-compatible:not(.is-occupied) {
+  outline: 2px solid rgba(118, 231, 244, .9);
+  box-shadow: 0 0 18px rgba(88, 215, 235, .52) !important;
+}
+
+.arkflight-bay-socket.is-category-incompatible:not(.is-occupied) {
+  opacity: .28;
+  filter: grayscale(.75);
+}
