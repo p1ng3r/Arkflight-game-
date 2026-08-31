@@ -89,4 +89,105 @@
 
 .arkflight-bay-socket.is-refit-installed {
   cursor: default;
+  border-width: 2px;
+}
+
+.arkflight-bay-socket.is-refit-installed .arkflight-refit-socket-mod-icon {
+  font-size: 16px;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.arkflight-bay-socket.is-refit-installed.tone-0,
+.arkflight-refit-installed-row.tone-0 { --arkflight-refit-tone: 81, 214, 232; }
+.arkflight-bay-socket.is-refit-installed.tone-1,
+.arkflight-refit-installed-row.tone-1 { --arkflight-refit-tone: 98, 167, 255; }
+.arkflight-bay-socket.is-refit-installed.tone-2,
+.arkflight-refit-installed-row.tone-2 { --arkflight-refit-tone: 176, 126, 255; }
+.arkflight-bay-socket.is-refit-installed.tone-3,
+.arkflight-refit-installed-row.tone-3 { --arkflight-refit-tone: 83, 224, 170; }
+
+.arkflight-bay-socket.is-refit-installed {
+  color: rgb(var(--arkflight-refit-tone, 81, 214, 232));
+  border-color: rgba(var(--arkflight-refit-tone, 81, 214, 232), .9);
+  background: rgba(var(--arkflight-refit-tone, 81, 214, 232), .13);
+  box-shadow: 0 0 12px rgba(var(--arkflight-refit-tone, 81, 214, 232), .34), inset 0 0 10px rgba(var(--arkflight-refit-tone, 81, 214, 232), .1);
+}
+
+.arkflight-refit-installed-authority {
+  display: grid;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.arkflight-refit-installed-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(var(--arkflight-refit-tone, 81, 214, 232), .34);
+  background: rgba(var(--arkflight-refit-tone, 81, 214, 232), .055);
+}
+
+.arkflight-refit-installed-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--arkflight-refit-tone, 81, 214, 232), .78);
+  color: rgb(var(--arkflight-refit-tone, 81, 214, 232));
+  background: rgba(var(--arkflight-refit-tone, 81, 214, 232), .12);
+  box-shadow: 0 0 9px rgba(var(--arkflight-refit-tone, 81, 214, 232), .23);
+}
+
+.arkflight-refit-installed-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.arkflight-refit-installed-copy strong {
+  color: #e7f6f8;
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+.arkflight-refit-installed-copy span,
+.arkflight-refit-installed-copy em {
+  font-size: 9px;
+  line-height: 1.15;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
+
+.arkflight-refit-installed-copy span { color: #8fa9ad; }
+.arkflight-refit-installed-copy em { color: #e9b95f; font-style: normal; }
+
+.arkflight-refit-remove-button {
+  min-height: 28px;
+  padding: 4px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(218, 176, 92, .48);
+  background: rgba(73, 52, 18, .19);
+  color: #ddbd74;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .045em;
+}
+
+.arkflight-refit-remove-button:hover:not(:disabled) {
+  border-color: rgba(235, 194, 105, .8);
+  background: rgba(100, 70, 20, .28);
+}
+
+.arkflight-refit-installed-row.is-removing {
+  opacity: .78;
+  border-style: dashed;
+}
+
+.arkflight-refit-installed-row.is-over-capacity {
+  --arkflight-refit-tone: 231, 99, 78;
 }
