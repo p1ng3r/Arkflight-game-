@@ -3,11 +3,13 @@
     <div class="arkflight-progression-portrait-wrap">
       <img class="arkflight-progression-portrait" src="{{actor.img}}" alt="{{actor.name}}">
       <div class="arkflight-progression-portrait-shade"></div>
+      <div class="arkflight-portrait-caption"><i class="fa-solid fa-anchor"></i> HER STORY IS WRITTEN IN BRASS, TIMBER & SCARS</div>
     </div>
 
     <div class="arkflight-progression-title-block">
-      <span class="arkflight-progression-kicker">ARKFLIGHT SHIP PROGRESSION</span>
+      <span class="arkflight-progression-kicker">THE SHIPWRIGHT'S LEDGER</span>
       <h1>{{actor.name}}</h1>
+      <p class="arkflight-hero-musing">Every refit changes more than the numbers. It changes what sailors whisper about her at the Last Lantern.</p>
       <div class="arkflight-level-track" aria-label="Ship progression through level 20">
         <div class="arkflight-level-track-fill" style="width: {{progression.levelPercent}}%"></div>
       </div>
@@ -20,10 +22,11 @@
     <div class="arkflight-progression-emblem">
       <img src="modules/arkflight-game/assets/ui/branding/arkflight_logo_Simple.webp" alt="Arkflight">
       <span>ARKFLIGHT</span>
+      <small>BUILD THE SHIP THEY REMEMBER</small>
     </div>
 
     <div class="arkflight-progression-level-card tier-{{progression.tier.id}}">
-      <span class="arkflight-level-label">LEVEL</span>
+      <span class="arkflight-level-label">VESSEL LEVEL</span>
       {{#if isGM}}
         <input type="number" min="1" max="20" value="{{progression.level}}" data-ship-level aria-label="Ship level">
       {{else}}
@@ -33,9 +36,9 @@
     </div>
 
     <div class="arkflight-progression-points">
-      <span>TALENT POINTS</span>
+      <span>UNSPENT TALENT</span>
       <strong>{{progression.available}} <small>/ {{progression.budget}}</small></strong>
-      <em>{{progression.spent}} spent</em>
+      <em>{{progression.spent}} committed to her story</em>
     </div>
   </header>
 
@@ -53,7 +56,7 @@
   <div class="arkflight-progression-toolbar">
     <div class="arkflight-talent-search">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="search" placeholder="Search talents or mechanical effects…" data-talent-search>
+      <input type="search" placeholder="Search the shipwright's ledger…" data-talent-search>
     </div>
     <div class="arkflight-talent-filters" data-talent-filters>
       {{#each filters as |filter|}}
@@ -65,8 +68,12 @@
   <div class="arkflight-progression-body">
     <main class="arkflight-talent-board">
       <div class="arkflight-library-heading">
-        <div><span class="arkflight-progression-kicker">SHIPWRIGHT'S LEDGER</span><h2>Talent Library</h2></div>
-        <span class="arkflight-library-count">{{selectedCount}} owned</span>
+        <div>
+          <span class="arkflight-progression-kicker">WHAT WILL SHE BECOME?</span>
+          <h2>Shipwright's Ledger</h2>
+          <p>Not a catalog of bonuses—a record of the habits, scars, refits, crew traditions, and impossible tricks that make this vessel hers.</p>
+        </div>
+        <span class="arkflight-library-count"><i class="fa-solid fa-bookmark"></i> {{selectedCount}} stories aboard</span>
       </div>
 
       {{#each tiers as |tier|}}
@@ -77,7 +84,7 @@
               <span>{{tier.label}}</span>
               <small>Levels {{tier.minLevel}}–{{tier.maxLevel}}</small>
             </div>
-            {{#unless tier.active}}<strong><i class="fa-solid fa-lock"></i> Unlocks at level {{tier.minLevel}}</strong>{{/unless}}
+            {{#unless tier.active}}<strong><i class="fa-solid fa-lock"></i> Her legend has not reached this far yet</strong>{{/unless}}
           </div>
 
           <div class="arkflight-talent-grid">
@@ -90,14 +97,15 @@
                     <h3>{{talent.name}}</h3>
                     <span>{{talent.cost}} TP</span>
                   </div>
-                  <p>{{talent.description}}</p>
+                  <p class="arkflight-talent-rule">{{talent.description}}</p>
+                  <blockquote class="arkflight-talent-vignette">“{{talent.lore.quote}}” <cite>— {{talent.lore.credit}}</cite></blockquote>
                   <div class="arkflight-talent-meta">
                     <span>{{talent.categoryLabel}}</span>
-                    {{#if talent.owned}}<strong><i class="fa-solid fa-circle-check"></i> OWNED</strong>{{/if}}
+                    {{#if talent.owned}}<strong><i class="fa-solid fa-circle-check"></i> PART OF HER STORY</strong>{{/if}}
                   </div>
                 </div>
                 <div class="arkflight-talent-actions">
-                  <button type="button" data-preview-talent="{{talent.id}}"><i class="fa-solid fa-eye"></i> Preview</button>
+                  <button type="button" data-preview-talent="{{talent.id}}"><i class="fa-solid fa-book-open"></i> Read</button>
                   {{#if ../../canSpend}}
                     {{#unless talent.owned}}
                       <button type="button" class="arkflight-buy-mini" data-buy-talent="{{talent.id}}" {{#unless talent.canBuy}}disabled{{/unless}}><i class="fa-solid fa-hammer"></i> {{talent.stateLabel}}</button>
@@ -109,13 +117,14 @@
           </div>
         </section>
       {{/each}}
-      <div class="arkflight-no-talents" data-no-talents hidden>No talents match this filter.</div>
+      <div class="arkflight-no-talents" data-no-talents hidden>No tales in the ledger match those marks.</div>
     </main>
 
     <aside class="arkflight-progression-preview">
       <div class="arkflight-preview-sticky">
-        <span class="arkflight-progression-kicker">YOUR SHIP NOW</span>
+        <span class="arkflight-progression-kicker">THE VESSEL AS SHE STANDS</span>
         <h2>{{actor.name}}</h2>
+        <p class="arkflight-preview-whisper">A captain sees numbers. A crew sees whether she will bring them home.</p>
 
         <div class="arkflight-progression-stat-list">
           {{#each preview.core as |stat|}}
@@ -126,7 +135,7 @@
         </div>
 
         <section class="arkflight-preview-panel arkflight-mod-slots">
-          <div class="arkflight-preview-panel-title"><span>MOD SLOTS</span><i class="fa-solid fa-gears"></i></div>
+          <div class="arkflight-preview-panel-title"><span>SHIPWRIGHT'S FITTINGS</span><i class="fa-solid fa-gears"></i></div>
           <div class="arkflight-slot-bonus-grid">
             {{#each preview.slots as |slot|}}
               <div><span><i class="{{slot.iconClass}}"></i>{{slot.label}}</span><strong>{{slot.value}}</strong></div>
@@ -135,14 +144,14 @@
         </section>
 
         <section class="arkflight-preview-panel arkflight-vessel-identity">
-          <div class="arkflight-preview-panel-title"><span>VESSEL IDENTITY</span><i class="fa-regular fa-compass"></i></div>
+          <div class="arkflight-preview-panel-title"><span>WHAT SAILORS NOTICE</span><i class="fa-regular fa-compass"></i></div>
           {{#each preview.identity as |identity|}}
             <div class="arkflight-identity-row"><i class="{{identity.iconClass}}"></i><span>{{identity.label}}</span><strong>{{identity.value}}</strong></div>
           {{/each}}
         </section>
 
         <section class="arkflight-preview-panel arkflight-station-panel">
-          <div class="arkflight-preview-panel-title"><span>STATION BONUSES</span><i class="fa-solid fa-users-gear"></i></div>
+          <div class="arkflight-preview-panel-title"><span>THE FIVE STATIONS</span><i class="fa-solid fa-users-gear"></i></div>
           <div class="arkflight-station-bonus-grid">
             {{#each preview.stations as |station|}}
               <div><strong>{{station.label}}</strong><span>Base {{station.base}}</span><span>Voy {{station.voyage}}</span><span>Cbt {{station.combat}}</span></div>
@@ -157,13 +166,15 @@
     <footer class="arkflight-selected-talent tier-{{selection.tier}}">
       <div class="arkflight-selected-icon"><i class="{{selection.iconClass}}"></i></div>
       <div class="arkflight-selected-copy">
+        <span class="arkflight-selection-kicker">A PAGE FROM HER FUTURE</span>
         <div class="arkflight-selected-title"><h2>{{selection.name}}</h2><span>{{selection.cost}} TP</span></div>
+        <blockquote class="arkflight-selected-vignette">“{{selection.lore.quote}}” <cite>— {{selection.lore.credit}}</cite></blockquote>
         <p>{{selection.flavor}}</p>
         <small>{{selection.description}}</small>
       </div>
 
       <div class="arkflight-mechanical-effect">
-        <h3>MECHANICAL EFFECT</h3>
+        <h3><i class="fa-solid fa-hammer"></i> WHAT THE SHIPWRIGHT CHANGES</h3>
         {{#if selection.changes.length}}
           {{#each selection.changes as |change|}}
             <div class="arkflight-effect-row"><span>{{change.label}}</span><b>{{change.before}}</b><i class="fa-solid fa-arrow-right"></i><strong>{{change.after}}</strong></div>
@@ -171,24 +182,24 @@
         {{else}}
           <div class="arkflight-effect-text">{{selection.effectText}}</div>
         {{/if}}
-        <div class="arkflight-effect-row arkflight-tp-change"><span>Talent Points</span><b>{{selection.pointsBefore}}</b><i class="fa-solid fa-arrow-right"></i><strong>{{selection.pointsAfter}}</strong></div>
+        <div class="arkflight-effect-row arkflight-tp-change"><span>Talent Remaining</span><b>{{selection.pointsBefore}}</b><i class="fa-solid fa-arrow-right"></i><strong>{{selection.pointsAfter}}</strong></div>
       </div>
 
       <div class="arkflight-in-play">
-        <h3>IN PLAY</h3>
+        <h3><i class="fa-solid fa-star"></i> WHEN THE VOID ANSWERS</h3>
         <p>{{selection.inPlay}}</p>
       </div>
 
       <div class="arkflight-selected-actions">
-        <button type="button" class="arkflight-cancel-preview" data-clear-talent-preview><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button type="button" class="arkflight-cancel-preview" data-clear-talent-preview><i class="fa-solid fa-xmark"></i> Close Ledger</button>
         {{#if canSpend}}
           {{#if selection.owned}}
-            <button type="button" class="arkflight-refund-talent" data-toggle-selected-talent><i class="fa-solid fa-rotate-left"></i> Refund — {{selection.cost}} TP</button>
+            <button type="button" class="arkflight-refund-talent" data-toggle-selected-talent><i class="fa-solid fa-rotate-left"></i> Refit Away — {{selection.cost}} TP</button>
           {{else}}
-            <button type="button" class="arkflight-purchase-talent" data-toggle-selected-talent {{#unless selection.canBuy}}disabled{{/unless}}><i class="fa-solid fa-hammer"></i> Purchase — {{selection.cost}} TP</button>
+            <button type="button" class="arkflight-purchase-talent" data-toggle-selected-talent {{#unless selection.canBuy}}disabled{{/unless}}><i class="fa-solid fa-hammer"></i> Make It Hers — {{selection.cost}} TP</button>
           {{/if}}
         {{else}}
-          <div class="arkflight-readonly-purchase">View only</div>
+          <div class="arkflight-readonly-purchase">The ledger is open for reading only.</div>
         {{/if}}
       </div>
     </footer>
