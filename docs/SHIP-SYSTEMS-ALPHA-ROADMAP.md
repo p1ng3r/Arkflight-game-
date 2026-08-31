@@ -9,7 +9,7 @@
 1. Authoritative Ship Rules Contract ✅
 2. Hull & Damage ✅
 3. Lifeveil ✅
-4. Strain & Area Readiness
+4. Strain & Area Readiness ✅
 5. Morale
 6. Supplies, Cargo & Salvage Economy
 7. Crew & Stations
@@ -170,3 +170,53 @@ Base degree results:
 Base stabilization consumes **no Supplies or other consumable resource**.
 
 Installed Ship Mods, Arkengine Mods, Rooms, specialists, Ship Talents, or other authored permanent effects may explicitly improve recovery percentage, stabilization time, permitted skills, Strain risk, or other parameters. They modify the shared Lifeveil recovery rule rather than creating a parallel recovery system.
+
+## Part 4 — Strain & Area Readiness
+
+### Integrity bands
+
+The locked Area integrity bands remain:
+
+| Area state | Effective integrity cap |
+|---|---:|
+| Stable | 100% |
+| Stressed | 90% |
+| Damaged | 65% |
+| Critical | 25% |
+| Disabled | 0% |
+
+Hull and Lifeveil use these states to determine Effective Maximum from Base Maximum. If Current exceeds a newly lowered Effective Maximum, Current is immediately capped downward. Improving an Area state raises the Effective Maximum but does **not** restore Current.
+
+Morale remains the compact 0–5 resource established in Part 1; its relationship to the Morale Area is finalized separately in Part 5 rather than forcing percentage math onto the 0–5 band.
+
+### Resource depletion and Area condition remain distinct
+
+Direct Hull or Lifeveil numerical damage does not automatically degrade its Area.
+
+- 0 Hull means Wrecked, but Hull Area degradation still requires Strain threshold crossing or an explicit authored effect.
+- 0 Lifeveil means Offline/exposed, but Lifeveil Area degradation still requires Strain threshold crossing or an explicit authored effect.
+
+This keeps resource depletion/recovery separate from persistent system damage/repair.
+
+### Strain threshold resolution
+
+For one discrete Strain contribution:
+
+1. Add the contribution to the ship-wide persistent Strain pool.
+2. If the result is below the Strain Limit, retain the total with no Area degradation.
+3. If the result reaches or exceeds the Strain Limit, degrade the threatened Area by exactly one state.
+4. Subtract exactly one full Strain Limit.
+5. Keep all remaining overflow Strain.
+6. A single discrete resolution can cause at most one Area degradation, even if overflow remains at or above the Strain Limit.
+
+Example with Strain Limit 4:
+
+`3 + 2 = 5 -> threatened Area degrades once -> Strain becomes 1`
+
+Large discrete result example:
+
+`3 + 10 = 13 -> threatened Area degrades once -> Strain becomes 9`
+
+The next qualifying discrete resolution may trigger the next degradation.
+
+Disabled is the bottom of the Area ladder. There is no sixth Area state. If a threshold is crossed while the threatened Area is already Disabled, the normal one-limit Strain consumption still occurs, but no additional automatic Area state is created; any further catastrophic consequence must be explicitly authored.
