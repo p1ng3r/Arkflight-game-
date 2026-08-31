@@ -1,0 +1,10 @@
+.arkflight-ship-sheet .arkflight-ship-portrait.arkflight-editable-portrait {
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+
+.arkflight-ship-sheet .arkflight-ship-portrait.arkflight-editable-portrait:hover {
+  border-color: #78d9ee;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(120, 217, 238, 0.22);
+  filter: brightness(1.06);
+}
