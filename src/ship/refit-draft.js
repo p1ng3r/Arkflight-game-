@@ -1,5 +1,6 @@
 import { deriveShip } from "./derive-ship.js";
 import { normalizeShip } from "./ship-schema.js";
+import { validateRefitSocketAssignment } from "./refit-sockets.js";
 
 export const REFIT_DRAFT_FAMILIES = Object.freeze({
   SHIP_MOD: "shipMod",
@@ -63,9 +64,9 @@ export function stageRefitComponent(ship, draft, catalogs, {
     return Object.freeze({ ok: false, reason: "wrong-slot-count", required: slotCost, provided: indices.length, draft: createRefitDraft(draft) });
   }
 
-  const occupied = new Set((draft?.assignments ?? []).flatMap((entry) => entry.socketIndices ?? []));
-  if (indices.some((index) => occupied.has(index))) {
-    return Object.freeze({ ok: false, reason: "draft-socket-occupied", draft: createRefitDraft(draft) });
+  const socketCheck = validateRefitSocketAssignment(normalized, catalogs, { family, componentId, socketIndices: indices }, draft);
+  if (!socketCheck.ok) {
+    return Object.freeze({ ...socketCheck, draft: createRefitDraft(draft) });
   }
 
   const next = createRefitDraft({
