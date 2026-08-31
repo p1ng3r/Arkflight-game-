@@ -1,5 +1,7 @@
 import { deriveShip } from "./derive-ship.js";
 
+const UNCOMMISSIONED_CAPACITY = Number.MAX_SAFE_INTEGER;
+
 function catalogFor(catalogs, family) {
   if (family === "shipMod") return catalogs?.shipMods ?? {};
   if (family === "arkengineMod") return catalogs?.arkengineMods ?? {};
@@ -19,10 +21,20 @@ function slotCost(catalogs, family, componentId) {
 }
 
 export function refitSocketCapacity(ship, catalogs, family) {
+  // Bare createShip() fixtures and not-yet-commissioned vessels have no physical
+  // frame to enforce yet. Real commissioned ships always have a hull chassis.
+  if (!ship?.hull?.chassisId) return UNCOMMISSIONED_CAPACITY;
+
   const derived = deriveShip(ship, catalogs);
-  const value = family === "shipMod"
-    ? derived?.stats?.shipModCapacity
-    : derived?.stats?.arkengineModCapacity;
+  if (family === "shipMod") {
+    return Math.max(0, Math.trunc(Number(derived?.stats?.shipModCapacity ?? 0)));
+  }
+
+  const engine = catalogs?.arkengines?.[ship?.arkengine?.chassisId] ?? null;
+  if (!engine) return 0;
+  const engineCapacity = Number(engine?.data?.modCapacity);
+  const fallback = Number(derived?.stats?.arkengineModCapacity ?? 0);
+  const value = Number.isFinite(engineCapacity) ? engineCapacity : fallback;
   return Math.max(0, Math.trunc(Number(value ?? 0)));
 }
 
@@ -89,14 +101,15 @@ export function installedSocketLayout(ship, catalogs, family) {
     }));
   }
 
+  const finiteCapacity = capacity !== UNCOMMISSIONED_CAPACITY;
   return Object.freeze({
     family,
     capacity,
     usedSlots,
-    overBy: Math.max(0, usedSlots - capacity),
+    overBy: finiteCapacity ? Math.max(0, usedSlots - capacity) : 0,
     occupied: Object.freeze([...occupied].sort((a, b) => a - b)),
     placements: Object.freeze(placements),
-    overCapacityPlacements: Object.freeze(placements.filter((entry) => entry.overCapacity))
+    overCapacityPlacements: Object.freeze(finiteCapacity ? placements.filter((entry) => entry.overCapacity) : [])
   });
 }
 
