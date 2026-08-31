@@ -62,6 +62,7 @@
     "src/ui/player-action-board-gm-ui.js",
     "src/ui/ship-progression-ui.js",
     "src/ui/ship-xp-ui.js",
-    "src/ui/ship-progression-eligibility-ui.js"
+    "src/ui/ship-progression-eligibility-ui.js",
+    "src/ui/ship-level-reset-fix-ui.js"
   ]
 }
