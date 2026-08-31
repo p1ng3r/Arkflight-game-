@@ -2,16 +2,24 @@ import { SHIP_TALENTS, SHIP_TALENT_TIERS } from "../content/ship-talents.js";
 
 export const SHIP_LEVEL_MIN = 1;
 export const SHIP_LEVEL_MAX = 20;
-export const SHIP_MILESTONE_LEVELS = Object.freeze([5, 10, 15, 20]);
 
 export function clampShipLevel(level) {
   return Math.max(SHIP_LEVEL_MIN, Math.min(SHIP_LEVEL_MAX, Math.trunc(Number(level) || SHIP_LEVEL_MIN)));
 }
 
+/**
+ * Ship Talent Point cadence:
+ * - Level 1 begins with 2 TP.
+ * - Every later odd level grants 2 TP.
+ * - Every even level grants 1 TP.
+ *
+ * Totals: L1 2, L2 3, L3 5 ... L10 15 ... L20 30.
+ */
 export function talentPointsForLevel(level) {
   const value = clampShipLevel(level);
-  const milestoneBonus = SHIP_MILESTONE_LEVELS.filter((entry) => value >= entry).length;
-  return value + milestoneBonus;
+  const oddLevels = Math.ceil(value / 2);
+  const evenLevels = Math.floor(value / 2);
+  return (oddLevels * 2) + evenLevels;
 }
 
 export function tierForLevel(level) {
