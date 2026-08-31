@@ -76,6 +76,7 @@
     "src/ui/shipwright-arkengine-socket-ui.js",
     "src/ui/shipwright-refit-inventory-ui.js",
     "src/ui/shipwright-refit-draft-ui.js",
+    "src/ui/shipwright-refit-work-order-ui.js",
     "src/ui/shipwright-inspector-readability-ui.js"
   ]
 }
