@@ -11,11 +11,20 @@ import {
   grantSalvageParts,
   salvageParts
 } from "../ship/refit-state.js";
+import { SHIP_CATALOGS } from "../content/index.js";
+import {
+  queueInstallDraft,
+  queueBuildJob,
+  queueRemoveJob,
+  queueRepairJob,
+  startRefitJob,
+  completeRefitJob
+} from "../ship/refit-work-orders.js";
 
 const MODULE_ID = "arkflight-game";
 
 function requireGM() {
-  if (!game.user?.isGM) throw new Error("Only the GM can change Arkflight refit inventory during Refit Alpha.");
+  if (!game.user?.isGM) throw new Error("Only the GM can change Arkflight refit state during Refit Alpha.");
 }
 
 function shipPayload(actor) {
@@ -32,61 +41,61 @@ async function persistShip(actor, ship) {
   return ship;
 }
 
+async function persistResult(actor, result) {
+  if (result?.ok && result.ship) await persistShip(actor, result.ship);
+  return result;
+}
+
 Hooks.once("init", () => {
   if (!game.arkflight) return;
 
   game.arkflight.refit = Object.freeze({
     families: REFIT_COMPONENT_FAMILIES,
 
-    getSalvageParts(actor) {
-      return salvageParts(shipPayload(requireShipActor(actor)));
-    },
-
-    getInventory(actor) {
-      return availableRefitInventory(shipPayload(requireShipActor(actor)));
-    },
-
-    getBlueprints(actor, family) {
-      return knownBlueprintEntries(shipPayload(requireShipActor(actor)), family);
-    },
-
-    quoteBuild(actor, family, componentId, quantity = 1) {
-      return buildComponentQuote(shipPayload(requireShipActor(actor)), family, componentId, quantity);
-    },
+    getSalvageParts(actor) { return salvageParts(shipPayload(requireShipActor(actor))); },
+    getInventory(actor) { return availableRefitInventory(shipPayload(requireShipActor(actor))); },
+    getBlueprints(actor, family) { return knownBlueprintEntries(shipPayload(requireShipActor(actor)), family); },
+    getWorkOrders(actor) { return Object.freeze([...(shipPayload(requireShipActor(actor))?.refit?.workOrders ?? [])]); },
+    quoteBuild(actor, family, componentId, quantity = 1) { return buildComponentQuote(shipPayload(requireShipActor(actor)), family, componentId, quantity); },
 
     async grantSalvageParts(actor, amount) {
-      requireGM();
-      const target = requireShipActor(actor);
-      const ship = grantSalvageParts(shipPayload(target), amount);
-      await persistShip(target, ship);
+      requireGM(); const target = requireShipActor(actor);
+      const ship = grantSalvageParts(shipPayload(target), amount); await persistShip(target, ship);
       return Object.freeze({ ok: true, amount: Math.max(0, Math.trunc(Number(amount) || 0)), total: salvageParts(ship), ship });
     },
-
     async learnBlueprint(actor, family, componentId) {
-      requireGM();
-      const target = requireShipActor(actor);
-      const result = learnBlueprint(shipPayload(target), family, componentId);
-      if (!result.ok) return result;
-      await persistShip(target, result.ship);
-      return result;
+      requireGM(); const target = requireShipActor(actor); return persistResult(target, learnBlueprint(shipPayload(target), family, componentId));
     },
-
     async acquireComponent(actor, family, componentId, quantity = 1) {
-      requireGM();
-      const target = requireShipActor(actor);
-      const result = acquireIntactComponent(shipPayload(target), family, componentId, quantity);
-      if (!result.ok) return result;
-      await persistShip(target, result.ship);
-      return result;
+      requireGM(); const target = requireShipActor(actor); return persistResult(target, acquireIntactComponent(shipPayload(target), family, componentId, quantity));
+    },
+    async buildFromBlueprint(actor, family, componentId, quantity = 1) {
+      requireGM(); const target = requireShipActor(actor); return persistResult(target, buildComponentFromBlueprint(shipPayload(target), family, componentId, quantity));
     },
 
-    async buildFromBlueprint(actor, family, componentId, quantity = 1) {
-      requireGM();
-      const target = requireShipActor(actor);
-      const result = buildComponentFromBlueprint(shipPayload(target), family, componentId, quantity);
-      if (!result.ok) return result;
-      await persistShip(target, result.ship);
-      return result;
+    async beginInstallDraft(actor, draft, options = {}) {
+      requireGM(); const target = requireShipActor(actor);
+      return persistResult(target, queueInstallDraft(shipPayload(target), draft, SHIP_CATALOGS, options));
+    },
+    async queueBuild(actor, family, componentId, options = {}) {
+      requireGM(); const target = requireShipActor(actor);
+      return persistResult(target, queueBuildJob(shipPayload(target), family, componentId, SHIP_CATALOGS, options));
+    },
+    async queueRemove(actor, family, componentId, options = {}) {
+      requireGM(); const target = requireShipActor(actor);
+      return persistResult(target, queueRemoveJob(shipPayload(target), family, componentId, SHIP_CATALOGS, options));
+    },
+    async queueRepair(actor, options = {}) {
+      requireGM(); const target = requireShipActor(actor);
+      return persistResult(target, queueRepairJob(shipPayload(target), options));
+    },
+    async startWork(actor, jobId, options = {}) {
+      requireGM(); const target = requireShipActor(actor);
+      return persistResult(target, startRefitJob(shipPayload(target), jobId, options));
+    },
+    async completeWork(actor, jobId, options = {}) {
+      requireGM(); const target = requireShipActor(actor);
+      return persistResult(target, completeRefitJob(shipPayload(target), jobId, SHIP_CATALOGS, options));
     }
   });
 });
