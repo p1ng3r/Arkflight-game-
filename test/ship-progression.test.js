@@ -17,12 +17,14 @@ function sloop(overrides = {}) {
   });
 }
 
-test("talent point milestones grant bonus TP at 5/10/15/20", () => {
-  assert.equal(talentPointsForLevel(1), 1);
-  assert.equal(talentPointsForLevel(5), 6);
-  assert.equal(talentPointsForLevel(10), 12);
-  assert.equal(talentPointsForLevel(15), 18);
-  assert.equal(talentPointsForLevel(20), 24);
+test("level 1 and every odd ship level grant 2 TP while even levels grant 1", () => {
+  assert.equal(talentPointsForLevel(1), 2);
+  assert.equal(talentPointsForLevel(2), 3);
+  assert.equal(talentPointsForLevel(3), 5);
+  assert.equal(talentPointsForLevel(5), 8);
+  assert.equal(talentPointsForLevel(10), 15);
+  assert.equal(talentPointsForLevel(15), 23);
+  assert.equal(talentPointsForLevel(20), 30);
 });
 
 test("ship XP uses a flat 1000 XP per level", () => {
@@ -68,6 +70,16 @@ test("GM reset lowers ship level and clears current XP", () => {
   assert.equal(result.ship.progression.xp, 0);
   assert.deepEqual(result.ship.progression.talentIds, ["toughness", "engineers-vessel"]);
   assert.equal(validateProgression(result.ship).ok, true);
+});
+
+test("GM can reset a ship all the way to level 1", () => {
+  const ship = sloop({ progression: { level: 9, xp: 640, talentIds: ["toughness", "engineers-vessel", "responsive-rigging"], arkcraftUpgrades: {} } });
+  const result = resetShipLevel(ship, 1);
+  assert.equal(result.level, 1);
+  assert.equal(result.ship.progression.level, 1);
+  assert.equal(result.ship.progression.xp, 0);
+  assert.equal(validateProgression(result.ship).ok, true);
+  assert.ok(result.ship.progression.talentIds.length <= 2);
 });
 
 test("GM reset refunds talents from tiers no longer unlocked", () => {
@@ -124,10 +136,10 @@ test("Legendary Action and Reaction talents affect combat profile", () => {
 });
 
 test("progression budget rejects overspending", () => {
-  const ship = sloop({ progression: { level: 1, talentIds: ["voyage-trained"], arkcraftUpgrades: {} } });
+  const ship = sloop({ progression: { level: 1, talentIds: ["voyage-trained", "battle-trained"], arkcraftUpgrades: {} } });
   const check = validateProgression(ship);
   assert.equal(check.ok, false);
-  assert.match(check.errors.join(" "), /spends 2 TP/);
+  assert.match(check.errors.join(" "), /spends 4 TP/);
 });
 
 test("Specialist Arkcraft talent adds a selectable technique", () => {
