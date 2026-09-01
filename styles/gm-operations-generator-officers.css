@@ -34,3 +34,41 @@
   color: #83919a;
   white-space: normal;
 }
+
+.arkflight-gm-generator-template-crew {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(190, 143, 66, .18);
+}
+
+.arkflight-gm-generator-template-toggle {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 7px 8px;
+  border: 1px solid rgba(190, 143, 66, .14);
+  border-radius: 4px;
+  background: rgba(8, 13, 18, .42);
+}
+
+.arkflight-gm-generator-template-toggle input {
+  margin-top: 2px;
+}
+
+.arkflight-gm-generator-template-toggle span {
+  display: grid;
+  gap: 2px;
+}
+
+.arkflight-gm-generator-template-toggle strong {
+  color: #e1d4b8;
+  font-size: 11px;
+}
+
+.arkflight-gm-generator-template-toggle small {
+  color: #87949d;
+  white-space: normal;
+}
