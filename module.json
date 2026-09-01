@@ -48,6 +48,7 @@
     "styles/shipwright-nav-compact.css",
     "styles/ship-portrait.css",
     "styles/gm-operations.css",
+    "styles/ship-sheet-refit-gameplay.css",
     "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
@@ -98,6 +99,7 @@
     "src/ui/gm-operations-combat-ui.js",
     "src/ui/gm-operations-time-work-ui.js",
     "src/ui/player-refit-work-start-ui.js",
+    "src/ui/ship-sheet-refit-gameplay-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
   ]
 }
