@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
-import { ENEMY_ARCHETYPES, generateEnemyShipPreview } from "../generator/enemy-ship-generator.js";
+import { ENEMY_ARCHETYPES } from "../generator/enemy-ship-generator.js";
+import { generateEnemyEncounterPreview } from "../generator/enemy-encounter-preview.js";
 
 const GM_OPERATIONS_ID = "arkflight-gm-operations";
 
@@ -10,7 +11,7 @@ function titleCase(value) {
 function componentName(catalog, id) { return catalog?.[id]?.name ?? id; }
 
 function defaultConfig() {
-  return { level: 10, archetypeId: "raider", difficulty: "standard", faction: "Independent", theme: "", lootProfile: "standard" };
+  return { level: 10, partyLevel: 10, archetypeId: "raider", difficulty: "standard", faction: "Independent", theme: "", lootProfile: "standard" };
 }
 
 function field(labelText, control) {
@@ -42,6 +43,13 @@ function inputControl(name, value, type = "text") {
   return input;
 }
 
+function readConfig(panel) {
+  const next = Object.fromEntries([...panel.querySelectorAll("[name]")].map((control) => [control.name, control.value]));
+  next.level = Number(next.level);
+  next.partyLevel = Number(next.partyLevel);
+  return next;
+}
+
 function buildConfigure(app) {
   const config = { ...defaultConfig(), ...(app._arkflightEnemyGeneratorConfig ?? {}) };
   const panel = document.createElement("article");
@@ -51,13 +59,20 @@ function buildConfigure(app) {
   grid.className = "arkflight-gm-generator-fields";
 
   const level = inputControl("level", config.level, "number"); level.min = "1"; level.max = "20"; level.step = "1";
+  const partyLevel = inputControl("partyLevel", config.partyLevel, "number"); partyLevel.min = "1"; partyLevel.max = "20"; partyLevel.step = "1";
   grid.append(field("Ship Level", level));
+  grid.append(field("Party Level", partyLevel));
   grid.append(field("Archetype", selectControl("archetypeId", Object.entries(ENEMY_ARCHETYPES).map(([id, row]) => [id, row.label]), config.archetypeId)));
   grid.append(field("Quality", selectControl("difficulty", [["poor","Poor"],["standard","Standard"],["elite","Elite"]], config.difficulty)));
   grid.append(field("Loot Richness", selectControl("lootProfile", [["poor","Poor"],["standard","Standard"],["rich","Rich"],["treasure","Treasure Ship"]], config.lootProfile)));
   grid.append(field("Faction", inputControl("faction", config.faction)));
   grid.append(field("Theme", inputControl("theme", config.theme)));
   panel.append(grid);
+
+  const note = document.createElement("p");
+  note.className = "arkflight-gm-muted";
+  note.textContent = "Ship Level drives vessel and officer level bands. Party Level caps PF2e encounter treasure economics.";
+  panel.append(note);
 
   const actions = document.createElement("div");
   actions.className = "arkflight-gm-generator-actions";
@@ -66,11 +81,10 @@ function buildConfigure(app) {
   generate.className = "arkflight-gm-primary";
   generate.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Generate Preview';
   generate.addEventListener("click", () => {
-    const next = Object.fromEntries([...panel.querySelectorAll("[name]")].map((control) => [control.name, control.value]));
-    next.level = Number(next.level);
+    const next = readConfig(panel);
     next.seed = `${next.archetypeId}:${next.level}:${Date.now()}:${Math.random()}`;
     app._arkflightEnemyGeneratorConfig = next;
-    try { app._arkflightEnemyGeneratorPreview = generateEnemyShipPreview(next); }
+    try { app._arkflightEnemyGeneratorPreview = generateEnemyEncounterPreview(next); }
     catch (error) { ui.notifications?.error(error?.message ?? "Unable to generate Arkflight enemy ship preview."); return; }
     app.render({ force: true });
   });
@@ -97,6 +111,36 @@ function listSection(title, rows) {
   return section;
 }
 
+function buildOfficerCard(officer) {
+  const row = document.createElement("div");
+  row.className = "arkflight-gm-generator-officer-card";
+  const heading = document.createElement("div");
+  heading.className = "arkflight-gm-generator-officer-heading";
+  const title = document.createElement("strong"); title.textContent = `${officer.role} · Level ${officer.level}`;
+  const quality = document.createElement("span"); quality.textContent = officer.quality;
+  heading.append(title, quality);
+  const identity = document.createElement("small"); identity.textContent = officer.identity;
+  const stats = document.createElement("div"); stats.className = "arkflight-gm-generator-officer-stats";
+  const values = [
+    ["AC", officer.statistics.ac],
+    ["HP", officer.statistics.hp],
+    ["Per", `+${officer.statistics.perception}`],
+    ["Strike", `+${officer.statistics.strike.attack} · ${officer.statistics.strike.damage}`]
+  ];
+  for (const [label, value] of values) { const cell = document.createElement("span"); cell.textContent = `${label} ${value}`; stats.append(cell); }
+  const skillText = Object.entries(officer.statistics.skills).map(([skill, bonus]) => `${titleCase(skill)} +${bonus}`).join(" · ");
+  const skills = document.createElement("small"); skills.textContent = skillText;
+  const saves = document.createElement("small"); saves.textContent = `Fort +${officer.statistics.saves.fortitude} · Ref +${officer.statistics.saves.reflex} · Will +${officer.statistics.saves.will}`;
+  const abilities = document.createElement("small"); abilities.textContent = officer.abilities.map((ability) => ability.name).join(" · ");
+  row.append(heading, identity, stats, skills, saves, abilities);
+  if (officer.statistics.spellcasting) {
+    const spell = document.createElement("small");
+    spell.textContent = `Occult DC ${officer.statistics.spellcasting.dc} · spell attack +${officer.statistics.spellcasting.attack}`;
+    row.append(spell);
+  }
+  return row;
+}
+
 function buildPreview(app, preview) {
   const panel = document.createElement("section");
   panel.className = "arkflight-gm-generator-preview";
@@ -108,7 +152,7 @@ function buildPreview(app, preview) {
   const hull = SHIP_CATALOGS.hulls[preview.ship.hull.chassisId];
   const engine = SHIP_CATALOGS.arkengines[preview.ship.arkengine.chassisId];
   summary.append(metric("Archetype", preview.archetype.label));
-  summary.append(metric("Level", preview.config.level));
+  summary.append(metric("Ship / Party Level", `${preview.config.level} / ${preview.config.partyLevel}`));
   summary.append(metric("Hull", hull?.name ?? preview.ship.hull.chassisId));
   summary.append(metric("Arkengine", engine?.name ?? preview.ship.arkengine.chassisId));
   summary.append(metric("Validation", preview.validation.ok ? "LEGAL" : "INVALID"));
@@ -126,15 +170,9 @@ function buildPreview(app, preview) {
 
   const crew = document.createElement("article");
   crew.className = "arkflight-gm-panel";
-  crew.innerHTML = '<div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">PF2E OFFICERS</div><h2>Station Crew Draft</h2></div><i class="fa-solid fa-users"></i></div>';
+  crew.innerHTML = '<div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">PF2E OFFICERS</div><h2>Station Crew Benchmarks</h2></div><i class="fa-solid fa-users"></i></div>';
   const officerGrid = document.createElement("div"); officerGrid.className = "arkflight-gm-generator-officers";
-  for (const officer of preview.crew.officers) {
-    const row = document.createElement("div");
-    const station = document.createElement("span"); station.textContent = titleCase(officer.station);
-    const level = document.createElement("strong"); level.textContent = `Level ${officer.level}`;
-    const state = document.createElement("small"); state.textContent = "PF2e stat generation pending";
-    row.append(station, level, state); officerGrid.append(row);
-  }
+  for (const officer of preview.crew.officers) officerGrid.append(buildOfficerCard(officer));
   crew.append(officerGrid);
 
   const cargo = document.createElement("article");
@@ -142,6 +180,8 @@ function buildPreview(app, preview) {
   cargo.innerHTML = '<div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">CARGO & SALVAGE</div><h2>Encounter Value</h2></div><i class="fa-solid fa-box-open"></i></div>';
   cargo.append(metric("Cargo Load", `${preview.cargo.used} / ${preview.cargo.capacity}`));
   cargo.append(metric("Loot Profile", titleCase(preview.loot.profile)));
+  cargo.append(metric("Economic Ceiling", `Party Level ${preview.loot.economicCeiling.level}`));
+  cargo.append(metric("Distribution", `${Math.round(preview.loot.distribution.personal * 100)}% personal · ${Math.round(preview.loot.distribution.shipCargo * 100)}% cargo · ${Math.round(preview.loot.distribution.arkflightSalvage * 100)}% salvage`));
   const lootNote = document.createElement("p"); lootNote.className = "arkflight-gm-muted"; lootNote.textContent = preview.loot.note; cargo.append(lootNote);
 
   const blockers = document.createElement("article");
@@ -154,9 +194,9 @@ function buildPreview(app, preview) {
   blockers.append(list);
   const actions = document.createElement("div"); actions.className = "arkflight-gm-generator-actions";
   const reroll = document.createElement("button"); reroll.type = "button"; reroll.innerHTML = '<i class="fa-solid fa-dice"></i> Reroll Ship';
-  reroll.addEventListener("click", () => { const next = { ...preview.config, seed: `${preview.config.archetypeId}:${preview.config.level}:${Date.now()}:${Math.random()}` }; app._arkflightEnemyGeneratorConfig = next; app._arkflightEnemyGeneratorPreview = generateEnemyShipPreview(next); app.render({ force: true }); });
+  reroll.addEventListener("click", () => { const next = { ...preview.config, seed: `${preview.config.archetypeId}:${preview.config.level}:${Date.now()}:${Math.random()}` }; app._arkflightEnemyGeneratorConfig = next; app._arkflightEnemyGeneratorPreview = generateEnemyEncounterPreview(next); app.render({ force: true }); });
   const commit = document.createElement("button"); commit.type = "button"; commit.className = "arkflight-gm-primary"; commit.disabled = !preview.canCommit; commit.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Commit Vessel';
-  commit.title = preview.canCommit ? "Persist this reviewed vessel" : "Commit remains locked until PF2e officers and treasure budgeting are complete.";
+  commit.title = preview.canCommit ? "Persist this reviewed vessel" : "Commit remains locked until PF2e Actor serialization, names/items, and treasure values are complete.";
   actions.append(reroll, commit); blockers.append(actions);
 
   panel.append(summary, loadout, crew, cargo, blockers);
@@ -182,7 +222,7 @@ export function installEnemyGeneratorUI() {
     game.arkflight ??= {};
     game.arkflight.enemyGenerator = {
       archetypes: ENEMY_ARCHETYPES,
-      generatePreview: generateEnemyShipPreview
+      generatePreview: generateEnemyEncounterPreview
     };
   });
   Hooks.on("renderApplicationV2", (app) => enhanceGMOperations(app));
