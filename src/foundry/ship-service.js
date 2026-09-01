@@ -3,6 +3,8 @@ import { validateShip } from "../ship/validate-ship.js";
 
 const MODULE_ID = "arkflight-game";
 const CURRENT_SHIP_SETTING = "currentShipActorId";
+const CLASSIFICATION_FLAG = "shipClassification";
+const CLASSIFICATIONS = new Set(["auto", "player", "npc"]);
 
 function extractShip(actor) {
   return actor?.flags?.[MODULE_ID]?.ship
@@ -40,12 +42,20 @@ function damagedSystems(ship) {
     .map(([system, state]) => ({ system, state }));
 }
 
+function classificationFor(actor) {
+  const override = actor?.getFlag?.(MODULE_ID, CLASSIFICATION_FLAG) ?? actor?.flags?.[MODULE_ID]?.[CLASSIFICATION_FLAG] ?? "auto";
+  const normalized = CLASSIFICATIONS.has(override) ? override : "auto";
+  const ownershipPlayer = Boolean(actor?.hasPlayerOwner);
+  const player = normalized === "player" ? true : normalized === "npc" ? false : ownershipPlayer;
+  return { override: normalized, player, isNPC: !player, ownershipPlayer };
+}
+
 function normalizeActor(actor, currentPlayerShipId) {
   const ship = extractShip(actor);
   const validation = validateShip(ship, SHIP_CATALOGS);
   const crew = stationReadiness(ship);
   const damage = damagedSystems(ship);
-  const player = Boolean(actor.hasPlayerOwner);
+  const classification = classificationFor(actor);
   const resources = ship.resources ?? {};
 
   return {
@@ -55,9 +65,11 @@ function normalizeActor(actor, currentPlayerShipId) {
     ship,
     name: actor.name ?? ship.identity?.name ?? "Unnamed Vessel",
     level: Number(ship.level ?? actor.system?.details?.level?.value ?? 0) || null,
-    player,
-    isNPC: !player,
-    current: player && actor.id === currentPlayerShipId,
+    player: classification.player,
+    isNPC: classification.isNPC,
+    classification: classification.override,
+    ownershipPlayer: classification.ownershipPlayer,
+    current: classification.player && actor.id === currentPlayerShipId,
     status: !validation.ok ? "Invalid" : damage.length ? "Damaged" : crew.ready ? "Ready" : "Needs Crew",
     validation,
     derived: validation.derived,
@@ -118,6 +130,20 @@ export function createShipService() {
       if (!entry) throw new Error("That Actor is not an Arkflight ship.");
       if (!entry.player) throw new Error("Only a player Arkflight ship can be designated as the Current Player Ship.");
       await game.settings.set(MODULE_ID, CURRENT_SHIP_SETTING, actorId);
+      return this.get(actorId);
+    },
+
+    async setClassification(actorId, classification = "auto") {
+      if (!game.user?.isGM) throw new Error("Only the GM may override Arkflight ship classification.");
+      if (!CLASSIFICATIONS.has(classification)) throw new Error("Ship classification must be auto, player, or npc.");
+      const entry = this.get(actorId);
+      if (!entry) throw new Error("That Actor is not an Arkflight ship.");
+      const actor = entry.actor;
+      if (classification === "auto") await actor.unsetFlag(MODULE_ID, CLASSIFICATION_FLAG);
+      else await actor.setFlag(MODULE_ID, CLASSIFICATION_FLAG, classification);
+      const updated = this.get(actorId);
+      const currentId = game.settings.get(MODULE_ID, CURRENT_SHIP_SETTING) || "";
+      if (currentId === actorId && updated?.isNPC) await game.settings.set(MODULE_ID, CURRENT_SHIP_SETTING, "");
       return this.get(actorId);
     },
 
