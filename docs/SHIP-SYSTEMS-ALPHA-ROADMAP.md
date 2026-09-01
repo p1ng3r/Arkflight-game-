@@ -15,7 +15,7 @@
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
 9. Ship Mod Catalog Completion ✅
-10. Arkengine Mod Catalog Completion — next
+10. Arkengine Mod Catalog Completion — rarity foundation + Standard band locked
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
 13. Whole-Ship Operational Validator
@@ -43,11 +43,9 @@ The existing ship-domain modules and regression tests remain authoritative for t
 
 ## Part 9 — Ship Mod Catalog Completion ✅
 
-### Rarity progression
+Ship Mods are complete for Alpha across the locked rarity ladder:
 
-Ship Mods use the player-facing rarity ladder:
-
-| Rarity | Default minimum ship level | Alpha target | Alpha authored |
+| Rarity | Minimum ship level | Alpha target | Authored |
 |---|---:|---:|---:|
 | Standard | 1 | 22–26 | 22 ✅ |
 | Rare | 3 | 20–22 | 20 ✅ |
@@ -55,72 +53,112 @@ Ship Mods use the player-facing rarity ladder:
 | Legendary | 12 | 15–16 | 15 ✅ |
 | Mythic | 17 | 8–9 | 8 ✅ |
 
-Legacy numeric Refit tiers remain temporary installation-cost compatibility metadata only. They are not the progression identity.
-
-### Shared catalog rules
-
-Every Ship Mod must provide at least one real mechanic: derived-stat effect, resistance, capability, action/Mastery/combat/passive unlock, explicit rule modifier, Event/Combat interaction, or authored synergy.
-
-Mods may affect Hull, Arkengine, Rigging, Lifeveil, Morale/Command, AC, PF2e-style resistances, maneuverability, speed, Cargo, Detection, crew support, repair/recovery, logistics, combat, Voyage/Event interactions, and cross-system behavior.
-
-The catalog is intentionally spread across the ship rather than concentrating all useful options in one Area.
-
-### Upgrade chains
-
-Direct upgrade-chain Mods:
-
-1. require the authored predecessor to be installed;
-2. replace that predecessor when completed;
-3. inherit its installation slot;
-4. consume the predecessor into the upgraded fitting instead of returning a duplicate physical component;
-5. add meaningful new mechanics as well as stronger numbers.
-
-Standalone Mods remain independently installable.
-
-### Synergies
-
-Synergy counts refer to total participating fittings, including the Mod that owns the synergy.
-
-- Normal synergies are usually 2-Mod combinations and therefore name one other required Mod.
-- 3-Mod set bonuses begin at Epic and name two other required Mods.
-- Synergies are explicitly authored rather than inferred from tags.
-- Synergy components retain their own normal slots unless one component is itself a direct replacement-chain upgrade.
-
-### Resistance model
-
-Resistance Mods use explicit PF2e-style positive values such as Resistance 5 fire or Resistance 15 physical. Higher rarities may grant stronger values, multiple resistances, or conditional resistances such as protection only while Lifeveil is online.
-
-### Acquisition
-
-- Standard: ordinary shipyard/market acquisition may be available.
-- Rare: limited purchase/reward sources.
-- Epic: exceptional purchase or significant reward sources.
-- Legendary: no ordinary purchase; exceptional shipyard/faction/discovery/unique blueprint or equivalent source required.
-- Mythic: never an ordinary shop/catalog purchase; campaign-defining rewards only.
-
-### Mythic identity
-
-Mythic Mods combine major numerical effects with unique capabilities and may alter a core ship rule only through an explicitly bounded exception.
-
-The Alpha Mythic band contains eight campaign-defining fittings:
-
-- **Eternity Worldroot Frame** — +120 Hull, +3 AC; once/event Hull-zero refusal at a Strain cost.
-- **Crown of the Ninefold Fortress** — +6 AC, +60 Hull, Resistance 15 physical and Resistance 10 force; mythic fortress set.
-- **Worldfire Arkengine Nexus** — +12 Strain Capacity; once/event one round of powered movement while Arkengine Area is Disabled, followed by +3 Strain.
-- **Wings of the First Dawn** — +7 combat speed, +3 maneuverability; once/event one movement action despite Disabled Rigging at +2 Strain.
-- **Veil of the First Firmament** — +80 Lifeveil; once/event extend protection to one allied vessel for one discrete resolution at a 20-Lifeveil cost.
-- **Oracle of the Last Horizon** — +12 Detection plus Battlewatch/Navigator foresight support and a three-component command synergy.
-- **Sovereign Concordance of Five Stations** — mythic command network; once/event permits one Crew Tactic while Morale is Broken, then adds +1 Strain.
-- **Singularity Strain Vault** — +10 Strain Capacity; once/event prevent the Area degradation from one threshold crossing, with delayed Strain cost.
-
-Every Mythic core-rule exception must author a trigger, usage restriction, cost, and/or hard limit. Unbounded permanent exceptions are invalid Alpha content.
-
-### Part 9 acceptance
-
-Part 9 is complete when the canonical merged Ship Mod catalog contains all five rarity bands, every band is inside its locked Alpha density range, the entire catalog passes the shared progression validator, upgrade/synergy semantics remain consistent, and Mythic exceptions are bounded.
-
-The repository now contains explicit whole-catalog acceptance tests for those conditions.
+Direct upgrade chains replace their predecessor and inherit its slot. Most synergies use two total fittings; three-component set bonuses begin at Epic. Mythic core-rule exceptions are always explicitly bounded. Legendary and Mythic acquisition remain restricted as previously locked.
 
 ## Part 10 — Arkengine Mod Catalog Completion
 
-Next work is to complete the Arkengine Mod catalog as a separate hardware family. Arkengine Mods continue to use Arkengine-specific sockets and must not be silently folded into Ship Mods.
+### Separate hardware family
+
+Arkengine Mods remain a distinct physical hardware family with Arkengine-specific sockets. They are not silently folded into Ship Mods. Their identity must remain visibly tied to something installed on, inside, or directly supporting the Arkengine.
+
+### Rarity progression
+
+Arkengine Mods use the same rarity ladder and default ship-level gates as Ship Mods, but with a smaller specialized catalog:
+
+| Rarity | Default minimum ship level | Alpha target | Current status |
+|---|---:|---:|---|
+| Standard | 1 | 18–22 | ✅ 22 baseline Mods migrated |
+| Rare | 3 | 14–16 | next |
+| Epic | 7 | 10–12 | pending |
+| Legendary | 12 | 7–8 | pending |
+| Mythic | 17 | 4–5 | pending |
+
+Legacy numeric Refit tiers remain temporary installation-cost compatibility metadata only. They do not determine player-facing rarity.
+
+### Arkengine Mod identity
+
+Arkengine Mods primarily modify engine-linked behavior such as:
+
+- power output,
+- shared Strain handling,
+- Hard Burn,
+- fuel capacity/efficiency hooks,
+- Lifeveil interaction,
+- cooling,
+- engine stability,
+- travel speed,
+- emergency power,
+- stealth/signature suppression,
+- deep-void operation,
+- ritual channeling,
+- unusual Arkengine behavior.
+
+They may affect general ship statistics when the effect is clearly caused by Arkengine hardware, but should not become generic Ship Mods with an engine-themed description.
+
+### Standard Alpha band
+
+The existing 22-entry Arkengine Mod catalog has been migrated to **Standard** rarity while preserving its old numeric Refit tier as `legacyRefitTier` for cost compatibility.
+
+Baseline concepts include pressure tuning, veil focusing, cooling loops, fuel-matrix efficiency, Stormwake injection, voidglass regulation, harmonic lattices, Overburn Catalysts, Deepwake stabilizers, core bracing, fuel siphons, Hushglass cowls, Hard Burn governors, grounding rods, harmonic prisms, pressure bypasses, resonance baffles, Quickspark injectors, ritual channeling rings, filter mesh, Coldwake condensers, and veil-pressure equalization.
+
+Every Standard entry now has a real mechanical purpose through an effect, capability, rule modifier, signature unlock, or fuel hook.
+
+### Fuel hooks — no mandatory fuel subsystem yet
+
+Part 10 does **not** invent a new mandatory Arkengine fuel-consumption gameplay loop.
+
+Fuel-oriented Mods may author explicit hooks such as:
+
+- fuel capacity,
+- fuel efficiency,
+- safer fuel handling,
+- ritual fuel conversion,
+- future authored interactions.
+
+Those hooks are structured data for future consumers. Existing fuel-related derived values remain compatibility hooks until a later fuel contract explicitly defines when and how fuel is spent.
+
+### Upgrade chains
+
+Direct Arkengine Mod upgrade chains use the same replacement model as Ship Mods:
+
+1. the predecessor Arkengine Mod must be installed;
+2. the higher-rarity Mod replaces it;
+3. the upgraded fitting inherits the predecessor's Arkengine socket;
+4. the predecessor is consumed into the new fitting;
+5. the upgrade must add meaningful new mechanics, not only larger numbers.
+
+### Synergies
+
+Arkengine Mod synergies may reference both:
+
+- other installed Arkengine Mods; and
+- compatible installed Ship Mods.
+
+Most synergies should involve two total fittings. Three-component set bonuses begin at Epic. Cross-family synergies must be explicitly authored rather than inferred from tags.
+
+Example intended pattern: an Arkengine governor plus racing sails can unlock an additional Hard Burn or drive benefit because the engine hardware and sail hardware were designed to operate together.
+
+### Mythic Arkengine rules
+
+Mythic Arkengine Mods may produce extreme effects such as:
+
+- one free or reduced-cost Hard Burn,
+- brief powered operation while the Arkengine Area is Disabled,
+- converting a catastrophic overload into Strain,
+- temporary propulsion surges,
+- temporary Lifeveil surges,
+- other campaign-defining Arkengine behavior.
+
+Every Mythic core-rule exception must be bounded by a clear trigger, cost, usage limit, or hard duration. Unbounded permanent exceptions are invalid.
+
+### Part 10 acceptance
+
+Part 10 will be complete when:
+
+- all five Arkengine rarity bands are inside their locked Alpha density ranges;
+- every Arkengine Mod passes the shared Arkengine progression validator;
+- upgrade replacement and socket inheritance are represented consistently;
+- cross-family synergies are explicitly authored and validated;
+- fuel remains hook-based unless a separate fuel contract is approved;
+- Mythic Arkengine exceptions are bounded;
+- the canonical Arkengine catalog is consumable by deriveShip, Refit, Character Sheet, GM generator, and Event/Combat work without translating legacy numeric tiers back into progression.
