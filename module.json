@@ -47,8 +47,8 @@
     "styles/player-action-board-gm.css",
     "styles/shipwright-nav-compact.css",
     "styles/ship-portrait.css",
-    "styles/refit-alpha-unified.css",
-    "styles/gm-operations.css"
+    "styles/gm-operations.css",
+    "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
