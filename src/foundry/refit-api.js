@@ -71,13 +71,14 @@ function economicCatalogs(mode, operation) {
   };
 }
 function tagService(result, mode) {
-  if (!result?.ok || mode === "crew") return result;
+  if (!result?.ok) return result;
+  if (mode === "crew") return { ...result, ...(result.jobs ? { jobs: [...result.jobs] } : {}) };
   const jobs = result.jobs ?? (result.job ? [result.job] : []);
-  if (!jobs.length) return result;
+  if (!jobs.length) return { ...result };
   let ship = result.ship;
   const tagged = jobs.map((job) => ({ ...job, result: { ...(job.result ?? {}), serviceMode: mode } }));
   for (const job of tagged) ship = replaceWorkOrder(ship, job);
-  return { ...result, ship, ...(result.jobs ? { jobs: Object.freeze(tagged) } : { job: tagged[0] }) };
+  return { ...result, ship, ...(result.jobs ? { jobs: tagged } : { job: tagged[0] }) };
 }
 
 function replaceWorkOrder(ship, job) {
