@@ -14,29 +14,23 @@ const HOUSE_DOCTRINES = Object.freeze({
 });
 
 const FACTION_DOCTRINES = Object.freeze({
-  freespacers: { shipTags:["frontier","courier","explorer","salvager"], weaponFamilies:["ballista","harpoon"], roomTags:["navigation","repair","social"], modTags:["maneuvering","detection","repair"], preferredArchetypes:["explorer","salvager","patrol"] },
-  freebooters: { shipTags:["escort","rescue","patrol"], weaponFamilies:["ballista","cannon"], roomTags:["recovery","military","navigation"], modTags:["detection","structural","command"], preferredArchetypes:["patrol","naval"] },
-  brotherhoodCosmicFlame: { shipTags:["imperial","warship","boarding","dragon","flame"], weaponFamilies:["cannon","lance"], roomTags:["military","containment","ritual"], modTags:["boarding","structural","command"], preferredArchetypes:["naval","raider"] },
-  grelkinCartel: { shipTags:["raider","pirate","boarding","stolen-ship","salvage"], weaponFamilies:["harpoon","cannon","ballista"], roomTags:["salvage","military","concealed"], modTags:["boarding","salvage","structural"], preferredArchetypes:["raider","pirate","salvager"] },
-  veilwardens: { shipTags:["containment","lifeveil","occult","patrol"], weaponFamilies:["lance","ballista"], roomTags:["occult","containment","ritual"], modTags:["lifeveil","occult","structural"], preferredArchetypes:["patrol","occult"] },
-  underwake: { shipTags:["smuggler","concealed","fast","black-market"], weaponFamilies:["harpoon","ballista"], roomTags:["concealed","cargo","navigation"], modTags:["maneuvering","cargo","detection"], preferredArchetypes:["smuggler","pirate"] },
-  faithOfTheChurn: { shipTags:["pilgrim","ritual","occult"], weaponFamilies:["ballista","lance"], roomTags:["ritual","social","recovery"], modTags:["lifeveil","occult"], preferredArchetypes:["occult","explorer"] },
-  councilOfTheVoid: { shipTags:["alien","deep-void","occult","mysterious"], weaponFamilies:["lance"], roomTags:["occult","research","containment"], modTags:["deepVoid","occult","lifeveil"], preferredArchetypes:["occult"] },
-  starweaverSkyLines: { shipTags:["merchant","passenger","routes","long-range"], weaponFamilies:["ballista"], roomTags:["luxury","cargo","navigation"], modTags:["cargo","detection","maneuvering"], preferredArchetypes:["merchant","explorer"] }
+  freespacers: { label:"Freespacers", shipTags:["frontier","courier","explorer","salvager"], weaponFamilies:["ballista","harpoon"], roomTags:["navigation","repair","social"], modTags:["maneuvering","detection","repair"], preferredArchetypes:["explorer","salvager","patrol"] },
+  freebooters: { label:"Freebooters", shipTags:["escort","rescue","patrol"], weaponFamilies:["ballista","cannon"], roomTags:["recovery","military","navigation"], modTags:["detection","structural","command"], preferredArchetypes:["patrol","naval"] },
+  brotherhoodCosmicFlame: { label:"Brotherhood of the Cosmic Flame", shipTags:["imperial","warship","boarding","dragon","flame"], weaponFamilies:["cannon","lance"], roomTags:["military","containment","ritual"], modTags:["boarding","structural","command"], preferredArchetypes:["naval","raider"] },
+  grelkinCartel: { label:"Grelkin Cartel", shipTags:["raider","pirate","boarding","stolen-ship","salvage"], weaponFamilies:["harpoon","cannon","ballista"], roomTags:["salvage","military","concealed"], modTags:["boarding","salvage","structural"], preferredArchetypes:["raider","pirate","salvager"] },
+  veilwardens: { label:"Veilwardens", shipTags:["containment","lifeveil","occult","patrol"], weaponFamilies:["lance","ballista"], roomTags:["occult","containment","ritual"], modTags:["lifeveil","occult","structural"], preferredArchetypes:["patrol","occult"] },
+  underwake: { label:"Underwake Syndicates", shipTags:["smuggler","concealed","fast","black-market"], weaponFamilies:["harpoon","ballista"], roomTags:["concealed","cargo","navigation"], modTags:["maneuvering","cargo","detection"], preferredArchetypes:["smuggler","pirate"] },
+  faithOfTheChurn: { label:"Faith of the Churn", shipTags:["pilgrim","ritual","occult"], weaponFamilies:["ballista","lance"], roomTags:["ritual","social","recovery"], modTags:["lifeveil","occult"], preferredArchetypes:["occult","explorer"] },
+  councilOfTheVoid: { label:"Council of the Void", shipTags:["alien","deep-void","occult","mysterious"], weaponFamilies:["lance"], roomTags:["occult","research","containment"], modTags:["deepVoid","occult","lifeveil"], preferredArchetypes:["occult"] },
+  starweaverSkyLines: { label:"Starweaver Sky Lines", shipTags:["merchant","passenger","routes","long-range"], weaponFamilies:["ballista"], roomTags:["luxury","cargo","navigation"], modTags:["cargo","detection","maneuvering"], preferredArchetypes:["merchant","explorer"] }
 });
-
-function factionKey(label) {
-  const lower = String(label ?? "").toLowerCase();
-  return Object.entries(FACTION_DOCTRINES).find(([key]) => ayerstoneFaction(label) === ayerstoneFaction(key))?.[0] ?? null;
-}
 
 export function ayerstoneShipDoctrine(factionLabel) {
   const lower = String(factionLabel ?? "").trim().toLowerCase();
   const house = HOUSE_DOCTRINES[lower];
   if (house) return Object.freeze({ ...house, source: "Ayerstone Great House doctrine" });
   const faction = ayerstoneFaction(factionLabel);
-  const key = Object.keys(FACTION_DOCTRINES).find((candidate) => ayerstoneFaction(candidate).label === faction.label);
-  const doctrine = key ? FACTION_DOCTRINES[key] : null;
+  const doctrine = Object.values(FACTION_DOCTRINES).find((row) => row.label.toLowerCase() === faction.label.toLowerCase()) ?? null;
   return Object.freeze(doctrine ? { ...doctrine, source: faction.source } : { shipTags:[], weaponFamilies:[], roomTags:[], modTags:[], preferredArchetypes:[], source:faction.source });
 }
 
