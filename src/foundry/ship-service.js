@@ -50,6 +50,31 @@ function classificationFor(actor) {
   return { override: normalized, player, isNPC: !player, ownershipPlayer };
 }
 
+function readinessStatus(validation, damage, crew, conditions = []) {
+  const reasons = [];
+  if (!validation.ok) {
+    reasons.push(...validation.errors);
+    return { status: "Invalid", reasons };
+  }
+  const criticalDamage = damage.filter((row) => ["disabled", "destroyed"].includes(row.state));
+  if (criticalDamage.length || conditions.some((condition) => Number(condition?.severity ?? 0) >= 2)) {
+    for (const row of criticalDamage) reasons.push(`${row.system} is ${row.state}`);
+    for (const condition of conditions.filter((condition) => Number(condition?.severity ?? 0) >= 2)) reasons.push(condition.label ?? condition.name ?? condition.id ?? "Persistent condition");
+    return { status: "Damaged", reasons };
+  }
+  if (damage.length || conditions.length) {
+    for (const row of damage) reasons.push(`${row.system} is ${row.state}`);
+    for (const condition of conditions) reasons.push(condition.label ?? condition.name ?? condition.id ?? "Persistent condition");
+    return { status: "Damaged", reasons };
+  }
+  if (!crew.ready) {
+    reasons.push(`${crew.assigned}/${crew.total} permanent stations assigned`);
+    return { status: "Needs Crew", reasons };
+  }
+  if (validation.warnings.length) reasons.push(...validation.warnings);
+  return { status: "Ready", reasons };
+}
+
 function normalizeActor(actor, currentPlayerShipId) {
   const ship = extractShip(actor);
   const validation = validateShip(ship, SHIP_CATALOGS);
@@ -57,6 +82,8 @@ function normalizeActor(actor, currentPlayerShipId) {
   const damage = damagedSystems(ship);
   const classification = classificationFor(actor);
   const resources = ship.resources ?? {};
+  const conditions = ship.conditions ?? [];
+  const readiness = readinessStatus(validation, damage, crew, conditions);
 
   return {
     id: actor.id,
@@ -70,14 +97,15 @@ function normalizeActor(actor, currentPlayerShipId) {
     classification: classification.override,
     ownershipPlayer: classification.ownershipPlayer,
     current: classification.player && actor.id === currentPlayerShipId,
-    status: !validation.ok ? "Invalid" : damage.length ? "Damaged" : crew.ready ? "Ready" : "Needs Crew",
+    status: readiness.status,
+    statusReasons: readiness.reasons,
     validation,
     derived: validation.derived,
     resources,
     cargo: ship.cargo ?? { used: 0 },
     crew,
     damagedSystems: damage,
-    conditions: ship.conditions ?? [],
+    conditions,
     hullName: SHIP_CATALOGS.hulls?.[ship.hull?.chassisId]?.name ?? ship.hull?.chassisId ?? "Unassigned Hull",
     hullPatternName: SHIP_CATALOGS.hullPatterns?.[ship.hull?.patternId]?.name ?? ship.hull?.patternId ?? "Standard",
     arkengineName: SHIP_CATALOGS.arkengines?.[ship.arkengine?.chassisId]?.name ?? ship.arkengine?.chassisId ?? "Unassigned Arkengine",
@@ -94,6 +122,26 @@ function normalizeActor(actor, currentPlayerShipId) {
       specialists: ship.crew?.specialists?.length ?? 0
     }
   };
+}
+
+async function writeStationAssignment(actor, stationId, crewActorId) {
+  if (actor.flags?.[MODULE_ID]?.ship) {
+    const ship = structuredClone(actor.flags[MODULE_ID].ship);
+    ship.crew ??= {};
+    ship.crew.stations ??= {};
+    ship.crew.stations[stationId] = crewActorId || null;
+    await actor.setFlag(MODULE_ID, "ship", ship);
+    return;
+  }
+  if (actor.system?.arkflight?.ship) {
+    await actor.update({ [`system.arkflight.ship.crew.stations.${stationId}`]: crewActorId || null });
+    return;
+  }
+  if (actor.system?.flags?.arkflight?.ship) {
+    await actor.update({ [`system.flags.arkflight.ship.crew.stations.${stationId}`]: crewActorId || null });
+    return;
+  }
+  throw new Error("Arkflight ship persistence path could not be resolved.");
 }
 
 export function registerShipServiceSetting() {
@@ -144,6 +192,20 @@ export function createShipService() {
       const updated = this.get(actorId);
       const currentId = game.settings.get(MODULE_ID, CURRENT_SHIP_SETTING) || "";
       if (currentId === actorId && updated?.isNPC) await game.settings.set(MODULE_ID, CURRENT_SHIP_SETTING, "");
+      return this.get(actorId);
+    },
+
+    async setStationAssignment(actorId, stationId, crewActorId = null) {
+      if (!game.user?.isGM) throw new Error("Only the GM may change permanent Arkflight crew assignments.");
+      const entry = this.get(actorId);
+      if (!entry) throw new Error("That Actor is not an Arkflight ship.");
+      if (!(stationId in (entry.ship?.crew?.stations ?? {}))) throw new Error(`Unknown Arkflight station: ${stationId}`);
+      if (crewActorId) {
+        const crewActor = game.actors?.get(crewActorId);
+        if (!crewActor) throw new Error("Assigned crew Actor could not be found.");
+        if (crewActor.type === "vehicle") throw new Error("A vehicle cannot be assigned as permanent ship crew.");
+      }
+      await writeStationAssignment(entry.actor, stationId, crewActorId);
       return this.get(actorId);
     },
 
