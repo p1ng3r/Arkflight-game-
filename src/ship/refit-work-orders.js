@@ -151,8 +151,28 @@ export function startRefitJob(ship, jobId, { startedAt = null } = {}) {
   const normalized = normalizeShip(ship); const found = normalized.refit?.workOrders?.find((j) => j.id === jobId);
   if (!found) return { ok: false, reason: "job-not-found", ship: normalized };
   if (found.status !== REFIT_JOB_STATES.PLANNED) return { ok: false, reason: "job-not-planned", ship: normalized };
+  if (found.method === REFIT_METHODS.CREW) {
+    const activeCrewJob = (normalized.refit?.workOrders ?? []).find((job) => job.id !== found.id && job.method === REFIT_METHODS.CREW && job.status === REFIT_JOB_STATES.WORKING);
+    if (activeCrewJob) return { ok: false, reason: "crew-work-already-active", activeJobId: activeCrewJob.id, ship: normalized };
+  }
   const job = createRefitJob({ ...found, status: REFIT_JOB_STATES.WORKING, startedAt: nowIso(startedAt) });
   return { ok: true, ship: replaceJob(normalized, job), job };
+}
+
+export function resolveCrewWorkConcurrency(ship, keepJobId) {
+  let next = normalizeShip(ship);
+  const workingCrewJobs = (next.refit?.workOrders ?? []).filter((job) => job.method === REFIT_METHODS.CREW && job.status === REFIT_JOB_STATES.WORKING);
+  if (workingCrewJobs.length <= 1) return { ok: true, ship: next, keptJob: workingCrewJobs[0] ?? null, replanned: [] };
+  const keep = workingCrewJobs.find((job) => job.id === keepJobId);
+  if (!keep) return { ok: false, reason: "working-crew-job-not-found", ship: next };
+  const replanned = [];
+  for (const job of workingCrewJobs) {
+    if (job.id === keep.id) continue;
+    const planned = createRefitJob({ ...job, status: REFIT_JOB_STATES.PLANNED, startedAt: null });
+    next = replaceJob(next, planned);
+    replanned.push(planned);
+  }
+  return { ok: true, ship: next, keptJob: keep, replanned: Object.freeze(replanned) };
 }
 
 export function completeRefitJob(ship, jobId, catalogs, { completedAt = null, result = { outcome: "success" } } = {}) {
