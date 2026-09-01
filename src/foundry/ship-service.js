@@ -199,11 +199,14 @@ export function createShipService() {
       if (!game.user?.isGM) throw new Error("Only the GM may change permanent Arkflight crew assignments.");
       const entry = this.get(actorId);
       if (!entry) throw new Error("That Actor is not an Arkflight ship.");
-      if (!(stationId in (entry.ship?.crew?.stations ?? {}))) throw new Error(`Unknown Arkflight station: ${stationId}`);
+      const stations = entry.ship?.crew?.stations ?? {};
+      if (!(stationId in stations)) throw new Error(`Unknown Arkflight station: ${stationId}`);
       if (crewActorId) {
         const crewActor = game.actors?.get(crewActorId);
         if (!crewActor) throw new Error("Assigned crew Actor could not be found.");
         if (crewActor.type === "vehicle") throw new Error("A vehicle cannot be assigned as permanent ship crew.");
+        const duplicate = Object.entries(stations).find(([otherStationId, assignedActorId]) => otherStationId !== stationId && assignedActorId === crewActorId);
+        if (duplicate) throw new Error(`${crewActor.name} is already permanently assigned to the ${duplicate[0]} station on ${entry.name}. One officer may hold only one permanent station per ship.`);
       }
       await writeStationAssignment(entry.actor, stationId, crewActorId);
       return this.get(actorId);
