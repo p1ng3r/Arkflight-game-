@@ -12,7 +12,7 @@
 4. Strain & Area Readiness ✅
 5. Morale ✅
 6. Supplies, Cargo & Salvage Economy ✅
-7. Crew & Stations
+7. Crew & Stations ✅
 8. Rooms & Weapons Completion
 9. Ship Mod Catalog Completion
 10. Arkengine Mod Catalog Completion
@@ -209,3 +209,42 @@ At 0 Supplies, each full day without Supplies causes:
 - **+1 Strain every second day** without Supplies.
 
 These consequences use the same canonical Morale and Strain systems and do not create separate starvation/stress tracks.
+
+## Part 7 — Crew & Stations
+
+### Staffing penalty
+
+Operating crew is the sum of assigned officers, ordinary crew hands, and specialists who are actually part of ship operations.
+
+If operating crew is below the hull's Minimum Crew, apply a **-1 circumstance penalty to all Arkflight station checks for each person below Minimum**.
+
+Once Minimum Crew is met, the under-crewed penalty is removed. There is no separate automatic bonus for reaching Recommended Crew.
+
+### Maximum occupancy / overcrowding
+
+Everyone physically aboard counts against Maximum occupancy and consumes Supplies as applicable:
+
+- officers,
+- crew hands,
+- specialists,
+- passengers.
+
+Passengers do not count toward Minimum operating crew unless an explicit rule makes them operating crew.
+
+For every person aboard above Maximum, apply a **-1 circumstance penalty to all Arkflight station checks per person over Maximum**.
+
+Under-minimum and over-maximum penalties stack if an unusual configuration causes both simultaneously.
+
+### Stations
+
+Each canonical Arkflight station has one primary officer assignment:
+
+- Captain,
+- Engineer,
+- Navigator,
+- Battlewatch,
+- Veilwarden.
+
+Stations may be empty. An empty station's normal station actions are unavailable unless a specific rule, Talent, Mod, specialist, Event, or other authored effect explicitly authorizes a substitute or untrained operator.
+
+The same staffing authority must be consumed by the Ship Sheet, Event Manager, Ship Combat, and future GM-generated enemy crews.
