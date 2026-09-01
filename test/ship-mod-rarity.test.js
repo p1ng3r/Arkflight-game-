@@ -41,12 +41,27 @@ test("standard alpha catalog is inside its locked density band", () => {
   assert.ok(standard.length <= target.max, `${standard.length} Standard mods exceeds Alpha target`);
 });
 
+test("rare alpha catalog is inside its locked density band", () => {
+  const rare = Object.values(SHIP_MODS).filter((mod) => mod.data.rarity === "rare");
+  const target = shipModAlphaTarget("rare");
+  assert.ok(rare.length >= target.min, `only ${rare.length} Rare mods`);
+  assert.ok(rare.length <= target.max, `${rare.length} Rare mods exceeds Alpha target`);
+});
+
 test("standard alpha catalog includes broad ship-profile options", () => {
   assert.deepEqual(SHIP_MODS["firebreak-plating"].data.resistances, [{ type: "fire", value: 5 }]);
   assert.deepEqual(SHIP_MODS["stormgrounding-mesh"].data.resistances, [{ type: "electricity", value: 5 }]);
   assert.ok(SHIP_MODS["trim-sail-regulators"].effects.some((effect) => effect.target === "combatSpeed" && effect.value === 1));
   assert.equal(SHIP_MODS["crew-muster-bell-network"].data.effectFamily, "morale-command");
   assert.equal(SHIP_MODS["veil-warded-bulkheads"].data.effectFamily, "lifeveil");
+});
+
+test("rare alpha catalog includes upgrades, resistances, command, and synergies", () => {
+  assert.deepEqual(SHIP_MODS["aether-bound-ribbing"].data.upgradeChain.requiresMods, ["reinforced-structural-ribbing"]);
+  assert.deepEqual(SHIP_MODS["stormglass-firebreak-shell"].data.resistances, [{ type: "fire", value: 10 }]);
+  assert.deepEqual(SHIP_MODS["deep-void-armor-web"].data.resistances, [{ type: "cold", value: 5 }, { type: "void", value: 5 }]);
+  assert.equal(SHIP_MODS["crew-cohesion-network"].data.effectFamily, "morale-command");
+  assert.equal(SHIP_MODS["battlewake-control-fins"].data.synergies[0].id, "battlewake-drive-suite");
 });
 
 test("ship mods may target broad ship statistics and systems", () => {
@@ -104,9 +119,9 @@ test("upgrade-chain mods replace their predecessor and inherit its slot", () => 
   assert.equal(validateShipModProgression(mod).ok, true);
 });
 
-test("most synergies are two-mod bonuses while three-mod sets are epic plus", () => {
-  assert.equal(SHIP_MOD_SYNERGY_RULES.normalRequiredMods, 2);
-  assert.equal(SHIP_MOD_SYNERGY_RULES.epicPlusSetBonusRequiredMods, 3);
+test("two-mod synergies mean two total fittings and three-mod sets are epic plus", () => {
+  assert.equal(SHIP_MOD_SYNERGY_RULES.normalTotalMods, 2);
+  assert.equal(SHIP_MOD_SYNERGY_RULES.epicPlusSetBonusTotalMods, 3);
 
   const epic = {
     id: "battlewake-control-fins",
@@ -115,19 +130,19 @@ test("most synergies are two-mod bonuses while three-mod sets are epic plus", ()
       minShipLevel: 7,
       synergies: [{
         id: "battlewake-drive-suite",
-        requiresMods: ["reinforced-void-sails", "arc-conduit-stabilizers"],
+        requiresMods: ["reinforced-void-sails"],
         effects: [{ target: "combatSpeed", mode: "add", value: 1 }]
       }, {
         id: "battlewake-grand-suite",
-        requiresMods: ["reinforced-void-sails", "arc-conduit-stabilizers", "stabilized-helm-relays"],
+        requiresMods: ["reinforced-void-sails", "arc-conduit-stabilizers"],
         effects: [{ target: "maneuverability", mode: "add", value: 1 }]
       }]
     },
     capabilities: ["battlewake-control"]
   };
-  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails"]).length, 0);
-  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails", "arc-conduit-stabilizers"]).length, 1);
-  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails", "arc-conduit-stabilizers", "stabilized-helm-relays"]).length, 2);
+  assert.equal(activeShipModSynergies(epic, []).length, 0);
+  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails"]).length, 1);
+  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails", "arc-conduit-stabilizers"]).length, 2);
   assert.equal(validateShipModProgression(epic).ok, true);
 
   const rareThreePiece = {
@@ -137,7 +152,7 @@ test("most synergies are two-mod bonuses while three-mod sets are epic plus", ()
       minShipLevel: 3,
       synergies: [{
         id: "too-early",
-        requiresMods: ["a", "b", "c"],
+        requiresMods: ["a", "b"],
         effects: [{ target: "armorClass", mode: "add", value: 1 }]
       }]
     },
