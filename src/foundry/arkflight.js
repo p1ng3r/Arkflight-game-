@@ -8,6 +8,7 @@ import { applyShipEffects } from "../ship/ship-effects.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
+import { ArkflightGMOperations } from "../ui/gm-operations-app.js";
 import { installMasteryTacticsUI } from "../ui/mastery-tactics-ui.js";
 import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 import { installPlayerResolutionUI } from "../ui/player-resolution-ui.js";
@@ -21,10 +22,18 @@ const ACTIVE_SHIP_SETTING = "activeVoyageShipUuid";
 let controller = null;
 let board = null;
 let rewardSummary = null;
+let gmOperations = null;
 let lastRoundRewardKey = null;
 let lastEventRewardKey = null;
 
 function ensureBoard() { if (!controller) return null; if (!board) board = new ArkflightEventBoard(controller); return board; }
+
+function ensureGMOperations() {
+  if (!game.user.isGM) return null;
+  if (!gmOperations) gmOperations = new ArkflightGMOperations();
+  return gmOperations;
+}
+
 function shipPayload(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 
 function actorCandidates() {
@@ -139,6 +148,11 @@ function decorateEventCompleteBoard() {
 function renderBoard() { const app = ensureBoard(); if (!app) return null; const rendered = app.render({ force: true }); if (controller?.state?.phase === "event-complete") setTimeout(decorateEventCompleteBoard, 75); return rendered; }
 function showRewardSummary() { if (!controller) return; if (!rewardSummary) rewardSummary = new ArkflightRewardSummary(controller); rewardSummary.render({ force: true }); }
 
+function openGMOperations(options = {}) {
+  if (!game.user.isGM) return null;
+  return ensureGMOperations()?.open(options) ?? null;
+}
+
 function announceStateRewards(state) {
   if (!state) return;
   if (state.phase === "round-result" && state.consequenceApplied) {
@@ -162,10 +176,12 @@ Hooks.once("init", () => {
     events: ARKFLIGHT_EVENTS,
     stationOptions: stationOptionsForShip(),
     get controller() { return controller; },
+    get gmOperations() { return ensureGMOperations(); },
     get activeShip() { return activeVoyageShip(); },
     get commissionedShips() { return commissionedShips(); },
     openBoard() { renderBoard(); return board; },
     openRewards() { showRewardSummary(); return rewardSummary; },
+    openGMOperations,
     isShip(actor) { return isArkflightShip(actor); },
     async markVehicleAsShip(actor) { return markVehicleAsArkflightShip(actor); },
     async openEvent(eventId = "glassback-cinderwake", shipReference = null) {
@@ -189,7 +205,11 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", async () => {
   controller = new PlanningController({
-    onStateChange: (state) => { renderBoard(); announceStateRewards(state); },
+    onStateChange: (state) => {
+      renderBoard();
+      if (gmOperations?.rendered) gmOperations.render({ force: true });
+      announceStateRewards(state);
+    },
     getMasteryOptions: () => masteryIdsForShip(activeVoyageShip()),
     applyShipEffects: (effects) => applyEventShipEffects(effects)
   });
