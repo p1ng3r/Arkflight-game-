@@ -117,14 +117,20 @@ export class PlanningController {
     });
   }
 
-  async openEvent(eventId = "glassback-cinderwake") {
+  async openEvent(eventId = "glassback-cinderwake", { shipActorId = null } = {}) {
     this.#requireGM();
     const event = ARKFLIGHT_EVENTS[eventId];
     if (!event) throw new Error(`Unknown Arkflight Event: ${eventId}`);
     const round = event.rounds[0];
-    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0, crewEdgeHand: this.state?.crewEdgeHand ?? [] });
+    let next = createPlanningState({ eventId: event.id, roundId: round.id, roundIndex: 0, crewEdgeHand: this.state?.crewEdgeHand ?? [], shipActorId });
     next = initializeEncounter(event, next);
     return this.#persistAndBroadcast(next);
+  }
+
+  async endEvent() {
+    this.#requireGM();
+    if (!this.state?.eventId) return null;
+    return this.#persistAndBroadcast(null);
   }
 
   async restartCurrentEvent() {
