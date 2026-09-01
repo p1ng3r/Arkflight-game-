@@ -1,0 +1,110 @@
+import { component, add, COMPONENT_TYPES } from "../ship/component-rules.js";
+import { defaultRefitCosts, refitSpec } from "../ship/refit-rules.js";
+
+const RARITY = "epic";
+const MIN_SHIP_LEVEL = 7;
+const LEGACY_REFIT_TIER = 3;
+
+function refit(slotClass, slotCost = 1) {
+  return refitSpec({ family: "arkengineMod", slotClass, tier: LEGACY_REFIT_TIER, slotCost, ...defaultRefitCosts(LEGACY_REFIT_TIER, slotCost) });
+}
+
+function mod({ id, name, description, slotClass, effectFamily, effects = [], capabilities = [], ruleModifiers = [], fuelHooks = [], upgradeChain, synergies = [], tags = [] }) {
+  return component({
+    id, name, type: COMPONENT_TYPES.ARKENGINE_MOD, description, capacityCost: 1,
+    tags: ["arkengine-mod", RARITY, effectFamily, ...tags], traits: [RARITY, effectFamily, ...tags],
+    effects: effects.map(([target, value]) => add(target, value)), capabilities,
+    data: {
+      rarity: RARITY, minShipLevel: MIN_SHIP_LEVEL, tier: LEGACY_REFIT_TIER, legacyRefitTier: LEGACY_REFIT_TIER,
+      modType: effectFamily, effectFamily, refit: refit(slotClass),
+      ...(ruleModifiers.length ? { ruleModifiers } : {}), ...(fuelHooks.length ? { fuelHooks } : {}),
+      ...(upgradeChain ? { upgradeChain } : {}), ...(synergies.length ? { synergies } : {})
+    }
+  });
+}
+
+const entries = [
+  mod({
+    id: "harmonic-pressure-dynamo", name: "Harmonic Pressure Dynamo",
+    description: "A self-balancing pressure dynamo turns unstable chamber oscillation into usable reserve output before it becomes shipwide Strain.",
+    slotClass: "stability", effectFamily: "strain", effects: [["strainCapacity", 6]],
+    capabilities: ["harmonic-pressure-recovery"],
+    ruleModifiers: [{ kind: "engine-strain-spike-reduction", value: 2 }, { kind: "threshold-overflow-damping", value: 1 }],
+    upgradeChain: { requiresArkengineMods: ["pressure-lattice-governor"] }, tags: ["pressure", "stability", "upgrade"]
+  }),
+  mod({
+    id: "seraphic-veil-reactor", name: "Seraphic Veil Reactor",
+    description: "A nested veil reactor converts Arkengine harmonics into a broad, resilient Lifeveil field capable of absorbing violent fluctuation without collapsing the drive feed.",
+    slotClass: "lifeveil", effectFamily: "lifeveil", effects: [["lifeveilCapacity", 30]],
+    capabilities: ["seraphic-veil-feed"], ruleModifiers: [{ kind: "lifeveil-recovery-support", value: 3 }],
+    upgradeChain: { requiresArkengineMods: ["focused-veil-manifold"] },
+    synergies: [{ id: "seraphic-aegis-triad", requiresArkengineMods: [], requiresShipMods: ["veil-citadel-projector", "prismatic-veil-refractors"], effects: [{ target: "lifeveilCapacity", mode: "add", value: 10 }] }],
+    tags: ["lifeveil", "projection", "set"]
+  }),
+  mod({
+    id: "absolute-zero-recirculator", name: "Absolute-Zero Recirculator",
+    description: "A deep-cold recirculation cage strips heat and magical turbulence from repeated Hard Burns faster than ordinary coolant loops can disperse it.",
+    slotClass: "utility", effectFamily: "cooling", capabilities: ["extreme-engine-cooling"],
+    ruleModifiers: [{ kind: "hard-burn-heat-mitigation", value: 3 }, { kind: "sustained-output-cooling", value: 3 }, { kind: "overburn-strain-reduction", value: 1 }],
+    upgradeChain: { requiresArkengineMods: ["coldwake-recirculation-loop"] }, tags: ["cooling", "hard-burn", "upgrade"]
+  }),
+  mod({
+    id: "consecrated-fuel-crucible", name: "Consecrated Fuel Crucible",
+    description: "A sanctified conversion crucible accepts diverse ritual fuel sources and extracts a cleaner, denser charge without making fuel expenditure mandatory for ordinary Arkflight play.",
+    slotClass: "utility", effectFamily: "fuel", capabilities: ["consecrated-fuel-conversion"],
+    fuelHooks: [{ kind: "fuel-efficiency", value: 3 }, { kind: "ritual-fuel-conversion", value: 2 }],
+    upgradeChain: { requiresArkengineMods: ["refined-fuel-matrix"] },
+    synergies: [{ id: "ritual-reserve-network", requiresArkengineMods: ["deep-reserve-fuel-siphons"], requiresShipMods: [], fuelHooks: [{ kind: "reserve-fuel-efficiency", value: 1 }] }],
+    tags: ["fuel", "ritual", "synergy"]
+  }),
+  mod({
+    id: "tempest-triad-injectors", name: "Tempest Triad Injectors",
+    description: "Three alternating surge chambers deliver continuous high-output thrust while rotating stress away from any single feed line.",
+    slotClass: "power", effectFamily: "power-output", effects: [["voyageSpeedTravelHexDays", -3], ["combatSpeed", 2]],
+    capabilities: ["tempest-drive-output"], ruleModifiers: [{ kind: "stormwake-risk-output", value: 3 }],
+    upgradeChain: { requiresArkengineMods: ["stormwake-twin-injectors"] },
+    synergies: [{ id: "tempest-battlewake-triad", requiresArkengineMods: [], requiresShipMods: ["stormproof-void-sails", "battlewake-control-fins"], effects: [{ target: "combatSpeed", mode: "add", value: 1 }, { target: "maneuverability", mode: "add", value: 1 }] }],
+    tags: ["overcharge", "speed", "set"]
+  }),
+  mod({
+    id: "black-tide-stability-core", name: "Black-Tide Stability Core",
+    description: "A voidglass-and-aetherite secondary core damps deep-current inversions and lets the primary Arkengine maintain coherent output in hostile Black Tides.",
+    slotClass: "stability", effectFamily: "deep-void", effects: [["strainCapacity", 5]],
+    capabilities: ["black-tide-core-stability"], ruleModifiers: [{ kind: "deep-void-engine-stability", value: 3 }, { kind: "void-event-engine-bonus", value: 2 }],
+    upgradeChain: { requiresArkengineMods: ["deepwake-voidglass-heart"] }, tags: ["deep-void", "stability", "upgrade"]
+  }),
+  mod({
+    id: "grand-choir-resonator", name: "Grand Choir Resonator",
+    description: "A cathedral-like resonance assembly lets ritual crews tune power, veil output, and magical containment through one synchronized engine harmonic.",
+    slotClass: "lifeveil", effectFamily: "ritual", effects: [["lifeveilCapacity", 20], ["strainCapacity", 2]],
+    capabilities: ["grand-engine-ritual"], ruleModifiers: [{ kind: "ritual-engine-check-bonus", value: 2 }, { kind: "ritual-consequence-reduction", value: 1 }],
+    upgradeChain: { requiresArkengineMods: ["resonant-choir-core"] }, tags: ["ritual", "harmonic", "upgrade"]
+  }),
+  mod({
+    id: "phoenix-overburn-chamber", name: "Phoenix Overburn Chamber",
+    description: "A sacrificial overburn chamber is built to flare, vent, cool, and return to service without forcing the entire Arkengine through the same destructive surge cycle.",
+    slotClass: "power", effectFamily: "emergency-power", effects: [["strainCapacity", 3]],
+    capabilities: ["phoenix-overburn-cycle"], ruleModifiers: [{ kind: "emergency-output-access", value: 3 }, { kind: "overburn-strain-reduction", value: 2 }],
+    upgradeChain: { requiresArkengineMods: ["controlled-overburn-catalysts"] },
+    synergies: [{ id: "phoenix-drive-suite", requiresArkengineMods: ["absolute-zero-recirculator"], requiresShipMods: ["arc-conduit-stabilizers"], ruleModifiers: [{ kind: "hard-burn-strain-reduction", value: 1 }] }],
+    tags: ["overburn", "emergency", "set"]
+  }),
+  mod({
+    id: "adamant-core-suspension", name: "Adamant Core Suspension",
+    description: "An adamantine gimbal cradle isolates the Arkengine core from hull shock, torsion, and sudden facing changes while preserving full power transfer.",
+    slotClass: "stability", effectFamily: "stability", effects: [["strainCapacity", 7]],
+    capabilities: ["adamant-core-isolation"], ruleModifiers: [{ kind: "arkengine-area-repair-bonus", value: 2 }, { kind: "collision-engine-protection", value: 2 }],
+    upgradeChain: { requiresArkengineMods: ["aetherite-core-cage"] }, tags: ["core", "stability", "upgrade"]
+  }),
+  mod({
+    id: "sovereign-hard-burn-governor", name: "Sovereign Hard Burn Governor",
+    description: "A predictive governor anticipates pressure spikes before the Engineer commits the burn, allowing violent acceleration with dramatically reduced accumulated Strain.",
+    slotClass: "power", effectFamily: "hard-burn", effects: [["hardBurnStrainCost", -3], ["combatSpeed", 1]],
+    capabilities: ["sovereign-governed-burn"], ruleModifiers: [{ kind: "hard-burn-control", value: 2 }],
+    upgradeChain: { requiresArkengineMods: ["precision-hard-burn-governor"] },
+    synergies: [{ id: "sovereign-racing-drive", requiresArkengineMods: [], requiresShipMods: ["black-tide-racing-sails", "battlewake-vector-vanes"], effects: [{ target: "combatSpeed", mode: "add", value: 2 }] }],
+    tags: ["hard-burn", "governor", "set"]
+  })
+];
+
+export const EPIC_ARKENGINE_MODS = Object.freeze(Object.fromEntries(entries.map((entry) => [entry.id, entry])));
