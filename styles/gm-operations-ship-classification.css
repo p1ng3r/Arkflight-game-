@@ -1,0 +1,79 @@
+.arkflight-gm-classification-override-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 2px 5px;
+  border: 1px solid rgba(209, 157, 75, 0.5);
+  border-radius: 999px;
+  color: #e2c184;
+  background: rgba(91, 62, 25, 0.34);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.arkflight-gm-classification-override-badge.prominent {
+  padding: 3px 7px;
+  font-size: 10px;
+}
+
+.arkflight-gm-ship-classification-manage {
+  position: relative;
+}
+
+.arkflight-gm-ship-classification-manage > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid rgba(190, 143, 66, 0.28);
+  border-radius: 4px;
+  color: #cbd3db;
+  background: rgba(13, 19, 25, 0.72);
+  cursor: pointer;
+  list-style: none;
+}
+
+.arkflight-gm-ship-classification-manage > summary::-webkit-details-marker { display: none; }
+
+.arkflight-gm-ship-classification-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 5px);
+  width: 240px;
+  padding: 10px;
+  border: 1px solid rgba(190, 143, 66, 0.45);
+  border-radius: 4px;
+  background: #10171e;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+.arkflight-gm-ship-classification-menu label {
+  display: grid;
+  gap: 5px;
+  color: #b9c2ca;
+  font-size: 11px;
+}
+
+.arkflight-gm-ship-classification-menu select {
+  min-height: 34px;
+  color: #e8edf2;
+  background: #0b1117;
+  border: 1px solid rgba(190, 143, 66, 0.34);
+}
+
+.arkflight-gm-ship-classification-menu small {
+  display: block;
+  margin-top: 7px;
+  color: #7f8b95;
+  line-height: 1.35;
+}
+
+.arkflight-gm-current-replacement label {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+}
