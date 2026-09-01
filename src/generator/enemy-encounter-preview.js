@@ -8,15 +8,30 @@ const LOOT_SPLITS = Object.freeze({
   treasure: Object.freeze({ personal: 0.20, cargo: 0.60, salvage: 0.20, multiplier: 1.75 })
 });
 
+export const ENEMY_REWARD_WEIGHTS = Object.freeze(["minor", "standard", "major", "hoard"]);
+
 function clampLevel(value) { return Math.max(1, Math.min(20, Math.round(Number(value) || 1))); }
+
+function automaticRewardWeight(config) {
+  if (config.lootProfile === "treasure") return "hoard";
+  if (config.lootProfile === "rich" || config.difficulty === "elite") return "major";
+  if (config.lootProfile === "poor" && config.difficulty === "poor") return "minor";
+  return "standard";
+}
 
 function lootContract(basePreview, input) {
   const partyLevel = clampLevel(input.partyLevel ?? basePreview.config.level);
   const split = LOOT_SPLITS[basePreview.config.lootProfile] ?? LOOT_SPLITS.standard;
+  const automatic = automaticRewardWeight(basePreview.config);
+  const requested = String(input.rewardWeight ?? "auto");
+  const rewardWeight = ENEMY_REWARD_WEIGHTS.includes(requested) ? requested : automatic;
   return Object.freeze({
     profile: basePreview.config.lootProfile,
     partyLevel,
     shipLevel: basePreview.config.level,
+    rewardWeight,
+    rewardWeightSource: ENEMY_REWARD_WEIGHTS.includes(requested) ? "gm-override" : "automatic",
+    automaticRewardWeight: automatic,
     economicCeiling: Object.freeze({
       basis: "party-level",
       level: partyLevel,
@@ -33,7 +48,7 @@ function lootContract(basePreview, input) {
     shipCargo: Object.freeze([]),
     salvage: Object.freeze([]),
     state: "policy-complete-values-pending",
-    note: `Party level ${partyLevel} sets the PF2e economic ceiling. Ship level ${basePreview.config.level} and ${basePreview.config.lootProfile} richness determine how that ceiling is split among personal treasure, cargo, and Arkflight salvage.`
+    note: `Party level ${partyLevel} sets the PF2e economic ceiling. Reward weight is ${rewardWeight}${ENEMY_REWARD_WEIGHTS.includes(requested) ? " (GM override)" : " (automatic)"}. Ship level ${basePreview.config.level} and ${basePreview.config.lootProfile} richness determine how value is split among personal treasure, cargo, and Arkflight salvage.`
   });
 }
 
@@ -51,14 +66,14 @@ export function generateEnemyEncounterPreview(input = {}) {
   const loot = lootContract(base, { ...input, partyLevel });
   const blockers = [
     ...(base.validation.ok ? [] : base.validation.errors),
-    "PF2e signature weapon/armor compendium resolution is not implemented yet.",
+    "PF2e signature gear compendium resolution and embedding is not implemented yet.",
     "PF2e treasure table GP ceiling and concrete item selection are not implemented yet."
   ];
 
   return Object.freeze({
     ...base,
-    version: 3,
-    config: Object.freeze({ ...base.config, partyLevel }),
+    version: 4,
+    config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto" }),
     crew: Object.freeze({ ...base.crew, officers: Object.freeze(officers) }),
     loot,
     canCommit: blockers.length === 0,
