@@ -44,6 +44,7 @@
     "src/foundry/arkflight.js",
     "src/foundry/generated-crew-folders.js",
     "src/foundry/generated-package-commit-api.js",
+    "src/ui/gm-operations-render-bridge.js",
     "src/ui/mastery-clarity-ui.js",
     "src/ui/event-board-large-desktop.js",
     "src/ui/opening-branding-ui.js",
