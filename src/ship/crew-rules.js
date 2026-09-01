@@ -20,7 +20,8 @@ export function crewStaffingPenalty({ operatingCrew = 0, minimum = 0, totalAboar
 
   const underMinimumBy = Math.max(0, min - operating);
   const overMaximumBy = max > 0 ? Math.max(0, aboard - max) : 0;
-  const penalty = -(underMinimumBy + overMaximumBy);
+  const missingOrExcess = underMinimumBy + overMaximumBy;
+  const penalty = missingOrExcess > 0 ? -missingOrExcess : 0;
 
   return Object.freeze({
     operatingCrew: operating,
