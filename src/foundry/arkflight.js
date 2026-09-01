@@ -9,6 +9,7 @@ import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
 import { ArkflightGMOperations } from "../ui/gm-operations-app.js";
+import { createShipService, registerShipServiceSetting } from "./ship-service.js";
 import { installMasteryTacticsUI } from "../ui/mastery-tactics-ui.js";
 import { installPlayerSetupClaims } from "../ui/setup-player-claims.js";
 import { installPlayerResolutionUI } from "../ui/player-resolution-ui.js";
@@ -169,6 +170,7 @@ function announceStateRewards(state) {
 
 Hooks.once("init", () => {
   PlanningController.registerSetting();
+  registerShipServiceSetting();
   game.settings.register(MODULE_ID, ACTIVE_SHIP_SETTING, { name: "Active Arkflight Voyage Vessel", scope: "world", config: false, type: String, default: "" });
   registerArkflightShipSheet(); installShipwrightUX(); installMasteryTacticsUI(); installPlayerSetupClaims(); installPlayerResolutionUI(); installMasteryOpportunityUI(); installOpeningScreenUI();
 
@@ -201,6 +203,7 @@ Hooks.once("init", () => {
       if (board?.rendered) board.render({ force: true });
     }
   };
+  game.arkflight.ships = createShipService();
 });
 
 Hooks.once("ready", async () => {
