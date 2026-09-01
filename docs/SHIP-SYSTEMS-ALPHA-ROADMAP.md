@@ -15,7 +15,7 @@
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
 9. Ship Mod Catalog Completion ✅
-10. Arkengine Mod Catalog Completion — Standard + Rare Alpha bands complete; Epic next
+10. Arkengine Mod Catalog Completion ✅
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
 13. Whole-Ship Operational Validator
@@ -55,7 +55,7 @@ Ship Mods are complete for Alpha across the locked rarity ladder:
 
 Direct upgrade chains replace their predecessor and inherit its slot. Most synergies use two total fittings; three-component set bonuses begin at Epic. Mythic core-rule exceptions are always explicitly bounded. Legendary and Mythic acquisition remain restricted as previously locked.
 
-## Part 10 — Arkengine Mod Catalog Completion
+## Part 10 — Arkengine Mod Catalog Completion ✅
 
 ### Separate hardware family
 
@@ -63,17 +63,17 @@ Arkengine Mods remain a distinct physical hardware family with Arkengine-specifi
 
 ### Rarity progression
 
-Arkengine Mods use the same rarity ladder and default ship-level gates as Ship Mods, but with a smaller specialized catalog:
+Arkengine Mods use the same rarity ladder and default ship-level gates as Ship Mods, with the smaller specialized Alpha catalog now complete:
 
-| Rarity | Default minimum ship level | Alpha target | Current status |
-|---|---:|---:|---|
-| Standard | 1 | 18–22 | ✅ 22 baseline Mods migrated |
-| Rare | 3 | 14–16 | ✅ 14 authored |
-| Epic | 7 | 10–12 | next |
-| Legendary | 12 | 7–8 | pending |
-| Mythic | 17 | 4–5 | pending |
+| Rarity | Default minimum ship level | Alpha target | Authored |
+|---|---:|---:|---:|
+| Standard | 1 | 18–22 | 22 ✅ |
+| Rare | 3 | 14–16 | 14 ✅ |
+| Epic | 7 | 10–12 | 10 ✅ |
+| Legendary | 12 | 7–8 | 8 ✅ |
+| Mythic | 17 | 4–5 | 5 ✅ |
 
-Legacy numeric Refit tiers remain temporary installation-cost compatibility metadata only. They do not determine player-facing rarity.
+Legacy numeric Refit tiers remain installation-cost compatibility metadata only. They do not determine player-facing rarity.
 
 ### Arkengine Mod identity
 
@@ -97,46 +97,41 @@ They may affect general ship statistics when the effect is clearly caused by Ark
 
 ### Standard Alpha band
 
-The existing 22-entry Arkengine Mod catalog has been migrated to **Standard** rarity while preserving its old numeric Refit tier as `legacyRefitTier` for cost compatibility.
+The existing 22-entry Arkengine Mod catalog is the Standard band while preserving old numeric Refit tier data as `legacyRefitTier` for cost compatibility. Baseline concepts include pressure tuning, veil focusing, cooling loops, fuel-matrix efficiency, Stormwake injection, voidglass regulation, harmonic lattices, Overburn Catalysts, core bracing, fuel siphons, Hushglass cowls, Hard Burn governors, grounding rods, harmonic prisms, Quickspark injectors, ritual channeling rings, Coldwake condensers, and veil-pressure equalization.
 
-Baseline concepts include pressure tuning, veil focusing, cooling loops, fuel-matrix efficiency, Stormwake injection, voidglass regulation, harmonic lattices, Overburn Catalysts, Deepwake stabilizers, core bracing, fuel siphons, Hushglass cowls, Hard Burn governors, grounding rods, harmonic prisms, pressure bypasses, resonance baffles, Quickspark injectors, ritual channeling rings, filter mesh, Coldwake condensers, and veil-pressure equalization.
-
-Every Standard entry now has a real mechanical purpose through an effect, capability, rule modifier, signature unlock, or fuel hook.
+Every Standard entry has a real mechanical purpose through an effect, capability, rule modifier, signature unlock, or fuel hook.
 
 ### Rare Alpha band
 
-The Rare band is now at the locked minimum target of **14 Mods**. Rare Arkengine hardware adds stronger effects plus upgrade-chain, fuel-hook, and cross-family build choices.
+The Rare band contains 14 Mods. It adds stronger effects, direct replacement chains, authored fuel hooks, and cross-family Ship Mod synergies. Representative fittings include Pressure Lattice Governor, Focused Veil Manifold, Coldwake Recirculation Loop, Refined Fuel Matrix, Stormwake Twin Injectors, Deepwake Voidglass Heart, Resonant Choir Core, Controlled Overburn Catalysts, Aetherite Core Cage, Deep-Reserve Fuel Siphons, Silent Hushglass Shroud, Precision Hard Burn Governor, Surge Grounding Array, and Prismatic Lifeveil Feed.
 
-New Rare fittings include:
+### Epic Alpha band
 
-- **Pressure Lattice Governor** — replaces Pressure Lattice Tuning, adds +3 Strain Capacity and active pressure control.
-- **Focused Veil Manifold** — replaces Veil Projector Focusing, adds +15 Lifeveil and recovery support.
-- **Coldwake Recirculation Loop** — replaces Cooling Loop Expansion and can synergize with Trim-Sail Regulators for safer Hard Burn operation.
-- **Refined Fuel Matrix** — replaces Fuel Matrix Efficiency and improves the authored fuel-efficiency hook without creating a mandatory fuel loop.
-- **Stormwake Twin Injectors** — replaces Stormwake Injector, improves burst travel output, and can synergize with Stormproof Void Sails.
-- **Deepwake Voidglass Heart** — replaces Voidglass Regulator and improves deep-void stability.
-- **Resonant Choir Core** — replaces Choir Harmonic Lattice and improves ritual/veil-linked engine handling.
-- **Controlled Overburn Catalysts** — replaces Overburn Catalysts and provides more controlled emergency output.
-- **Aetherite Core Cage** — replaces Aetherite Core Bracing and adds +4 Strain Capacity plus repair support.
-- **Deep-Reserve Fuel Siphons** — replaces Refined Fuel Siphons and expands fuel-capacity/reserve-access hooks.
-- **Silent Hushglass Shroud** — replaces Hushglass Cowl and can synergize with Occult Signal Refractors for suppressed magical wake.
-- **Precision Hard Burn Governor** — replaces Hard Burn Governor, reduces Hard Burn Strain cost by 2, and can synergize with Battlewake Control Fins.
-- **Surge Grounding Array** — replaces Overcharge Grounding Rods and improves overcharge Strain handling.
-- **Prismatic Lifeveil Feed** — replaces Lifeveil Harmonic Prism, adds +20 Lifeveil, and can synergize with Veil Harmonic Capacitors.
+The Epic band contains 10 Mods and introduces the first true three-component Arkengine/Ship Mod set bonuses. It includes Harmonic Pressure Dynamo, Seraphic Veil Reactor, Absolute-Zero Recirculator, Consecrated Fuel Crucible, Tempest Triad Injectors, Black-Tide Stability Core, Grand Choir Resonator, Phoenix Overburn Chamber, Adamant Core Suspension, and Sovereign Hard Burn Governor.
+
+Epic hardware changes play through stronger Strain control, emergency output, ritual support, pursuit-drive combinations, Lifeveil reinforcement, and explicit Event/Hard Burn interactions rather than relying on larger numbers alone.
+
+### Legendary Alpha band
+
+The Legendary band contains 8 build-defining Mods: Worldheart Pressure Dynamo, Aegis-Sun Veil Reactor, Winterstar Recirculation Crown, Saintfire Fuel Reliquary, Thunderlord Tempest Injectors, Abyssal Tide Stability Heart, Archon Overburn Forge, and Crown of the Sovereign Burn.
+
+Legendary Arkengine Mods may create powerful cross-system builds and three-component sets, but they do not receive Mythic core-rule exceptions.
+
+### Mythic Alpha band
+
+The Mythic band contains 5 campaign-defining fittings:
+
+- **Singularity Worldheart Dynamo** — once per event can suppress one Strain-threshold degradation of the Arkengine Area while threshold consumption and overflow still resolve.
+- **Firmament Veil Heart** — once per event can sustain Lifeveil for one round after the Arkengine Area becomes Disabled, at a Lifeveil cost.
+- **Crown of the First Burn** — once per event can ignore the base Strain cost of one Hard Burn, with a delayed Arkengine-threatening Strain cost.
+- **Godspark Emergency Nexus** — once per event can force a Disabled Arkengine to function for one round, followed by +3 Strain threatening Arkengine.
+- **Saintfire Eternity Reliquary** — once per event can waive one explicitly authored Arkengine fuel expenditure without creating a universal fuel-consumption rule.
+
+Every Mythic exception has an explicit trigger, usage limit, hard boundary, and where appropriate a direct cost. Permanent unbounded rule bypasses remain invalid.
 
 ### Fuel hooks — no mandatory fuel subsystem yet
 
-Part 10 does **not** invent a new mandatory Arkengine fuel-consumption gameplay loop.
-
-Fuel-oriented Mods may author explicit hooks such as:
-
-- fuel capacity,
-- fuel efficiency,
-- safer fuel handling,
-- ritual fuel conversion,
-- future authored interactions.
-
-Those hooks are structured data for future consumers. Existing fuel-related derived values remain compatibility hooks until a later fuel contract explicitly defines when and how fuel is spent.
+Part 10 does **not** invent a mandatory Arkengine fuel-consumption gameplay loop. Fuel-oriented Mods may author structured hooks such as fuel capacity, fuel efficiency, safer fuel handling, ritual fuel conversion, fuel memory, and future authored interactions. Existing fuel-related derived values remain compatibility hooks until a later fuel contract explicitly defines when and how fuel is spent.
 
 ### Upgrade chains
 
@@ -150,36 +145,20 @@ Direct Arkengine Mod upgrade chains use the same replacement model as Ship Mods:
 
 ### Synergies
 
-Arkengine Mod synergies may reference both:
+Arkengine Mod synergies may reference both other installed Arkengine Mods and compatible installed Ship Mods. Most synergies involve two total fittings. Three-component set bonuses begin at Epic. Cross-family synergies are explicitly authored rather than inferred from tags.
 
-- other installed Arkengine Mods; and
-- compatible installed Ship Mods.
+### Part 10 acceptance — complete
 
-Most synergies should involve two total fittings. Three-component set bonuses begin at Epic. Cross-family synergies must be explicitly authored rather than inferred from tags.
-
-Example intended pattern: an Arkengine governor plus racing sails can unlock an additional Hard Burn or drive benefit because the engine hardware and sail hardware were designed to operate together.
-
-### Mythic Arkengine rules
-
-Mythic Arkengine Mods may produce extreme effects such as:
-
-- one free or reduced-cost Hard Burn,
-- brief powered operation while the Arkengine Area is Disabled,
-- converting a catastrophic overload into Strain,
-- temporary propulsion surges,
-- temporary Lifeveil surges,
-- other campaign-defining Arkengine behavior.
-
-Every Mythic core-rule exception must be bounded by a clear trigger, cost, usage limit, or hard duration. Unbounded permanent exceptions are invalid.
-
-### Part 10 acceptance
-
-Part 10 will be complete when:
+Part 10 is complete because:
 
 - all five Arkengine rarity bands are inside their locked Alpha density ranges;
-- every Arkengine Mod passes the shared Arkengine progression validator;
+- every current Arkengine Mod passes the shared progression validator;
 - upgrade replacement and socket inheritance are represented consistently;
 - cross-family synergies are explicitly authored and validated;
-- fuel remains hook-based unless a separate fuel contract is approved;
-- Mythic Arkengine exceptions are bounded;
-- the canonical Arkengine catalog is consumable by deriveShip, Refit, Character Sheet, GM generator, and Event/Combat work without translating legacy numeric tiers back into progression.
+- fuel remains hook-based rather than becoming a mandatory subsystem;
+- all Mythic Arkengine exceptions are bounded;
+- the canonical Arkengine catalog is consumable by downstream deriveShip, Refit, Character Sheet, GM generator, Event, and Combat work without translating legacy numeric tiers back into progression.
+
+## Next — Part 11: Canonical Derived Stat Registry
+
+Part 11 will define the authoritative registry of derived ship statistics and their consumers so Ship Mods, Arkengine Mods, Rooms, Weapons, Hulls, Patterns, Talents, Events, Combat, and the Character Sheet do not invent competing stat names or silently ignore authored effects.
