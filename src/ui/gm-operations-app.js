@@ -74,6 +74,31 @@ function eventCatalog(selectedEventId = null) {
   };
 }
 
+function confirmVoyageLaunch(ship, event) {
+  return new Promise((resolve) => {
+    const DialogV2 = foundry.applications.api.DialogV2;
+    const content = `
+      <div class="arkflight-gm-launch-confirm">
+        <p>Launch this Voyage?</p>
+        <div class="arkflight-gm-launch-route">
+          <strong>${foundry.utils.escapeHTML(ship.name)}</strong>
+          <i class="fa-solid fa-arrow-right"></i>
+          <strong>${foundry.utils.escapeHTML(event.title)}</strong>
+        </div>
+        <p class="hint">This ship will remain bound to the Voyage for the entire event.</p>
+      </div>`;
+    new DialogV2({
+      window: { title: "Launch Arkflight Voyage" },
+      content,
+      buttons: [
+        { action: "cancel", label: "Cancel", icon: "fa-solid fa-xmark", callback: () => resolve(false) },
+        { action: "launch", label: "Launch Voyage", icon: "fa-solid fa-compass", default: true, callback: () => resolve(true) }
+      ],
+      close: () => resolve(false)
+    }).render({ force: true });
+  });
+}
+
 function buildCommandDashboard(eventState, eventDefinition, combatActive) {
   const ships = commandShipSource();
   const eventActive = Boolean(eventState?.eventId);
@@ -167,6 +192,7 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     const catalog = eventCatalog(this.selectedEventId);
     this.selectedEventId = catalog.selectedId;
     const selectedShip = shipOptions.find((ship) => ship.id === this.selectedShipId) ?? null;
+    const boundShip = eventState?.shipActorId ? ships.all.find((ship) => ship.id === eventState.shipActorId) ?? null : null;
     const canLaunchSelectedEvent = Boolean(catalog.selected && selectedShip && !eventActive && !combatActive);
     const launchBlockReason = eventActive
       ? "End or resume the active Voyage before launching another event."
@@ -197,7 +223,9 @@ export class ArkflightGMOperations extends HandlebarsApplication {
         id: eventState.eventId,
         name: eventDefinition?.name ?? eventDefinition?.title ?? eventState.eventId,
         phase: eventState.phase ?? "active",
-        round: Number(eventState.roundIndex ?? 0) + 1
+        round: Number(eventState.roundIndex ?? 0) + 1,
+        shipActorId: eventState.shipActorId ?? null,
+        shipName: boundShip?.name ?? (eventState.shipActorId ? game.actors.get(eventState.shipActorId)?.name ?? "Bound Ship" : null)
       } : null,
       operationsTab: this.operationsTab,
       operationsActiveTab: this.operationsTab === "active",
@@ -227,7 +255,7 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     for (const button of this.element.querySelectorAll("[data-operations-tab]")) {
       button.addEventListener("click", () => {
         const tab = button.dataset.operationsTab;
-        if (!['active', 'voyage-events'].includes(tab) || tab === this.operationsTab) return;
+        if (!["active", "voyage-events"].includes(tab) || tab === this.operationsTab) return;
         this.operationsTab = tab;
         this.render({ force: true });
       });
@@ -255,10 +283,15 @@ export class ArkflightGMOperations extends HandlebarsApplication {
 
     this.element.querySelector("[data-action='launch-voyage-event']")?.addEventListener("click", async () => {
       if (!this.selectedEventId || !this.selectedShipId || eventIsActive() || combatIsActive()) return;
+      const catalog = eventCatalog(this.selectedEventId);
+      const ship = commandShipSource().all.find((entry) => entry.id === this.selectedShipId) ?? null;
+      if (!catalog.selected || !ship) return;
+      const confirmed = await confirmVoyageLaunch(ship, catalog.selected);
+      if (!confirmed) return;
+
       const button = this.element.querySelector("[data-action='launch-voyage-event']");
       if (button) button.disabled = true;
       try {
-        game.arkflight.selectedVoyageShipId = this.selectedShipId;
         await game.arkflight.openEvent(this.selectedEventId, { shipActorId: this.selectedShipId });
         this.operationsTab = "active";
         this.render({ force: true });
