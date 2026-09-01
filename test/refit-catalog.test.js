@@ -19,7 +19,8 @@ function assertCatalog(catalog, family, validSlots) {
     assert.ok(spec, `${id} has refit metadata`);
     assert.equal(spec.family, family, `${id} family`);
     assert.ok(validSlots.includes(spec.slotClass), `${id} slotClass ${spec.slotClass}`);
-    assert.equal(spec.tier, mod.data.tier, `${id} tier mirrors catalog tier`);
+    const compatibilityTier = mod.data.legacyRefitTier ?? mod.data.tier;
+    assert.equal(spec.tier, compatibilityTier, `${id} tier mirrors legacy Refit tier`);
     assert.equal(spec.slotCost, mod.capacityCost, `${id} slot cost mirrors capacity cost`);
     assert.equal(spec.blueprintRequired, true, `${id} requires a blueprint to build`);
     assertWorkSpec(spec.build, `${id} build`);
