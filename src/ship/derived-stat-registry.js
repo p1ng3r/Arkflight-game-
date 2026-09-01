@@ -9,6 +9,7 @@ function stat(path, { label, category, defaultValue = 0, kind = DERIVED_STAT_KIN
 
 export const DERIVED_STAT_REGISTRY = Object.freeze({
   armorClass: stat("armorClass", { label: "Armor Class", category: "defense" }),
+  hardness: stat("hardness", { label: "Hardness", category: "defense" }),
   hullIntegrity: stat("hullIntegrity", { label: "Hull Integrity", category: "survival" }),
   lifeveilCapacity: stat("lifeveilCapacity", { label: "Lifeveil Capacity", category: "lifeveil" }),
   strainCapacity: stat("strainCapacity", { label: "Strain Capacity", category: "arkengine" }),
@@ -16,9 +17,22 @@ export const DERIVED_STAT_REGISTRY = Object.freeze({
   detection: stat("detection", { label: "Detection", category: "battlewatch" }),
   combatSpeed: stat("combatSpeed", { label: "Combat Speed", category: "mobility" }),
   maneuverability: stat("maneuverability", { label: "Maneuverability", category: "mobility" }),
+  weaponAttackBonus: stat("weaponAttackBonus", { label: "Weapon Attack Bonus", category: "weapons" }),
+  defensiveCheckBonus: stat("defensiveCheckBonus", { label: "Defensive Check Bonus", category: "defense" }),
+  repairCheckBonus: stat("repairCheckBonus", { label: "Repair Check Bonus", category: "repair" }),
+  repairTimePercent: stat("repairTimePercent", { label: "Repair Time Modifier %", category: "repair" }),
+  repairSupplyPercent: stat("repairSupplyPercent", { label: "Repair Supply Modifier %", category: "repair" }),
+  supplyUsePercent: stat("supplyUsePercent", { label: "Supply Use Modifier %", category: "logistics" }),
   roomCapacity: stat("roomCapacity", { label: "Room Capacity", category: "fittings" }),
   shipModCapacity: stat("shipModCapacity", { label: "Ship Mod Capacity", category: "fittings" }),
   arkengineModCapacity: stat("arkengineModCapacity", { label: "Arkengine Mod Capacity", category: "arkengine" }),
+  crewTacticCapacity: stat("crewTacticCapacity", { label: "Crew Tactic Capacity", category: "crew" }),
+  actionBonus: stat("actionBonus", { label: "Combat Action Bonus", category: "combat" }),
+  reactionBonus: stat("reactionBonus", { label: "Combat Reaction Bonus", category: "combat" }),
+  allStationBonus: stat("allStationBonus", { label: "All Station Bonus", category: "stations" }),
+  arkcraftUpgradeChoices: stat("arkcraftUpgradeChoices", { label: "Arkcraft Upgrade Choices", category: "progression" }),
+  legendaryArkcraftUpgradeChoices: stat("legendaryArkcraftUpgradeChoices", { label: "Legendary Arkcraft Upgrade Choices", category: "progression" }),
+  mythicCapabilityCount: stat("mythicCapabilityCount", { label: "Mythic Capability Count", category: "progression" }),
   supplyCapacity: stat("supplyCapacity", { label: "Supply Capacity", category: "logistics" }),
   moraleCapacity: stat("moraleCapacity", { label: "Morale Capacity", category: "crew" }),
   arkengineFuelSlots: stat("arkengineFuelSlots", { label: "Arkengine Fuel Slots", category: "arkengine" }),
@@ -68,7 +82,8 @@ export function createDefaultDerivedStats() {
 export function validateComponentEffectTargets(component) {
   const invalidTargets = [];
   for (const effect of component?.effects ?? []) {
-    if (!isCanonicalEffectTarget(effect?.target)) invalidTargets.push(effect?.target ?? null);
+    if (effect?.target == null) continue;
+    if (!isCanonicalEffectTarget(effect.target)) invalidTargets.push(effect.target);
   }
   return Object.freeze({
     ok: invalidTargets.length === 0,
