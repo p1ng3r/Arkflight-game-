@@ -1,6 +1,11 @@
 import { AREA_STATES } from "./ship-schema.js";
 import { applyTalentProgression, progressionView } from "./progression.js";
-import { assertCanonicalEffectTarget, createDefaultDerivedStats } from "./derived-stat-registry.js";
+import {
+  assertCanonicalEffectTarget,
+  createDefaultDerivedStats,
+  deriveResistanceProfile,
+  normalizeDerivedStats
+} from "./derived-stat-registry.js";
 
 function getPath(object, path) { return path.split(".").reduce((value, key) => value?.[key], object); }
 function setPath(object, path, value) { const keys = path.split("."); const last = keys.pop(); let cursor = object; for (const key of keys) cursor = cursor[key] ??= {}; cursor[last] = value; }
@@ -61,7 +66,9 @@ function addStationUnlocks(target, component) {
 export function deriveShip(ship, catalogs = {}) {
   const components = installedComponents(ship, catalogs);
   const hull = lookup(catalogs.hulls, ship.hull.chassisId);
-  const baseStats = structuredClone(hull?.data?.baseStats ?? createDefaultDerivedStats());
+  const defaults = createDefaultDerivedStats();
+  const authoredBase = structuredClone(hull?.data?.baseStats ?? {});
+  const baseStats = { ...defaults, ...authoredBase, crew: structuredClone(authoredBase.crew ?? defaults.crew), weaponMounts: structuredClone(authoredBase.weaponMounts ?? defaults.weaponMounts), physicalResistances: structuredClone(authoredBase.physicalResistances ?? defaults.physicalResistances) };
   const derived = structuredClone(baseStats);
   const tags = new Set(ship.traits ?? []);
   const capabilities = new Set();
@@ -75,11 +82,13 @@ export function deriveShip(ship, catalogs = {}) {
   }
 
   applyTalentProgression(derived, baseStats, ship, stationCapabilities, capabilities);
+  derived.resistances = deriveResistanceProfile(baseStats.physicalResistances, components);
+  const normalizedStats = normalizeDerivedStats(derived);
 
   const frozenStationCapabilities = Object.fromEntries(Object.entries(stationCapabilities).map(([station, values]) => [station, Object.freeze({ masteries: Object.freeze([...values.masteries]), combatActions: Object.freeze([...values.combatActions]), passiveEffects: Object.freeze([...values.passiveEffects]) })]));
   const progression = progressionView(ship);
   return Object.freeze({
-    stats: Object.freeze(derived), tags: Object.freeze([...tags]), capabilities: Object.freeze([...capabilities]), progression,
+    stats: Object.freeze(normalizedStats), tags: Object.freeze([...tags]), capabilities: Object.freeze([...capabilities]), progression,
     stationCapabilities: Object.freeze(frozenStationCapabilities),
     unlocks: Object.freeze({ masteries: Object.freeze(Object.values(frozenStationCapabilities).flatMap((row) => row.masteries)), actions: Object.freeze(Object.values(frozenStationCapabilities).flatMap((row) => row.combatActions)) }),
     usage: Object.freeze({ rooms: (ship.rooms ?? []).reduce((sum, id) => sum + (catalogs.rooms?.[id]?.capacityCost ?? 0), 0), shipMods: (ship.shipMods ?? []).reduce((sum, id) => sum + (catalogs.shipMods?.[id]?.capacityCost ?? 0), 0), arkengineMods: (ship.arkengine.modIds ?? []).reduce((sum, id) => sum + (catalogs.arkengineMods?.[id]?.capacityCost ?? 0), 0) })
