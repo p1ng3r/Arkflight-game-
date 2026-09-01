@@ -1,8 +1,5 @@
 import { generatePF2eOfficerBenchmark, stationRole } from "./pf2e-officer-generator.js";
-
-const ANCESTRIES = Object.freeze([
-  "Human", "Dwarf", "Elf", "Goblin", "Halfling", "Orc", "Gnome", "Hobgoblin", "Kobold", "Leshy"
-]);
+import { ayerstoneFaction } from "./ayerstone-setting-catalog.js";
 
 const GIVEN = Object.freeze([
   "Alden", "Brenna", "Cassian", "Dara", "Edrin", "Fara", "Garrick", "Hessa", "Ilyra", "Joren",
@@ -69,7 +66,8 @@ function titleCase(value) { return String(value ?? "").replaceAll("-", " ").repl
 
 function biography({ station, faction, theme, seed }) {
   const rng = rngFor(`${seed}:${station}:identity`);
-  const ancestry = choose(rng, ANCESTRIES);
+  const factionProfile = ayerstoneFaction(faction);
+  const ancestry = choose(rng, factionProfile.ancestries);
   const name = `${choose(rng, GIVEN)} ${choose(rng, SURNAMES)}`;
   const personality = choose(rng, PERSONALITIES[station]);
   const visual = choose(rng, VISUALS[station]);
@@ -80,9 +78,11 @@ function biography({ station, faction, theme, seed }) {
     personality,
     visual,
     hook,
-    faction: faction || "Independent",
+    faction: factionProfile.label,
+    factionSource: factionProfile.source,
+    factionTone: factionProfile.crewTone,
     theme: theme || "",
-    summary: `${ancestry} ${titleCase(station)}; ${personality}. ${hook}.`
+    summary: `${ancestry} ${titleCase(station)} of ${factionProfile.label}; ${personality}. ${hook}.`
   });
 }
 
@@ -95,7 +95,7 @@ function abilityItems(benchmark) {
     name: ability.name,
     type: "action",
     system: {
-      actionType: { value: ability.actionCost > 1 ? "action" : "action" },
+      actionType: { value: "action" },
       actions: { value: ability.actionCost },
       category: null,
       description: { value: `<p>${ability.summary}</p>` },
@@ -123,7 +123,6 @@ function abstractStrikeItem(benchmark, gear) {
 function actorSourceDraft(benchmark, bio, gear) {
   const saves = benchmark.statistics.saves;
   const skills = skillSources(benchmark.statistics.skills);
-  const traits = ["humanoid"];
   return {
     name: bio.name,
     type: "npc",
@@ -132,10 +131,10 @@ function actorSourceDraft(benchmark, bio, gear) {
       details: {
         level: { value: benchmark.level },
         alliance: null,
-        publicNotes: `<p><strong>${bio.ancestry} ${benchmark.role}</strong></p><p>${bio.visual}. ${bio.personality}. ${bio.hook}.</p>`,
-        privateNotes: `<p>Generated for ${bio.faction}. ${bio.theme}</p>`
+        publicNotes: `<p><strong>${bio.ancestry} ${benchmark.role} — ${bio.faction}</strong></p><p>${bio.visual}. ${bio.personality}. ${bio.hook}.</p>`,
+        privateNotes: `<p>Ayerstone faction source: ${bio.factionSource}</p><p>Faction tone: ${bio.factionTone}</p><p>${bio.theme}</p>`
       },
-      traits: { value: traits, rarity: "common", size: { value: "med" }, languages: { value: ["common"], custom: "" } },
+      traits: { value: ["humanoid"], rarity: "common", size: { value: "med" }, languages: { value: ["common"], custom: "" } },
       attributes: {
         ac: { value: benchmark.statistics.ac, details: "Arkflight generated benchmark" },
         hp: { value: benchmark.statistics.hp, max: benchmark.statistics.hp, temp: 0, details: "Arkflight generated benchmark" },
@@ -157,6 +156,8 @@ function actorSourceDraft(benchmark, bio, gear) {
         station: benchmark.station,
         quality: benchmark.quality,
         ancestry: bio.ancestry,
+        faction: bio.faction,
+        factionSource: bio.factionSource,
         personality: bio.personality,
         visual: bio.visual,
         hook: bio.hook,
@@ -168,7 +169,7 @@ function actorSourceDraft(benchmark, bio, gear) {
 
 export function generatePF2eOfficerActorDraft({ station, level, quality = "standard", faction = "Independent", theme = "", seed = Date.now() } = {}) {
   const benchmark = generatePF2eOfficerBenchmark({ station, level, quality });
-  const role = stationRole(station);
+  stationRole(station);
   const bio = biography({ station, faction, theme, seed });
   const gear = SIGNATURE_GEAR[station];
   const actorData = actorSourceDraft(benchmark, bio, gear);
@@ -180,7 +181,7 @@ export function generatePF2eOfficerActorDraft({ station, level, quality = "stand
     visual: bio.visual,
     hook: bio.hook,
     biography: bio,
-    signatureGear: Object.freeze({ ...gear, state: "compendium-resolution-pending" }),
+    signatureGear: Object.freeze({ ...gear, lootableByDefault: true, recoveryPolicy: "profile-and-quality", state: "compendium-resolution-pending" }),
     abstractSecondary: gear.abstractSecondary,
     actorData: Object.freeze(actorData),
     generationState: "actor-draft-complete"
