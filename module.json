@@ -91,6 +91,7 @@
     "src/ui/shipwright-refit-work-order-ui.js",
     "src/ui/shipwright-refit-section-lifecycle-ui.js",
     "src/ui/shipwright-inspector-readability-ui.js",
+    "src/ui/enemy-generator-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
   ]
 }
