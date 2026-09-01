@@ -1,4 +1,4 @@
-const ROOT_NAME = "Arkflight Crews";
+const ROOT_NAME = "Arkflight";
 
 function actorFolders() {
   return (game.folders?.contents ?? []).filter((folder) => folder.type === "Actor");
@@ -14,8 +14,8 @@ async function ensureRootFolder() {
   return Folder.create({ name: ROOT_NAME, type: "Actor", sorting: "a" });
 }
 
-export async function ensureShipCrewFolder(shipName) {
-  if (!game.user?.isGM) throw new Error("Only the GM may create Arkflight crew folders.");
+export async function ensureShipPackageFolder(shipName) {
+  if (!game.user?.isGM) throw new Error("Only the GM may create Arkflight ship folders.");
   const cleanName = String(shipName ?? "Unnamed Vessel").trim() || "Unnamed Vessel";
   const root = await ensureRootFolder();
   const existing = childFolder(root.id, cleanName);
@@ -23,19 +23,26 @@ export async function ensureShipCrewFolder(shipName) {
   return Folder.create({ name: cleanName, type: "Actor", folder: root.id, sorting: "a" });
 }
 
+export async function placeGeneratedShip(actorData, shipName) {
+  const folder = await ensureShipPackageFolder(shipName);
+  return Actor.create({ ...structuredClone(actorData), folder: folder.id }, { renderSheet: false });
+}
+
 export async function placeGeneratedOfficer(actorData, shipName) {
-  const folder = await ensureShipCrewFolder(shipName);
+  const folder = await ensureShipPackageFolder(shipName);
   return Actor.create({ ...structuredClone(actorData), folder: folder.id }, { renderSheet: false });
 }
 
 export function installGeneratedCrewFolderAPI() {
   Hooks.once("init", () => {
     game.arkflight ??= {};
-    game.arkflight.crewFolders = {
+    game.arkflight.generatedShipFolders = {
       rootName: ROOT_NAME,
-      ensureShipCrewFolder,
+      ensureShipPackageFolder,
+      placeGeneratedShip,
       placeGeneratedOfficer
     };
+    game.arkflight.crewFolders = game.arkflight.generatedShipFolders;
   });
 }
 
