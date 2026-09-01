@@ -63,21 +63,30 @@ function damagedSystemRows(entry) {
   }));
 }
 
-function crewCandidates() {
+function crewCandidates(entry, station) {
+  const stations = entry?.ship?.crew?.stations ?? {};
+  const usedElsewhere = new Set(Object.entries(stations)
+    .filter(([stationId, actorId]) => stationId !== station.id && actorId)
+    .map(([, actorId]) => actorId));
   return (game.actors?.contents ?? [])
     .filter((actor) => actor.type !== "vehicle")
-    .map((actor) => ({ id: actor.id, name: actor.name ?? actor.id, type: titleCase(actor.type) }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map((actor) => ({
+      id: actor.id,
+      name: actor.name ?? actor.id,
+      type: titleCase(actor.type),
+      unavailable: usedElsewhere.has(actor.id)
+    }))
+    .sort((a, b) => Number(a.unavailable) - Number(b.unavailable) || a.name.localeCompare(b.name));
 }
 
 function choosePermanentCrew(entry, station) {
   return new Promise((resolve) => {
     const DialogV2 = foundry.applications.api.DialogV2;
-    const candidates = crewCandidates();
+    const candidates = crewCandidates(entry, station);
     const content = document.createElement("div");
     content.className = "arkflight-gm-crew-picker";
     const intro = document.createElement("p");
-    intro.textContent = `Set the permanent ${station.label} for ${entry.name}. Voyage Planning may still assign a different officer temporarily for an event.`;
+    intro.textContent = `Set the permanent ${station.label} for ${entry.name}. One officer may hold only one permanent station on this ship. Voyage Planning may still assign a different officer temporarily for an event.`;
     const label = document.createElement("label");
     const span = document.createElement("span");
     span.textContent = "Permanent Officer";
@@ -90,8 +99,9 @@ function choosePermanentCrew(entry, station) {
     for (const candidate of candidates) {
       const option = document.createElement("option");
       option.value = candidate.id;
-      option.textContent = `${candidate.name} · ${candidate.type}`;
+      option.textContent = `${candidate.name} · ${candidate.type}${candidate.unavailable ? " · Assigned Elsewhere" : ""}`;
       option.selected = candidate.id === station.actorId;
+      option.disabled = candidate.unavailable && candidate.id !== station.actorId;
       select.append(option);
     }
     label.append(span, select);
@@ -177,7 +187,7 @@ function buildReadinessPanel(entry, app) {
   crewSection.innerHTML = `<div class="arkflight-gm-kicker">PERMANENT STATION CREW</div>`;
   const note = document.createElement("p");
   note.className = "arkflight-gm-muted arkflight-gm-crew-note";
-  note.textContent = "These are persistent ship assignments. Voyage Planning may temporarily man stations with different officers for that event.";
+  note.textContent = "Persistent station officers determine station readiness only. Total ship crew complement is tracked separately from these five officer posts. Voyage Planning may temporarily man stations with different officers for that event.";
   crewSection.append(note);
   const crewList = document.createElement("div");
   crewList.className = "arkflight-gm-station-assignment-list";
