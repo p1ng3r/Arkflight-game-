@@ -40,7 +40,7 @@ function damagedSystems(ship) {
     .map(([system, state]) => ({ system, state }));
 }
 
-function normalizeActor(actor, currentId) {
+function normalizeActor(actor, currentPlayerShipId) {
   const ship = extractShip(actor);
   const validation = validateShip(ship, SHIP_CATALOGS);
   const crew = stationReadiness(ship);
@@ -57,7 +57,7 @@ function normalizeActor(actor, currentId) {
     level: Number(ship.level ?? actor.system?.details?.level?.value ?? 0) || null,
     player,
     isNPC: !player,
-    current: actor.id === currentId,
+    current: player && actor.id === currentPlayerShipId,
     status: !validation.ok ? "Invalid" : damage.length ? "Damaged" : crew.ready ? "Ready" : "Needs Crew",
     validation,
     derived: validation.derived,
@@ -86,7 +86,7 @@ function normalizeActor(actor, currentId) {
 
 export function registerShipServiceSetting() {
   game.settings.register(MODULE_ID, CURRENT_SHIP_SETTING, {
-    name: "Current Arkflight Ship",
+    name: "Current Arkflight Player Ship",
     scope: "world",
     config: false,
     type: String,
@@ -101,7 +101,7 @@ export function createShipService() {
       return (game.actors?.contents ?? [])
         .filter(isArkflightShipActor)
         .map((actor) => normalizeActor(actor, currentId))
-        .sort((a, b) => Number(b.current) - Number(a.current) || a.name.localeCompare(b.name));
+        .sort((a, b) => Number(b.current) - Number(a.current) || Number(b.player) - Number(a.player) || a.name.localeCompare(b.name));
     },
 
     get(actorId) {
@@ -110,12 +110,13 @@ export function createShipService() {
 
     getCurrent() {
       const rows = this.list();
-      return rows.find((entry) => entry.current) ?? rows.find((entry) => entry.player) ?? rows[0] ?? null;
+      return rows.find((entry) => entry.current) ?? rows.find((entry) => entry.player) ?? null;
     },
 
     async setCurrent(actorId) {
       const entry = this.get(actorId);
       if (!entry) throw new Error("That Actor is not an Arkflight ship.");
+      if (!entry.player) throw new Error("Only a player Arkflight ship can be designated as the Current Player Ship.");
       await game.settings.set(MODULE_ID, CURRENT_SHIP_SETTING, actorId);
       return this.get(actorId);
     },
