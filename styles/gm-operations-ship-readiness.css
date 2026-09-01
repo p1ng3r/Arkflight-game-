@@ -56,7 +56,7 @@
 
 .arkflight-gm-station-assignment {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
   padding: 8px 10px;
@@ -65,9 +65,28 @@
   background: rgba(8, 13, 18, 0.48);
 }
 
-.arkflight-gm-station-assignment > div:first-child {
+.arkflight-gm-officer-portrait {
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border: 1px solid rgba(190, 143, 66, 0.26);
+  border-radius: 4px;
+  background: rgba(3, 7, 10, 0.7);
   display: grid;
-  grid-template-columns: 118px minmax(0, 1fr);
+  place-items: center;
+  color: #7d8790;
+}
+
+.arkflight-gm-officer-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.arkflight-gm-station-identity {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   min-width: 0;
@@ -105,6 +124,11 @@
   padding: 0;
   display: inline-grid;
   place-items: center;
+}
+
+.arkflight-gm-create-officer:disabled {
+  opacity: 0.36;
+  cursor: not-allowed;
 }
 
 .arkflight-gm-condition-detail {
@@ -186,7 +210,10 @@
 .arkflight-gm-crew-picker p { margin: 0; line-height: 1.4; }
 .arkflight-gm-crew-picker label { display: grid; gap: 5px; }
 .arkflight-gm-crew-picker label > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; }
+.arkflight-gm-crew-picker input[type="search"],
 .arkflight-gm-crew-picker select { width: 100%; }
+.arkflight-gm-crew-picker optgroup { font-weight: 700; }
+.arkflight-gm-crew-picker option { font-weight: 400; }
 
 @media (max-width: 980px) {
   .arkflight-gm-derived-readiness-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
