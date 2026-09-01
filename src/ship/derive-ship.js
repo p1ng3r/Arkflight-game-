@@ -1,9 +1,16 @@
 import { AREA_STATES } from "./ship-schema.js";
 import { applyTalentProgression, progressionView } from "./progression.js";
+import { assertCanonicalEffectTarget, createDefaultDerivedStats } from "./derived-stat-registry.js";
 
 function getPath(object, path) { return path.split(".").reduce((value, key) => value?.[key], object); }
 function setPath(object, path, value) { const keys = path.split("."); const last = keys.pop(); let cursor = object; for (const key of keys) cursor = cursor[key] ??= {}; cursor[last] = value; }
-function applyEffect(stats, effect) { const current = getPath(stats, effect.target); if (effect.mode === "set") return setPath(stats, effect.target, effect.value); if (effect.mode === "add") return setPath(stats, effect.target, Number(current ?? 0) + Number(effect.value ?? 0)); throw new Error(`Unsupported Arkflight effect mode: ${effect.mode}`); }
+function applyEffect(stats, effect) {
+  assertCanonicalEffectTarget(effect.target);
+  const current = getPath(stats, effect.target);
+  if (effect.mode === "set") return setPath(stats, effect.target, effect.value);
+  if (effect.mode === "add") return setPath(stats, effect.target, Number(current ?? 0) + Number(effect.value ?? 0));
+  throw new Error(`Unsupported Arkflight effect mode: ${effect.mode}`);
+}
 function lookup(catalog, id) { return id ? catalog?.[id] ?? null : null; }
 function areaOperational(ship, area) { return (ship.areas?.[area]?.state ?? AREA_STATES.STABLE) !== AREA_STATES.DISABLED; }
 
@@ -54,7 +61,7 @@ function addStationUnlocks(target, component) {
 export function deriveShip(ship, catalogs = {}) {
   const components = installedComponents(ship, catalogs);
   const hull = lookup(catalogs.hulls, ship.hull.chassisId);
-  const baseStats = structuredClone(hull?.data?.baseStats ?? { armorClass: 0, hullIntegrity: 0, lifeveilCapacity: 0, strainCapacity: 0, cargoCapacity: 0, detection: 0, combatSpeed: 0, maneuverability: 0, roomCapacity: 0, shipModCapacity: 0, arkengineModCapacity: 0, crew: { minimum: 0, recommended: 0, maximum: 0 }, weaponMounts: {} });
+  const baseStats = structuredClone(hull?.data?.baseStats ?? createDefaultDerivedStats());
   const derived = structuredClone(baseStats);
   const tags = new Set(ship.traits ?? []);
   const capabilities = new Set();
