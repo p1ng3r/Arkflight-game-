@@ -1,0 +1,109 @@
+.arkflight-gm-generator-workspace {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.arkflight-gm-generator-config {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.arkflight-gm-generator-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.arkflight-gm-generator-fields label {
+  display: grid;
+  gap: 5px;
+}
+
+.arkflight-gm-generator-fields label > span {
+  color: #9aa6ae;
+  font-size: 10px;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.arkflight-gm-generator-fields input,
+.arkflight-gm-generator-fields select {
+  width: 100%;
+}
+
+.arkflight-gm-generator-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.arkflight-gm-generator-loadout,
+.arkflight-gm-generator-commit {
+  grid-column: 1 / -1;
+}
+
+.arkflight-gm-generator-list-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.arkflight-gm-generator-list {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(190, 143, 66, .16);
+  border-radius: 4px;
+  background: rgba(8, 13, 18, .46);
+}
+
+.arkflight-gm-generator-list span,
+.arkflight-gm-generator-list small {
+  overflow: hidden;
+  color: #c5ced4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arkflight-gm-generator-officers {
+  display: grid;
+  gap: 6px;
+}
+
+.arkflight-gm-generator-officers > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 12px;
+  padding: 8px 9px;
+  border: 1px solid rgba(190, 143, 66, .16);
+  border-radius: 4px;
+  background: rgba(8, 13, 18, .46);
+}
+
+.arkflight-gm-generator-officers span { color: #d8c49b; }
+.arkflight-gm-generator-officers strong { color: #e8edf2; }
+.arkflight-gm-generator-officers small { grid-column: 1 / -1; color: #7f8c95; }
+
+.arkflight-gm-generator-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.arkflight-gm-generator-commit ul {
+  margin: 0 0 12px 18px;
+  padding: 0;
+  color: #d5bd8d;
+}
+
+@media (max-width: 1000px) {
+  .arkflight-gm-generator-workspace { grid-template-columns: 1fr; }
+  .arkflight-gm-generator-config { position: static; }
+  .arkflight-gm-generator-list-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
