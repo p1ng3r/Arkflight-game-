@@ -14,7 +14,7 @@
 6. Supplies, Cargo & Salvage Economy ✅
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
-9. Ship Mod Catalog Completion — rarity foundation and Alpha density locked
+9. Ship Mod Catalog Completion — rarity, density, chains, and synergies locked
 10. Arkengine Mod Catalog Completion
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
@@ -27,7 +27,7 @@
 
 ## Parts 1–8
 
-Parts 1–8 are design-locked and implemented on this branch. Their authoritative rules remain represented in the ship-domain modules and regression tests. This document keeps the current high-level contract while implementation tests remain the executable authority.
+Parts 1–8 are design-locked and implemented on this branch. Their authoritative rules remain represented in the ship-domain modules and regression tests.
 
 ### Core locked rules retained
 
@@ -50,8 +50,6 @@ Parts 1–8 are design-locked and implemented on this branch. Their authoritativ
 
 Ship Mods no longer use generic numeric tiers as their player-facing progression authority.
 
-Locked rarity ladder:
-
 | Rarity | Default minimum ship level | Alpha catalog target |
 |---|---:|---:|
 | Standard | 1 | 22–26 |
@@ -60,29 +58,76 @@ Locked rarity ladder:
 | Legendary | 12 | 15–16 |
 | Mythic | 17 | 8–9 |
 
-These are Alpha catalog density targets, not hard lifetime caps. The purpose is to provide substantial build variety at each progression band without reverting to one giant undifferentiated catalog.
+These are Alpha catalog density targets, not hard lifetime caps.
 
-A specifically authored reward may set a higher minimum level. Bypassing the normal rarity floor requires an explicit exceptional reward/rule rather than accidental catalog data.
-
-Existing legacy Refit tier values remain temporarily preserved only as **installation-cost compatibility metadata** while Refit economics are migrated. They are not the new progression identity.
+Existing legacy Refit tier values remain temporarily preserved only as installation-cost compatibility metadata while Refit economics are migrated. They are not the new progression identity.
 
 ### Higher rarity means power plus uniqueness
 
-Rarity progression combines **larger numerical improvements and stronger rule-changing effects**.
+Rarity progression combines larger numerical improvements and stronger rule-changing effects.
 
 - **Standard:** practical baseline fittings and straightforward stat/capacity improvements.
 - **Rare:** stronger numbers and/or a specialized capability.
 - **Epic:** substantial numerical effect combined with capabilities, action interactions, or Event/Combat hooks.
 - **Legendary:** build-defining hardware with strong numbers and rules that materially alter vessel operation.
-- **Mythic:** extraordinary vessel-defining hardware combining major numerical impact with unique actions, capabilities, or rule exceptions.
+- **Mythic:** extraordinary vessel-defining hardware combining major numerical impact with unique actions, capabilities, or bounded rule exceptions.
 
-Higher rarity must not collapse into only larger numeric bonuses. Conversely, unique effects do not prevent a high-rarity Mod from also providing appropriately stronger numerical improvements.
+Higher rarity must not collapse into only larger numeric bonuses. Unique effects also do not prevent a high-rarity Mod from providing appropriately stronger numbers.
 
-### Upgrade families are allowed
+### Effect coverage is broader than the five Areas
 
-A Mod concept may have higher-rarity descendants, for example a practical structural fitting growing into a more extraordinary frame technology.
+The Alpha catalog should be distributed roughly evenly across Hull, Arkengine, Rigging, Lifeveil, and Morale/Command, with a smaller cross-system/logistics pool.
 
-Upgrade chains are optional rather than mandatory. A higher-rarity descendant must gain a distinct mechanical identity, such as a new capability, action interaction, rule exception, Event/Combat hook, or tradeoff, in addition to any larger numerical effect. A chain that only changes `+20 Hull` into a larger Hull number is not sufficient.
+Mods may also directly improve or alter other ship statistics and operations, including:
+
+- Armor Class,
+- resistances,
+- maneuverability,
+- combat/travel speed,
+- Cargo Capacity,
+- Detection,
+- crew support,
+- recovery and repair,
+- combat actions,
+- Voyage/Event interactions,
+- logistics and salvage,
+- cross-system rules.
+
+No single Area should dominate the catalog simply because it has more obvious numerical targets.
+
+### Upgrade chains
+
+A Mod concept may have higher-rarity descendants. Some descendants may require one or more lower-rarity Mods already installed before they can be fitted.
+
+Examples of the intended model:
+
+- a Standard structural reinforcement may be the prerequisite for a Rare or Epic frame upgrade;
+- a later chain member may preserve the earlier fitting as part of the completed system rather than pretending it never existed;
+- standalone Mods do not need a predecessor merely because they are high rarity.
+
+A higher-rarity descendant must gain a distinct mechanical identity in addition to stronger numbers. A chain that only changes `+20 Hull` into a larger Hull number is insufficient.
+
+The shared Mod authority validates authored predecessor requirements and exposes install eligibility from ship level plus installed Mod IDs.
+
+### Synergy bonuses
+
+Specific installed Mod combinations may unlock additional bonuses at higher levels.
+
+Synergy is authored, not inferred from matching tags. A synergy must name the required installed Mods and provide a real additional benefit such as:
+
+- an extra derived-stat effect,
+- a capability,
+- a rule modifier,
+- an action/Mastery interaction,
+- an Event/Combat benefit.
+
+This allows build-focused combinations without requiring every Mod to belong to a rigid upgrade tree. Synergies should reward deliberate combinations rather than create mandatory hidden tax chains.
+
+### Mythic rule exceptions
+
+Mythic Mods may alter a core ship rule, including effects such as surviving a Hull-zero result, limited operation while an Area is Disabled, extending Lifeveil to another vessel, or temporarily ignoring a Strain threshold.
+
+Every Mythic core-rule exception must be bounded by an explicit **limit, cost, trigger, or usage restriction**. Unbounded permanent exceptions are invalid Alpha content.
 
 ### Acquisition rules
 
@@ -100,11 +145,10 @@ A Ship Mod is invalid if it provides none of the following:
 - capability,
 - Mastery/action/combat-action/passive unlock,
 - explicit rule modifier,
-- Event/Combat interaction.
+- Event/Combat interaction,
+- authored synergy effect.
 
 Description-only Mods are not valid Alpha catalog entries.
-
-The catalog validator enforces rarity, minimum ship level, and mechanical-purpose requirements. The rarity authority also exposes the locked Alpha density and acquisition rules for future GM generation/catalog presentation.
 
 ### Similar concepts must be mechanically distinct
 
