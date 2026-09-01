@@ -1,0 +1,39 @@
+.arkflight-gm-ship-row small {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
+.arkflight-gm-ship-row[data-active="true"] small::after,
+.arkflight-gm-ship-row[data-in-work="true"] small::before {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid rgba(126, 205, 218, 0.32);
+  border-radius: 999px;
+  color: #bfe9ef;
+  background: rgba(32, 83, 91, 0.28);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.arkflight-gm-ship-row[data-active="true"] small::after {
+  content: "ACTIVE";
+}
+
+.arkflight-gm-ship-row[data-in-work="true"] small::before {
+  content: "IN WORK";
+  border-color: rgba(200, 154, 78, 0.36);
+  color: #e3c78f;
+  background: rgba(89, 62, 25, 0.26);
+}
+
+.arkflight-gm-ships-layout:has(.arkflight-gm-ship-row.selected[data-npc="true"]) [data-action="set-current-ship"] {
+  display: none;
+}
+
+.arkflight-gm-ship-row[data-npc="true"] .fa-star {
+  display: none;
+}
