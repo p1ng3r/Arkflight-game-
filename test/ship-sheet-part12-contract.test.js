@@ -45,8 +45,12 @@ test("structured operational stats are human-readable", () => {
 });
 
 test("Refit blueprints resolve to named catalog entries", () => {
-  const ship = createShip({ blueprints: { shipModIds: ["reinforced-bulkheads"], arkengineModIds: ["pressure-lattice-tuning"] } });
+  const shipModId = Object.keys(SHIP_CATALOGS.shipMods)[0];
+  const arkengineModId = Object.keys(SHIP_CATALOGS.arkengineMods)[0];
+  assert.ok(shipModId);
+  assert.ok(arkengineModId);
+  const ship = createShip({ blueprints: { shipModIds: [shipModId], arkengineModIds: [arkengineModId] } });
   const refit = buildRefitInventory(ship, SHIP_CATALOGS);
-  assert.equal(refit.blueprints.shipMods[0].name, SHIP_CATALOGS.shipMods["reinforced-bulkheads"].name);
-  assert.equal(refit.blueprints.arkengineMods[0].name, SHIP_CATALOGS.arkengineMods["pressure-lattice-tuning"].name);
+  assert.equal(refit.blueprints.shipMods[0].name, SHIP_CATALOGS.shipMods[shipModId].name);
+  assert.equal(refit.blueprints.arkengineMods[0].name, SHIP_CATALOGS.arkengineMods[arkengineModId].name);
 });
