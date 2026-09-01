@@ -5,7 +5,9 @@ function shipPayload(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 function currentShip() { return game.arkflight?.ships?.getCurrent?.() ?? null; }
 function shipActors() { return (game.actors?.contents ?? []).filter((actor) => actor?.type === "vehicle" && shipPayload(actor)); }
 function activeJobs(actor) { return (shipPayload(actor)?.refit?.workOrders ?? []).filter((job) => !["complete", "complication"].includes(job.status)); }
+function workingCrewJobs(actor) { return activeJobs(actor).filter((job) => job.method === "crew" && job.status === "working"); }
 function label(job) { return job.componentId || String(job.type || "Ship work").replaceAll("-", " "); }
+function methodLabel(job) { return job.method === "shipyard" ? "Shipyard" : "Crew"; }
 
 async function advanceHours(app, hours) {
   if (!game.user?.isGM) return;
@@ -26,7 +28,10 @@ async function startJob(app, actorId, jobId) {
   if (!actor) return;
   try {
     const result = await game.arkflight?.refit?.startWork?.(actor, jobId);
-    if (!result?.ok) throw new Error(result?.reason ?? "Unable to start work order.");
+    if (!result?.ok) {
+      if (result?.reason === "crew-work-already-active") throw new Error("This ship already has active crew refit work. Complete or stop that crew job before starting another.");
+      throw new Error(result?.reason ?? "Unable to start work order.");
+    }
     ui.notifications?.info(`${actor.name}: work started on ${label(result.job)}.`);
     app.render({ force: true });
   } catch (error) {
@@ -34,11 +39,44 @@ async function startJob(app, actorId, jobId) {
   }
 }
 
+function chooseCrewJobDialog(actor, jobs) {
+  return new Promise((resolve) => {
+    const DialogV2 = foundry.applications.api.DialogV2;
+    const selectId = `arkflight-crew-job-pick-${actor.id}-${Date.now()}`;
+    const options = jobs.map((job) => `<option value="${foundry.utils.escapeHTML(job.id)}">${foundry.utils.escapeHTML(label(job))} — ${foundry.utils.escapeHTML(String(job.type ?? "work").replaceAll("-", " "))} — ${Number(job.remainingHours ?? 0)}h</option>`).join("");
+    const content = `<div class="arkflight-gm-crew-dialog"><p><strong>${foundry.utils.escapeHTML(actor.name)}</strong> has multiple legacy crew jobs marked WORKING.</p><p>Choose the one crew job that should remain active. Every other WORKING crew job will return to PLANNED with its remaining hours preserved.</p><select id="${selectId}">${options}</select></div>`;
+    new DialogV2({
+      window: { title: "Choose Active Crew Refit" },
+      content,
+      buttons: [
+        { action: "cancel", label: "Cancel", icon: "fa-solid fa-xmark", callback: () => resolve(null) },
+        { action: "keep", label: "Keep Selected Active", icon: "fa-solid fa-check", default: true, callback: () => resolve(document.getElementById(selectId)?.value ?? null) }
+      ],
+      close: () => resolve(null)
+    }).render({ force: true });
+  });
+}
+
+async function resolveCrewQueue(app, actor) {
+  const jobs = workingCrewJobs(actor);
+  if (jobs.length <= 1) return;
+  const keepJobId = await chooseCrewJobDialog(actor, jobs);
+  if (!keepJobId) return;
+  try {
+    const result = await game.arkflight?.refit?.resolveCrewConcurrency?.(actor, keepJobId);
+    if (!result?.ok) throw new Error(result?.reason ?? "Unable to resolve crew refit queue.");
+    ui.notifications?.info(`${actor.name}: one crew refit remains active; ${result.replanned?.length ?? 0} returned to planned.`);
+    app.render({ force: true });
+  } catch (error) {
+    ui.notifications?.warn(error?.message ?? "Unable to resolve Arkflight crew refit queue.");
+  }
+}
+
 function workOrderRow(app, actor, job) {
   const row = document.createElement("div");
   row.className = "arkflight-gm-metric-row";
   const left = document.createElement("span");
-  left.textContent = `${label(job)} · ${String(job.type ?? "work").replaceAll("-", " ")}`;
+  left.textContent = `${label(job)} · ${String(job.type ?? "work").replaceAll("-", " ")} · ${methodLabel(job)}`;
   const right = document.createElement("div");
   right.style.display = "flex";
   right.style.alignItems = "center";
@@ -62,6 +100,19 @@ function shipJobsPanel(app, actor, kicker) {
   const panel = document.createElement("article");
   panel.className = "arkflight-gm-panel";
   panel.innerHTML = `<div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">${kicker}</div><h2>${foundry.utils.escapeHTML(actor.name)}</h2></div><i class="fa-solid fa-hammer"></i></div>`;
+  const crewWorking = workingCrewJobs(actor);
+  if (crewWorking.length > 1) {
+    const warning = document.createElement("div");
+    warning.className = "arkflight-gm-empty-state";
+    const text = document.createElement("p");
+    text.textContent = `${crewWorking.length} crew refit jobs are marked WORKING. Crew refit now allows only one active job per ship.`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = "Choose Active Crew Job";
+    button.addEventListener("click", () => resolveCrewQueue(app, actor));
+    warning.append(text, button);
+    panel.append(warning);
+  }
   if (!jobs.length) {
     const empty = document.createElement("p"); empty.className = "arkflight-gm-muted"; empty.textContent = "No active or planned work orders."; panel.append(empty);
   } else for (const job of jobs) panel.append(workOrderRow(app, actor, job));
@@ -84,7 +135,7 @@ function buildTimeWork(app) {
   const custom = document.createElement("input"); custom.type = "number"; custom.min = "1"; custom.step = "1"; custom.placeholder = "Hours"; custom.style.width = "90px";
   const customButton = document.createElement("button"); customButton.type = "button"; customButton.textContent = "Advance"; customButton.addEventListener("click", () => advanceHours(app, custom.value));
   actions.append(custom, customButton); time.append(actions);
-  const note = document.createElement("p"); note.className = "arkflight-gm-muted"; note.textContent = "Only the GM advances world time. Every WORKING refit order progresses automatically; PLANNED orders wait until someone starts them."; time.append(note);
+  const note = document.createElement("p"); note.className = "arkflight-gm-muted"; note.textContent = "GM time advances all active shipyard jobs concurrently. Crew refit is one job at a time per ship; if a crew job finishes with time remaining, Arkflight asks before starting the next planned crew job."; time.append(note);
   wrapper.append(time);
 
   const current = currentShip();
