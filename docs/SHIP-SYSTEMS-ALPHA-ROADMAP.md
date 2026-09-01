@@ -14,7 +14,7 @@
 6. Supplies, Cargo & Salvage Economy ✅
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
-9. Ship Mod Catalog Completion — rarity, density, chains, synergies, replacement, and resistance model locked
+9. Ship Mod Catalog Completion — Standard Alpha band complete; higher rarities next
 10. Arkengine Mod Catalog Completion
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
@@ -50,17 +50,31 @@ Parts 1–8 are design-locked and implemented on this branch. Their authoritativ
 
 Ship Mods no longer use generic numeric tiers as their player-facing progression authority.
 
-| Rarity | Default minimum ship level | Alpha catalog target |
-|---|---:|---:|
-| Standard | 1 | 22–26 |
-| Rare | 3 | 20–22 |
-| Epic | 7 | 18–20 |
-| Legendary | 12 | 15–16 |
-| Mythic | 17 | 8–9 |
+| Rarity | Default minimum ship level | Alpha catalog target | Current Alpha status |
+|---|---:|---:|---|
+| Standard | 1 | 22–26 | ✅ 22 authored |
+| Rare | 3 | 20–22 | in progress |
+| Epic | 7 | 18–20 | in progress |
+| Legendary | 12 | 15–16 | in progress |
+| Mythic | 17 | 8–9 | in progress |
 
 These are Alpha catalog density targets, not hard lifetime caps.
 
 Existing legacy Refit tier values remain temporarily preserved only as installation-cost compatibility metadata while Refit economics are migrated. They are not the new progression identity.
+
+### Standard Alpha band
+
+The Standard band is now at the locked minimum target of **22 Mods**. It includes practical choices across structural durability, cargo, helm/rigging, Lifeveil, command, detection, logistics, repair, maneuverability, speed, Strain, and PF2e-style resistance.
+
+New baseline fittings added to complete the Standard band include:
+
+- **Firebreak Plating** — Resistance 5 fire.
+- **Stormgrounding Mesh** — Resistance 5 electricity.
+- **Trim-Sail Regulators** — +1 combat speed with an efficient-sail-trim capability.
+- **Crew Muster Bell Network** — command/crew-muster support and signal redundancy.
+- **Veil-Warded Bulkheads** — +5 Lifeveil Capacity plus Lifeveil recovery support.
+
+These entries are deliberately useful as future upgrade-chain roots for Rare/Epic descendants.
 
 ### Higher rarity means power plus uniqueness
 
