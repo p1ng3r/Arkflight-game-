@@ -1,0 +1,36 @@
+.arkflight-gm-generator-officer-identity {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 3px;
+  margin-top: 5px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(190, 143, 66, .14);
+}
+
+.arkflight-gm-generator-officer-identity .arkflight-gm-generator-officer-name {
+  color: #e9dfca;
+  font-size: 13px;
+}
+
+.arkflight-gm-generator-officer-identity > span {
+  color: #bba574;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.arkflight-gm-generator-officer-identity p {
+  margin: 0;
+  color: #aeb8bf;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.arkflight-gm-generator-officer-identity .arkflight-gm-generator-officer-hook {
+  color: #d5bd8d;
+}
+
+.arkflight-gm-generator-officer-identity small {
+  color: #83919a;
+  white-space: normal;
+}
