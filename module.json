@@ -42,6 +42,7 @@
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
+    "src/foundry/generated-crew-folders.js",
     "src/ui/mastery-clarity-ui.js",
     "src/ui/event-board-large-desktop.js",
     "src/ui/opening-branding-ui.js",
@@ -49,6 +50,7 @@
     "src/ui/ship-classification-ui.js",
     "src/ui/ship-readiness-ui.js",
     "src/ui/enemy-generator-ui.js",
+    "src/ui/enemy-generator-ayerstone-ui.js",
     "src/ui/enemy-generator-officer-detail-ui.js"
   ]
 }
