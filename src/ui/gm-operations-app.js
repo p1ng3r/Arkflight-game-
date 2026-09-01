@@ -232,6 +232,7 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     this.selectedEventId = options.selectedEventId ?? null;
     this.selectedShipId = options.selectedShipId ?? null;
     this.queuedEventId = options.queuedEventId ?? null;
+    this.queuedShipId = options.queuedShipId ?? null;
   }
 
   open(options = {}) {
@@ -263,6 +264,9 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     }));
 
     const ships = commandShipSource();
+    if (!eventActive && this.queuedEventId && this.queuedShipId && ships.all.some((ship) => ship.id === this.queuedShipId)) {
+      this.selectedShipId = this.queuedShipId;
+    }
     if (!this.selectedShipId || !ships.all.some((ship) => ship.id === this.selectedShipId)) {
       this.selectedShipId = ships.current?.id ?? null;
     }
@@ -360,14 +364,17 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     });
 
     this.element.querySelector("[data-action='queue-voyage-event']")?.addEventListener("click", () => {
-      if (!eventIsActive() || !this.selectedEventId || this.selectedEventId === currentEventState()?.eventId) return;
+      const active = currentEventState();
+      if (!active?.eventId || !this.selectedEventId || this.selectedEventId === active.eventId) return;
       this.queuedEventId = this.selectedEventId;
+      this.queuedShipId = active.shipActorId ?? this.selectedShipId ?? null;
       ui.notifications?.info(`Queued Arkflight Voyage: ${eventCatalog(this.queuedEventId).selected?.title ?? this.queuedEventId}`);
       this.render({ force: true });
     });
 
     this.element.querySelector("[data-action='clear-queued-voyage']")?.addEventListener("click", () => {
       this.queuedEventId = null;
+      this.queuedShipId = null;
       this.render({ force: true });
     });
 
@@ -383,7 +390,10 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       if (button) button.disabled = true;
       try {
         await game.arkflight.openEvent(this.selectedEventId, { shipActorId: this.selectedShipId });
-        if (this.queuedEventId === this.selectedEventId) this.queuedEventId = null;
+        if (this.queuedEventId === this.selectedEventId) {
+          this.queuedEventId = null;
+          this.queuedShipId = null;
+        }
         this.operationsTab = "active";
         this.render({ force: true });
       } catch (error) {
@@ -400,9 +410,14 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       const ship = active.shipActorId ? game.actors.get(active.shipActorId) : null;
       const confirmed = await confirmEndVoyage(definition?.title ?? active.eventId, ship?.name ?? context.activeEvent?.shipName);
       if (!confirmed) return;
+      const finishedShipId = active.shipActorId ?? null;
       try {
         await game.arkflight?.endEvent?.();
-        if (this.queuedEventId) this.selectedEventId = this.queuedEventId;
+        if (this.queuedEventId) {
+          this.selectedEventId = this.queuedEventId;
+          this.queuedShipId = this.queuedShipId ?? finishedShipId;
+          this.selectedShipId = this.queuedShipId ?? finishedShipId ?? this.selectedShipId;
+        }
         this.operationsTab = "voyage-events";
         this.render({ force: true });
       } catch (error) {
