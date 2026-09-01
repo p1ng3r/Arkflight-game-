@@ -43,8 +43,8 @@ export const SHIP_MOD_EFFECT_FAMILIES = Object.freeze([
 ]);
 
 export const SHIP_MOD_SYNERGY_RULES = Object.freeze({
-  normalRequiredMods: 2,
-  epicPlusSetBonusRequiredMods: 3,
+  normalTotalMods: 2,
+  epicPlusSetBonusTotalMods: 3,
   threeModSetBonusMinRarity: "epic"
 });
 
@@ -108,6 +108,7 @@ export function shipModUpgradeReplacement(mod) {
 
 export function activeShipModSynergies(mod, installedModIds = []) {
   const installed = new Set(installedModIds ?? []);
+  if (mod?.id) installed.add(mod.id);
   return Object.freeze((mod?.data?.synergies ?? []).filter((synergy) =>
     Array.isArray(synergy?.requiresMods) &&
     synergy.requiresMods.length > 0 &&
@@ -185,12 +186,14 @@ export function validateShipModProgression(mod) {
   if (!Array.isArray(synergies)) errors.push("invalid-synergies");
   else {
     for (const synergy of synergies) {
-      if (!synergy?.id || !Array.isArray(synergy?.requiresMods) || synergy.requiresMods.length < 2) {
+      if (!synergy?.id || !Array.isArray(synergy?.requiresMods) || synergy.requiresMods.length < 1) {
         errors.push("invalid-synergy-definition");
         continue;
       }
       if (synergy.requiresMods.includes(mod?.id)) errors.push("self-requiring-synergy");
-      if (synergy.requiresMods.length >= 3 && SHIP_MOD_RARITIES.includes(rarity) && SHIP_MOD_RARITY_RULES[rarity].rank < SHIP_MOD_RARITY_RULES.epic.rank) {
+      if (new Set(synergy.requiresMods).size !== synergy.requiresMods.length) errors.push("duplicate-synergy-requirement");
+      const totalMods = synergy.requiresMods.length + 1;
+      if (totalMods >= SHIP_MOD_SYNERGY_RULES.epicPlusSetBonusTotalMods && SHIP_MOD_RARITIES.includes(rarity) && SHIP_MOD_RARITY_RULES[rarity].rank < SHIP_MOD_RARITY_RULES.epic.rank) {
         errors.push("three-mod-synergy-below-epic");
       }
       const hasBonus = Boolean(
