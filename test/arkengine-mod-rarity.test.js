@@ -30,7 +30,7 @@ test("Arkengine Mod Alpha density targets are locked", () => {
   assert.deepEqual(arkengineModAlphaTarget("mythic"), { min: 4, max: 5 });
 });
 
-for (const rarity of ["standard", "rare", "epic"]) {
+for (const rarity of ["standard", "rare", "epic", "legendary"]) {
   test(`${rarity} Arkengine Mod catalog is inside its locked Alpha band`, () => {
     const mods = Object.values(ARKENGINE_MODS).filter((mod) => mod.data.rarity === rarity);
     const target = arkengineModAlphaTarget(rarity);
@@ -61,6 +61,7 @@ test("fuel remains authored hooks rather than a mandatory subsystem", () => {
   assert.deepEqual(ARKENGINE_MODS["refined-fuel-matrix"].data.fuelHooks, [{ kind: "fuel-efficiency", value: 2 }]);
   assert.deepEqual(ARKENGINE_MODS["deep-reserve-fuel-siphons"].data.fuelHooks, [{ kind: "fuel-capacity", value: 2 }, { kind: "reserve-fuel-access", value: 1 }]);
   assert.ok(ARKENGINE_MODS["consecrated-fuel-crucible"].data.fuelHooks.some((hook) => hook.kind === "ritual-fuel-conversion"));
+  assert.ok(ARKENGINE_MODS["saintfire-fuel-reliquary"].data.fuelHooks.some((hook) => hook.kind === "fuel-efficiency"));
 });
 
 test("Rare Arkengine band includes direct upgrades and cross-family synergies", () => {
@@ -79,6 +80,18 @@ test("Epic Arkengine band changes play and includes three-component sets", () =>
   assert.equal(ARKENGINE_MODS["phoenix-overburn-chamber"].data.synergies[0].requiresArkengineMods.length, 1);
   assert.equal(ARKENGINE_MODS["phoenix-overburn-chamber"].data.synergies[0].requiresShipMods.length, 1);
   assert.ok(ARKENGINE_MODS["sovereign-hard-burn-governor"].effects.some((effect) => effect.target === "hardBurnStrainCost"));
+});
+
+test("Legendary Arkengine band is build-defining without Mythic core-rule exceptions", () => {
+  const legendary = Object.values(ARKENGINE_MODS).filter((mod) => mod.data.rarity === "legendary");
+  assert.equal(legendary.length, 8);
+  assert.deepEqual(ARKENGINE_MODS["worldheart-pressure-dynamo"].data.upgradeChain.requiresArkengineMods, ["harmonic-pressure-dynamo"]);
+  assert.ok(ARKENGINE_MODS["aegis-sun-veil-reactor"].effects.some((effect) => effect.target === "lifeveilCapacity"));
+  assert.equal(ARKENGINE_MODS["aegis-sun-veil-reactor"].data.synergies[0].requiresShipMods.length, 2);
+  assert.ok(ARKENGINE_MODS["thunderlord-tempest-injectors"].effects.some((effect) => effect.target === "combatSpeed"));
+  assert.ok(ARKENGINE_MODS["crown-of-the-sovereign-burn"].effects.some((effect) => effect.target === "hardBurnStrainCost"));
+  assert.ok(ARKENGINE_MODS["archon-overburn-forge"].data.synergies[0].requiresArkengineMods.includes("winterstar-recirculation-crown"));
+  assert.ok(legendary.every((mod) => !mod.data.coreRuleException));
 });
 
 test("Arkengine upgrade chains replace predecessors and inherit their slot", () => {
