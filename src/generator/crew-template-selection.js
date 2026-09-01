@@ -23,4 +23,13 @@ export function selectedCrewTemplateTypes(preview, requested) {
   return Object.freeze([...new Set(requested.filter((type) => legal.has(type)))]);
 }
 
+export function selectCrewTemplates(templates = [], { archetypeId = "", ship = null, doctrine = null, selectedTypes } = {}) {
+  const preview = { config: { archetypeId }, ship, doctrine };
+  const selected = new Set(selectedCrewTemplateTypes(preview, selectedTypes));
+  return Object.freeze(templates.map((template) => Object.freeze({
+    ...template,
+    selected: selected.has(template.type)
+  })));
+}
+
 export const CREW_TEMPLATE_TYPE_IDS = ALL_TYPES;
