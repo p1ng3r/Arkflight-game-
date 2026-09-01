@@ -49,7 +49,7 @@ test("a job reaching zero completes through the canonical boundary", () => {
   assert.equal(componentQuantity(advanced.ship, "shipMod", "expanded-cargo-lattice"), 1);
 });
 
-test("multiple working jobs progress concurrently by the same elapsed time", () => {
+test("crew work is serialized and a second crew job cannot start concurrently", () => {
   let ship = createShip();
   ship = unlockBlueprint(ship, "shipMod", "expanded-cargo-lattice");
   ship = unlockBlueprint(ship, "shipMod", "detection-spire");
@@ -59,12 +59,15 @@ test("multiple working jobs progress concurrently by the same elapsed time", () 
   const second = queueBuildJob(first.ship, "shipMod", "detection-spire", SHIP_CATALOGS, { idFactory: ids });
   const startedFirst = startRefitJob(second.ship, first.job.id);
   const startedSecond = startRefitJob(startedFirst.ship, second.job.id);
-  const advanced = advanceRefitWorkOrders(startedSecond.ship, 2, SHIP_CATALOGS);
+  assert.equal(startedSecond.ok, false);
+  assert.equal(startedSecond.reason, "crew-work-already-active");
 
+  const advanced = advanceRefitWorkOrders(startedFirst.ship, 2, SHIP_CATALOGS);
   const a = advanced.ship.refit.workOrders.find((entry) => entry.id === first.job.id);
   const b = advanced.ship.refit.workOrders.find((entry) => entry.id === second.job.id);
   assert.equal(a.remainingHours, Math.max(0, first.job.durationHours - 2));
-  assert.equal(b.remainingHours, Math.max(0, second.job.durationHours - 2));
+  assert.equal(b.remainingHours, second.job.durationHours);
+  assert.equal(b.status, "planned");
 });
 
 test("Part 9 Foundry layer is loaded and listens to world time", () => {
