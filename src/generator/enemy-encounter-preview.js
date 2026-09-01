@@ -1,5 +1,6 @@
 import { generateEnemyShipPreview } from "./enemy-ship-generator.js";
 import { generatePF2eOfficerActorDraft } from "./pf2e-officer-actor-draft.js";
+import { applyCrewAffiliation } from "./ayerstone-crew-affiliation.js";
 
 const LOOT_SPLITS = Object.freeze({
   poor: Object.freeze({ personal: 0.25, cargo: 0.40, salvage: 0.35, multiplier: 0.55 }),
@@ -32,21 +33,9 @@ function lootContract(basePreview, input) {
     rewardWeight,
     rewardWeightSource: ENEMY_REWARD_WEIGHTS.includes(requested) ? "gm-override" : "automatic",
     automaticRewardWeight: automatic,
-    economicCeiling: Object.freeze({
-      basis: "party-level",
-      level: partyLevel,
-      gpBudget: null,
-      state: "pf2e-treasure-table-value-pending"
-    }),
-    distribution: Object.freeze({
-      personal: split.personal,
-      shipCargo: split.cargo,
-      arkflightSalvage: split.salvage,
-      profileMultiplier: split.multiplier
-    }),
-    personal: Object.freeze([]),
-    shipCargo: Object.freeze([]),
-    salvage: Object.freeze([]),
+    economicCeiling: Object.freeze({ basis: "party-level", level: partyLevel, gpBudget: null, state: "pf2e-treasure-table-value-pending" }),
+    distribution: Object.freeze({ personal: split.personal, shipCargo: split.cargo, arkflightSalvage: split.salvage, profileMultiplier: split.multiplier }),
+    personal: Object.freeze([]), shipCargo: Object.freeze([]), salvage: Object.freeze([]),
     state: "policy-complete-values-pending",
     note: `Party level ${partyLevel} sets the PF2e economic ceiling. Reward weight is ${rewardWeight}${ENEMY_REWARD_WEIGHTS.includes(requested) ? " (GM override)" : " (automatic)"}. Ship level ${basePreview.config.level} and ${basePreview.config.lootProfile} richness determine how value is split among personal treasure, cargo, and Arkflight salvage.`
   });
@@ -55,14 +44,11 @@ function lootContract(basePreview, input) {
 export function generateEnemyEncounterPreview(input = {}) {
   const base = generateEnemyShipPreview(input);
   const partyLevel = clampLevel(input.partyLevel ?? base.config.level);
-  const officers = base.crew.officers.map((officer) => generatePF2eOfficerActorDraft({
-    station: officer.station,
-    level: officer.level,
-    quality: base.config.difficulty,
-    faction: base.config.faction,
-    theme: base.config.theme,
-    seed: `${base.config.seed}:${officer.station}`
-  }));
+  const officers = base.crew.officers.map((officer) => {
+    const seed = `${base.config.seed}:${officer.station}`;
+    const draft = generatePF2eOfficerActorDraft({ station: officer.station, level: officer.level, quality: base.config.difficulty, faction: base.config.faction, theme: base.config.theme, seed });
+    return applyCrewAffiliation(draft, { faction: base.config.faction, seed });
+  });
   const loot = lootContract(base, { ...input, partyLevel });
   const blockers = [
     ...(base.validation.ok ? [] : base.validation.errors),
@@ -72,7 +58,7 @@ export function generateEnemyEncounterPreview(input = {}) {
 
   return Object.freeze({
     ...base,
-    version: 4,
+    version: 5,
     config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto" }),
     crew: Object.freeze({ ...base.crew, officers: Object.freeze(officers) }),
     loot,
