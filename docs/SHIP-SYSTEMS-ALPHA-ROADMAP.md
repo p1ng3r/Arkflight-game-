@@ -14,8 +14,8 @@
 6. Supplies, Cargo & Salvage Economy ✅
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
-9. Ship Mod Catalog Completion — Standard + Rare Alpha bands complete; Epic next
-10. Arkengine Mod Catalog Completion
+9. Ship Mod Catalog Completion ✅
+10. Arkengine Mod Catalog Completion — next
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
 13. Whole-Ship Operational Validator
@@ -25,154 +25,102 @@
 17. Hardware Interaction in Events
 18. Full Glassback/Cinderwake Event Playthrough
 
-## Parts 1–8
+## Parts 1–8 — locked foundation
 
-Parts 1–8 are design-locked and implemented on this branch. Their authoritative rules remain represented in the ship-domain modules and regression tests.
+The existing ship-domain modules and regression tests remain authoritative for the locked Parts 1–8 rules, including:
 
-### Core locked rules retained
+- 0 Hull = Wrecked, not automatically destroyed;
+- Hull HP and Hull Area degradation remain separate systems;
+- Lifeveil is environmental/magical protection and 0 Lifeveil = Offline/exposed;
+- Area caps are Stable 100%, Stressed 90%, Damaged 65%, Critical 25%, Disabled 0%;
+- one shared persistent Strain pool with one Area degradation maximum per discrete threshold resolution;
+- Morale 0–5 with 0 Broken preventing Crew Tactics and 5 Inspired granting its locked once-per-round benefit;
+- Supplies/Cargo/Salvage conversion and deprivation rules;
+- under-Minimum and over-Maximum crew penalties;
+- one primary officer per canonical station: Captain, Engineer, Navigator, Battlewatch, Veilwarden;
+- Rooms require real gameplay purpose;
+- Weapons are physical fittings with mount, crew, reload, arc, damage, System Threat, traits, Cargo, and short-handed operation rules.
 
-- 0 Hull = Wrecked, not automatically destroyed.
-- Hull HP and Hull Area damage are distinct.
-- Lifeveil is environmental/magical protection; 0 Lifeveil = Offline/exposed.
-- Area caps are Stable 100%, Stressed 90%, Damaged 65%, Critical 25%, Disabled 0%.
-- Shared Strain threshold resolution degrades at most one threatened Area per discrete result and preserves overflow.
-- Morale is mechanically 0–5 but should be presented as five tankards in the player UI.
-- Daily Supplies = 1 per 10 people aboard, rounded up; 10 Supplies = 1 Cargo; 10 Salvage Parts = 1 Cargo.
-- At 0 Supplies: -1 Morale/day and +1 Strain every second day.
-- Under Minimum crew: -1 circumstance penalty per missing operating crew member. Over Maximum occupancy: -1 circumstance penalty per extra person aboard.
-- Each canonical station has one primary officer; empty stations are legal but unavailable without an explicit substitute rule.
-- Every Room must have a real gameplay purpose.
-- Weapons are physical fittings with mount, crew, reload, arc, damage, System Threat, traits, and Cargo metadata; short-handed use is -1 per missing required crew member.
+## Part 9 — Ship Mod Catalog Completion ✅
 
-## Part 9 — Ship Mod Catalog Completion
+### Rarity progression
 
-### Mod progression is rarity-based
+Ship Mods use the player-facing rarity ladder:
 
-Ship Mods no longer use generic numeric tiers as their player-facing progression authority.
+| Rarity | Default minimum ship level | Alpha target | Alpha authored |
+|---|---:|---:|---:|
+| Standard | 1 | 22–26 | 22 ✅ |
+| Rare | 3 | 20–22 | 20 ✅ |
+| Epic | 7 | 18–20 | 18 ✅ |
+| Legendary | 12 | 15–16 | 15 ✅ |
+| Mythic | 17 | 8–9 | 8 ✅ |
 
-| Rarity | Default minimum ship level | Alpha catalog target | Current Alpha status |
-|---|---:|---:|---|
-| Standard | 1 | 22–26 | ✅ minimum target authored |
-| Rare | 3 | 20–22 | ✅ 20 authored |
-| Epic | 7 | 18–20 | next |
-| Legendary | 12 | 15–16 | pending |
-| Mythic | 17 | 8–9 | pending |
+Legacy numeric Refit tiers remain temporary installation-cost compatibility metadata only. They are not the progression identity.
 
-These are Alpha catalog density targets, not hard lifetime caps.
+### Shared catalog rules
 
-Existing legacy Refit tier values remain temporarily preserved only as installation-cost compatibility metadata while Refit economics are migrated. They are not the new progression identity.
+Every Ship Mod must provide at least one real mechanic: derived-stat effect, resistance, capability, action/Mastery/combat/passive unlock, explicit rule modifier, Event/Combat interaction, or authored synergy.
 
-### Standard Alpha band
+Mods may affect Hull, Arkengine, Rigging, Lifeveil, Morale/Command, AC, PF2e-style resistances, maneuverability, speed, Cargo, Detection, crew support, repair/recovery, logistics, combat, Voyage/Event interactions, and cross-system behavior.
 
-The Standard band is inside the locked target and includes practical choices across structural durability, cargo, helm/rigging, Lifeveil, command, detection, logistics, repair, maneuverability, speed, Strain, and PF2e-style resistance.
+The catalog is intentionally spread across the ship rather than concentrating all useful options in one Area.
 
-Baseline fittings added specifically to seed later upgrade families include:
+### Upgrade chains
 
-- **Firebreak Plating** — Resistance 5 fire.
-- **Stormgrounding Mesh** — Resistance 5 electricity.
-- **Trim-Sail Regulators** — +1 combat speed.
-- **Crew Muster Bell Network** — command/crew-muster support.
-- **Veil-Warded Bulkheads** — +5 Lifeveil Capacity plus recovery support.
+Direct upgrade-chain Mods:
 
-### Rare Alpha band
+1. require the authored predecessor to be installed;
+2. replace that predecessor when completed;
+3. inherit its installation slot;
+4. consume the predecessor into the upgraded fitting instead of returning a duplicate physical component;
+5. add meaningful new mechanics as well as stronger numbers.
 
-The Rare band is now at the locked minimum target of **20 Mods**. Rare content combines stronger numerical effects with specialized capabilities, direct replacement upgrades, explicit resistances, and authored 2-Mod synergies.
+Standalone Mods remain independently installable.
 
-New Rare fittings include:
+### Synergies
 
-- **Aether-Bound Ribbing** — replaces Reinforced Structural Ribbing and increases Hull Integrity by 35.
-- **Merchant-Prime Cargo Lattice** — replaces Expanded Cargo Lattice, adds 40 Cargo Capacity, and can synergize with reinforced docking hardware.
-- **Precision Helm Relays** — replaces Stabilized Helm Relays and grants +2 Maneuverability.
-- **Battleline Signal Array** — fleet/command coordination with a Crew Muster synergy.
-- **Stormglass Firebreak Shell** — replaces Firebreak Plating, adds +1 AC and Resistance 10 fire.
-- **Veil Resonance Relay** — replaces Emergency Veil Relay and adds Lifeveil capacity plus improved recovery support.
-- **Deep-Void Armor Web** — replaces Deep Void Reinforcement and adds cold/void resistance.
-- **Grounded Conduit Bus** — replaces Stormgrounding Mesh, adds Strain Capacity and Resistance 10 electricity.
-- **Stormproof Void Sails** — replaces Reinforced Void Sails, adds +2 combat speed and Hard Burn strain support.
-- **Battlewatch Scrying Crown** — replaces Lookout Spire and improves immediate threat detection.
-- **Salvage Winch Clusters** — replaces Docking Claw System and improves Cargo/salvage handling.
-- **Battlewake Control Fins** — replaces Reinforced Maneuvering Fins, grants +2 Maneuverability, and synergizes with Trim-Sail Regulators.
-- **Crew Cohesion Network** — replaces Crew Muster Bell Network and improves morale recovery/station reassignment support.
-- **Ablative Iron Sheathing** — +2 AC and Resistance 5 piercing.
-- **Veil Harmonic Capacitors** — +20 Lifeveil Capacity with a Veil-Warded Bulkhead synergy.
+Synergy counts refer to total participating fittings, including the Mod that owns the synergy.
 
-The inherited Rare entries remain part of the band where they already provide valid Arkflight roles.
-
-### Synergy participant counting
-
-A synergy count refers to the **total number of installed fittings participating**, including the Mod that owns the synergy definition.
-
-- A normal 2-Mod synergy therefore names **one other required Mod**.
-- An Epic+ 3-Mod set bonus names **two other required Mods**.
-- Three-Mod sets remain invalid below Epic.
-
-This prevents the data schema from accidentally turning a stated 2-Mod synergy into a hidden 3-Mod requirement.
-
-### Higher rarity means power plus uniqueness
-
-Rarity progression combines larger numerical improvements and stronger rule-changing effects.
-
-- **Standard:** practical baseline fittings and straightforward stat/capacity improvements.
-- **Rare:** stronger numbers and/or a specialized capability.
-- **Epic:** substantial numerical effect combined with capabilities, action interactions, or Event/Combat hooks.
-- **Legendary:** build-defining hardware with strong numbers and rules that materially alter vessel operation.
-- **Mythic:** extraordinary vessel-defining hardware combining major numerical impact with unique actions, capabilities, or bounded rule exceptions.
-
-Higher rarity must not collapse into only larger numeric bonuses. Unique effects also do not prevent a high-rarity Mod from providing appropriately stronger numbers.
-
-### Effect coverage is broader than the five Areas
-
-The Alpha catalog should be distributed roughly evenly across Hull, Arkengine, Rigging, Lifeveil, and Morale/Command, with a smaller cross-system/logistics pool.
-
-Mods may also directly improve or alter other ship statistics and operations, including Armor Class, PF2e-style resistances, maneuverability, combat/travel speed, Cargo Capacity, Detection, crew support, recovery and repair, combat actions, Voyage/Event interactions, logistics/salvage, and cross-system rules.
-
-### Upgrade chains replace their predecessor
-
-A Mod concept may have higher-rarity descendants. Some descendants require a lower-rarity Mod already installed before they can be fitted.
-
-For a direct upgrade chain:
-
-1. the predecessor must be installed to qualify for the upgrade;
-2. completing the upgrade replaces the predecessor rather than leaving both installed;
-3. the new fitting inherits the predecessor's installation slot instead of consuming an additional slot;
-4. the predecessor is consumed into the upgraded fitting rather than returned as a second usable physical component;
-5. the upgraded Mod must add meaningful new mechanics as well as any stronger numbers.
-
-Standalone Mods remain independently installable and do not need artificial predecessors.
-
-### Synergy bonuses
-
-Specific installed Mod combinations may unlock additional bonuses.
-
-- Most synergies are 2-Mod combinations.
-- A smaller number of stronger 3-Mod set bonuses are allowed beginning at Epic rarity.
-- Synergies do not replace their component Mods; unrelated components retain their normal slots.
-- Synergy is authored, not inferred from matching tags.
-
-A synergy must provide a real additional effect, capability, rule modifier, action/Mastery interaction, or Event/Combat benefit.
+- Normal synergies are usually 2-Mod combinations and therefore name one other required Mod.
+- 3-Mod set bonuses begin at Epic and name two other required Mods.
+- Synergies are explicitly authored rather than inferred from tags.
+- Synergy components retain their own normal slots unless one component is itself a direct replacement-chain upgrade.
 
 ### Resistance model
 
-Resistance-granting Mods use explicit PF2e-style resistance values such as Resistance 5 fire or Resistance 10 electricity. Higher-rarity Mods may grant stronger values, multiple resistance types, or conditional/context-sensitive resistance.
+Resistance Mods use explicit PF2e-style positive values such as Resistance 5 fire or Resistance 15 physical. Higher rarities may grant stronger values, multiple resistances, or conditional resistances such as protection only while Lifeveil is online.
 
-### Mythic rule exceptions
+### Acquisition
 
-Mythic Mods may alter a core ship rule, including surviving a Hull-zero result, limited operation while an Area is Disabled, extending Lifeveil to another vessel, or temporarily ignoring a Strain threshold.
+- Standard: ordinary shipyard/market acquisition may be available.
+- Rare: limited purchase/reward sources.
+- Epic: exceptional purchase or significant reward sources.
+- Legendary: no ordinary purchase; exceptional shipyard/faction/discovery/unique blueprint or equivalent source required.
+- Mythic: never an ordinary shop/catalog purchase; campaign-defining rewards only.
 
-Every Mythic core-rule exception must be bounded by an explicit limit, cost, trigger, or usage restriction.
+### Mythic identity
 
-### Acquisition rules
+Mythic Mods combine major numerical effects with unique capabilities and may alter a core ship rule only through an explicitly bounded exception.
 
-- **Standard:** ordinary shipyard/market acquisition may be available.
-- **Rare:** may be purchasable or awarded through more limited sources.
-- **Epic:** may be purchasable only through suitably exceptional sources or earned as significant rewards, depending on authored content.
-- **Legendary:** not an ordinary catalog purchase; requires exceptional shipyards, major factions, discoveries, unique blueprints, or equivalent GM-authored sources.
-- **Mythic:** never an ordinary shop/catalog purchase; Mythic hardware comes from campaign-defining sources.
+The Alpha Mythic band contains eight campaign-defining fittings:
 
-### Every Mod must do something real
+- **Eternity Worldroot Frame** — +120 Hull, +3 AC; once/event Hull-zero refusal at a Strain cost.
+- **Crown of the Ninefold Fortress** — +6 AC, +60 Hull, Resistance 15 physical and Resistance 10 force; mythic fortress set.
+- **Worldfire Arkengine Nexus** — +12 Strain Capacity; once/event one round of powered movement while Arkengine Area is Disabled, followed by +3 Strain.
+- **Wings of the First Dawn** — +7 combat speed, +3 maneuverability; once/event one movement action despite Disabled Rigging at +2 Strain.
+- **Veil of the First Firmament** — +80 Lifeveil; once/event extend protection to one allied vessel for one discrete resolution at a 20-Lifeveil cost.
+- **Oracle of the Last Horizon** — +12 Detection plus Battlewatch/Navigator foresight support and a three-component command synergy.
+- **Sovereign Concordance of Five Stations** — mythic command network; once/event permits one Crew Tactic while Morale is Broken, then adds +1 Strain.
+- **Singularity Strain Vault** — +10 Strain Capacity; once/event prevent the Area degradation from one threshold crossing, with delayed Strain cost.
 
-A Ship Mod is invalid if it provides none of the following: derived-stat effect, capability, Mastery/action/combat-action/passive unlock, explicit rule modifier, Event/Combat interaction, authored synergy effect, or explicit resistance.
+Every Mythic core-rule exception must author a trigger, usage restriction, cost, and/or hard limit. Unbounded permanent exceptions are invalid Alpha content.
 
-### Canonical terminology
+### Part 9 acceptance
 
-New player-facing catalog data uses **Battlewatch**. Legacy `watchmaster` identifiers may remain internally only where compatibility with existing signatures/migrations still requires them; they are not the canonical displayed station name.
+Part 9 is complete when the canonical merged Ship Mod catalog contains all five rarity bands, every band is inside its locked Alpha density range, the entire catalog passes the shared progression validator, upgrade/synergy semantics remain consistent, and Mythic exceptions are bounded.
+
+The repository now contains explicit whole-catalog acceptance tests for those conditions.
+
+## Part 10 — Arkengine Mod Catalog Completion
+
+Next work is to complete the Arkengine Mod catalog as a separate hardware family. Arkengine Mods continue to use Arkengine-specific sockets and must not be silently folded into Ship Mods.
