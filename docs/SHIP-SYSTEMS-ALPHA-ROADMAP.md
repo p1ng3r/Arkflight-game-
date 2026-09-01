@@ -10,8 +10,8 @@
 2. Hull & Damage ✅
 3. Lifeveil ✅
 4. Strain & Area Readiness ✅
-5. Morale
-6. Supplies, Cargo & Salvage Economy
+5. Morale ✅
+6. Supplies, Cargo & Salvage Economy ✅
 7. Crew & Stations
 8. Rooms & Weapons Completion
 9. Ship Mod Catalog Completion
@@ -64,8 +64,6 @@ The following consume Cargo Capacity:
 
 Installed hardware does not also consume Cargo Capacity. Installed Ship Mods, Arkengine Mods, and Weapons consume their installation/mount capacity instead.
 
-Exact cargo-unit conversion values are intentionally deferred to Part 6.
-
 #### Morale scale
 
 Morale remains a compact 0–5 resource:
@@ -79,7 +77,7 @@ Morale remains a compact 0–5 resource:
 | 1 | Faltering |
 | 0 | Broken |
 
-The Morale Area remains the persistent degradation/readiness state. Morale resource-band bonuses/penalties are deferred to Part 5 so the resource and Area do not accidentally duplicate mechanics.
+The Morale Area remains the persistent degradation/readiness state.
 
 ### Architectural invariant
 
@@ -89,93 +87,43 @@ The Ship Sheet, GM Operations generator, Ship Combat, Refit, Voyage/Event Manage
 
 ## Part 2 — Hull & Damage
 
-### Hull HP and Hull Area are related but distinct
+Ordinary Hull HP damage does **not** automatically degrade the Hull Area. Hull Area degradation comes from shared Strain threshold resolution or an explicit authored effect.
 
-Ordinary Hull HP damage does **not** automatically degrade the Hull Area.
-
-Hull Area degradation comes from the shared Strain threshold system, authored critical/catastrophic effects, or another explicit rule. This prevents Hull HP and Hull Area state from becoming duplicate damage tracks.
-
-### Hull HP repair
-
-Hull HP repair uses the assigned repairer's native PF2e **Crafting** check and physical **Salvage Parts**.
-
-Base repair economy:
+Hull HP repair uses PF2e **Crafting** and physical **Salvage Parts**:
 
 - 1 Salvage Part repairs 10 Hull on Success.
-- Critical Success repairs twice the normal amount: 20 Hull per Salvage Part.
-- Failure repairs nothing and does not consume the committed Salvage Parts.
-- Critical Failure repairs nothing and consumes the committed Salvage Parts.
-- Base repair time is **1 hour per Salvage Part committed**.
-- Critical Success improves repaired Hull, not the base time.
+- Critical Success repairs 20 Hull per Salvage Part.
+- Failure repairs nothing and preserves committed Salvage Parts.
+- Critical Failure repairs nothing and consumes committed Salvage Parts.
+- Base repair time is 1 hour per Salvage Part committed.
+- Repair requires a valid safe repair site and cannot be performed while underway in the Void.
+- Repair uses the PF2e level-based DC for ship level + 5.
+- Mods, Talents, Rooms, specialists, or other authored effects may improve the shared repair rule.
 
-Hull repair may not be performed while the ship is **underway in the Void**. The ship must be in a valid safe repair situation such as landed, docked, anchored, berthed, or another GM-authorized secure repair site.
+0 Hull means **Wrecked**. Recommissioning requires a proper shipyard, takes 7 days, costs 25% of level-appropriate replacement/refit value, requires no roll, restores 10% Base Max Hull, and does not reset Areas, Strain, Lifeveil, Supplies, or other state.
 
-The repair check uses the standard PF2e level-based DC for **ship level + 5**. Do not add ship level to a DC a second time after resolving the level-based DC.
-
-Installed Mods, Ship Talents, Rooms, specialists, or other authored permanent effects may explicitly improve Hull repaired per Part, repair time, efficiency, or other repair parameters. They modify the shared Hull repair rule rather than creating parallel repair systems.
-
-Hull HP repair is separate from Area repair. Hull HP repair restores numerical structural integrity; Hull Area repair improves the persistent `Stable -> Disabled` readiness condition.
-
-### Zero Hull and wreck recommissioning
-
-0 Hull means **Wrecked**.
-
-A Wrecked vessel cannot be brought back through ordinary emergency Hull patching and cannot be recommissioned in the Void.
-
-Recommissioning requires a proper **shipyard**.
-
-Locked base recommission rules:
-
-- Time: **7 days**.
-- Cost: **25% of the vessel's level-appropriate replacement/refit value**.
-- Check: **none**; this represents professional shipyard reconstruction.
-- Restored Hull: **10% of Base Max Hull**.
-
-Normal Hull HP repairs may continue after recommissioning.
-
-Recommissioning does not automatically repair degraded Areas, clear Strain, refill Lifeveil, restore Supplies, or otherwise reset the ship.
-
-### Zero-value persistence bug guard
-
-Derived-stat synchronization must preserve a legitimate current Hull value of `0`; recalculating maximum Hull from components must never treat zero as an uninitialized value and heal a Wrecked ship back to maximum. The same guard is applied to Lifeveil zero values ahead of Part 3.
+Derived-stat synchronization must preserve legitimate zero Hull and Lifeveil values.
 
 ## Part 3 — Lifeveil
 
-### Identity
+Lifeveil is the vessel's atmospheric/environmental envelope and magical shielding. It protects crew from Void exposure, hostile environments, aetheric hazards, and authored magical/energy threats.
 
-Lifeveil is the vessel's **atmospheric/environmental envelope and magical shielding**. It protects the crew from Void exposure, hostile environments, aetheric hazards, and authored magical/energy threats. It is not merely a temporary-hit-point buffer.
+At 0 Lifeveil the veil is **Offline**. The vessel may still move if other systems permit, but the crew is exposed to the outside environment.
 
-### Lifeveil at zero
+Base Lifeveil stabilization:
 
-At **0 Lifeveil**, the Lifeveil is **Offline**.
-
-The vessel may still move if Hull, Arkengine, and Rigging permit, but the environmental envelope and magical shielding are unavailable. Everyone aboard is exposed to the outside environment. In a safe atmosphere this may be harmless; in the Void or another hostile environment it becomes an immediate serious hazard resolved by the applicable Event, Combat, environmental, or GM-authored rules.
-
-### Base stabilization / recovery
-
-Base Lifeveil recovery requires **1 hour** of stabilization by the Veilwarden using one of:
-
-- Arcana,
-- Religion,
-- Nature,
-- Occultism.
-
-Base degree results:
-
-- Critical Success: restore **20% of Base Max Lifeveil**.
-- Success: restore **10% of Base Max Lifeveil**.
+- 1 hour.
+- Veilwarden uses Arcana, Religion, Nature, or Occultism.
+- Critical Success: restore 20% Base Max Lifeveil.
+- Success: restore 10% Base Max Lifeveil.
 - Failure: restore nothing.
-- Critical Failure: restore nothing and gain **+1 Strain**.
-
-Base stabilization consumes **no Supplies or other consumable resource**.
-
-Installed Ship Mods, Arkengine Mods, Rooms, specialists, Ship Talents, or other authored permanent effects may explicitly improve recovery percentage, stabilization time, permitted skills, Strain risk, or other parameters. They modify the shared Lifeveil recovery rule rather than creating a parallel recovery system.
+- Critical Failure: restore nothing and gain +1 Strain.
+- No default consumable cost.
+- Mods, Talents, Rooms, specialists, and other authored effects may improve the shared rule.
 
 ## Part 4 — Strain & Area Readiness
 
-### Integrity bands
-
-The locked Area integrity bands remain:
+Locked integrity caps:
 
 | Area state | Effective integrity cap |
 |---|---:|
@@ -185,38 +133,79 @@ The locked Area integrity bands remain:
 | Critical | 25% |
 | Disabled | 0% |
 
-Hull and Lifeveil use these states to determine Effective Maximum from Base Maximum. If Current exceeds a newly lowered Effective Maximum, Current is immediately capped downward. Improving an Area state raises the Effective Maximum but does **not** restore Current.
+Hull and Lifeveil use Area state to determine Effective Maximum. Lowering the cap may reduce Current to the new cap. Improving the Area raises the cap but does not heal Current.
 
-Morale remains the compact 0–5 resource established in Part 1; its relationship to the Morale Area is finalized separately in Part 5 rather than forcing percentage math onto the 0–5 band.
-
-### Resource depletion and Area condition remain distinct
-
-Direct Hull or Lifeveil numerical damage does not automatically degrade its Area.
-
-- 0 Hull means Wrecked, but Hull Area degradation still requires Strain threshold crossing or an explicit authored effect.
-- 0 Lifeveil means Offline/exposed, but Lifeveil Area degradation still requires Strain threshold crossing or an explicit authored effect.
-
-This keeps resource depletion/recovery separate from persistent system damage/repair.
-
-### Strain threshold resolution
+Direct Hull or Lifeveil depletion does not automatically degrade its Area.
 
 For one discrete Strain contribution:
 
-1. Add the contribution to the ship-wide persistent Strain pool.
-2. If the result is below the Strain Limit, retain the total with no Area degradation.
-3. If the result reaches or exceeds the Strain Limit, degrade the threatened Area by exactly one state.
+1. Add Strain to the shared persistent pool.
+2. If below the Strain Limit, retain it with no Area degradation.
+3. If at or above the limit, degrade the threatened Area exactly one state.
 4. Subtract exactly one full Strain Limit.
-5. Keep all remaining overflow Strain.
-6. A single discrete resolution can cause at most one Area degradation, even if overflow remains at or above the Strain Limit.
+5. Preserve overflow.
+6. A single discrete resolution causes at most one Area degradation.
 
-Example with Strain Limit 4:
+Disabled is the bottom of the ladder; no sixth Area state exists.
 
-`3 + 2 = 5 -> threatened Area degrades once -> Strain becomes 1`
+## Part 5 — Morale
 
-Large discrete result example:
+Morale is a short-term 0–5 crew-spirit resource while the Morale Area represents persistent command/cohesion damage.
 
-`3 + 10 = 13 -> threatened Area degrades once -> Strain becomes 9`
+### UI presentation
 
-The next qualifying discrete resolution may trigger the next degradation.
+The ship sheet should not lead with a raw Morale number. Present Morale as **five tankards/beer mugs**, filled or empty, with the named band visible by tooltip/label. The numerical 0–5 value remains canonical under the hood.
 
-Disabled is the bottom of the Area ladder. There is no sixth Area state. If a threshold is crossed while the threatened Area is already Disabled, the normal one-limit Strain consumption still occurs, but no additional automatic Area state is created; any further catastrophic consequence must be explicitly authored.
+### Mechanical bands
+
+- **5 Inspired:** once per round, the crew may apply a +1 circumstance bonus to one Arkflight station check.
+- **4 Confident:** no automatic modifier.
+- **3 Steady:** normal baseline.
+- **2 Shaken:** no automatic modifier.
+- **1 Faltering:** warning state, no automatic numeric modifier.
+- **0 Broken:** Crew Tactics are unavailable until Morale rises above 0.
+
+Normal authored Morale changes are typically ±1, while exceptional/catastrophic effects may explicitly change more. Morale always clamps 0–5.
+
+### Safe-rest recovery
+
+- 8 hours safe rest restores +1 Morale.
+- Ordinary rest cannot raise Morale above 3 Steady.
+- Morale above 3 requires a positive authored cause such as success, Captain action, shore leave, reward, Room, Mod, Talent, or other explicit effect.
+- Mods/Talents/Rooms/specialists may improve recovery amount or ceiling through the shared Morale recovery rule.
+
+## Part 6 — Supplies, Cargo & Salvage Economy
+
+### Daily Supplies
+
+A crewed active vessel consumes Supplies at the rate of **1 Supply per day per 10 crew aboard**, rounded up, with a minimum of 1 Supply/day for any crewed vessel.
+
+Examples:
+
+- 1–10 crew: 1 Supply/day.
+- 11–20 crew: 2 Supplies/day.
+- 21–30 crew: 3 Supplies/day.
+- 0 crew: 0 Supplies/day.
+
+### Cargo conversion
+
+Locked Cargo conversion:
+
+- **10 Supplies = 1 Cargo**.
+- **10 Salvage Parts = 1 Cargo**.
+- Uninstalled Ship Mods consume Cargo equal to their authored Refit slot cost per physical fitting.
+- Uninstalled Arkengine Mods consume Cargo equal to their authored Refit slot cost per physical fitting.
+- Uninstalled Weapons consume their authored Cargo value.
+- Ordinary cargo consumes its authored/direct Cargo value.
+- Installed Ship Mods, Arkengine Mods, and Weapons do not also consume Cargo; their installation/mount capacity is the relevant limit once installed.
+
+Partial Supply/Salvage stacks use proportional Cargo accounting, so one Supply or one Salvage Part is 0.1 Cargo.
+
+### Running out of Supplies
+
+At 0 Supplies, each full day without Supplies causes:
+
+- **-1 Morale per day**.
+- **+1 Strain every second day** without Supplies.
+
+These consequences use the same canonical Morale and Strain systems and do not create separate starvation/stress tracks.
