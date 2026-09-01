@@ -14,7 +14,7 @@
 6. Supplies, Cargo & Salvage Economy ✅
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
-9. Ship Mod Catalog Completion — rarity foundation locked
+9. Ship Mod Catalog Completion — rarity foundation and Alpha density locked
 10. Arkengine Mod Catalog Completion
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
@@ -52,13 +52,15 @@ Ship Mods no longer use generic numeric tiers as their player-facing progression
 
 Locked rarity ladder:
 
-| Rarity | Default minimum ship level |
-|---|---:|
-| Standard | 1 |
-| Rare | 3 |
-| Epic | 7 |
-| Legendary | 12 |
-| Mythic | 17 |
+| Rarity | Default minimum ship level | Alpha catalog target |
+|---|---:|---:|
+| Standard | 1 | 22–26 |
+| Rare | 3 | 20–22 |
+| Epic | 7 | 18–20 |
+| Legendary | 12 | 15–16 |
+| Mythic | 17 | 8–9 |
+
+These are Alpha catalog density targets, not hard lifetime caps. The purpose is to provide substantial build variety at each progression band without reverting to one giant undifferentiated catalog.
 
 A specifically authored reward may set a higher minimum level. Bypassing the normal rarity floor requires an explicit exceptional reward/rule rather than accidental catalog data.
 
@@ -66,15 +68,29 @@ Existing legacy Refit tier values remain temporarily preserved only as **install
 
 ### Higher rarity means power plus uniqueness
 
-Rarity progression should combine **larger numerical improvements and stronger rule-changing effects**.
+Rarity progression combines **larger numerical improvements and stronger rule-changing effects**.
 
 - **Standard:** practical baseline fittings and straightforward stat/capacity improvements.
 - **Rare:** stronger numbers and/or a specialized capability.
-- **Epic:** substantial numerical effect combined with capabilities, action interactions, or event/combat hooks.
+- **Epic:** substantial numerical effect combined with capabilities, action interactions, or Event/Combat hooks.
 - **Legendary:** build-defining hardware with strong numbers and rules that materially alter vessel operation.
 - **Mythic:** extraordinary vessel-defining hardware combining major numerical impact with unique actions, capabilities, or rule exceptions.
 
 Higher rarity must not collapse into only larger numeric bonuses. Conversely, unique effects do not prevent a high-rarity Mod from also providing appropriately stronger numerical improvements.
+
+### Upgrade families are allowed
+
+A Mod concept may have higher-rarity descendants, for example a practical structural fitting growing into a more extraordinary frame technology.
+
+Upgrade chains are optional rather than mandatory. A higher-rarity descendant must gain a distinct mechanical identity, such as a new capability, action interaction, rule exception, Event/Combat hook, or tradeoff, in addition to any larger numerical effect. A chain that only changes `+20 Hull` into a larger Hull number is not sufficient.
+
+### Acquisition rules
+
+- **Standard:** ordinary shipyard/market acquisition may be available.
+- **Rare:** may be purchasable or awarded through more limited sources.
+- **Epic:** may be purchasable only through suitably exceptional sources or earned as significant rewards, depending on authored content.
+- **Legendary:** not an ordinary catalog purchase; requires exceptional shipyards, major factions, discoveries, unique blueprints, or equivalent GM-authored sources.
+- **Mythic:** never an ordinary shop/catalog purchase. Mythic hardware comes from unique blueprints, bosses, Great Houses, ancient wrecks, divine/void artifacts, major campaign rewards, or equivalent campaign-defining sources.
 
 ### Every Mod must do something real
 
@@ -88,7 +104,7 @@ A Ship Mod is invalid if it provides none of the following:
 
 Description-only Mods are not valid Alpha catalog entries.
 
-The catalog validator enforces rarity, minimum ship level, and mechanical-purpose requirements.
+The catalog validator enforces rarity, minimum ship level, and mechanical-purpose requirements. The rarity authority also exposes the locked Alpha density and acquisition rules for future GM generation/catalog presentation.
 
 ### Similar concepts must be mechanically distinct
 
