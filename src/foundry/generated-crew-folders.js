@@ -23,15 +23,14 @@ export async function ensureShipPackageFolder(shipName) {
   return Folder.create({ name: cleanName, type: "Actor", folder: root.id, sorting: "a" });
 }
 
-export async function placeGeneratedShip(actorData, shipName) {
+async function placeActor(actorData, shipName) {
   const folder = await ensureShipPackageFolder(shipName);
   return Actor.create({ ...structuredClone(actorData), folder: folder.id }, { renderSheet: false });
 }
 
-export async function placeGeneratedOfficer(actorData, shipName) {
-  const folder = await ensureShipPackageFolder(shipName);
-  return Actor.create({ ...structuredClone(actorData), folder: folder.id }, { renderSheet: false });
-}
+export async function placeGeneratedShip(actorData, shipName) { return placeActor(actorData, shipName); }
+export async function placeGeneratedOfficer(actorData, shipName) { return placeActor(actorData, shipName); }
+export async function placeGeneratedCrewTemplate(actorData, shipName) { return placeActor(actorData, shipName); }
 
 export function installGeneratedCrewFolderAPI() {
   Hooks.once("init", () => {
@@ -40,7 +39,8 @@ export function installGeneratedCrewFolderAPI() {
       rootName: ROOT_NAME,
       ensureShipPackageFolder,
       placeGeneratedShip,
-      placeGeneratedOfficer
+      placeGeneratedOfficer,
+      placeGeneratedCrewTemplate
     };
     game.arkflight.crewFolders = game.arkflight.generatedShipFolders;
   });
