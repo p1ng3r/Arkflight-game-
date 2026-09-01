@@ -1,3 +1,5 @@
+import { generateEnemyEncounterPreview } from "../generator/enemy-encounter-preview.js";
+
 const GM_OPERATIONS_ID = "arkflight-gm-operations";
 
 function addShipNameField(app, root) {
@@ -30,6 +32,15 @@ function addDoctrineWarning(app, root) {
   summary.append(note);
 }
 
+function regenerateWithCrewSelection(app, selectedTypes) {
+  const preview = app._arkflightEnemyGeneratorPreview;
+  if (!preview) return;
+  const next = { ...preview.config, crewTemplateTypes: selectedTypes, shipName: preview.ship.identity.name, seed: preview.config.seed };
+  app._arkflightEnemyGeneratorConfig = next;
+  app._arkflightEnemyGeneratorPreview = generateEnemyEncounterPreview(next);
+  app.render({ force: true });
+}
+
 function addCrewTemplates(app, root) {
   const templates = app._arkflightEnemyGeneratorPreview?.crew?.templates ?? [];
   if (!templates.length) return;
@@ -42,20 +53,51 @@ function addCrewTemplates(app, root) {
   kicker.className = "arkflight-gm-kicker";
   kicker.textContent = "REUSABLE CREW ACTORS";
   section.append(kicker);
+
   for (const template of templates) {
-    const row = document.createElement("div");
+    const row = document.createElement("label");
+    row.className = "arkflight-gm-generator-template-toggle";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = Boolean(template.selected);
+    checkbox.dataset.crewTemplateType = template.type;
+    const text = document.createElement("span");
     const name = document.createElement("strong");
     name.textContent = `${template.label} · Level ${template.level}`;
     const role = document.createElement("small");
     role.textContent = template.role;
-    row.append(name, role);
+    text.append(name, role);
+    row.append(checkbox, text);
     section.append(row);
   }
+
+  section.addEventListener("change", (event) => {
+    if (!event.target?.matches?.("[data-crew-template-type]")) return;
+    const selectedTypes = [...section.querySelectorAll("[data-crew-template-type]:checked")].map((input) => input.dataset.crewTemplateType);
+    regenerateWithCrewSelection(app, selectedTypes);
+  });
+
   const note = document.createElement("p");
   note.className = "arkflight-gm-muted";
-  note.textContent = "These are reusable PF2e NPC Actors for tokens/boarding scenes; the remaining ordinary crew complement stays numeric.";
+  note.textContent = "Arkflight selects useful crew types automatically from the vessel role, weapons, and doctrine. Toggle any template before Commit; the remaining ordinary crew complement stays numeric.";
   section.append(note);
   crewPanel.append(section);
+}
+
+async function addPackageConflictState(app, root) {
+  const shipName = app._arkflightEnemyGeneratorPreview?.ship?.identity?.name;
+  const finder = game.arkflight?.generatedShipFolders?.findShipPackageFolder;
+  if (!shipName || typeof finder !== "function") return;
+  const existing = await finder(shipName);
+  if (!existing || !app.element?.isConnected) return;
+  const summary = app.element.querySelector(".arkflight-gm-generator-preview .arkflight-gm-panel");
+  if (!summary || summary.querySelector("[data-package-conflict]")) return;
+  const note = document.createElement("div");
+  note.dataset.packageConflict = existing.id;
+  note.className = "arkflight-gm-launch-warning";
+  note.innerHTML = '<i class="fa-solid fa-folder-tree"></i><span></span>';
+  note.querySelector("span").textContent = `Arkflight/${shipName} already exists. Commit will require Rename or Reuse Existing; it will not merge automatically.`;
+  summary.append(note);
 }
 
 function enhance(app) {
@@ -66,6 +108,7 @@ function enhance(app) {
   addShipNameField(app, root);
   addDoctrineWarning(app, root);
   addCrewTemplates(app, root);
+  void addPackageConflictState(app, root);
 }
 
 Hooks.on("renderApplicationV2", (app) => enhance(app));
