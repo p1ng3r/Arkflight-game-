@@ -4,10 +4,11 @@ function emptySelection() { return { actionId: null, skillId: null, riskTier: nu
 function emptyAssignments() { return Object.fromEntries(STATIONS.map((station) => [station, { actorId: null }])); }
 function emptyMasterySelections() { return Object.fromEntries(STATIONS.map((station) => [station, null])); }
 
-export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Date.now(), assignments = null, masterySelections = null, crewEdgeHand = [] }) {
+export function createPlanningState({ eventId, roundId, roundIndex = 0, now = Date.now(), assignments = null, masterySelections = null, crewEdgeHand = [], shipActorId = null }) {
   return {
-    version: 4,
+    version: 5,
     eventId, roundId, roundIndex,
+    shipActorId: shipActorId || null,
     phase: "opening",
     createdAt: now,
     planningStartedAt: null,
@@ -84,7 +85,7 @@ export function lockPlanning(state, now = Date.now()) {
 
 export function restartEvent(state, { roundId, preserveAssignments = true, preserveCrewEdgeHand = true, preserveMastery = true, now = Date.now() } = {}) {
   if (!state?.eventId) throw new Error("No Arkflight Event is active.");
-  return createPlanningState({ eventId: state.eventId, roundId: roundId ?? state.roundId, roundIndex: 0, now, assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null, masterySelections: preserveMastery ? (state.masterySelections ?? emptyMasterySelections()) : null, crewEdgeHand: preserveCrewEdgeHand ? (state.crewEdgeHand ?? []) : [] });
+  return createPlanningState({ eventId: state.eventId, roundId: roundId ?? state.roundId, roundIndex: 0, now, assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null, masterySelections: preserveMastery ? (state.masterySelections ?? emptyMasterySelections()) : null, crewEdgeHand: preserveCrewEdgeHand ? (state.crewEdgeHand ?? []) : [], shipActorId: state.shipActorId ?? null });
 }
 
 function updateSelection(state, station, patch) { return { ...state, selections: { ...state.selections, [station]: { ...state.selections[station], ...patch } } }; }
