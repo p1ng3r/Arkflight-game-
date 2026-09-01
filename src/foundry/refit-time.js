@@ -1,6 +1,7 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { advanceRefitWorkOrders } from "../ship/refit-time.js";
-import { REFIT_JOB_STATES, REFIT_METHODS } from "../ship/refit-rules.js";
+import { REFIT_JOB_STATES, REFIT_JOB_TYPES, REFIT_METHODS } from "../ship/refit-rules.js";
+import { findAvailableRefitSocketAssignment, validateRefitSocketAssignment } from "../ship/refit-sockets.js";
 import { startRefitJob } from "../ship/refit-work-orders.js";
 
 const MODULE_ID = "arkflight-game";
@@ -20,6 +21,46 @@ function nextPlannedCrewJob(ship) {
 
 function jobLabel(job) {
   return job?.componentId || String(job?.type ?? "Ship work").replaceAll("-", " ");
+}
+
+function replaceWorkOrder(ship, job) {
+  return {
+    ...ship,
+    refit: {
+      ...ship.refit,
+      workOrders: (ship.refit?.workOrders ?? []).map((entry) => entry.id === job.id ? job : entry)
+    }
+  };
+}
+
+function repairQueuedInstallSocket(ship, job) {
+  if (job?.type !== REFIT_JOB_TYPES.INSTALL) return { ok: true, ship, job, repaired: false };
+  const current = validateRefitSocketAssignment(ship, SHIP_CATALOGS, {
+    family: job.componentFamily,
+    componentId: job.componentId,
+    socketIndices: job.socketIndices
+  });
+  if (current.ok) return { ok: true, ship, job, repaired: false };
+
+  const available = findAvailableRefitSocketAssignment(ship, SHIP_CATALOGS, {
+    family: job.componentFamily,
+    componentId: job.componentId
+  });
+  if (!available.ok) {
+    const blockedJob = {
+      ...job,
+      result: { ...(job.result ?? {}), blockedReason: available.reason ?? current.reason ?? "no-legal-socket" }
+    };
+    return { ok: false, reason: blockedJob.result.blockedReason, ship: replaceWorkOrder(ship, blockedJob), job: blockedJob, repaired: false, blocked: true };
+  }
+
+  const repairedJob = {
+    ...job,
+    socketIndices: [...available.socketIndices],
+    result: { ...(job.result ?? {}) }
+  };
+  delete repairedJob.result.blockedReason;
+  return { ok: true, ship: replaceWorkOrder(ship, repairedJob), job: repairedJob, repaired: true };
 }
 
 function confirmCrewContinuation(actor, job, remainingHours) {
@@ -53,26 +94,45 @@ async function persistTimeAdvance(actor, elapsedHours, { completedAt = null, not
   const completed = [...first.completed];
   let crewRemaining = first.crewUnusedHours ?? 0;
 
+  // Checkpoint successful work before asking about the next queued job. A later blocked
+  // reservation must never roll back a job that already finished during this time jump.
+  if (first.progressed.length) await persistShip(actor, ship);
+
   while (crewRemaining > 0) {
-    const nextJob = nextPlannedCrewJob(ship);
+    let nextJob = nextPlannedCrewJob(ship);
     if (!nextJob) break;
+
+    const repaired = repairQueuedInstallSocket(ship, nextJob);
+    ship = repaired.ship;
+    nextJob = repaired.job;
+    if (repaired.repaired) await persistShip(actor, ship);
+    if (!repaired.ok) {
+      await persistShip(actor, ship);
+      ui.notifications?.warn?.(`${actor.name}: next crew refit is blocked — ${repaired.reason}. The completed job was kept and the queued job remains planned.`);
+      break;
+    }
+
     const allow = await confirmCrewContinuation(actor, nextJob, crewRemaining);
     if (!allow) break;
 
     const started = startRefitJob(ship, nextJob.id, { startedAt: new Date().toISOString() });
     if (!started.ok) return { ...started, progressed: Object.freeze(progressed), completed: Object.freeze(completed) };
     ship = started.ship;
+    await persistShip(actor, ship);
 
     const continuation = advanceRefitWorkOrders(ship, crewRemaining, SHIP_CATALOGS, { completedAt, progressCrew: true, progressShipyard: false });
-    if (!continuation.ok) return { ...continuation, progressed: Object.freeze(progressed), completed: Object.freeze(completed) };
+    if (!continuation.ok) {
+      ui.notifications?.warn?.(`${actor.name}: queued crew refit could not complete — ${continuation.reason ?? "unknown reason"}. Earlier completed work was preserved.`);
+      return { ...continuation, ship, progressed: Object.freeze(progressed), completed: Object.freeze(completed) };
+    }
     ship = continuation.ship;
     progressed.push(...continuation.progressed);
     completed.push(...continuation.completed);
     crewRemaining = continuation.crewUnusedHours ?? 0;
+    if (continuation.progressed.length) await persistShip(actor, ship);
     if (!continuation.crewCompleted) break;
   }
 
-  if (progressed.length) await persistShip(actor, ship);
   if (notify && completed.length) {
     const labels = completed.map((job) => jobLabel(job)).join(", ");
     ui.notifications?.info?.(`${actor.name}: Refit work completed — ${labels}.`);
