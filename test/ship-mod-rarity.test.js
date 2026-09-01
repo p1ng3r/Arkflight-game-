@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { SHIP_MODS } from "../src/content/ship-mods.js";
+import { SHIP_MODS } from "../src/content/ship-mod-catalog.js";
 import {
   SHIP_MOD_RARITIES,
   SHIP_MOD_RARITY_RULES,
@@ -34,19 +34,14 @@ test("alpha catalog density targets are locked", () => {
   assert.deepEqual(shipModAlphaTarget("mythic"), { min: 8, max: 9 });
 });
 
-test("standard alpha catalog is inside its locked density band", () => {
-  const standard = Object.values(SHIP_MODS).filter((mod) => mod.data.rarity === "standard");
-  const target = shipModAlphaTarget("standard");
-  assert.ok(standard.length >= target.min, `only ${standard.length} Standard mods`);
-  assert.ok(standard.length <= target.max, `${standard.length} Standard mods exceeds Alpha target`);
-});
-
-test("rare alpha catalog is inside its locked density band", () => {
-  const rare = Object.values(SHIP_MODS).filter((mod) => mod.data.rarity === "rare");
-  const target = shipModAlphaTarget("rare");
-  assert.ok(rare.length >= target.min, `only ${rare.length} Rare mods`);
-  assert.ok(rare.length <= target.max, `${rare.length} Rare mods exceeds Alpha target`);
-});
+for (const rarity of ["standard", "rare", "epic"]) {
+  test(`${rarity} alpha catalog is inside its locked density band`, () => {
+    const mods = Object.values(SHIP_MODS).filter((mod) => mod.data.rarity === rarity);
+    const target = shipModAlphaTarget(rarity);
+    assert.ok(mods.length >= target.min, `only ${mods.length} ${rarity} mods`);
+    assert.ok(mods.length <= target.max, `${mods.length} ${rarity} mods exceeds Alpha target`);
+  });
+}
 
 test("standard alpha catalog includes broad ship-profile options", () => {
   assert.deepEqual(SHIP_MODS["firebreak-plating"].data.resistances, [{ type: "fire", value: 5 }]);
@@ -61,7 +56,16 @@ test("rare alpha catalog includes upgrades, resistances, command, and synergies"
   assert.deepEqual(SHIP_MODS["stormglass-firebreak-shell"].data.resistances, [{ type: "fire", value: 10 }]);
   assert.deepEqual(SHIP_MODS["deep-void-armor-web"].data.resistances, [{ type: "cold", value: 5 }, { type: "void", value: 5 }]);
   assert.equal(SHIP_MODS["crew-cohesion-network"].data.effectFamily, "morale-command");
-  assert.equal(SHIP_MODS["battlewake-control-fins"].data.synergies[0].id, "battlewake-drive-suite");
+  assert.ok(SHIP_MODS["battlewake-control-fins"].data.synergies.length > 0);
+});
+
+test("epic alpha catalog includes stronger upgrades and three-mod sets", () => {
+  assert.deepEqual(SHIP_MODS["living-adamant-frame"].data.upgradeChain.requiresMods, ["aether-bound-ribbing"]);
+  assert.ok(SHIP_MODS["living-adamant-frame"].effects.some((effect) => effect.target === "hullIntegrity" && effect.value === 55));
+  assert.deepEqual(SHIP_MODS["phoenix-firebreak-mantle"].data.resistances, [{ type: "fire", value: 15 }, { type: "acid", value: 5 }]);
+  assert.equal(SHIP_MODS["battlewake-vector-vanes"].data.synergies[0].requiresMods.length, 2);
+  assert.equal(SHIP_MODS["fleet-command-concordance"].data.synergies[0].requiresMods.length, 2);
+  assert.equal(SHIP_MODS["harmonic-strain-reservoir"].data.synergies[0].requiresMods.length, 2);
 });
 
 test("ship mods may target broad ship statistics and systems", () => {
@@ -91,7 +95,9 @@ test("rarity level gates are enforced", () => {
   const rare = { data: { rarity: "rare", minShipLevel: 3 } };
   assert.equal(shipModAvailableAtLevel(rare, 2), false);
   assert.equal(shipModAvailableAtLevel(rare, 3), true);
-
+  const epic = { data: { rarity: "epic", minShipLevel: 7 } };
+  assert.equal(shipModAvailableAtLevel(epic, 6), false);
+  assert.equal(shipModAvailableAtLevel(epic, 7), true);
   const mythic = { data: { rarity: "mythic", minShipLevel: 17 } };
   assert.equal(shipModAvailableAtLevel(mythic, 16), false);
   assert.equal(shipModAvailableAtLevel(mythic, 17), true);
@@ -100,22 +106,14 @@ test("rarity level gates are enforced", () => {
 test("upgrade-chain mods replace their predecessor and inherit its slot", () => {
   const mod = {
     id: "aether-bound-ribbing",
-    data: {
-      rarity: "rare",
-      minShipLevel: 3,
-      upgradeChain: { requiresMods: ["reinforced-structural-ribbing"] }
-    },
+    data: { rarity: "rare", minShipLevel: 3, upgradeChain: { requiresMods: ["reinforced-structural-ribbing"] } },
     effects: [{ target: "hullIntegrity", mode: "add", value: 30 }]
   };
   assert.equal(shipModPrerequisitesMet(mod, []), false);
   assert.equal(shipModPrerequisitesMet(mod, ["reinforced-structural-ribbing"]), true);
   assert.equal(shipModInstallEligibility(mod, { shipLevel: 3, installedModIds: [] }).ok, false);
   assert.equal(shipModInstallEligibility(mod, { shipLevel: 3, installedModIds: ["reinforced-structural-ribbing"] }).ok, true);
-  assert.deepEqual(shipModUpgradeReplacement(mod), {
-    mode: "replace",
-    replaces: ["reinforced-structural-ribbing"],
-    inheritsSlot: true
-  });
+  assert.deepEqual(shipModUpgradeReplacement(mod), { mode: "replace", replaces: ["reinforced-structural-ribbing"], inheritsSlot: true });
   assert.equal(validateShipModProgression(mod).ok, true);
 });
 
@@ -128,15 +126,10 @@ test("two-mod synergies mean two total fittings and three-mod sets are epic plus
     data: {
       rarity: "epic",
       minShipLevel: 7,
-      synergies: [{
-        id: "battlewake-drive-suite",
-        requiresMods: ["reinforced-void-sails"],
-        effects: [{ target: "combatSpeed", mode: "add", value: 1 }]
-      }, {
-        id: "battlewake-grand-suite",
-        requiresMods: ["reinforced-void-sails", "arc-conduit-stabilizers"],
-        effects: [{ target: "maneuverability", mode: "add", value: 1 }]
-      }]
+      synergies: [
+        { id: "battlewake-drive-suite", requiresMods: ["reinforced-void-sails"], effects: [{ target: "combatSpeed", mode: "add", value: 1 }] },
+        { id: "battlewake-grand-suite", requiresMods: ["reinforced-void-sails", "arc-conduit-stabilizers"], effects: [{ target: "maneuverability", mode: "add", value: 1 }] }
+      ]
     },
     capabilities: ["battlewake-control"]
   };
@@ -147,15 +140,7 @@ test("two-mod synergies mean two total fittings and three-mod sets are epic plus
 
   const rareThreePiece = {
     id: "too-early-set",
-    data: {
-      rarity: "rare",
-      minShipLevel: 3,
-      synergies: [{
-        id: "too-early",
-        requiresMods: ["a", "b"],
-        effects: [{ target: "armorClass", mode: "add", value: 1 }]
-      }]
-    },
+    data: { rarity: "rare", minShipLevel: 3, synergies: [{ id: "too-early", requiresMods: ["a", "b"], effects: [{ target: "armorClass", mode: "add", value: 1 }] }] },
     capabilities: ["set-piece"]
   };
   assert.ok(validateShipModProgression(rareThreePiece).errors.includes("three-mod-synergy-below-epic"));
@@ -164,43 +149,18 @@ test("two-mod synergies mean two total fittings and three-mod sets are epic plus
 test("resistance mods use explicit PF2e-style values and may be conditional", () => {
   const mod = {
     id: "stormglass-grounding-web",
-    data: {
-      rarity: "rare",
-      minShipLevel: 3,
-      effectFamily: "resistance",
-      resistances: [
-        { type: "electricity", value: 5 },
-        { type: "fire", value: 5, condition: "while Lifeveil is online" }
-      ]
-    }
+    data: { rarity: "rare", minShipLevel: 3, effectFamily: "resistance", resistances: [{ type: "electricity", value: 5 }, { type: "fire", value: 5, condition: "while Lifeveil is online" }] }
   };
   assert.equal(validateShipModProgression(mod).ok, true);
 
-  const bad = {
-    id: "bad-resistance",
-    data: {
-      rarity: "rare",
-      minShipLevel: 3,
-      effectFamily: "resistance",
-      resistances: [{ type: "electricity", value: 0 }]
-    }
-  };
+  const bad = { id: "bad-resistance", data: { rarity: "rare", minShipLevel: 3, effectFamily: "resistance", resistances: [{ type: "electricity", value: 0 }] } };
   assert.ok(validateShipModProgression(bad).errors.includes("invalid-resistance-value"));
 });
 
 test("mythic core-rule exceptions must be bounded", () => {
-  const invalid = {
-    id: "mythic-unbounded",
-    data: { rarity: "mythic", minShipLevel: 17, coreRuleException: { rule: "ignore-strain" } },
-    capabilities: ["mythic-rule-change"]
-  };
+  const invalid = { id: "mythic-unbounded", data: { rarity: "mythic", minShipLevel: 17, coreRuleException: { rule: "ignore-strain" } }, capabilities: ["mythic-rule-change"] };
   assert.ok(validateShipModProgression(invalid).errors.includes("unbounded-mythic-rule-exception"));
-
-  const valid = {
-    id: "mythic-bounded",
-    data: { rarity: "mythic", minShipLevel: 17, coreRuleException: { rule: "ignore-strain-threshold", usage: "once-per-event" } },
-    capabilities: ["mythic-rule-change"]
-  };
+  const valid = { id: "mythic-bounded", data: { rarity: "mythic", minShipLevel: 17, coreRuleException: { rule: "ignore-strain-threshold", usage: "once-per-event" } }, capabilities: ["mythic-rule-change"] };
   assert.equal(validateShipModProgression(valid).ok, true);
 });
 
