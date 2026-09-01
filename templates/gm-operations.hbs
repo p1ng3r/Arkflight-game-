@@ -22,7 +22,7 @@
 
     <div class="arkflight-gm-context-tabs" aria-label="Context controls">
       {{#if command}}<button type="button" class="active">Overview</button><button type="button" disabled>Alerts</button>{{/if}}
-      {{#if ships}}<button type="button" class="active">Fleet</button><button type="button" disabled>Selected Ship</button>{{/if}}
+      {{#if ships}}<button type="button" class="active">Fleet</button><button type="button">Selected Ship</button>{{/if}}
       {{#if generate}}<button type="button" class="active">Ship Generator</button><button type="button" disabled>Preview</button>{{/if}}
       {{#if operations}}
         <button type="button" class="{{#if operationsActiveTab}}active{{/if}}" data-operations-tab="active">Active</button>
@@ -43,30 +43,115 @@
             <div class="arkflight-gm-metric-row"><span>Active Work Orders</span><strong>{{commandDashboard.world.workOrderCount}}</strong></div>
             {{#if commandDashboard.world.authoritativeCalendarPending}}<p class="arkflight-gm-muted">Calendar formatting and advancement controls will connect in the Time & Work phase.</p>{{/if}}
           </article>
-
           <article class="arkflight-gm-panel arkflight-gm-command-card">
             <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">CURRENT SHIP</div><h2>{{#if commandDashboard.currentShip}}{{commandDashboard.currentShip.name}}{{else}}No Current Ship{{/if}}</h2></div><i class="fa-solid fa-ship"></i></div>
             {{#if commandDashboard.currentShip}}
               <div class="arkflight-gm-metric-row"><span>Status</span><strong>{{commandDashboard.currentShip.status}}</strong></div>
               {{#if commandDashboard.currentShip.level}}<div class="arkflight-gm-metric-row"><span>Level</span><strong>{{commandDashboard.currentShip.level}}</strong></div>{{/if}}
-            {{else}}<p class="arkflight-gm-muted">The dashboard is ready to consume the authoritative player-ship source once that API is exposed.</p>{{/if}}
-            {{#if commandDashboard.hasOtherShips}}
-              <div class="arkflight-gm-compact-ship-list">{{#each commandDashboard.otherShips}}<div class="arkflight-gm-compact-ship-row"><span>{{name}}</span><small>{{status}}{{#if level}} · Lv {{level}}{{/if}}</small></div>{{/each}}</div>
-            {{/if}}
+            {{else}}<p class="arkflight-gm-muted">No Arkflight ship Actor is currently designated.</p>{{/if}}
+            {{#if commandDashboard.hasOtherShips}}<div class="arkflight-gm-compact-ship-list">{{#each commandDashboard.otherShips}}<div class="arkflight-gm-compact-ship-row"><span>{{name}}</span><small>{{status}}{{#if level}} · Lv {{level}}{{/if}}</small></div>{{/each}}</div>{{/if}}
           </article>
-
           <article class="arkflight-gm-panel arkflight-gm-command-card">
             <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">ACTIVE OPERATION</div><h2>{{#if commandDashboard.operation}}{{commandDashboard.operation.type}}{{else}}No Active Operation{{/if}}</h2></div><i class="fa-solid fa-compass"></i></div>
             {{#if commandDashboard.operation}}
               <h3>{{commandDashboard.operation.name}}</h3><p>{{#if commandDashboard.operation.round}}Round {{commandDashboard.operation.round}} · {{/if}}{{commandDashboard.operation.phase}}</p>
               <div class="arkflight-gm-command-actions">{{#if commandDashboard.operation.action}}<button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-play"></i> Resume</button>{{/if}}<button type="button" data-action="open-operations"><i class="fa-solid fa-arrow-right"></i> Operations</button></div>
-            {{else}}<p class="arkflight-gm-muted">Voyage and ship-combat activity will surface here without taking over the entire dashboard.</p>{{/if}}
+            {{else}}<p class="arkflight-gm-muted">No Voyage or Ship Combat is currently active.</p>{{/if}}
           </article>
-
           <article class="arkflight-gm-panel arkflight-gm-command-card">
             <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">ATTENTION</div><h2>Warnings</h2></div><i class="fa-solid fa-triangle-exclamation"></i></div>
             {{#if commandDashboard.hasWarnings}}<div class="arkflight-gm-warning-list">{{#each commandDashboard.warnings}}<div class="arkflight-gm-warning {{severity}}"><strong>{{title}}</strong><span>{{detail}}</span></div>{{/each}}</div>{{else}}<div class="arkflight-gm-clear-state"><i class="fa-solid fa-circle-check"></i><span>No critical or near-term warnings.</span></div>{{/if}}
           </article>
+        </div>
+      {{/if}}
+
+      {{#if ships}}
+        <div class="arkflight-gm-ships-layout">
+          <aside class="arkflight-gm-panel arkflight-gm-ship-roster">
+            <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">FLEET ROSTER</div><h2>Arkflight Ships</h2></div><i class="fa-solid fa-ship"></i></div>
+            <label class="arkflight-gm-search"><i class="fa-solid fa-magnifying-glass"></i><input type="search" placeholder="Search ships…" data-ship-search></label>
+            <select class="arkflight-gm-ship-filter" data-ship-filter>
+              <option value="all">All Ships ({{shipsScreen.counts.all}})</option>
+              <option value="player">Player ({{shipsScreen.counts.player}})</option>
+              <option value="npc">NPC ({{shipsScreen.counts.npc}})</option>
+              <option value="damaged">Damaged ({{shipsScreen.counts.damaged}})</option>
+              <option value="active">Active ({{shipsScreen.counts.active}})</option>
+              <option value="inWork">In Work ({{shipsScreen.counts.inWork}})</option>
+            </select>
+            <div class="arkflight-gm-ship-list">
+              {{#each shipsScreen.rows}}
+                <button type="button" class="arkflight-gm-ship-row {{#if selected}}selected{{/if}}" data-roster-ship-id="{{id}}" data-player="{{player}}" data-npc="{{isNPC}}" data-damaged="{{damaged}}" data-active="{{active}}" data-in-work="{{inWork}}">
+                  <span class="arkflight-gm-ship-row-main"><strong>{{name}}</strong>{{#if current}}<i class="fa-solid fa-star" title="Current Ship"></i>{{/if}}</span>
+                  <small>{{kind}}{{#if level}} · Lv {{level}}{{/if}} · {{status}}</small>
+                </button>
+              {{else}}
+                <div class="arkflight-gm-muted">No Arkflight Vehicle Actors were found.</div>
+              {{/each}}
+            </div>
+          </aside>
+
+          <section class="arkflight-gm-ship-detail">
+            {{#if shipsScreen.selected}}
+              <article class="arkflight-gm-panel arkflight-gm-ship-summary-head">
+                <div>
+                  <div class="arkflight-gm-kicker">SELECTED SHIP</div>
+                  <div class="arkflight-gm-ship-title-line"><h2>{{shipsScreen.selected.name}}</h2>{{#if shipsScreen.selected.current}}<span class="arkflight-gm-current-badge"><i class="fa-solid fa-star"></i> Current</span>{{/if}}</div>
+                  <p>{{shipsScreen.selected.kind}}{{#if shipsScreen.selected.level}} · Level {{shipsScreen.selected.level}}{{/if}} · {{shipsScreen.selected.status}}</p>
+                </div>
+                <div class="arkflight-gm-ship-actions">
+                  <button type="button" data-action="open-ship-sheet"><i class="fa-solid fa-file-lines"></i> Open Sheet</button>
+                  <button type="button" data-action="open-shipwright" {{#unless shipsScreen.selected.canShipwright}}disabled{{/unless}}><i class="fa-solid fa-hammer"></i> Shipwright</button>
+                  {{#unless shipsScreen.selected.current}}<button type="button" data-action="set-current-ship"><i class="fa-solid fa-star"></i> Set Current</button>{{/unless}}
+                  <button type="button" class="arkflight-gm-primary" data-action="ship-launch-voyage" {{#unless shipsScreen.selected.canLaunchVoyage}}disabled{{/unless}}><i class="fa-solid fa-compass"></i> Launch Voyage</button>
+                  <button type="button" data-action="ship-launch-combat" {{#unless shipsScreen.selected.canLaunchCombat}}disabled{{/unless}}><i class="fa-solid fa-burst"></i> Launch Combat</button>
+                </div>
+              </article>
+
+              <div class="arkflight-gm-ship-detail-grid">
+                <article class="arkflight-gm-panel">
+                  <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">READINESS</div><h2>Resources & Crew</h2></div><i class="fa-solid fa-gauge"></i></div>
+                  <div class="arkflight-gm-resource-grid">{{#each shipsScreen.selected.resourcesView}}<div><span>{{name}}</span><strong>{{value}}{{#if hasMax}} / {{max}}{{/if}}</strong></div>{{/each}}</div>
+                  <div class="arkflight-gm-metric-row"><span>Station Crew</span><strong>{{shipsScreen.selected.crewText}}</strong></div>
+                  <div class="arkflight-gm-metric-row"><span>Specialists</span><strong>{{shipsScreen.selected.counts.specialists}}</strong></div>
+                </article>
+
+                <article class="arkflight-gm-panel">
+                  <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">CONFIGURATION</div><h2>Hull & Arkengine</h2></div><i class="fa-solid fa-gears"></i></div>
+                  <div class="arkflight-gm-metric-row"><span>Hull</span><strong>{{shipsScreen.selected.hullName}}</strong></div>
+                  <div class="arkflight-gm-metric-row"><span>Hull Pattern</span><strong>{{shipsScreen.selected.hullPatternName}}</strong></div>
+                  <div class="arkflight-gm-metric-row"><span>Arkengine</span><strong>{{shipsScreen.selected.arkengineName}}</strong></div>
+                  <div class="arkflight-gm-metric-row"><span>Engine Pattern</span><strong>{{shipsScreen.selected.arkenginePatternName}}</strong></div>
+                </article>
+
+                <article class="arkflight-gm-panel">
+                  <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">FITTING</div><h2>Capacity & Equipment</h2></div><i class="fa-solid fa-toolbox"></i></div>
+                  <div class="arkflight-gm-capacity-grid">
+                    <div><span>Rooms</span><strong>{{shipsScreen.selected.capacity.rooms}}</strong></div>
+                    <div><span>Ship Mods</span><strong>{{shipsScreen.selected.capacity.shipMods}}</strong></div>
+                    <div><span>Engine Mods</span><strong>{{shipsScreen.selected.capacity.arkengineMods}}</strong></div>
+                    <div><span>Cargo</span><strong>{{shipsScreen.selected.capacity.cargo}}</strong></div>
+                  </div>
+                  <div class="arkflight-gm-component-counts"><span>{{shipsScreen.selected.counts.rooms}} Rooms</span><span>{{shipsScreen.selected.counts.shipMods}} Ship Mods</span><span>{{shipsScreen.selected.counts.arkengineMods}} Engine Mods</span><span>{{shipsScreen.selected.counts.weapons}} Weapons</span></div>
+                </article>
+
+                <article class="arkflight-gm-panel">
+                  <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">ATTENTION</div><h2>Ship Warnings</h2></div><i class="fa-solid fa-triangle-exclamation"></i></div>
+                  {{#if shipsScreen.selected.hasWarnings}}
+                    <div class="arkflight-gm-warning-list">{{#each shipsScreen.selected.warnings}}<div class="arkflight-gm-warning {{severity}}"><span>{{detail}}</span></div>{{/each}}</div>
+                  {{else}}<div class="arkflight-gm-clear-state"><i class="fa-solid fa-circle-check"></i><span>Configuration valid; no persistent system warnings.</span></div>{{/if}}
+                </article>
+              </div>
+
+              <article class="arkflight-gm-panel arkflight-gm-installed-components">
+                <div class="arkflight-gm-component-column"><div class="arkflight-gm-kicker">ROOMS</div>{{#each shipsScreen.selected.roomNames}}<span>{{this}}</span>{{else}}<small>None installed</small>{{/each}}</div>
+                <div class="arkflight-gm-component-column"><div class="arkflight-gm-kicker">SHIP MODS</div>{{#each shipsScreen.selected.shipModNames}}<span>{{this}}</span>{{else}}<small>None installed</small>{{/each}}</div>
+                <div class="arkflight-gm-component-column"><div class="arkflight-gm-kicker">ARKENGINE MODS</div>{{#each shipsScreen.selected.arkengineModNames}}<span>{{this}}</span>{{else}}<small>None installed</small>{{/each}}</div>
+                <div class="arkflight-gm-component-column"><div class="arkflight-gm-kicker">WEAPONS</div>{{#each shipsScreen.selected.weaponNames}}<span>{{this}}</span>{{else}}<small>None mounted</small>{{/each}}</div>
+              </article>
+            {{else}}
+              <article class="arkflight-gm-panel arkflight-gm-empty-state"><i class="fa-solid fa-ship"></i><h2>No Arkflight ships found</h2><p>Create or register an Arkflight Vehicle Actor to populate the fleet roster.</p></article>
+            {{/if}}
+          </section>
         </div>
       {{/if}}
 
@@ -75,58 +160,20 @@
           {{#if activeEvent}}
             <div class="arkflight-gm-active-voyage-grid">
               <article class="arkflight-gm-panel arkflight-gm-active-voyage-card">
-                <div class="arkflight-gm-card-heading">
-                  <div><div class="arkflight-gm-kicker">ACTIVE VOYAGE</div><h2>{{activeEvent.name}}</h2></div>
-                  <i class="fa-solid fa-compass"></i>
-                </div>
-                <div class="arkflight-gm-metric-row"><span>Progress</span><strong>Round {{activeEvent.round}} / {{activeEvent.totalRounds}}</strong></div>
-                <div class="arkflight-gm-metric-row"><span>Phase</span><strong>{{activeEvent.phase}}</strong></div>
-                <div class="arkflight-gm-metric-row"><span>Momentum</span><strong>{{activeEvent.momentum}}</strong></div>
-                <div class="arkflight-gm-active-tags">
-                  {{#if activeEvent.hasPressure}}
-                    {{#each activeEvent.pressure}}{{#if value}}<span class="arkflight-gm-pressure-tag"><b>{{system}}</b> {{value}}</span>{{/if}}{{/each}}
-                  {{else}}<span class="arkflight-gm-clear-tag"><i class="fa-solid fa-circle-check"></i> No Pressure</span>{{/if}}
-                </div>
-                {{#if activeEvent.hasHazards}}
-                  <div class="arkflight-gm-hazard-row">{{#each activeEvent.hazards}}<span><i class="fa-solid fa-triangle-exclamation"></i> {{name}}</span>{{/each}}</div>
-                {{/if}}
-                <div class="arkflight-gm-active-actions">
-                  <button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-play"></i> Resume Event</button>
-                  <details class="arkflight-gm-manage-menu">
-                    <summary><i class="fa-solid fa-ellipsis"></i> Manage</summary>
-                    <button type="button" data-action="end-voyage"><i class="fa-solid fa-stop"></i> End Voyage</button>
-                  </details>
-                </div>
+                <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">ACTIVE VOYAGE</div><h2>{{activeEvent.name}}</h2></div><i class="fa-solid fa-compass"></i></div>
+                <div class="arkflight-gm-metric-row"><span>Progress</span><strong>Round {{activeEvent.round}} / {{activeEvent.totalRounds}}</strong></div><div class="arkflight-gm-metric-row"><span>Phase</span><strong>{{activeEvent.phase}}</strong></div><div class="arkflight-gm-metric-row"><span>Momentum</span><strong>{{activeEvent.momentum}}</strong></div>
+                <div class="arkflight-gm-active-tags">{{#if activeEvent.hasPressure}}{{#each activeEvent.pressure}}{{#if value}}<span class="arkflight-gm-pressure-tag"><b>{{system}}</b> {{value}}</span>{{/if}}{{/each}}{{else}}<span class="arkflight-gm-clear-tag"><i class="fa-solid fa-circle-check"></i> No Pressure</span>{{/if}}</div>
+                {{#if activeEvent.hasHazards}}<div class="arkflight-gm-hazard-row">{{#each activeEvent.hazards}}<span><i class="fa-solid fa-triangle-exclamation"></i> {{name}}</span>{{/each}}</div>{{/if}}
+                <div class="arkflight-gm-active-actions"><button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-play"></i> Resume Event</button><details class="arkflight-gm-manage-menu"><summary><i class="fa-solid fa-ellipsis"></i> Manage</summary><button type="button" data-action="end-voyage"><i class="fa-solid fa-stop"></i> End Voyage</button></details></div>
               </article>
-
               <article class="arkflight-gm-panel arkflight-gm-active-voyage-card">
-                <div class="arkflight-gm-card-heading">
-                  <div><div class="arkflight-gm-kicker">BOUND SHIP</div><h2>{{activeEvent.shipName}}</h2></div>
-                  <i class="fa-solid fa-ship"></i>
-                </div>
-                <div class="arkflight-gm-metric-row"><span>Status</span><strong>{{activeEvent.shipStatus}}</strong></div>
-                {{#if activeEvent.shipLevel}}<div class="arkflight-gm-metric-row"><span>Level</span><strong>{{activeEvent.shipLevel}}</strong></div>{{/if}}
-                {{#if activeEvent.hasShipResources}}
-                  <div class="arkflight-gm-resource-grid">
-                    {{#each activeEvent.shipResources}}
-                      <div><span>{{name}}</span><strong>{{value}}{{#if hasMax}} / {{max}}{{/if}}</strong></div>
-                    {{/each}}
-                  </div>
-                {{else}}
-                  <p class="arkflight-gm-muted">This Voyage is permanently bound to this ship. Detailed ship resources will populate here from the authoritative ship source.</p>
-                {{/if}}
+                <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">BOUND SHIP</div><h2>{{activeEvent.shipName}}</h2></div><i class="fa-solid fa-ship"></i></div>
+                <div class="arkflight-gm-metric-row"><span>Status</span><strong>{{activeEvent.shipStatus}}</strong></div>{{#if activeEvent.shipLevel}}<div class="arkflight-gm-metric-row"><span>Level</span><strong>{{activeEvent.shipLevel}}</strong></div>{{/if}}
+                {{#if activeEvent.hasShipResources}}<div class="arkflight-gm-resource-grid">{{#each activeEvent.shipResources}}<div><span>{{name}}</span><strong>{{value}}{{#if hasMax}} / {{max}}{{/if}}</strong></div>{{/each}}</div>{{else}}<p class="arkflight-gm-muted">This Voyage is permanently bound to this ship.</p>{{/if}}
               </article>
             </div>
-
-            {{#if queuedVoyageEvent}}
-              <article class="arkflight-gm-panel arkflight-gm-queued-voyage">
-                <div><div class="arkflight-gm-kicker">QUEUED NEXT</div><h3>{{queuedVoyageEvent.title}}</h3><p>Ready for review after the active Voyage ends. It will not launch automatically.</p></div>
-                <button type="button" data-action="clear-queued-voyage"><i class="fa-solid fa-xmark"></i> Clear Queue</button>
-              </article>
-            {{/if}}
-          {{else}}
-            <article class="arkflight-gm-panel arkflight-gm-empty-state"><i class="fa-solid fa-compass"></i><h2>No active Voyage</h2><p>Choose Voyage Events above to select and launch an event.</p></article>
-          {{/if}}
+            {{#if queuedVoyageEvent}}<article class="arkflight-gm-panel arkflight-gm-queued-voyage"><div><div class="arkflight-gm-kicker">QUEUED NEXT</div><h3>{{queuedVoyageEvent.title}}</h3><p>Ready for review after the active Voyage ends. It will not launch automatically.</p></div><button type="button" data-action="clear-queued-voyage"><i class="fa-solid fa-xmark"></i> Clear Queue</button></article>{{/if}}
+          {{else}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><i class="fa-solid fa-compass"></i><h2>No active Voyage</h2><p>Choose Voyage Events above to select and launch an event.</p></article>{{/if}}
           {{#if combatActive}}<article class="arkflight-gm-panel"><h2>Active Ship Combat</h2><p>Combat controls will connect to the authoritative Arkflight combat API.</p></article>{{/if}}
         {{/if}}
 
@@ -135,63 +182,26 @@
             <aside class="arkflight-gm-panel arkflight-gm-voyage-browser">
               <div class="arkflight-gm-card-heading"><div><div class="arkflight-gm-kicker">EVENT LIBRARY</div><h2>Voyage Events</h2></div><i class="fa-solid fa-map"></i></div>
               <label class="arkflight-gm-search"><i class="fa-solid fa-magnifying-glass"></i><input type="search" placeholder="Search events…" data-voyage-search></label>
-              <div class="arkflight-gm-voyage-list">
-                {{#each voyageCatalog}}
-                  <button type="button" class="arkflight-gm-voyage-row {{#if selected}}selected{{/if}}" data-voyage-event-id="{{id}}">
-                    <span class="arkflight-gm-voyage-row-title">{{title}}</span>
-                    <small>{{roundCount}} rounds{{#if planningMinutes}} · {{planningMinutes}}m planning{{/if}}</small>
-                  </button>
-                {{else}}
-                  <div class="arkflight-gm-muted">No authored Voyage events are registered.</div>
-                {{/each}}
-              </div>
+              <div class="arkflight-gm-voyage-list">{{#each voyageCatalog}}<button type="button" class="arkflight-gm-voyage-row {{#if selected}}selected{{/if}}" data-voyage-event-id="{{id}}"><span class="arkflight-gm-voyage-row-title">{{title}}</span><small>{{roundCount}} rounds{{#if planningMinutes}} · {{planningMinutes}}m planning{{/if}}</small></button>{{else}}<div class="arkflight-gm-muted">No authored Voyage events are registered.</div>{{/each}}</div>
             </aside>
-
             <section class="arkflight-gm-panel arkflight-gm-voyage-preview">
               {{#if selectedVoyageEvent}}
-                <div class="arkflight-gm-voyage-hero">
-                  <img src="{{selectedVoyageEvent.image}}" alt="{{selectedVoyageEvent.title}}">
-                  <div class="arkflight-gm-voyage-hero-overlay"><div class="arkflight-gm-kicker">VOYAGE EVENT</div><h2>{{selectedVoyageEvent.title}}</h2></div>
-                </div>
-
-                <div class="arkflight-gm-voyage-meta">
-                  <span><i class="fa-solid fa-layer-group"></i> {{selectedVoyageEvent.roundCount}} rounds</span>
-                  {{#if selectedVoyageEvent.planningMinutes}}<span><i class="fa-solid fa-hourglass-half"></i> {{selectedVoyageEvent.planningMinutes}}m planning</span>{{/if}}
-                </div>
-
+                <div class="arkflight-gm-voyage-hero"><img src="{{selectedVoyageEvent.image}}" alt="{{selectedVoyageEvent.title}}"><div class="arkflight-gm-voyage-hero-overlay"><div class="arkflight-gm-kicker">VOYAGE EVENT</div><h2>{{selectedVoyageEvent.title}}</h2></div></div>
+                <div class="arkflight-gm-voyage-meta"><span><i class="fa-solid fa-layer-group"></i> {{selectedVoyageEvent.roundCount}} rounds</span>{{#if selectedVoyageEvent.planningMinutes}}<span><i class="fa-solid fa-hourglass-half"></i> {{selectedVoyageEvent.planningMinutes}}m planning</span>{{/if}}</div>
                 <div class="arkflight-gm-voyage-copy"><h3>Goal</h3><p>{{selectedVoyageEvent.goal}}</p><h3>Opening</h3><p>{{selectedVoyageEvent.openingVignette}}</p></div>
-
                 {{#if eventActive}}
-                  <div class="arkflight-gm-launch-strip">
-                    <div class="arkflight-gm-queue-copy">
-                      <span>Active Voyage already running</span>
-                      <small>Select another event to queue it for later.</small>
-                    </div>
-                    {{#if canQueueSelectedEvent}}
-                      <button type="button" class="arkflight-gm-primary arkflight-gm-launch-button" data-action="queue-voyage-event"><i class="fa-solid fa-list"></i> {{#if selectedEventQueued}}Queued{{else}}Queue Next{{/if}}</button>
-                    {{else}}
-                      <button type="button" class="arkflight-gm-launch-button" disabled><i class="fa-solid fa-lock"></i> Active Event</button>
-                    {{/if}}
-                  </div>
+                  <div class="arkflight-gm-launch-strip"><div class="arkflight-gm-queue-copy"><span>Active Voyage already running</span><small>Select another event to queue it for later.</small></div>{{#if canQueueSelectedEvent}}<button type="button" class="arkflight-gm-primary arkflight-gm-launch-button" data-action="queue-voyage-event"><i class="fa-solid fa-list"></i> {{#if selectedEventQueued}}Queued{{else}}Queue Next{{/if}}</button>{{else}}<button type="button" class="arkflight-gm-launch-button" disabled><i class="fa-solid fa-lock"></i> Active Event</button>{{/if}}</div>
                   {{#if queuedVoyageEvent}}<div class="arkflight-gm-queue-status"><i class="fa-solid fa-list-check"></i> Queued: {{queuedVoyageEvent.title}}</div>{{/if}}
                 {{else}}
-                  <div class="arkflight-gm-launch-strip">
-                    <label><span>Player Ship</span><select data-voyage-ship>
-                      {{#each voyageShipOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}{{#if level}} · Lv {{level}}{{/if}}</option>{{else}}<option value="">No player ship available</option>{{/each}}
-                    </select></label>
-                    <button type="button" class="arkflight-gm-primary arkflight-gm-launch-button" data-action="launch-voyage-event" {{#unless canLaunchSelectedEvent}}disabled{{/unless}}><i class="fa-solid fa-play"></i> Launch Event</button>
-                  </div>
+                  <div class="arkflight-gm-launch-strip"><label><span>Player Ship</span><select data-voyage-ship>{{#each voyageShipOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}{{#if level}} · Lv {{level}}{{/if}}</option>{{else}}<option value="">No player ship available</option>{{/each}}</select></label><button type="button" class="arkflight-gm-primary arkflight-gm-launch-button" data-action="launch-voyage-event" {{#unless canLaunchSelectedEvent}}disabled{{/unless}}><i class="fa-solid fa-play"></i> Launch Event</button></div>
                   {{#if launchBlockReason}}<div class="arkflight-gm-launch-warning"><i class="fa-solid fa-triangle-exclamation"></i><span>{{launchBlockReason}}</span></div>{{/if}}
                 {{/if}}
-              {{else}}
-                <div class="arkflight-gm-empty-state"><i class="fa-solid fa-map"></i><h2>No event selected</h2></div>
-              {{/if}}
+              {{else}}<div class="arkflight-gm-empty-state"><i class="fa-solid fa-map"></i><h2>No event selected</h2></div>{{/if}}
             </section>
           </div>
         {{/if}}
       {{/if}}
 
-      {{#if ships}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Ships</h2><p>Fleet roster and selected-ship operations are the next ship-facing layer.</p></article>{{/if}}
       {{#if generate}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Generate</h2><p>Configure → Generate Preview → Review/Edit → Commit will live here.</p></article>{{/if}}
       {{#if timeWork}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Time & Work</h2><p>World-time advancement and Work Orders will live here.</p></article>{{/if}}
       {{#if salvage}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><h2>Salvage</h2><p>Personal loot, cargo, and Arkflight salvage will live here.</p></article>{{/if}}
