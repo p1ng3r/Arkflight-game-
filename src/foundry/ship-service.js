@@ -50,8 +50,13 @@ function classificationFor(actor) {
   return { override: normalized, player, isNPC: !player, ownershipPlayer };
 }
 
-function readinessStatus(validation, damage, crew, conditions = []) {
+function readinessStatus(ship, validation, damage, crew, conditions = []) {
   const reasons = [];
+  const commissioned = Boolean(ship?.hull?.chassisId && ship?.arkengine?.chassisId);
+  if (!commissioned) {
+    reasons.push(...validation.errors);
+    return { status: "Commissioning Required", reasons };
+  }
   if (!validation.ok) {
     reasons.push(...validation.errors);
     return { status: "Invalid", reasons };
@@ -83,7 +88,7 @@ function normalizeActor(actor, currentPlayerShipId) {
   const classification = classificationFor(actor);
   const resources = ship.resources ?? {};
   const conditions = ship.conditions ?? [];
-  const readiness = readinessStatus(validation, damage, crew, conditions);
+  const readiness = readinessStatus(ship, validation, damage, crew, conditions);
 
   return {
     id: actor.id,
