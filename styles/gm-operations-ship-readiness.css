@@ -1,0 +1,135 @@
+.arkflight-gm-ship-readiness-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.arkflight-gm-derived-readiness-strip {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.arkflight-gm-derived-readiness-strip > div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid rgba(190, 143, 66, 0.18);
+  border-radius: 4px;
+  background: rgba(8, 13, 18, 0.52);
+}
+
+.arkflight-gm-derived-readiness-strip span {
+  color: #82909a;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.arkflight-gm-derived-readiness-strip strong {
+  color: #e8edf2;
+  font-size: 15px;
+}
+
+.arkflight-gm-readiness-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 14px;
+}
+
+.arkflight-gm-readiness-column {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.arkflight-gm-station-assignment-list,
+.arkflight-gm-condition-detail-list {
+  display: grid;
+  gap: 6px;
+}
+
+.arkflight-gm-station-assignment {
+  display: grid;
+  grid-template-columns: 118px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid rgba(190, 143, 66, 0.16);
+  border-radius: 4px;
+  background: rgba(8, 13, 18, 0.48);
+}
+
+.arkflight-gm-station-assignment span {
+  color: #9aa6ae;
+  font-size: 11px;
+}
+
+.arkflight-gm-station-assignment strong {
+  color: #e5ebef;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arkflight-gm-station-assignment.missing {
+  border-color: rgba(190, 143, 66, 0.34);
+}
+
+.arkflight-gm-station-assignment.missing strong {
+  color: #d5bd8d;
+}
+
+.arkflight-gm-condition-detail {
+  overflow: hidden;
+  border: 1px solid rgba(190, 143, 66, 0.18);
+  border-radius: 4px;
+  background: rgba(8, 13, 18, 0.5);
+}
+
+.arkflight-gm-condition-detail > summary {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.arkflight-gm-condition-detail > summary::-webkit-details-marker { display: none; }
+
+.arkflight-gm-condition-detail > summary span {
+  color: #e7ddca;
+  font-weight: 700;
+}
+
+.arkflight-gm-condition-detail > summary small {
+  color: #87959f;
+}
+
+.arkflight-gm-condition-detail.severity-2,
+.arkflight-gm-condition-detail.severity-3 {
+  border-color: rgba(172, 74, 64, 0.45);
+}
+
+.arkflight-gm-condition-detail-body {
+  display: grid;
+  gap: 8px;
+  padding: 9px 10px 10px;
+  border-top: 1px solid rgba(190, 143, 66, 0.14);
+  background: rgba(3, 7, 10, 0.36);
+}
+
+.arkflight-gm-condition-detail-body > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.arkflight-gm-condition-detail-body > div span { color: #7f8c95; }
+.arkflight-gm-condition-detail-body > div strong { color: #c9b17e; text-align: right; }
+.arkflight-gm-condition-detail-body p { margin: 0; color: #b7c0c6; line-height: 1.4; }
+
+@media (max-width: 980px) {
+  .arkflight-gm-derived-readiness-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .arkflight-gm-readiness-columns { grid-template-columns: 1fr; }
+}
