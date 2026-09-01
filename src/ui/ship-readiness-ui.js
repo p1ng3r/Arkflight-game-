@@ -1,4 +1,5 @@
 const GM_OPERATIONS_ID = "arkflight-gm-operations";
+const PF2E_CREW_TYPES = new Set(["character", "npc"]);
 
 function titleCase(value) {
   return String(value ?? "")
@@ -12,6 +13,11 @@ function actorName(actorId) {
   return game.actors?.get(actorId)?.name ?? `Unknown Actor (${actorId})`;
 }
 
+function actorPortrait(actorId) {
+  if (!actorId) return null;
+  return game.actors?.get(actorId)?.img ?? null;
+}
+
 function stationRows(entry) {
   const stations = entry?.ship?.crew?.stations ?? {};
   const preferredOrder = ["captain", "engineer", "navigator", "watchmaster", "veilwarden"];
@@ -21,6 +27,7 @@ function stationRows(entry) {
     label: titleCase(key),
     actorId: stations[key] ?? null,
     name: actorName(stations[key]),
+    portrait: actorPortrait(stations[key]),
     assigned: Boolean(stations[key])
   }));
 }
@@ -68,46 +75,88 @@ function crewCandidates(entry, station) {
   const usedElsewhere = new Set(Object.entries(stations)
     .filter(([stationId, actorId]) => stationId !== station.id && actorId)
     .map(([, actorId]) => actorId));
+
   return (game.actors?.contents ?? [])
-    .filter((actor) => actor.type !== "vehicle")
+    .filter((actor) => PF2E_CREW_TYPES.has(actor.type))
     .map((actor) => ({
       id: actor.id,
       name: actor.name ?? actor.id,
       type: titleCase(actor.type),
+      playerOwned: Boolean(actor.hasPlayerOwner),
       unavailable: usedElsewhere.has(actor.id)
     }))
-    .sort((a, b) => Number(a.unavailable) - Number(b.unavailable) || a.name.localeCompare(b.name));
+    .sort((a, b) => Number(b.playerOwned) - Number(a.playerOwned) || Number(a.unavailable) - Number(b.unavailable) || a.name.localeCompare(b.name));
+}
+
+function appendCandidateGroup(select, label, candidates, currentActorId) {
+  const group = document.createElement("optgroup");
+  group.label = label;
+  for (const candidate of candidates) {
+    const option = document.createElement("option");
+    option.value = candidate.id;
+    option.textContent = `${candidate.name} · ${candidate.type}${candidate.unavailable ? " · Assigned Elsewhere" : ""}`;
+    option.selected = candidate.id === currentActorId;
+    option.disabled = candidate.unavailable && candidate.id !== currentActorId;
+    option.dataset.crewName = candidate.name.toLowerCase();
+    option.dataset.crewType = candidate.type.toLowerCase();
+    group.append(option);
+  }
+  if (group.children.length) select.append(group);
+}
+
+function installCrewPickerSearch(dialog) {
+  const root = dialog.element;
+  const input = root?.querySelector("[data-permanent-crew-search]");
+  const select = root?.querySelector("[data-permanent-crew-picker]");
+  if (!input || !select) return;
+  input.addEventListener("input", () => {
+    const query = input.value.trim().toLowerCase();
+    for (const group of select.querySelectorAll("optgroup")) {
+      let visible = 0;
+      for (const option of group.querySelectorAll("option")) {
+        const matches = !query || option.dataset.crewName?.includes(query) || option.dataset.crewType?.includes(query);
+        option.hidden = !matches;
+        if (matches) visible += 1;
+      }
+      group.hidden = visible === 0;
+    }
+  });
 }
 
 function choosePermanentCrew(entry, station) {
   return new Promise((resolve) => {
     const DialogV2 = foundry.applications.api.DialogV2;
     const candidates = crewCandidates(entry, station);
+    const playerCrew = candidates.filter((candidate) => candidate.playerOwned);
+    const npcCrew = candidates.filter((candidate) => !candidate.playerOwned);
     const content = document.createElement("div");
     content.className = "arkflight-gm-crew-picker";
+
     const intro = document.createElement("p");
     intro.textContent = `Set the permanent ${station.label} for ${entry.name}. One officer may hold only one permanent station on this ship. Voyage Planning may still assign a different officer temporarily for an event.`;
+
+    const search = document.createElement("input");
+    search.type = "search";
+    search.placeholder = "Search PF2e characters and NPCs…";
+    search.dataset.permanentCrewSearch = "true";
+
     const label = document.createElement("label");
     const span = document.createElement("span");
     span.textContent = "Permanent Officer";
     const select = document.createElement("select");
     select.dataset.permanentCrewPicker = "true";
+
     const none = document.createElement("option");
     none.value = "";
     none.textContent = "Unassigned";
     select.append(none);
-    for (const candidate of candidates) {
-      const option = document.createElement("option");
-      option.value = candidate.id;
-      option.textContent = `${candidate.name} · ${candidate.type}${candidate.unavailable ? " · Assigned Elsewhere" : ""}`;
-      option.selected = candidate.id === station.actorId;
-      option.disabled = candidate.unavailable && candidate.id !== station.actorId;
-      select.append(option);
-    }
-    label.append(span, select);
-    content.append(intro, label);
+    appendCandidateGroup(select, "Player Characters", playerCrew, station.actorId);
+    appendCandidateGroup(select, "NPC Officers", npcCrew, station.actorId);
 
-    new DialogV2({
+    label.append(span, select);
+    content.append(intro, search, label);
+
+    const dialog = new DialogV2({
       window: { title: `Permanent Crew — ${station.label}` },
       content: content.outerHTML,
       buttons: [
@@ -117,12 +166,22 @@ function choosePermanentCrew(entry, station) {
           label: "Save Assignment",
           icon: "fa-solid fa-user-check",
           default: true,
-          callback: (_event, button, dialog) => resolve(dialog.element?.querySelector("[data-permanent-crew-picker]")?.value ?? "")
+          callback: (_event, button, dialogApp) => resolve(dialogApp.element?.querySelector("[data-permanent-crew-picker]")?.value ?? "")
         }
       ],
       close: () => resolve(null)
-    }).render({ force: true });
+    });
+    dialog.render({ force: true });
+    setTimeout(() => installCrewPickerSearch(dialog), 0);
   });
+}
+
+function officerGeneratorAPI() {
+  const api = game.arkflight?.crewGenerator ?? game.arkflight?.crew?.generator ?? null;
+  if (typeof api?.openForStation === "function") return { available: true, open: (entry, station) => api.openForStation({ shipActorId: entry.id, stationId: station.id }) };
+  if (typeof api?.open === "function") return { available: true, open: (entry, station) => api.open({ shipActorId: entry.id, stationId: station.id }) };
+  if (typeof api?.createOfficer === "function") return { available: true, open: (entry, station) => api.createOfficer({ shipActorId: entry.id, stationId: station.id }) };
+  return { available: false, open: null };
 }
 
 function addStatusReasons(root, entry) {
@@ -158,6 +217,7 @@ function buildReadinessPanel(entry, app) {
   const stations = stationRows(entry);
   const stats = derivedRows(entry);
   const issues = [...conditionRows(entry), ...damagedSystemRows(entry)];
+  const generator = officerGeneratorAPI();
   const wrapper = document.createElement("section");
   wrapper.className = "arkflight-gm-panel arkflight-gm-ship-readiness-detail";
   wrapper.dataset.shipReadinessDetail = entry.id;
@@ -191,15 +251,30 @@ function buildReadinessPanel(entry, app) {
   crewSection.append(note);
   const crewList = document.createElement("div");
   crewList.className = "arkflight-gm-station-assignment-list";
+
   for (const station of stations) {
     const row = document.createElement("div");
     row.className = `arkflight-gm-station-assignment ${station.assigned ? "assigned" : "missing"}`;
+
+    const portrait = document.createElement("div");
+    portrait.className = "arkflight-gm-officer-portrait";
+    if (station.portrait) {
+      const img = document.createElement("img");
+      img.src = station.portrait;
+      img.alt = station.name;
+      portrait.append(img);
+    } else {
+      portrait.innerHTML = '<i class="fa-solid fa-user-slash"></i>';
+    }
+
     const identity = document.createElement("div");
+    identity.className = "arkflight-gm-station-identity";
     const stationLabel = document.createElement("span");
     stationLabel.textContent = station.label;
     const officer = document.createElement("strong");
     officer.textContent = station.name;
     identity.append(stationLabel, officer);
+
     const actions = document.createElement("div");
     actions.className = "arkflight-gm-station-actions";
     if (station.actorId) {
@@ -211,6 +286,7 @@ function buildReadinessPanel(entry, app) {
       sheetButton.addEventListener("click", () => game.actors?.get(station.actorId)?.sheet?.render({ force: true }));
       actions.append(sheetButton);
     }
+
     const assignButton = document.createElement("button");
     assignButton.type = "button";
     assignButton.className = "arkflight-gm-icon-button";
@@ -227,9 +303,32 @@ function buildReadinessPanel(entry, app) {
       }
     });
     actions.append(assignButton);
-    row.append(identity, actions);
+
+    if (entry.isNPC) {
+      const createButton = document.createElement("button");
+      createButton.type = "button";
+      createButton.className = "arkflight-gm-icon-button arkflight-gm-create-officer";
+      createButton.disabled = !generator.available;
+      createButton.title = generator.available
+        ? `Create a PF2e ${station.label} officer for this NPC ship`
+        : "Arkflight crew generator is not available yet.";
+      createButton.innerHTML = '<i class="fa-solid fa-user-gear"></i>';
+      if (generator.available) {
+        createButton.addEventListener("click", async () => {
+          try {
+            await generator.open(entry, station);
+          } catch (error) {
+            ui.notifications?.error(error?.message ?? "Unable to open Arkflight officer generator.");
+          }
+        });
+      }
+      actions.append(createButton);
+    }
+
+    row.append(portrait, identity, actions);
     crewList.append(row);
   }
+
   if (!stations.length) crewList.innerHTML = `<div class="arkflight-gm-muted">No station assignments are defined on this ship.</div>`;
   crewSection.append(crewList);
 
