@@ -2,6 +2,7 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { createShip } from "../ship/ship-schema.js";
 import { deriveShip, syncResourceMaxima } from "../ship/derive-ship.js";
 import { validateShip } from "../ship/validate-ship.js";
+import { ayerstoneShipDoctrine, combineDoctrine } from "./ayerstone-ship-doctrine.js";
 
 const STATIONS = Object.freeze(["captain", "engineer", "navigator", "watchmaster", "veilwarden"]);
 const BASE_OFFSETS = Object.freeze({ captain: 0, engineer: -1, navigator: -1, watchmaster: -2, veilwarden: -1 });
@@ -23,7 +24,6 @@ export const ENEMY_ARCHETYPES = Object.freeze({
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 function tierForLevel(level) { return clamp(Math.ceil(clamp(Number(level) || 1, 1, 20) / 4), 1, 5); }
 function randomInt(rng, min, max) { return min + Math.floor(rng() * (max - min + 1)); }
-function choose(rng, rows) { return rows.length ? rows[Math.floor(rng() * rows.length)] : null; }
 function intersects(values = [], tags = []) { return tags.some((tag) => values.includes(tag)); }
 function componentTags(component) { return [...(component?.tags ?? []), ...(component?.traits ?? [])]; }
 function sizeFits(size, maxSize) { return (SIZE_RANK[size] ?? 99) <= (SIZE_RANK[maxSize] ?? 0); }
@@ -158,14 +158,7 @@ function officerLevels(level, archetype) {
 
 function officerDrafts(config, archetype) {
   const levels = officerLevels(config.level, archetype);
-  return STATIONS.map((station) => ({
-    station,
-    level: levels[station],
-    role: station,
-    name: null,
-    actorData: null,
-    generationState: "pf2e-benchmark-pending"
-  }));
+  return STATIONS.map((station) => ({ station, level: levels[station], role: station, name: null, actorData: null, generationState: "pf2e-benchmark-pending" }));
 }
 
 function ordinaryCrew(derived, difficulty) {
@@ -178,29 +171,19 @@ function ordinaryCrew(derived, difficulty) {
 function cargoPreview(rng, derived, archetype, config) {
   const capacity = Number(derived.stats?.cargoCapacity ?? 0);
   const fill = config.lootProfile === "poor" ? 0.2 : config.lootProfile === "rich" ? 0.62 : config.lootProfile === "treasure" ? 0.82 : 0.42;
-  return {
-    used: clamp(Math.round(capacity * (fill + (rng() - 0.5) * 0.12)), 0, capacity),
-    capacity,
-    notes: `${archetype.label} cargo manifest preview`
-  };
+  return { used: clamp(Math.round(capacity * (fill + (rng() - 0.5) * 0.12)), 0, capacity), capacity, notes: `${archetype.label} cargo manifest preview` };
 }
 
 function lootPreview(config, archetype) {
-  return {
-    profile: config.lootProfile,
-    personal: [],
-    shipCargo: [],
-    salvage: [],
-    pf2eBudget: null,
-    state: "budget-rules-pending",
-    note: `${archetype.label} loot sections reserved; PF2e treasure-by-level budget will be applied before Commit is enabled.`
-  };
+  return { profile: config.lootProfile, personal: [], shipCargo: [], salvage: [], pf2eBudget: null, state: "budget-rules-pending", note: `${archetype.label} loot sections reserved; PF2e treasure-by-level budget will be applied before Commit is enabled.` };
 }
 
 export function generateEnemyShipPreview(input = {}) {
   const config = normalizedConfig(input);
   const rng = seededRng(config.seed);
-  const archetype = ENEMY_ARCHETYPES[config.archetypeId];
+  const baseArchetype = ENEMY_ARCHETYPES[config.archetypeId];
+  const doctrine = ayerstoneShipDoctrine(config.faction);
+  const archetype = combineDoctrine(baseArchetype, doctrine);
   const hull = pickHull(rng, config.level, archetype);
   if (!hull) throw new Error("No legal Arkflight hull is available for this generator configuration.");
   const engine = pickEngine(rng, hull, archetype);
@@ -208,7 +191,7 @@ export function generateEnemyShipPreview(input = {}) {
 
   let ship = createShip({
     level: config.level,
-    identity: { name: `${archetype.label} Vessel`, owner: config.faction, notes: config.theme },
+    identity: { name: `${baseArchetype.label} Vessel`, owner: config.faction, notes: config.theme },
     traits: [...new Set(["generated-enemy", config.archetypeId, ...archetype.tags])],
     hull: { chassisId: hull.id, patternId: "standard" },
     arkengine: { chassisId: engine.id, patternId: "standard", modIds: [] },
@@ -220,33 +203,24 @@ export function generateEnemyShipPreview(input = {}) {
   });
 
   let derived = deriveShip(ship, SHIP_CATALOGS);
-  const cargo = cargoPreview(rng, derived, archetype, config);
+  const cargo = cargoPreview(rng, derived, baseArchetype, config);
   ship = { ...ship, cargo: { used: cargo.used, notes: cargo.notes } };
   ship = syncResourceMaxima(ship, derived);
   derived = deriveShip(ship, SHIP_CATALOGS);
   const validation = validateShip(ship, SHIP_CATALOGS);
 
   return Object.freeze({
-    version: 1,
+    version: 2,
     config: Object.freeze(config),
-    archetype: Object.freeze({ id: config.archetypeId, label: archetype.label }),
+    archetype: Object.freeze({ id: config.archetypeId, label: baseArchetype.label }),
+    doctrine: Object.freeze({ source: doctrine.source, preferredArchetypes: doctrine.preferredArchetypes ?? [], shipTags: doctrine.shipTags ?? [] }),
     ship: Object.freeze(ship),
     derived,
     validation,
-    crew: Object.freeze({
-      officers: Object.freeze(officerDrafts(config, archetype)),
-      ordinaryCrew: ordinaryCrew(derived, config.difficulty),
-      minimum: derived.stats?.crew?.minimum ?? 0,
-      recommended: derived.stats?.crew?.recommended ?? 0,
-      maximum: derived.stats?.crew?.maximum ?? 0
-    }),
+    crew: Object.freeze({ officers: Object.freeze(officerDrafts(config, archetype)), ordinaryCrew: ordinaryCrew(derived, config.difficulty), minimum: derived.stats?.crew?.minimum ?? 0, recommended: derived.stats?.crew?.recommended ?? 0, maximum: derived.stats?.crew?.maximum ?? 0 }),
     cargo: Object.freeze(cargo),
-    loot: Object.freeze(lootPreview(config, archetype)),
+    loot: Object.freeze(lootPreview(config, baseArchetype)),
     canCommit: false,
-    blockers: Object.freeze([
-      ...(validation.ok ? [] : validation.errors),
-      "PF2e officer benchmark generation is not implemented yet.",
-      "PF2e treasure-by-level budgeting is not implemented yet."
-    ])
+    blockers: Object.freeze([...(validation.ok ? [] : validation.errors), "PF2e officer benchmark generation is not implemented yet.", "PF2e treasure-by-level budgeting is not implemented yet."])
   });
 }
