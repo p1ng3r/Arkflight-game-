@@ -116,13 +116,14 @@ export async function resolveGeneratedPreviewPF2e(preview) {
   const personalReserved = money(officerResolution.personal.reduce((sum,row) => sum + Number(row.budgetReservedGp ?? 0), 0));
   const cargoValue = money(cargo.reduce((sum,row) => sum + Number(row.gp ?? 0), 0));
   const salvageValue = money(salvage.reduce((sum,row) => sum + Number(row.budgetGp ?? 0), 0));
+  const totalReserved = money(personalReserved + cargoValue + salvageValue);
   const loot = Object.freeze({
     ...preview.loot,
     economicCeiling:Object.freeze({ basis:"party-level", level:budget.level, gpBudget:budget.gp, rewardWeight:budget.rewardWeight, source:budget.source, state:"resolved" }),
     personal:officerResolution.personal,
     shipCargo:cargo,
     salvage,
-    accounting:Object.freeze({ ceilingGp:budget.gp, personalReservedGp:personalReserved, personalUnallocatedGp:officerResolution.unallocated, cargoGp:cargoValue, salvageGp:salvageValue, totalReservedGp:money(personalReserved+cargoValue+salvageValue) }),
+    accounting:Object.freeze({ ceilingGp:budget.gp, personalReservedGp:personalReserved, personalUnallocatedGp:officerResolution.unallocated, cargoGp:cargoValue, salvageGp:salvageValue, totalReservedGp:totalReserved, totalGp:totalReserved }),
     state:"resolved"
   });
   return Object.freeze({
