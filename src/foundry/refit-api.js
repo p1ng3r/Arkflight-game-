@@ -8,6 +8,8 @@ import {
 } from "../ship/refit-economy.js";
 import { REFIT_COMPONENT_FAMILIES, grantSalvageParts, salvageParts } from "../ship/refit-state.js";
 import { SHIP_CATALOGS } from "../content/index.js";
+import { REFIT_JOB_TYPES } from "../ship/refit-rules.js";
+import { findAvailableRefitSocketAssignment, validateRefitSocketAssignment } from "../ship/refit-sockets.js";
 import {
   queueInstallDraft,
   queueBuildJob,
@@ -29,6 +31,41 @@ async function persistShip(actor, ship) { await actor.update({ [`flags.${MODULE_
 async function persistResult(actor, result) { if (result?.ok && result.ship) await persistShip(actor, result.ship); return result; }
 function targetForRefit(actor) { return requireRefitAuthority(requireShipActor(actor)); }
 
+function replaceWorkOrder(ship, job) {
+  return {
+    ...ship,
+    refit: {
+      ...ship.refit,
+      workOrders: (ship.refit?.workOrders ?? []).map((entry) => entry.id === job.id ? job : entry)
+    }
+  };
+}
+
+function repairInstallSocketBeforeStart(ship, jobId) {
+  const job = ship?.refit?.workOrders?.find((entry) => entry.id === jobId);
+  if (!job || job.type !== REFIT_JOB_TYPES.INSTALL) return { ok: true, ship, job, repaired: false };
+
+  const current = validateRefitSocketAssignment(ship, SHIP_CATALOGS, {
+    family: job.componentFamily,
+    componentId: job.componentId,
+    socketIndices: job.socketIndices
+  });
+  if (current.ok) return { ok: true, ship, job, repaired: false };
+
+  const available = findAvailableRefitSocketAssignment(ship, SHIP_CATALOGS, {
+    family: job.componentFamily,
+    componentId: job.componentId
+  });
+  if (!available.ok) {
+    const blockedJob = { ...job, result: { ...(job.result ?? {}), blockedReason: available.reason ?? current.reason ?? "no-legal-socket" } };
+    return { ok: false, reason: blockedJob.result.blockedReason, ship: replaceWorkOrder(ship, blockedJob), job: blockedJob, blocked: true };
+  }
+
+  const repairedJob = { ...job, socketIndices: [...available.socketIndices], result: { ...(job.result ?? {}) } };
+  delete repairedJob.result.blockedReason;
+  return { ok: true, ship: replaceWorkOrder(ship, repairedJob), job: repairedJob, repaired: true };
+}
+
 Hooks.once("init", () => {
   if (!game.arkflight) return;
   game.arkflight.refit = Object.freeze({
@@ -49,7 +86,16 @@ Hooks.once("init", () => {
     async queueBuild(actor, family, componentId, options = {}) { const target = targetForRefit(actor); return persistResult(target, queueBuildJob(shipPayload(target), family, componentId, SHIP_CATALOGS, options)); },
     async queueRemove(actor, family, componentId, options = {}) { const target = targetForRefit(actor); return persistResult(target, queueRemoveJob(shipPayload(target), family, componentId, SHIP_CATALOGS, options)); },
     async queueRepair(actor, options = {}) { const target = targetForRefit(actor); return persistResult(target, queueRepairJob(shipPayload(target), options)); },
-    async startWork(actor, jobId, options = {}) { const target = targetForRefit(actor); return persistResult(target, startRefitJob(shipPayload(target), jobId, options)); },
+    async startWork(actor, jobId, options = {}) {
+      const target = targetForRefit(actor);
+      const repaired = repairInstallSocketBeforeStart(shipPayload(target), jobId);
+      if (!repaired.ok) {
+        if (repaired.ship) await persistShip(target, repaired.ship);
+        return repaired;
+      }
+      const result = startRefitJob(repaired.ship, jobId, options);
+      return persistResult(target, result);
+    },
     async completeWork(actor, jobId, options = {}) { const target = targetForRefit(actor); return persistResult(target, completeRefitJob(shipPayload(target), jobId, SHIP_CATALOGS, options)); },
     async resolveCrewConcurrency(actor, keepJobId) { requireGM(); const target = requireShipActor(actor); return persistResult(target, resolveCrewWorkConcurrency(shipPayload(target), keepJobId)); }
   });
