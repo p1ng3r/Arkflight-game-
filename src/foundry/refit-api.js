@@ -1,12 +1,17 @@
 import {
   acquireIntactComponent,
   availableRefitInventory,
+  breakdownIntactComponent,
+  breakdownComponentQuote,
   buildComponentFromBlueprint,
   buildComponentQuote,
   knownBlueprintEntries,
-  learnBlueprint
+  learnBlueprint,
+  refitComponentEconomyQuote,
+  resaleComponentQuote
 } from "../ship/refit-economy.js";
 import { REFIT_COMPONENT_FAMILIES, grantSalvageParts, salvageParts } from "../ship/refit-state.js";
+import { AETHER_SCRAP_GP_VALUE, REFIT_VALUE_RATES } from "../ship/refit-value.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { REFIT_JOB_TYPES } from "../ship/refit-rules.js";
 import { findAvailableRefitSocketAssignment, validateRefitSocketAssignment } from "../ship/refit-sockets.js";
@@ -70,13 +75,23 @@ Hooks.once("init", () => {
   if (!game.arkflight) return;
   game.arkflight.refit = Object.freeze({
     families: REFIT_COMPONENT_FAMILIES,
+    economy: Object.freeze({
+      aetherScrapGpValue: AETHER_SCRAP_GP_VALUE,
+      rates: REFIT_VALUE_RATES
+    }),
+    getAetherScrap(actor) { return salvageParts(shipPayload(requireShipActor(actor))); },
     getSalvageParts(actor) { return salvageParts(shipPayload(requireShipActor(actor))); },
     getInventory(actor) { return availableRefitInventory(shipPayload(requireShipActor(actor))); },
     getBlueprints(actor, family) { return knownBlueprintEntries(shipPayload(requireShipActor(actor)), family); },
     getWorkOrders(actor) { return Object.freeze([...(shipPayload(requireShipActor(actor))?.refit?.workOrders ?? [])]); },
+    quoteEconomy(family, componentId) { return refitComponentEconomyQuote(family, componentId); },
     quoteBuild(actor, family, componentId, quantity = 1) { return buildComponentQuote(shipPayload(requireShipActor(actor)), family, componentId, quantity); },
+    quoteBreakdown(actor, family, componentId, quantity = 1) { return breakdownComponentQuote(shipPayload(requireShipActor(actor)), family, componentId, quantity); },
+    quoteResale(actor, family, componentId, quantity = 1) { return resaleComponentQuote(shipPayload(requireShipActor(actor)), family, componentId, quantity); },
 
+    async grantAetherScrap(actor, amount) { requireGM(); const target = requireShipActor(actor); const ship = grantSalvageParts(shipPayload(target), amount); await persistShip(target, ship); return Object.freeze({ ok: true, amount: Math.max(0, Math.trunc(Number(amount) || 0)), total: salvageParts(ship), ship }); },
     async grantSalvageParts(actor, amount) { requireGM(); const target = requireShipActor(actor); const ship = grantSalvageParts(shipPayload(target), amount); await persistShip(target, ship); return Object.freeze({ ok: true, amount: Math.max(0, Math.trunc(Number(amount) || 0)), total: salvageParts(ship), ship }); },
+    async breakdownComponent(actor, family, componentId, quantity = 1) { const target = targetForRefit(actor); return persistResult(target, breakdownIntactComponent(shipPayload(target), family, componentId, quantity)); },
     async learnBlueprint(actor, family, componentId) { requireGM(); const target = requireShipActor(actor); return persistResult(target, learnBlueprint(shipPayload(target), family, componentId)); },
     async acquireComponent(actor, family, componentId, quantity = 1) { requireGM(); const target = requireShipActor(actor); return persistResult(target, acquireIntactComponent(shipPayload(target), family, componentId, quantity)); },
     async buildFromBlueprint(actor, family, componentId, quantity = 1) { const target = targetForRefit(actor); return persistResult(target, buildComponentFromBlueprint(shipPayload(target), family, componentId, quantity)); },
