@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ARKENGINE_MODS } from "../src/content/arkengine-mods.js";
+import { ARKENGINE_MODS } from "../src/content/arkengine-mod-catalog.js";
 import {
   ARKENGINE_MOD_RARITIES,
   ARKENGINE_MOD_RARITY_RULES,
@@ -30,14 +30,16 @@ test("Arkengine Mod Alpha density targets are locked", () => {
   assert.deepEqual(arkengineModAlphaTarget("mythic"), { min: 4, max: 5 });
 });
 
-test("baseline Standard Arkengine Mod catalog is inside its locked Alpha band", () => {
-  const standard = Object.values(ARKENGINE_MODS).filter((mod) => mod.data.rarity === "standard");
-  const target = arkengineModAlphaTarget("standard");
-  assert.ok(standard.length >= target.min, `only ${standard.length} Standard Arkengine Mods`);
-  assert.ok(standard.length <= target.max, `${standard.length} Standard Arkengine Mods exceeds Alpha target`);
-});
+for (const rarity of ["standard", "rare"]) {
+  test(`${rarity} Arkengine Mod catalog is inside its locked Alpha band`, () => {
+    const mods = Object.values(ARKENGINE_MODS).filter((mod) => mod.data.rarity === rarity);
+    const target = arkengineModAlphaTarget(rarity);
+    assert.ok(mods.length >= target.min, `only ${mods.length} ${rarity} Arkengine Mods`);
+    assert.ok(mods.length <= target.max, `${mods.length} ${rarity} Arkengine Mods exceeds Alpha target`);
+  });
+}
 
-test("every baseline Arkengine Mod has a valid rarity and real mechanical purpose", () => {
+test("every current Arkengine Mod has a valid rarity and real mechanical purpose", () => {
   for (const mod of Object.values(ARKENGINE_MODS)) {
     const result = validateArkengineModProgression(mod);
     assert.equal(result.ok, true, `${mod.id}: ${result.errors.join(", ")}`);
@@ -56,6 +58,16 @@ test("Arkengine Mod identity remains engine-linked", () => {
 test("fuel remains authored hooks rather than a mandatory subsystem", () => {
   assert.deepEqual(ARKENGINE_MODS["fuel-matrix-efficiency"].data.fuelHooks, [{ kind: "fuel-efficiency" }]);
   assert.deepEqual(ARKENGINE_MODS["refined-fuel-siphons"].data.fuelHooks, [{ kind: "fuel-capacity", value: 1 }]);
+  assert.deepEqual(ARKENGINE_MODS["refined-fuel-matrix"].data.fuelHooks, [{ kind: "fuel-efficiency", value: 2 }]);
+  assert.deepEqual(ARKENGINE_MODS["deep-reserve-fuel-siphons"].data.fuelHooks, [{ kind: "fuel-capacity", value: 2 }, { kind: "reserve-fuel-access", value: 1 }]);
+});
+
+test("Rare Arkengine band includes direct upgrades and cross-family synergies", () => {
+  assert.deepEqual(ARKENGINE_MODS["pressure-lattice-governor"].data.upgradeChain.requiresArkengineMods, ["pressure-lattice-tuning"]);
+  assert.deepEqual(ARKENGINE_MODS["precision-hard-burn-governor"].data.upgradeChain.requiresArkengineMods, ["hard-burn-governor"]);
+  assert.equal(ARKENGINE_MODS["stormwake-twin-injectors"].data.synergies[0].requiresShipMods[0], "stormproof-void-sails");
+  assert.equal(ARKENGINE_MODS["prismatic-lifeveil-feed"].data.synergies[0].requiresShipMods[0], "veil-harmonic-capacitors");
+  assert.equal(ARKENGINE_MODS["silent-hushglass-shroud"].data.synergies[0].requiresShipMods[0], "occult-signal-refractors");
 });
 
 test("Arkengine upgrade chains replace predecessors and inherit their slot", () => {
