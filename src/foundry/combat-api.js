@@ -5,6 +5,8 @@ import {
   persistentStrainPatch,
   resetCombatRound
 } from "../combat/index.js";
+import { SHIP_CATALOGS } from "../content/index.js";
+import { validateShip } from "../ship/validate-ship.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_SETTING = "activeCombatState";
@@ -43,6 +45,27 @@ async function activeShip() {
   return resolveShip(uuid).catch(() => null);
 }
 
+function launchBlockers(actor) {
+  const blockers = [];
+  const ship = shipPayload(actor);
+  if (!ship) return [`${actor?.name ?? "Selected Actor"} is not an Arkflight ship.`];
+
+  const commissioned = Boolean(ship.hull?.chassisId && ship.arkengine?.chassisId);
+  if (!commissioned) blockers.push("Ship commissioning is incomplete.");
+
+  const validation = validateShip(ship, SHIP_CATALOGS);
+  if (!validation.ok) blockers.push(...validation.errors);
+
+  const serviceEntry = game.arkflight?.ships?.get?.(actor.id) ?? null;
+  if (serviceEntry && !serviceEntry.player) blockers.push("Only a player-classified Arkflight ship may be launched from GM Operations.");
+  if (serviceEntry && !serviceEntry.crew?.ready) blockers.push(`${serviceEntry.crew?.assigned ?? 0}/${serviceEntry.crew?.total ?? 0} permanent stations assigned.`);
+
+  if (game.arkflight?.controller?.state?.eventId) blockers.push("A Voyage Event is already active.");
+  if (activeState()) blockers.push("Arkflight ship combat is already active.");
+
+  return [...new Set(blockers)];
+}
+
 async function persistState(state) {
   await game.settings.set(MODULE_ID, STATE_SETTING, state);
   return state;
@@ -78,12 +101,17 @@ Hooks.once("ready", () => {
     actions: COMBAT_ACTIONS,
     get state() { return activeState(); },
     async ship() { return activeShip(); },
+    launchBlockers(reference) {
+      const actor = reference?.documentName === "Actor" ? reference : game.actors?.get(reference) ?? null;
+      return actor ? launchBlockers(actor) : ["Choose an Arkflight ship Actor for combat."];
+    },
 
     async start(reference, options = {}) {
       requireGM();
       const actor = await resolveShip(reference);
+      const blockers = launchBlockers(actor);
+      if (blockers.length) throw new Error(`Cannot launch Arkflight ship combat: ${blockers.join(" ")}`);
       const ship = shipPayload(actor);
-      if (!ship) throw new Error(`${actor.name} is not an Arkflight ship.`);
       const state = createCombatState(ship, options);
       await game.settings.set(MODULE_ID, SHIP_SETTING, actor.uuid);
       await persistState(state);
