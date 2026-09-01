@@ -88,8 +88,19 @@ function numeric(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
-function displayValue(value) {
-  if (value && typeof value === "object") return value;
+function resistanceText(profile = {}) {
+  const entries = Object.entries(profile?.values ?? {});
+  if (!entries.length) return "None";
+  return entries.map(([type, value]) => `${titleCase(type)} ${value}`).join(" · ");
+}
+
+function displayValue(key, value) {
+  if (key === "resistances") return resistanceText(value);
+  if (key === "crew") {
+    return `${numeric(value?.minimum)} / ${numeric(value?.recommended)} / ${numeric(value?.maximum)}`;
+  }
+  if (key === "weaponMounts") return `${Object.keys(value ?? {}).length} mount types`;
+  if (value && typeof value === "object") return "Structured";
   return numeric(value);
 }
 
@@ -150,7 +161,7 @@ function statRows(stats, presentation) {
       key: definition.path,
       label: definition.label,
       category: definition.category,
-      value: displayValue(stats?.[definition.path])
+      value: displayValue(definition.path, stats?.[definition.path])
     })));
 }
 
@@ -164,11 +175,13 @@ export function buildStatPresentation(stats = {}) {
 
 export function buildInstalledFittings(ship = {}, catalogs = {}) {
   const hull = resolveCatalog(catalogs.hulls, ship.hull?.chassisId);
+  const hullPattern = resolveCatalog(catalogs.hullPatterns, ship.hull?.patternId);
   const arkengine = resolveCatalog(catalogs.arkengines, ship.arkengine?.chassisId);
+  const arkenginePattern = resolveCatalog(catalogs.arkenginePatterns, ship.arkengine?.patternId);
   const talentIds = ship.progression?.talentIds ?? [];
   return Object.freeze({
-    hull: hull ? fitting(catalogs.hulls, hull.id, "hull", { patternId: ship.hull?.patternId ?? null }) : null,
-    arkengine: arkengine ? fitting(catalogs.arkengines, arkengine.id, "arkengine", { patternId: ship.arkengine?.patternId ?? null }) : null,
+    hull: hull ? fitting(catalogs.hulls, hull.id, "hull", { patternId: ship.hull?.patternId ?? null, patternName: hullPattern?.name ?? "No pattern" }) : null,
+    arkengine: arkengine ? fitting(catalogs.arkengines, arkengine.id, "arkengine", { patternId: ship.arkengine?.patternId ?? null, patternName: arkenginePattern?.name ?? "No pattern" }) : null,
     rooms: Object.freeze((ship.rooms ?? []).map((id) => fitting(catalogs.rooms, id, "room"))),
     shipMods: Object.freeze((ship.shipMods ?? []).map((id) => fitting(catalogs.shipMods, id, "shipMod"))),
     arkengineMods: Object.freeze((ship.arkengine?.modIds ?? []).map((id) => fitting(catalogs.arkengineMods, id, "arkengineMod"))),
@@ -194,8 +207,8 @@ export function buildRefitInventory(ship = {}, catalogs = {}) {
     arkengineMods: Object.freeze(physicalArkengineMods),
     workOrders: Object.freeze((ship.refit?.workOrders ?? []).map((entry) => Object.freeze({ ...entry }))),
     blueprints: Object.freeze({
-      shipMods: Object.freeze([...(ship.blueprints?.shipModIds ?? [])]),
-      arkengineMods: Object.freeze([...(ship.blueprints?.arkengineModIds ?? [])])
+      shipMods: Object.freeze((ship.blueprints?.shipModIds ?? []).map((id) => fitting(catalogs.shipMods, id, "shipMod"))),
+      arkengineMods: Object.freeze((ship.blueprints?.arkengineModIds ?? []).map((id) => fitting(catalogs.arkengineMods, id, "arkengineMod")))
     })
   });
 }
