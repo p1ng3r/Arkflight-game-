@@ -14,7 +14,7 @@
 6. Supplies, Cargo & Salvage Economy ✅
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
-9. Ship Mod Catalog Completion — rarity, density, chains, and synergies locked
+9. Ship Mod Catalog Completion — rarity, density, chains, synergies, replacement, and resistance model locked
 10. Arkengine Mod Catalog Completion
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
@@ -81,7 +81,7 @@ The Alpha catalog should be distributed roughly evenly across Hull, Arkengine, R
 Mods may also directly improve or alter other ship statistics and operations, including:
 
 - Armor Class,
-- resistances,
+- PF2e-style resistances,
 - maneuverability,
 - combat/travel speed,
 - Cargo Capacity,
@@ -95,33 +95,43 @@ Mods may also directly improve or alter other ship statistics and operations, in
 
 No single Area should dominate the catalog simply because it has more obvious numerical targets.
 
-### Upgrade chains
+### Upgrade chains replace their predecessor
 
-A Mod concept may have higher-rarity descendants. Some descendants may require one or more lower-rarity Mods already installed before they can be fitted.
+A Mod concept may have higher-rarity descendants. Some descendants require a lower-rarity Mod already installed before they can be fitted.
 
-Examples of the intended model:
+For a direct upgrade chain:
 
-- a Standard structural reinforcement may be the prerequisite for a Rare or Epic frame upgrade;
-- a later chain member may preserve the earlier fitting as part of the completed system rather than pretending it never existed;
-- standalone Mods do not need a predecessor merely because they are high rarity.
+1. the predecessor must be installed to qualify for the upgrade;
+2. completing the upgrade **replaces** the predecessor rather than leaving both installed;
+3. the new fitting inherits the predecessor's installation slot instead of consuming an additional slot;
+4. the predecessor is consumed into the upgraded fitting rather than returned as a second usable physical component;
+5. the upgraded Mod must add meaningful new mechanics as well as any stronger numbers.
 
-A higher-rarity descendant must gain a distinct mechanical identity in addition to stronger numbers. A chain that only changes `+20 Hull` into a larger Hull number is insufficient.
-
-The shared Mod authority validates authored predecessor requirements and exposes install eligibility from ship level plus installed Mod IDs.
+Standalone Mods remain independently installable and do not need artificial predecessors.
 
 ### Synergy bonuses
 
 Specific installed Mod combinations may unlock additional bonuses at higher levels.
 
-Synergy is authored, not inferred from matching tags. A synergy must name the required installed Mods and provide a real additional benefit such as:
+- Most synergies should be **2-Mod combinations**.
+- A smaller number of stronger **3-Mod set bonuses** are allowed beginning at **Epic** rarity.
+- Synergies do not replace their component Mods; each unrelated synergy component retains its own normal slot.
+- Synergy is authored, not inferred from matching tags.
 
-- an extra derived-stat effect,
-- a capability,
-- a rule modifier,
-- an action/Mastery interaction,
-- an Event/Combat benefit.
+A synergy must name its required Mods and provide a real additional benefit such as an extra derived-stat effect, capability, rule modifier, action/Mastery interaction, or Event/Combat benefit.
 
-This allows build-focused combinations without requiring every Mod to belong to a rigid upgrade tree. Synergies should reward deliberate combinations rather than create mandatory hidden tax chains.
+This supports deliberate build crafting without turning every Mod into a mandatory hidden tax chain.
+
+### Resistance model
+
+Resistance-granting Mods use explicit PF2e-style resistance values, such as:
+
+- Resistance 5 fire,
+- Resistance 10 electricity,
+- Resistance 5 physical,
+- conditional resistance such as Resistance 5 fire while Lifeveil is online.
+
+Higher-rarity Mods may grant stronger values, multiple resistance types, or conditional/context-sensitive resistance. Resistance values must always be explicit positive numbers and the affected damage type must be authored.
 
 ### Mythic rule exceptions
 
@@ -146,7 +156,8 @@ A Ship Mod is invalid if it provides none of the following:
 - Mastery/action/combat-action/passive unlock,
 - explicit rule modifier,
 - Event/Combat interaction,
-- authored synergy effect.
+- authored synergy effect,
+- explicit resistance.
 
 Description-only Mods are not valid Alpha catalog entries.
 
