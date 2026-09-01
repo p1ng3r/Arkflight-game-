@@ -12,6 +12,8 @@ import { installMasteryOpportunityUI } from "../ui/mastery-opportunity-ui.js";
 import { installOpeningScreenUI } from "../ui/opening-screen-ui.js";
 
 const MODULE_ID = "arkflight-game";
+const ACTIVE_EVENT_SETTING = "activeEventPlanning";
+const SOCKET = `module.${MODULE_ID}`;
 let controller = null;
 let board = null;
 let rewardSummary = null;
@@ -82,6 +84,19 @@ function openGMOperations(options = {}) {
   return ensureGMOperations()?.open(options) ?? null;
 }
 
+async function bindActiveEventToShip(shipActorId) {
+  if (!controller?.state?.eventId) throw new Error("No Arkflight Event is active to bind.");
+  if (!shipActorId) throw new Error("Voyage launch requires an Arkflight ship.");
+  const actor = game.actors.get(shipActorId);
+  if (!actor) throw new Error("The selected Arkflight ship Actor could not be found.");
+  const next = { ...controller.state, shipActorId };
+  controller.state = next;
+  await game.settings.set(MODULE_ID, ACTIVE_EVENT_SETTING, next);
+  game.socket.emit(SOCKET, { type: "snapshot", state: next, sourceUserId: game.user.id });
+  controller.onStateChange?.(next);
+  return next;
+}
+
 function showActiveEventChoice() {
   const DialogV2 = foundry.applications.api.DialogV2;
   return new DialogV2({
@@ -148,9 +163,10 @@ Hooks.once("init", () => {
     openBoard() { renderBoard(); return board; },
     openRewards() { showRewardSummary(); return rewardSummary; },
     openGMOperations,
-    async openEvent(eventId = "glassback-cinderwake") {
+    async openEvent(eventId = "glassback-cinderwake", options = {}) {
       if (!controller) throw new Error("Arkflight is not ready yet.");
       await controller.openEvent(eventId);
+      if (options.shipActorId) await bindActiveEventToShip(options.shipActorId);
       renderBoard();
       return controller.state;
     },
