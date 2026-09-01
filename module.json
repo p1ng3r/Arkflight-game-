@@ -93,6 +93,7 @@
     "src/ui/shipwright-inspector-readability-ui.js",
     "src/ui/enemy-generator-ui.js",
     "src/ui/gm-operations-voyage-ui.js",
+    "src/ui/gm-operations-combat-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
   ]
 }
