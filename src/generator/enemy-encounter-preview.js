@@ -5,7 +5,8 @@ import { generateAyerstoneShipName } from "./ayerstone-ship-names.js";
 import { generatePF2eCrewTemplates } from "./pf2e-crew-template-generator.js";
 import { selectCrewTemplates } from "./crew-template-selection.js";
 import { applySignatureGearPolicy } from "./officer-signature-gear-policy.js";
-import { ARKFLIGHT_SALVAGE_VALUE_POLICY } from "./arkflight-salvage-value-policy.js";
+import { buildOfficerWeaponIntent } from "./officer-weapon-pools.js";
+import { ARKFLIGHT_SALVAGE_VALUE_POLICY, rollAndAnnotateSalvage } from "./arkflight-salvage-value-policy.js";
 
 const LOOT_SPLITS = Object.freeze({
   poor: Object.freeze({ personal: 0.25, cargo: 0.40, salvage: 0.35, multiplier: 0.55 }),
@@ -25,7 +26,25 @@ function automaticRewardWeight(config) {
   return "standard";
 }
 
-function lootContract(basePreview, input) {
+function resolvedRewardWeight(basePreview, input) {
+  const automatic = automaticRewardWeight(basePreview.config);
+  const requested = String(input.rewardWeight ?? "auto");
+  return ENEMY_REWARD_WEIGHTS.includes(requested) ? requested : automatic;
+}
+
+function salvageEntries(basePreview) {
+  const ship = basePreview.ship;
+  const seed = basePreview.config.seed;
+  const rows = [
+    { type: "arkengine", id: ship.arkengine?.chassisId, name: ship.arkengine?.chassisId },
+    ...(ship.weapons ?? []).map((entry, index) => ({ type: "weapon", id: `${entry.id}:${entry.arc}:${index}`, componentId: entry.id, name: entry.id, arc: entry.arc })),
+    ...(ship.shipMods ?? []).map((id, index) => ({ type: "ship-mod", id: `${id}:${index}`, componentId: id, name: id })),
+    ...(ship.arkengine?.modIds ?? []).map((id, index) => ({ type: "arkengine-mod", id: `${id}:${index}`, componentId: id, name: id }))
+  ].filter((entry) => entry.id);
+  return Object.freeze(rows.map((entry, index) => rollAndAnnotateSalvage(entry, { seed: `${seed}:salvage:${entry.type}:${entry.id}:${index}` })));
+}
+
+function lootContract(basePreview, input, salvage) {
   const partyLevel = clampLevel(input.partyLevel ?? basePreview.config.level);
   const split = LOOT_SPLITS[basePreview.config.lootProfile] ?? LOOT_SPLITS.standard;
   const automatic = automaticRewardWeight(basePreview.config);
@@ -40,18 +59,13 @@ function lootContract(basePreview, input) {
     automaticRewardWeight: automatic,
     economicCeiling: Object.freeze({ basis: "party-level", level: partyLevel, gpBudget: null, state: "pf2e-treasure-table-value-pending" }),
     distribution: Object.freeze({ personal: split.personal, shipCargo: split.cargo, arkflightSalvage: split.salvage, profileMultiplier: split.multiplier }),
-    signatureGearPolicy: Object.freeze({
-      inventoryMode: "embedded-pf2e-item",
-      combatMathMode: "npc-benchmark-independent",
-      recoveryMode: "reward-system-decision",
-      autoAward: false
-    }),
+    signatureGearPolicy: Object.freeze({ inventoryMode: "embedded-pf2e-item", combatMathMode: "npc-benchmark-independent", recoveryMode: "reward-system-decision", autoAward: false }),
     salvageValuePolicy: ARKFLIGHT_SALVAGE_VALUE_POLICY,
     personal: Object.freeze([]),
     shipCargo: Object.freeze([]),
-    salvage: Object.freeze([]),
+    salvage,
     state: "policy-complete-values-pending",
-    note: `Party level ${partyLevel} sets the PF2e economic ceiling. Reward weight is ${rewardWeight}${ENEMY_REWARD_WEIGHTS.includes(requested) ? " (GM override)" : " (automatic)"}. Usable or resellable Arkflight salvage consumes treasure value; damaged or ruined narrative salvage does not.`
+    note: `Party level ${partyLevel} sets the PF2e economic ceiling. Reward weight is ${rewardWeight}${ENEMY_REWARD_WEIGHTS.includes(requested) ? " (GM override)" : " (automatic)"}. Arkflight component condition is rolled Intact, Damaged, or Ruined. Intact value-bearing salvage consumes treasure budget; damaged or ruined narrative salvage does not.`
   });
 }
 
@@ -64,17 +78,21 @@ function doctrineWarning(base) {
 export function generateEnemyEncounterPreview(input = {}) {
   const base = generateEnemyShipPreview(input);
   const partyLevel = clampLevel(input.partyLevel ?? base.config.level);
+  const rewardWeight = resolvedRewardWeight(base, input);
   const shipName = generateAyerstoneShipName({ faction: base.config.faction, archetypeLabel: base.archetype.label, seed: base.config.seed, override: input.shipName });
   const ship = Object.freeze({ ...base.ship, identity: Object.freeze({ ...(base.ship.identity ?? {}), name: shipName }) });
   const officers = base.crew.officers.map((officer) => {
     const seed = `${base.config.seed}:${officer.station}`;
     const draft = generatePF2eOfficerActorDraft({ station: officer.station, level: officer.level, quality: base.config.difficulty, faction: base.config.faction, theme: base.config.theme, seed });
     const affiliated = applyCrewAffiliation(draft, { faction: base.config.faction, seed });
-    return applySignatureGearPolicy(affiliated);
+    const policyOfficer = applySignatureGearPolicy(affiliated);
+    const weaponIntent = buildOfficerWeaponIntent({ faction: base.config.faction, station: officer.station, level: officer.level, quality: base.config.difficulty, rewardWeight });
+    return Object.freeze({ ...policyOfficer, weaponIntent });
   });
   const rawTemplates = generatePF2eCrewTemplates({ shipLevel: base.config.level, quality: base.config.difficulty, faction: base.config.faction });
   const templates = selectCrewTemplates(rawTemplates, { archetypeId: base.config.archetypeId, ship, doctrine: base.doctrine, selectedTypes: input.crewTemplateTypes });
-  const loot = lootContract(base, { ...input, partyLevel });
+  const salvage = salvageEntries({ ...base, ship });
+  const loot = lootContract(base, { ...input, partyLevel }, salvage);
   const blockers = [
     ...(base.validation.ok ? [] : base.validation.errors),
     "PF2e signature gear compendium resolution and embedding is not implemented yet.",
@@ -83,7 +101,7 @@ export function generateEnemyEncounterPreview(input = {}) {
 
   return Object.freeze({
     ...base,
-    version: 8,
+    version: 9,
     ship,
     config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto", shipName, crewTemplateTypes: templates.filter((template) => template.selected).map((template) => template.type) }),
     doctrine: Object.freeze({ ...base.doctrine, warning: doctrineWarning(base) }),
