@@ -1,5 +1,5 @@
 import { generateEnemyShipPreview } from "./enemy-ship-generator.js";
-import { generatePF2eOfficerBenchmark } from "./pf2e-officer-generator.js";
+import { generatePF2eOfficerActorDraft } from "./pf2e-officer-actor-draft.js";
 
 const LOOT_SPLITS = Object.freeze({
   poor: Object.freeze({ personal: 0.25, cargo: 0.40, salvage: 0.35, multiplier: 0.55 }),
@@ -40,21 +40,24 @@ function lootContract(basePreview, input) {
 export function generateEnemyEncounterPreview(input = {}) {
   const base = generateEnemyShipPreview(input);
   const partyLevel = clampLevel(input.partyLevel ?? base.config.level);
-  const officers = base.crew.officers.map((officer) => generatePF2eOfficerBenchmark({
+  const officers = base.crew.officers.map((officer) => generatePF2eOfficerActorDraft({
     station: officer.station,
     level: officer.level,
-    quality: base.config.difficulty
+    quality: base.config.difficulty,
+    faction: base.config.faction,
+    theme: base.config.theme,
+    seed: `${base.config.seed}:${officer.station}`
   }));
   const loot = lootContract(base, { ...input, partyLevel });
   const blockers = [
     ...(base.validation.ok ? [] : base.validation.errors),
-    "PF2e Actor document serialization and generated officer names/items are not implemented yet.",
+    "PF2e signature weapon/armor compendium resolution is not implemented yet.",
     "PF2e treasure table GP ceiling and concrete item selection are not implemented yet."
   ];
 
   return Object.freeze({
     ...base,
-    version: 2,
+    version: 3,
     config: Object.freeze({ ...base.config, partyLevel }),
     crew: Object.freeze({ ...base.crew, officers: Object.freeze(officers) }),
     loot,
