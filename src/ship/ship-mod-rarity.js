@@ -42,6 +42,28 @@ export const SHIP_MOD_EFFECT_FAMILIES = Object.freeze([
   "cross-system"
 ]);
 
+export const SHIP_MOD_SYNERGY_RULES = Object.freeze({
+  normalRequiredMods: 2,
+  epicPlusSetBonusRequiredMods: 3,
+  threeModSetBonusMinRarity: "epic"
+});
+
+export const SHIP_RESISTANCE_TYPES = Object.freeze([
+  "acid",
+  "cold",
+  "electricity",
+  "fire",
+  "force",
+  "mental",
+  "poison",
+  "sonic",
+  "physical",
+  "bludgeoning",
+  "piercing",
+  "slashing",
+  "void"
+]);
+
 export function shipModRarityRule(rarity = "standard") {
   return SHIP_MOD_RARITY_RULES[rarity] ?? SHIP_MOD_RARITY_RULES.standard;
 }
@@ -73,6 +95,17 @@ export function shipModPrerequisitesMet(mod, installedModIds = []) {
   return shipModRequiredPredecessors(mod).every((id) => installed.has(id));
 }
 
+export function shipModUpgradeReplacement(mod) {
+  const requiresMods = shipModRequiredPredecessors(mod);
+  const replacementMode = mod?.data?.upgradeChain?.mode ?? (requiresMods.length ? "replace" : "standalone");
+  const replaces = Object.freeze([...(mod?.data?.upgradeChain?.replaces ?? requiresMods)]);
+  return Object.freeze({
+    mode: replacementMode,
+    replaces,
+    inheritsSlot: replacementMode === "replace" && replaces.length > 0
+  });
+}
+
 export function activeShipModSynergies(mod, installedModIds = []) {
   const installed = new Set(installedModIds ?? []);
   return Object.freeze((mod?.data?.synergies ?? []).filter((synergy) =>
@@ -102,8 +135,19 @@ function hasMechanicalPurpose(mod) {
       entry?.masteries?.length || entry?.combatActions?.length || entry?.passiveEffects?.length
     ) ||
     mod?.data?.ruleModifiers?.length ||
-    mod?.data?.synergies?.length
+    mod?.data?.synergies?.length ||
+    mod?.data?.resistances?.length
   );
+}
+
+function validateResistance(resistance, errors) {
+  if (!resistance || !SHIP_RESISTANCE_TYPES.includes(resistance.type)) {
+    errors.push("invalid-resistance-type");
+    return;
+  }
+  const value = Number(resistance.value);
+  if (!Number.isInteger(value) || value <= 0) errors.push("invalid-resistance-value");
+  if (resistance.condition != null && typeof resistance.condition !== "string") errors.push("invalid-resistance-condition");
 }
 
 export function validateShipModProgression(mod) {
@@ -130,15 +174,25 @@ export function validateShipModProgression(mod) {
     if (new Set(requiresMods).size !== requiresMods.length) errors.push("duplicate-upgrade-requirement");
   }
 
+  if (requiresMods.length) {
+    const upgrade = shipModUpgradeReplacement(mod);
+    if (upgrade.mode !== "replace") errors.push("upgrade-chain-must-replace");
+    if (!upgrade.inheritsSlot) errors.push("upgrade-chain-must-inherit-slot");
+    if (!upgrade.replaces.length) errors.push("upgrade-chain-missing-replacement");
+  }
+
   const synergies = mod?.data?.synergies ?? [];
   if (!Array.isArray(synergies)) errors.push("invalid-synergies");
   else {
     for (const synergy of synergies) {
-      if (!synergy?.id || !Array.isArray(synergy?.requiresMods) || synergy.requiresMods.length === 0) {
+      if (!synergy?.id || !Array.isArray(synergy?.requiresMods) || synergy.requiresMods.length < 2) {
         errors.push("invalid-synergy-definition");
         continue;
       }
       if (synergy.requiresMods.includes(mod?.id)) errors.push("self-requiring-synergy");
+      if (synergy.requiresMods.length >= 3 && SHIP_MOD_RARITIES.includes(rarity) && SHIP_MOD_RARITY_RULES[rarity].rank < SHIP_MOD_RARITY_RULES.epic.rank) {
+        errors.push("three-mod-synergy-below-epic");
+      }
       const hasBonus = Boolean(
         synergy?.effects?.length ||
         synergy?.capabilities?.length ||
@@ -148,6 +202,10 @@ export function validateShipModProgression(mod) {
       if (!hasBonus) errors.push("synergy-without-bonus");
     }
   }
+
+  const resistances = mod?.data?.resistances ?? [];
+  if (!Array.isArray(resistances)) errors.push("invalid-resistances");
+  else for (const resistance of resistances) validateResistance(resistance, errors);
 
   if (rarity === "mythic" && mod?.data?.coreRuleException) {
     const exception = mod.data.coreRuleException;
