@@ -20,6 +20,8 @@ function catalogEntry(mod) {
     ...mod,
     data: Object.freeze({
       ...(mod.data ?? {}),
+      legacyRarity: mod.data?.rarity ?? "epic",
+      rarity: "legacy",
       catalogStatus: "legacy-compat"
     })
   });
