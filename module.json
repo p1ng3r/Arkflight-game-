@@ -33,7 +33,8 @@
     "styles/opening-screen-icon-assets.css",
     "styles/gm-operations.css",
     "styles/gm-operations-active.css",
-    "styles/gm-operations-ships.css"
+    "styles/gm-operations-ships.css",
+    "styles/gm-operations-ship-status.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
