@@ -14,29 +14,49 @@ async function ensureRootFolder() {
   return Folder.create({ name: ROOT_NAME, type: "Actor", sorting: "a" });
 }
 
-export async function ensureShipPackageFolder(shipName) {
+export async function findShipPackageFolder(shipName) {
+  const cleanName = String(shipName ?? "Unnamed Vessel").trim() || "Unnamed Vessel";
+  const root = actorFolders().find((folder) => !folder.folder && folder.name === ROOT_NAME) ?? null;
+  if (!root) return null;
+  return childFolder(root.id, cleanName);
+}
+
+export async function ensureShipPackageFolder(shipName, { conflict = "error" } = {}) {
   if (!game.user?.isGM) throw new Error("Only the GM may create Arkflight ship folders.");
   const cleanName = String(shipName ?? "Unnamed Vessel").trim() || "Unnamed Vessel";
   const root = await ensureRootFolder();
   const existing = childFolder(root.id, cleanName);
-  if (existing) return existing;
+  if (existing) {
+    if (conflict === "reuse") return existing;
+    const error = new Error(`An Arkflight ship package named ${cleanName} already exists. Choose Rename or Reuse Existing.`);
+    error.code = "ARKFLIGHT_SHIP_PACKAGE_CONFLICT";
+    error.folderId = existing.id;
+    throw error;
+  }
   return Folder.create({ name: cleanName, type: "Actor", folder: root.id, sorting: "a" });
 }
 
-async function placeActor(actorData, shipName) {
-  const folder = await ensureShipPackageFolder(shipName);
+export async function placeGeneratedShip(actorData, shipName, options = {}) {
+  const folder = await ensureShipPackageFolder(shipName, options);
   return Actor.create({ ...structuredClone(actorData), folder: folder.id }, { renderSheet: false });
 }
 
-export async function placeGeneratedShip(actorData, shipName) { return placeActor(actorData, shipName); }
-export async function placeGeneratedOfficer(actorData, shipName) { return placeActor(actorData, shipName); }
-export async function placeGeneratedCrewTemplate(actorData, shipName) { return placeActor(actorData, shipName); }
+export async function placeGeneratedOfficer(actorData, shipName, options = {}) {
+  const folder = await ensureShipPackageFolder(shipName, options);
+  return Actor.create({ ...structuredClone(actorData), folder: folder.id }, { renderSheet: false });
+}
+
+export async function placeGeneratedCrewTemplate(actorData, shipName, options = {}) {
+  const folder = await ensureShipPackageFolder(shipName, options);
+  return Actor.create({ ...structuredClone(actorData), folder: folder.id }, { renderSheet: false });
+}
 
 export function installGeneratedCrewFolderAPI() {
   Hooks.once("init", () => {
     game.arkflight ??= {};
     game.arkflight.generatedShipFolders = {
       rootName: ROOT_NAME,
+      findShipPackageFolder,
       ensureShipPackageFolder,
       placeGeneratedShip,
       placeGeneratedOfficer,
