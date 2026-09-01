@@ -3,6 +3,7 @@ import { generatePF2eOfficerActorDraft } from "./pf2e-officer-actor-draft.js";
 import { applyCrewAffiliation } from "./ayerstone-crew-affiliation.js";
 import { generateAyerstoneShipName } from "./ayerstone-ship-names.js";
 import { generatePF2eCrewTemplates } from "./pf2e-crew-template-generator.js";
+import { selectedCrewTemplateTypes } from "./crew-template-selection.js";
 
 const LOOT_SPLITS = Object.freeze({
   poor: Object.freeze({ personal: 0.25, cargo: 0.40, salvage: 0.35, multiplier: 0.55 }),
@@ -59,7 +60,9 @@ export function generateEnemyEncounterPreview(input = {}) {
     const draft = generatePF2eOfficerActorDraft({ station: officer.station, level: officer.level, quality: base.config.difficulty, faction: base.config.faction, theme: base.config.theme, seed });
     return applyCrewAffiliation(draft, { faction: base.config.faction, seed });
   });
-  const templates = generatePF2eCrewTemplates({ shipLevel: base.config.level, quality: base.config.difficulty, faction: base.config.faction });
+  const allTemplates = generatePF2eCrewTemplates({ shipLevel: base.config.level, quality: base.config.difficulty, faction: base.config.faction });
+  const selectedTypes = selectedCrewTemplateTypes({ ...base, ship }, input.crewTemplateTypes);
+  const templates = allTemplates.map((template) => Object.freeze({ ...template, selected: selectedTypes.includes(template.type) }));
   const loot = lootContract(base, { ...input, partyLevel });
   const blockers = [
     ...(base.validation.ok ? [] : base.validation.errors),
@@ -69,11 +72,11 @@ export function generateEnemyEncounterPreview(input = {}) {
 
   return Object.freeze({
     ...base,
-    version: 6,
+    version: 7,
     ship,
-    config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto", shipName }),
+    config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto", shipName, crewTemplateTypes: selectedTypes }),
     doctrine: Object.freeze({ ...base.doctrine, warning: doctrineWarning(base) }),
-    crew: Object.freeze({ ...base.crew, officers: Object.freeze(officers), templates: Object.freeze(templates) }),
+    crew: Object.freeze({ ...base.crew, officers: Object.freeze(officers), templates: Object.freeze(templates), selectedTemplateTypes: selectedTypes }),
     loot,
     canCommit: blockers.length === 0,
     blockers: Object.freeze(blockers)
