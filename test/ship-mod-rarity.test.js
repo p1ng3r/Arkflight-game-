@@ -34,6 +34,21 @@ test("alpha catalog density targets are locked", () => {
   assert.deepEqual(shipModAlphaTarget("mythic"), { min: 8, max: 9 });
 });
 
+test("standard alpha catalog is inside its locked density band", () => {
+  const standard = Object.values(SHIP_MODS).filter((mod) => mod.data.rarity === "standard");
+  const target = shipModAlphaTarget("standard");
+  assert.ok(standard.length >= target.min, `only ${standard.length} Standard mods`);
+  assert.ok(standard.length <= target.max, `${standard.length} Standard mods exceeds Alpha target`);
+});
+
+test("standard alpha catalog includes broad ship-profile options", () => {
+  assert.deepEqual(SHIP_MODS["firebreak-plating"].data.resistances, [{ type: "fire", value: 5 }]);
+  assert.deepEqual(SHIP_MODS["stormgrounding-mesh"].data.resistances, [{ type: "electricity", value: 5 }]);
+  assert.ok(SHIP_MODS["trim-sail-regulators"].effects.some((effect) => effect.target === "combatSpeed" && effect.value === 1));
+  assert.equal(SHIP_MODS["crew-muster-bell-network"].data.effectFamily, "morale-command");
+  assert.equal(SHIP_MODS["veil-warded-bulkheads"].data.effectFamily, "lifeveil");
+});
+
 test("ship mods may target broad ship statistics and systems", () => {
   for (const family of ["armor-class", "resistance", "maneuverability", "speed", "cargo", "detection", "cross-system"]) {
     assert.ok(SHIP_MOD_EFFECT_FAMILIES.includes(family));
