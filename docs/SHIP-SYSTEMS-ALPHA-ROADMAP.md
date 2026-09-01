@@ -13,7 +13,7 @@
 5. Morale ✅
 6. Supplies, Cargo & Salvage Economy ✅
 7. Crew & Stations ✅
-8. Rooms & Weapons Completion
+8. Rooms & Weapons Completion ✅
 9. Ship Mod Catalog Completion
 10. Arkengine Mod Catalog Completion
 11. Canonical Derived Stat Registry
@@ -248,3 +248,51 @@ Each canonical Arkflight station has one primary officer assignment:
 Stations may be empty. An empty station's normal station actions are unavailable unless a specific rule, Talent, Mod, specialist, Event, or other authored effect explicitly authorizes a substitute or untrained operator.
 
 The same staffing authority must be consumed by the Ship Sheet, Event Manager, Ship Combat, and future GM-generated enemy crews.
+
+## Part 8 — Rooms & Weapons Completion
+
+### Rooms require real gameplay purpose
+
+Every installed Room must provide at least one explicit gameplay role. Recognized purpose families are:
+
+- capacity/storage,
+- crew/passenger support,
+- recovery/repair,
+- station/action unlock,
+- Voyage/Event interaction,
+- combat support,
+- intentional luxury/flavor benefit.
+
+A purely decorative Room should not consume mechanical Room Capacity unless it is intentionally authored as a luxury/flavor choice with a real benefit. The current Room catalog is validated against this rule.
+
+### Weapons are physical fittings
+
+Weapons follow the physical-component economy:
+
+- a weapon exists as a physical inventory fitting before installation,
+- uninstalled weapons consume authored Cargo,
+- installed weapons consume mount capacity rather than Cargo,
+- removing a weapon returns that physical fitting to inventory,
+- damaged weapons remain explicitly damaged,
+- destroyed weapons are explicitly lost/destroyed rather than silently disappearing or returning as usable inventory.
+
+### Required weapon metadata
+
+Each Weapon must author:
+
+- required crew,
+- reload requirement/action cost,
+- firing arc(s),
+- mount size/type,
+- damage profile/type,
+- System Threat Area,
+- traits,
+- Cargo footprint while uninstalled.
+
+The current starter catalog now carries these fields. Current System Threat defaults are Deck Ballista -> Hull, Swivel Cannon -> Hull, Stormglass Lance -> Lifeveil, Grapnel Harpoon -> Rigging.
+
+### Short-handed weapon operation
+
+Weapons may be operated short-handed as long as at least one operator is available.
+
+Apply a **-1 circumstance penalty per missing required crew member**. A weapon with zero available operators cannot be used. Reload/action costs remain those authored by the weapon unless another explicit rule modifies them.
