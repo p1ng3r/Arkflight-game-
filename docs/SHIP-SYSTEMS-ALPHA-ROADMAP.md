@@ -15,7 +15,7 @@
 7. Crew & Stations ✅
 8. Rooms & Weapons Completion ✅
 9. Ship Mod Catalog Completion ✅
-10. Arkengine Mod Catalog Completion — rarity foundation + Standard band locked
+10. Arkengine Mod Catalog Completion — Standard + Rare Alpha bands complete; Epic next
 11. Canonical Derived Stat Registry
 12. Character Sheet Completion
 13. Whole-Ship Operational Validator
@@ -68,8 +68,8 @@ Arkengine Mods use the same rarity ladder and default ship-level gates as Ship M
 | Rarity | Default minimum ship level | Alpha target | Current status |
 |---|---:|---:|---|
 | Standard | 1 | 18–22 | ✅ 22 baseline Mods migrated |
-| Rare | 3 | 14–16 | next |
-| Epic | 7 | 10–12 | pending |
+| Rare | 3 | 14–16 | ✅ 14 authored |
+| Epic | 7 | 10–12 | next |
 | Legendary | 12 | 7–8 | pending |
 | Mythic | 17 | 4–5 | pending |
 
@@ -102,6 +102,27 @@ The existing 22-entry Arkengine Mod catalog has been migrated to **Standard** ra
 Baseline concepts include pressure tuning, veil focusing, cooling loops, fuel-matrix efficiency, Stormwake injection, voidglass regulation, harmonic lattices, Overburn Catalysts, Deepwake stabilizers, core bracing, fuel siphons, Hushglass cowls, Hard Burn governors, grounding rods, harmonic prisms, pressure bypasses, resonance baffles, Quickspark injectors, ritual channeling rings, filter mesh, Coldwake condensers, and veil-pressure equalization.
 
 Every Standard entry now has a real mechanical purpose through an effect, capability, rule modifier, signature unlock, or fuel hook.
+
+### Rare Alpha band
+
+The Rare band is now at the locked minimum target of **14 Mods**. Rare Arkengine hardware adds stronger effects plus upgrade-chain, fuel-hook, and cross-family build choices.
+
+New Rare fittings include:
+
+- **Pressure Lattice Governor** — replaces Pressure Lattice Tuning, adds +3 Strain Capacity and active pressure control.
+- **Focused Veil Manifold** — replaces Veil Projector Focusing, adds +15 Lifeveil and recovery support.
+- **Coldwake Recirculation Loop** — replaces Cooling Loop Expansion and can synergize with Trim-Sail Regulators for safer Hard Burn operation.
+- **Refined Fuel Matrix** — replaces Fuel Matrix Efficiency and improves the authored fuel-efficiency hook without creating a mandatory fuel loop.
+- **Stormwake Twin Injectors** — replaces Stormwake Injector, improves burst travel output, and can synergize with Stormproof Void Sails.
+- **Deepwake Voidglass Heart** — replaces Voidglass Regulator and improves deep-void stability.
+- **Resonant Choir Core** — replaces Choir Harmonic Lattice and improves ritual/veil-linked engine handling.
+- **Controlled Overburn Catalysts** — replaces Overburn Catalysts and provides more controlled emergency output.
+- **Aetherite Core Cage** — replaces Aetherite Core Bracing and adds +4 Strain Capacity plus repair support.
+- **Deep-Reserve Fuel Siphons** — replaces Refined Fuel Siphons and expands fuel-capacity/reserve-access hooks.
+- **Silent Hushglass Shroud** — replaces Hushglass Cowl and can synergize with Occult Signal Refractors for suppressed magical wake.
+- **Precision Hard Burn Governor** — replaces Hard Burn Governor, reduces Hard Burn Strain cost by 2, and can synergize with Battlewake Control Fins.
+- **Surge Grounding Array** — replaces Overcharge Grounding Rods and improves overcharge Strain handling.
+- **Prismatic Lifeveil Feed** — replaces Lifeveil Harmonic Prism, adds +20 Lifeveil, and can synergize with Veil Harmonic Capacitors.
 
 ### Fuel hooks — no mandatory fuel subsystem yet
 
