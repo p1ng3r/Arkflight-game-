@@ -16,7 +16,8 @@ import {
   startRefitJob,
   completeRefitJob,
   recordCrewInstallComplication,
-  recordCrewInstallFailure
+  recordCrewInstallFailure,
+  resolveCrewWorkConcurrency
 } from "../ship/refit-work-orders.js";
 
 const MODULE_ID = "arkflight-game";
@@ -49,6 +50,7 @@ Hooks.once("init", () => {
     async queueRemove(actor, family, componentId, options = {}) { const target = targetForRefit(actor); return persistResult(target, queueRemoveJob(shipPayload(target), family, componentId, SHIP_CATALOGS, options)); },
     async queueRepair(actor, options = {}) { const target = targetForRefit(actor); return persistResult(target, queueRepairJob(shipPayload(target), options)); },
     async startWork(actor, jobId, options = {}) { const target = targetForRefit(actor); return persistResult(target, startRefitJob(shipPayload(target), jobId, options)); },
-    async completeWork(actor, jobId, options = {}) { const target = targetForRefit(actor); return persistResult(target, completeRefitJob(shipPayload(target), jobId, SHIP_CATALOGS, options)); }
+    async completeWork(actor, jobId, options = {}) { const target = targetForRefit(actor); return persistResult(target, completeRefitJob(shipPayload(target), jobId, SHIP_CATALOGS, options)); },
+    async resolveCrewConcurrency(actor, keepJobId) { requireGM(); const target = requireShipActor(actor); return persistResult(target, resolveCrewWorkConcurrency(shipPayload(target), keepJobId)); }
   });
 });
