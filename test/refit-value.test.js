@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   AETHER_SCRAP_GP_VALUE,
   REFIT_VALUE_RATES,
+  arkflightLevelToPf2eLevel,
+  arkflightLevelValueGp,
   componentEconomyQuote
 } from "../src/ship/refit-value.js";
 
@@ -43,4 +45,34 @@ test("Aether Scrap rounds fractional material costs up to whole scrap", () => {
   assert.equal(quote.installation.shipyard.aetherScrap, 3);
   assert.equal(quote.breakdown.aetherScrap, 7);
   assert.equal(quote.resale.gpValue, 125);
+});
+
+test("Arkflight level 1 prices as PF2e level 6 and advances one-for-one", () => {
+  assert.equal(arkflightLevelToPf2eLevel(1), 6);
+  assert.equal(arkflightLevelToPf2eLevel(7), 12);
+  assert.equal(arkflightLevelValueGp(1), 225);
+  assert.equal(arkflightLevelValueGp(7), 1820);
+});
+
+test("rarity level gates provide automatic mod values when no authored price exists", () => {
+  const standard = componentEconomyQuote({ id: "standard", data: { rarity: "standard", minShipLevel: 1, refit: {} } });
+  assert.equal(standard.arkflightLevel, 1);
+  assert.equal(standard.pf2eLevel, 6);
+  assert.equal(standard.fullValueGp, 225);
+  assert.equal(standard.fabrication.aetherScrap, 12);
+  assert.equal(standard.installation.crew.aetherScrap, 5);
+
+  const rare = componentEconomyQuote({ id: "rare", data: { rarity: "rare", minShipLevel: 3, refit: {} } });
+  assert.equal(rare.arkflightLevel, 3);
+  assert.equal(rare.pf2eLevel, 8);
+  assert.equal(rare.fullValueGp, 460);
+  assert.equal(rare.resale.gpValue, 230);
+});
+
+test("high Arkflight levels continue the economy beyond PF2e level 20", () => {
+  const mythic = componentEconomyQuote({ id: "mythic", data: { rarity: "mythic", minShipLevel: 17, refit: {} } });
+  assert.equal(mythic.arkflightLevel, 17);
+  assert.equal(mythic.pf2eLevel, 22);
+  assert.equal(mythic.fullValueGp, 140000);
+  assert.equal(mythic.breakdown.aetherScrap, 3500);
 });
