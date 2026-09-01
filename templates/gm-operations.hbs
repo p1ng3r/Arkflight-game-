@@ -73,10 +73,57 @@
       {{#if operations}}
         {{#if operationsActiveTab}}
           {{#if activeEvent}}
-            <article class="arkflight-gm-panel arkflight-gm-active-operation">
-              <div><div class="arkflight-gm-kicker">ACTIVE VOYAGE</div><h2>{{activeEvent.name}}</h2><p>Round {{activeEvent.round}} · {{activeEvent.phase}}</p></div>
-              <button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-compass"></i> Resume Event</button>
-            </article>
+            <div class="arkflight-gm-active-voyage-grid">
+              <article class="arkflight-gm-panel arkflight-gm-active-voyage-card">
+                <div class="arkflight-gm-card-heading">
+                  <div><div class="arkflight-gm-kicker">ACTIVE VOYAGE</div><h2>{{activeEvent.name}}</h2></div>
+                  <i class="fa-solid fa-compass"></i>
+                </div>
+                <div class="arkflight-gm-metric-row"><span>Progress</span><strong>Round {{activeEvent.round}} / {{activeEvent.totalRounds}}</strong></div>
+                <div class="arkflight-gm-metric-row"><span>Phase</span><strong>{{activeEvent.phase}}</strong></div>
+                <div class="arkflight-gm-metric-row"><span>Momentum</span><strong>{{activeEvent.momentum}}</strong></div>
+                <div class="arkflight-gm-active-tags">
+                  {{#if activeEvent.hasPressure}}
+                    {{#each activeEvent.pressure}}{{#if value}}<span class="arkflight-gm-pressure-tag"><b>{{system}}</b> {{value}}</span>{{/if}}{{/each}}
+                  {{else}}<span class="arkflight-gm-clear-tag"><i class="fa-solid fa-circle-check"></i> No Pressure</span>{{/if}}
+                </div>
+                {{#if activeEvent.hasHazards}}
+                  <div class="arkflight-gm-hazard-row">{{#each activeEvent.hazards}}<span><i class="fa-solid fa-triangle-exclamation"></i> {{name}}</span>{{/each}}</div>
+                {{/if}}
+                <div class="arkflight-gm-active-actions">
+                  <button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-play"></i> Resume Event</button>
+                  <details class="arkflight-gm-manage-menu">
+                    <summary><i class="fa-solid fa-ellipsis"></i> Manage</summary>
+                    <button type="button" data-action="end-voyage"><i class="fa-solid fa-stop"></i> End Voyage</button>
+                  </details>
+                </div>
+              </article>
+
+              <article class="arkflight-gm-panel arkflight-gm-active-voyage-card">
+                <div class="arkflight-gm-card-heading">
+                  <div><div class="arkflight-gm-kicker">BOUND SHIP</div><h2>{{activeEvent.shipName}}</h2></div>
+                  <i class="fa-solid fa-ship"></i>
+                </div>
+                <div class="arkflight-gm-metric-row"><span>Status</span><strong>{{activeEvent.shipStatus}}</strong></div>
+                {{#if activeEvent.shipLevel}}<div class="arkflight-gm-metric-row"><span>Level</span><strong>{{activeEvent.shipLevel}}</strong></div>{{/if}}
+                {{#if activeEvent.hasShipResources}}
+                  <div class="arkflight-gm-resource-grid">
+                    {{#each activeEvent.shipResources}}
+                      <div><span>{{name}}</span><strong>{{value}}{{#if hasMax}} / {{max}}{{/if}}</strong></div>
+                    {{/each}}
+                  </div>
+                {{else}}
+                  <p class="arkflight-gm-muted">This Voyage is permanently bound to this ship. Detailed ship resources will populate here from the authoritative ship source.</p>
+                {{/if}}
+              </article>
+            </div>
+
+            {{#if queuedVoyageEvent}}
+              <article class="arkflight-gm-panel arkflight-gm-queued-voyage">
+                <div><div class="arkflight-gm-kicker">QUEUED NEXT</div><h3>{{queuedVoyageEvent.title}}</h3><p>Ready for review after the active Voyage ends. It will not launch automatically.</p></div>
+                <button type="button" data-action="clear-queued-voyage"><i class="fa-solid fa-xmark"></i> Clear Queue</button>
+              </article>
+            {{/if}}
           {{else}}
             <article class="arkflight-gm-panel arkflight-gm-empty-state"><i class="fa-solid fa-compass"></i><h2>No active Voyage</h2><p>Choose Voyage Events above to select and launch an event.</p></article>
           {{/if}}
@@ -114,13 +161,28 @@
 
                 <div class="arkflight-gm-voyage-copy"><h3>Goal</h3><p>{{selectedVoyageEvent.goal}}</p><h3>Opening</h3><p>{{selectedVoyageEvent.openingVignette}}</p></div>
 
-                <div class="arkflight-gm-launch-strip">
-                  <label><span>Player Ship</span><select data-voyage-ship>
-                    {{#each voyageShipOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}{{#if level}} · Lv {{level}}{{/if}}</option>{{else}}<option value="">No player ship available</option>{{/each}}
-                  </select></label>
-                  <button type="button" class="arkflight-gm-primary arkflight-gm-launch-button" data-action="launch-voyage-event" {{#unless canLaunchSelectedEvent}}disabled{{/unless}}><i class="fa-solid fa-play"></i> Launch Event</button>
-                </div>
-                {{#if launchBlockReason}}<div class="arkflight-gm-launch-warning"><i class="fa-solid fa-triangle-exclamation"></i><span>{{launchBlockReason}}</span></div>{{/if}}
+                {{#if eventActive}}
+                  <div class="arkflight-gm-launch-strip">
+                    <div class="arkflight-gm-queue-copy">
+                      <span>Active Voyage already running</span>
+                      <small>Select another event to queue it for later.</small>
+                    </div>
+                    {{#if canQueueSelectedEvent}}
+                      <button type="button" class="arkflight-gm-primary arkflight-gm-launch-button" data-action="queue-voyage-event"><i class="fa-solid fa-list"></i> {{#if selectedEventQueued}}Queued{{else}}Queue Next{{/if}}</button>
+                    {{else}}
+                      <button type="button" class="arkflight-gm-launch-button" disabled><i class="fa-solid fa-lock"></i> Active Event</button>
+                    {{/if}}
+                  </div>
+                  {{#if queuedVoyageEvent}}<div class="arkflight-gm-queue-status"><i class="fa-solid fa-list-check"></i> Queued: {{queuedVoyageEvent.title}}</div>{{/if}}
+                {{else}}
+                  <div class="arkflight-gm-launch-strip">
+                    <label><span>Player Ship</span><select data-voyage-ship>
+                      {{#each voyageShipOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}{{#if level}} · Lv {{level}}{{/if}}</option>{{else}}<option value="">No player ship available</option>{{/each}}
+                    </select></label>
+                    <button type="button" class="arkflight-gm-primary arkflight-gm-launch-button" data-action="launch-voyage-event" {{#unless canLaunchSelectedEvent}}disabled{{/unless}}><i class="fa-solid fa-play"></i> Launch Event</button>
+                  </div>
+                  {{#if launchBlockReason}}<div class="arkflight-gm-launch-warning"><i class="fa-solid fa-triangle-exclamation"></i><span>{{launchBlockReason}}</span></div>{{/if}}
+                {{/if}}
               {{else}}
                 <div class="arkflight-gm-empty-state"><i class="fa-solid fa-map"></i><h2>No event selected</h2></div>
               {{/if}}
