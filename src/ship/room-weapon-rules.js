@@ -68,7 +68,8 @@ export function validateWeaponDefinition(weapon) {
 export function weaponCrewPenalty(requiredCrew, availableCrew) {
   const required = Math.max(0, Math.trunc(Number(requiredCrew) || 0));
   const available = Math.max(0, Math.trunc(Number(availableCrew) || 0));
-  return -Math.max(0, required - available);
+  const missing = Math.max(0, required - available);
+  return missing > 0 ? -missing : 0;
 }
 
 export function weaponCanOperate(requiredCrew, availableCrew) {
