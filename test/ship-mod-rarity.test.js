@@ -6,10 +6,12 @@ import {
   SHIP_MOD_RARITY_RULES,
   SHIP_MOD_ACQUISITION_RULES,
   SHIP_MOD_EFFECT_FAMILIES,
+  SHIP_MOD_SYNERGY_RULES,
   shipModAvailableAtLevel,
   shipModAlphaTarget,
   shipModOrdinaryPurchaseAllowed,
   shipModPrerequisitesMet,
+  shipModUpgradeReplacement,
   activeShipModSynergies,
   shipModInstallEligibility,
   validateShipModProgression
@@ -65,7 +67,7 @@ test("rarity level gates are enforced", () => {
   assert.equal(shipModAvailableAtLevel(mythic, 17), true);
 });
 
-test("upgrade-chain mods can require installed predecessors", () => {
+test("upgrade-chain mods replace their predecessor and inherit its slot", () => {
   const mod = {
     id: "aether-bound-ribbing",
     data: {
@@ -79,10 +81,19 @@ test("upgrade-chain mods can require installed predecessors", () => {
   assert.equal(shipModPrerequisitesMet(mod, ["reinforced-structural-ribbing"]), true);
   assert.equal(shipModInstallEligibility(mod, { shipLevel: 3, installedModIds: [] }).ok, false);
   assert.equal(shipModInstallEligibility(mod, { shipLevel: 3, installedModIds: ["reinforced-structural-ribbing"] }).ok, true);
+  assert.deepEqual(shipModUpgradeReplacement(mod), {
+    mode: "replace",
+    replaces: ["reinforced-structural-ribbing"],
+    inheritsSlot: true
+  });
+  assert.equal(validateShipModProgression(mod).ok, true);
 });
 
-test("mod combinations may activate authored synergy bonuses", () => {
-  const mod = {
+test("most synergies are two-mod bonuses while three-mod sets are epic plus", () => {
+  assert.equal(SHIP_MOD_SYNERGY_RULES.normalRequiredMods, 2);
+  assert.equal(SHIP_MOD_SYNERGY_RULES.epicPlusSetBonusRequiredMods, 3);
+
+  const epic = {
     id: "battlewake-control-fins",
     data: {
       rarity: "epic",
@@ -91,13 +102,60 @@ test("mod combinations may activate authored synergy bonuses", () => {
         id: "battlewake-drive-suite",
         requiresMods: ["reinforced-void-sails", "arc-conduit-stabilizers"],
         effects: [{ target: "combatSpeed", mode: "add", value: 1 }]
+      }, {
+        id: "battlewake-grand-suite",
+        requiresMods: ["reinforced-void-sails", "arc-conduit-stabilizers", "stabilized-helm-relays"],
+        effects: [{ target: "maneuverability", mode: "add", value: 1 }]
       }]
     },
     capabilities: ["battlewake-control"]
   };
-  assert.equal(activeShipModSynergies(mod, ["reinforced-void-sails"]).length, 0);
-  assert.equal(activeShipModSynergies(mod, ["reinforced-void-sails", "arc-conduit-stabilizers"]).length, 1);
+  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails"]).length, 0);
+  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails", "arc-conduit-stabilizers"]).length, 1);
+  assert.equal(activeShipModSynergies(epic, ["reinforced-void-sails", "arc-conduit-stabilizers", "stabilized-helm-relays"]).length, 2);
+  assert.equal(validateShipModProgression(epic).ok, true);
+
+  const rareThreePiece = {
+    id: "too-early-set",
+    data: {
+      rarity: "rare",
+      minShipLevel: 3,
+      synergies: [{
+        id: "too-early",
+        requiresMods: ["a", "b", "c"],
+        effects: [{ target: "armorClass", mode: "add", value: 1 }]
+      }]
+    },
+    capabilities: ["set-piece"]
+  };
+  assert.ok(validateShipModProgression(rareThreePiece).errors.includes("three-mod-synergy-below-epic"));
+});
+
+test("resistance mods use explicit PF2e-style values and may be conditional", () => {
+  const mod = {
+    id: "stormglass-grounding-web",
+    data: {
+      rarity: "rare",
+      minShipLevel: 3,
+      effectFamily: "resistance",
+      resistances: [
+        { type: "electricity", value: 5 },
+        { type: "fire", value: 5, condition: "while Lifeveil is online" }
+      ]
+    }
+  };
   assert.equal(validateShipModProgression(mod).ok, true);
+
+  const bad = {
+    id: "bad-resistance",
+    data: {
+      rarity: "rare",
+      minShipLevel: 3,
+      effectFamily: "resistance",
+      resistances: [{ type: "electricity", value: 0 }]
+    }
+  };
+  assert.ok(validateShipModProgression(bad).errors.includes("invalid-resistance-value"));
 });
 
 test("mythic core-rule exceptions must be bounded", () => {
