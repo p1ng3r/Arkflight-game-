@@ -208,9 +208,7 @@
   line-height: 1.45;
 }
 
-.arkflight-gm-command-card {
-  min-height: 190px;
-}
+.arkflight-gm-command-card { min-height: 190px; }
 
 .arkflight-gm-card-heading {
   display: flex;
@@ -235,16 +233,8 @@
   color: #aeb8c1;
 }
 
-.arkflight-gm-metric-row strong {
-  color: #eff3f6;
-  font-weight: 700;
-}
-
-.arkflight-gm-muted {
-  margin-top: 11px !important;
-  color: #7f8b95 !important;
-  font-size: 12px;
-}
+.arkflight-gm-metric-row strong { color: #eff3f6; font-weight: 700; }
+.arkflight-gm-muted { margin-top: 11px !important; color: #7f8b95 !important; font-size: 12px; }
 
 .arkflight-gm-compact-ship-list {
   display: grid;
@@ -263,24 +253,10 @@
   background: rgba(8, 13, 18, 0.38);
 }
 
-.arkflight-gm-compact-ship-row small {
-  color: #87949f;
-}
-
-.arkflight-gm-command-actions {
-  display: flex;
-  gap: 7px;
-  margin-top: 14px;
-}
-
-.arkflight-gm-command-actions button {
-  width: auto;
-}
-
-.arkflight-gm-warning-list {
-  display: grid;
-  gap: 7px;
-}
+.arkflight-gm-compact-ship-row small { color: #87949f; }
+.arkflight-gm-command-actions { display: flex; gap: 7px; margin-top: 14px; }
+.arkflight-gm-command-actions button { width: auto; }
+.arkflight-gm-warning-list { display: grid; gap: 7px; }
 
 .arkflight-gm-warning {
   display: grid;
@@ -290,15 +266,8 @@
   background: rgba(86, 61, 26, 0.24);
 }
 
-.arkflight-gm-warning.critical {
-  border-left-color: #b9574f;
-  background: rgba(91, 33, 29, 0.3);
-}
-
-.arkflight-gm-warning span {
-  color: #aeb8c1;
-  font-size: 12px;
-}
+.arkflight-gm-warning.critical { border-left-color: #b9574f; background: rgba(91, 33, 29, 0.3); }
+.arkflight-gm-warning span { color: #aeb8c1; font-size: 12px; }
 
 .arkflight-gm-clear-state {
   display: flex;
@@ -327,6 +296,8 @@
   background: linear-gradient(180deg, rgba(42, 111, 126, 0.72), rgba(27, 72, 84, 0.8));
 }
 
+.arkflight-gm-primary:disabled { opacity: 0.42; cursor: not-allowed; }
+
 .arkflight-gm-empty-state {
   display: grid;
   place-items: center;
@@ -335,13 +306,147 @@
   text-align: center;
 }
 
-.arkflight-gm-empty-state > i {
-  font-size: 30px;
-  color: #8bd5e2;
+.arkflight-gm-empty-state > i { font-size: 30px; color: #8bd5e2; }
+
+.arkflight-gm-voyage-layout {
+  display: grid;
+  grid-template-columns: 285px minmax(0, 1fr);
+  gap: 14px;
+  min-height: 520px;
+}
+
+.arkflight-gm-voyage-browser,
+.arkflight-gm-voyage-preview { min-height: 0; }
+
+.arkflight-gm-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 7px 9px;
+  border: 1px solid rgba(190, 143, 66, 0.25);
+  border-radius: 4px;
+  background: rgba(8, 13, 18, 0.52);
+}
+
+.arkflight-gm-search i { color: #8bd5e2; }
+.arkflight-gm-search input { margin: 0; border: 0; background: transparent; color: #e8edf2; box-shadow: none; }
+
+.arkflight-gm-voyage-list {
+  display: grid;
+  gap: 6px;
+  max-height: 430px;
+  overflow: auto;
+}
+
+.arkflight-gm-voyage-row {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid rgba(190, 143, 66, 0.14);
+  border-radius: 4px;
+  color: #d4dce3;
+  background: rgba(10, 16, 21, 0.58);
+  text-align: left;
+  box-shadow: none;
+}
+
+.arkflight-gm-voyage-row:hover,
+.arkflight-gm-voyage-row.selected {
+  border-color: rgba(190, 143, 66, 0.52);
+  background: linear-gradient(90deg, rgba(91, 65, 29, 0.46), rgba(25, 36, 43, 0.6));
+}
+
+.arkflight-gm-voyage-row.selected { box-shadow: inset 3px 0 #c79a4e; }
+.arkflight-gm-voyage-row-title { font-weight: 700; color: #efe1c5; }
+.arkflight-gm-voyage-row small { color: #86949f; }
+
+.arkflight-gm-voyage-preview { display: flex; flex-direction: column; gap: 13px; }
+
+.arkflight-gm-voyage-hero {
+  position: relative;
+  min-height: 210px;
+  overflow: hidden;
+  border: 1px solid rgba(190, 143, 66, 0.26);
+  border-radius: 4px;
+  background: #06090d;
+}
+
+.arkflight-gm-voyage-hero img {
+  display: block;
+  width: 100%;
+  height: 230px;
+  object-fit: cover;
+}
+
+.arkflight-gm-voyage-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 32%, rgba(6, 10, 14, 0.92) 100%);
+  pointer-events: none;
+}
+
+.arkflight-gm-voyage-hero-overlay {
+  position: absolute;
+  z-index: 1;
+  left: 18px;
+  right: 18px;
+  bottom: 14px;
+}
+
+.arkflight-gm-voyage-hero-overlay h2 { margin: 4px 0 0; font-size: 23px; color: #f3e4c7; }
+
+.arkflight-gm-voyage-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.arkflight-gm-voyage-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid rgba(107, 211, 227, 0.22);
+  border-radius: 999px;
+  color: #b6dbe0;
+  background: rgba(26, 65, 73, 0.25);
+  font-size: 12px;
+}
+
+.arkflight-gm-voyage-copy { display: grid; gap: 5px; }
+.arkflight-gm-voyage-copy h3 { margin-top: 6px; color: #d9b978; }
+
+.arkflight-gm-launch-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(190, 143, 66, 0.2);
+}
+
+.arkflight-gm-launch-strip label { display: grid; gap: 5px; color: #aab5bd; font-size: 12px; }
+.arkflight-gm-launch-strip select { min-height: 36px; color: #e5ebef; background: rgba(8, 13, 18, 0.78); border: 1px solid rgba(190, 143, 66, 0.32); }
+.arkflight-gm-launch-button { min-width: 160px; }
+
+.arkflight-gm-launch-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(190, 143, 66, 0.25);
+  color: #d5bd8d;
+  background: rgba(82, 58, 24, 0.22);
+  font-size: 12px;
 }
 
 @media (max-width: 900px) {
   .arkflight-gm-shell { grid-template-columns: 160px minmax(0, 1fr); }
   .arkflight-gm-placeholder-grid,
-  .arkflight-gm-command-grid { grid-template-columns: 1fr; }
+  .arkflight-gm-command-grid,
+  .arkflight-gm-voyage-layout { grid-template-columns: 1fr; }
 }
