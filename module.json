@@ -94,6 +94,8 @@
     "src/ui/enemy-generator-ui.js",
     "src/ui/gm-operations-voyage-ui.js",
     "src/ui/gm-operations-combat-ui.js",
+    "src/ui/gm-operations-time-work-ui.js",
+    "src/ui/player-refit-work-start-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
   ]
 }
