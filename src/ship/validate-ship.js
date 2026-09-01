@@ -1,4 +1,5 @@
 import { deriveShip } from "./derive-ship.js";
+import { allocateWeaponMounts } from "./weapon-mounts.js";
 
 export function validateShip(ship, catalogs = {}) {
   const errors = [];
@@ -33,6 +34,9 @@ export function validateShip(ship, catalogs = {}) {
     errors.push(`Arkengine Mod capacity exceeded: ${derived.usage.arkengineMods}/${engineCapacity}.`);
   }
 
+  const weaponMounts = allocateWeaponMounts(ship, catalogs);
+  if (!weaponMounts.ok) errors.push(...weaponMounts.errors);
+
   if ((ship.cargo?.used ?? 0) > (derived.stats.cargoCapacity ?? 0)) {
     warnings.push(`Cargo exceeds capacity: ${ship.cargo.used}/${derived.stats.cargoCapacity}.`);
   }
@@ -41,6 +45,7 @@ export function validateShip(ship, catalogs = {}) {
     ok: errors.length === 0,
     errors: Object.freeze(errors),
     warnings: Object.freeze(warnings),
-    derived
+    derived,
+    weaponMounts
   });
 }
