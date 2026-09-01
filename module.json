@@ -31,7 +31,8 @@
     "styles/opening-screen-final-layout-fix.css",
     "styles/opening-screen-endcap-color-fix.css",
     "styles/opening-screen-icon-assets.css",
-    "styles/gm-operations.css"
+    "styles/gm-operations.css",
+    "styles/gm-operations-active.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
