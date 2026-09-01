@@ -27,6 +27,9 @@ function moduleAssetPath(path) {
   if (/^(https?:|data:|modules\/)/.test(path)) return path;
   return `modules/arkflight-game/${String(path).replace(/^\/+/, "")}`;
 }
+function titleCase(value) {
+  return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
 function commandShipSource() {
   const source = game.arkflight?.ships;
@@ -37,14 +40,20 @@ function commandShipSource() {
   else if (Array.isArray(source)) rows = source;
   else if (Array.isArray(source.contents)) rows = source.contents;
 
-  const normalized = rows.map((entry) => ({
-    id: entry.id ?? entry.actor?.id ?? null,
-    name: entry.name ?? entry.actor?.name ?? entry.ship?.identity?.name ?? "Unnamed Vessel",
-    level: entry.level ?? entry.ship?.level ?? entry.system?.details?.level?.value ?? null,
-    status: entry.status ?? entry.readiness ?? "Available",
-    player: entry.player !== false && entry.isNPC !== true,
-    current: entry.current === true || entry.selected === true || entry.active === true
-  })).filter((entry) => entry.player && entry.id);
+  const normalized = rows.map((entry) => {
+    const ship = entry.ship ?? entry.system?.flags?.arkflight?.ship ?? entry.system?.arkflight?.ship ?? null;
+    return {
+      id: entry.id ?? entry.actor?.id ?? null,
+      name: entry.name ?? entry.actor?.name ?? ship?.identity?.name ?? "Unnamed Vessel",
+      level: entry.level ?? ship?.level ?? entry.system?.details?.level?.value ?? null,
+      status: entry.status ?? entry.readiness ?? "Available",
+      player: entry.player !== false && entry.isNPC !== true,
+      current: entry.current === true || entry.selected === true || entry.active === true,
+      resources: ship?.resources ?? entry.resources ?? null,
+      conditions: ship?.conditions ?? entry.conditions ?? [],
+      systems: ship?.systems ?? entry.systems ?? null
+    };
+  }).filter((entry) => entry.player && entry.id);
 
   const current = normalized.find((entry) => entry.current) ?? normalized[0] ?? null;
   return { current, others: normalized.filter((entry) => entry !== current), all: normalized };
@@ -97,6 +106,71 @@ function confirmVoyageLaunch(ship, event) {
       close: () => resolve(false)
     }).render({ force: true });
   });
+}
+
+function confirmEndVoyage(eventName, shipName) {
+  return new Promise((resolve) => {
+    const DialogV2 = foundry.applications.api.DialogV2;
+    const content = `
+      <div class="arkflight-gm-launch-confirm">
+        <p><strong>End the active Voyage?</strong></p>
+        <div class="arkflight-gm-launch-route">
+          <strong>${foundry.utils.escapeHTML(shipName || "Bound Ship")}</strong>
+          <i class="fa-solid fa-xmark"></i>
+          <strong>${foundry.utils.escapeHTML(eventName || "Active Voyage")}</strong>
+        </div>
+        <p class="hint">This clears the active Voyage state for every connected player. It does not launch the queued event.</p>
+      </div>`;
+    new DialogV2({
+      window: { title: "Manage Active Voyage" },
+      content,
+      buttons: [
+        { action: "cancel", label: "Cancel", icon: "fa-solid fa-arrow-left", default: true, callback: () => resolve(false) },
+        { action: "end", label: "End Voyage", icon: "fa-solid fa-stop", callback: () => resolve(true) }
+      ],
+      close: () => resolve(false)
+    }).render({ force: true });
+  });
+}
+
+function activeVoyageModel(eventState, eventDefinition, ships) {
+  if (!eventState?.eventId) return null;
+  const boundShip = eventState.shipActorId
+    ? ships.all.find((ship) => ship.id === eventState.shipActorId) ?? null
+    : null;
+  const actor = eventState.shipActorId ? game.actors.get(eventState.shipActorId) : null;
+  const shipName = boundShip?.name ?? actor?.name ?? (eventState.shipActorId ? "Bound Ship" : "No Bound Ship");
+  const encounter = eventState.encounter ?? eventDefinition?.startingState ?? {};
+  const pressure = Object.entries(encounter.pressure ?? {}).map(([system, value]) => ({ system: titleCase(system), value: Number(value ?? 0) }));
+  const hazards = (encounter.hazards ?? []).map((hazard) => ({ id: hazard, name: titleCase(hazard) }));
+  const resources = boundShip?.resources
+    ? Object.entries(boundShip.resources).map(([key, value]) => ({
+        key,
+        name: titleCase(key),
+        value: Number(value?.value ?? 0),
+        max: Number(value?.max ?? 0),
+        hasMax: Number(value?.max ?? 0) > 0
+      }))
+    : [];
+
+  return {
+    id: eventState.eventId,
+    name: eventDefinition?.name ?? eventDefinition?.title ?? eventState.eventId,
+    phase: titleCase(eventState.phase ?? "active"),
+    round: Number(eventState.roundIndex ?? 0) + 1,
+    totalRounds: eventDefinition?.rounds?.length ?? 1,
+    momentum: Number(encounter.momentum ?? 0),
+    pressure,
+    hasPressure: pressure.some((row) => row.value !== 0),
+    hazards,
+    hasHazards: hazards.length > 0,
+    shipActorId: eventState.shipActorId ?? null,
+    shipName,
+    shipLevel: boundShip?.level ?? actor?.system?.details?.level?.value ?? null,
+    shipStatus: boundShip?.status ?? "Bound",
+    shipResources: resources,
+    hasShipResources: resources.length > 0
+  };
 }
 
 function buildCommandDashboard(eventState, eventDefinition, combatActive) {
@@ -157,6 +231,7 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     this.operationsTab = options.operationsTab ?? null;
     this.selectedEventId = options.selectedEventId ?? null;
     this.selectedShipId = options.selectedShipId ?? null;
+    this.queuedEventId = options.queuedEventId ?? null;
   }
 
   open(options = {}) {
@@ -176,6 +251,10 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     this.activeSection = activeSection;
 
     if (!this.operationsTab) this.operationsTab = eventActive || combatActive ? "active" : "voyage-events";
+    if (!eventActive && this.queuedEventId) {
+      this.selectedEventId = this.queuedEventId;
+      this.operationsTab = "voyage-events";
+    }
 
     const sections = PRIMARY_SECTIONS.map((section) => ({
       ...section,
@@ -192,10 +271,13 @@ export class ArkflightGMOperations extends HandlebarsApplication {
     const catalog = eventCatalog(this.selectedEventId);
     this.selectedEventId = catalog.selectedId;
     const selectedShip = shipOptions.find((ship) => ship.id === this.selectedShipId) ?? null;
-    const boundShip = eventState?.shipActorId ? ships.all.find((ship) => ship.id === eventState.shipActorId) ?? null : null;
+    const activeEvent = activeVoyageModel(eventState, eventDefinition, ships);
+    const queuedEvent = this.queuedEventId ? eventCatalog(this.queuedEventId).selected : null;
+    const canQueueSelectedEvent = Boolean(eventActive && catalog.selected && catalog.selected.id !== eventState.eventId);
+    const selectedEventQueued = Boolean(this.queuedEventId && catalog.selected?.id === this.queuedEventId);
     const canLaunchSelectedEvent = Boolean(catalog.selected && selectedShip && !eventActive && !combatActive);
     const launchBlockReason = eventActive
-      ? "End or resume the active Voyage before launching another event."
+      ? "A Voyage is already active. Browse another event and queue it for later."
       : combatActive
         ? "An active ship combat must be resolved before launching a Voyage."
         : !selectedShip
@@ -219,14 +301,7 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       eventActive,
       combatActive,
       commandDashboard: buildCommandDashboard(eventState, eventDefinition, combatActive),
-      activeEvent: eventActive ? {
-        id: eventState.eventId,
-        name: eventDefinition?.name ?? eventDefinition?.title ?? eventState.eventId,
-        phase: eventState.phase ?? "active",
-        round: Number(eventState.roundIndex ?? 0) + 1,
-        shipActorId: eventState.shipActorId ?? null,
-        shipName: boundShip?.name ?? (eventState.shipActorId ? game.actors.get(eventState.shipActorId)?.name ?? "Bound Ship" : null)
-      } : null,
+      activeEvent,
       operationsTab: this.operationsTab,
       operationsActiveTab: this.operationsTab === "active",
       operationsVoyageTab: this.operationsTab === "voyage-events",
@@ -235,7 +310,10 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       voyageShipOptions: shipOptions,
       selectedVoyageShip: selectedShip,
       canLaunchSelectedEvent,
-      launchBlockReason
+      launchBlockReason,
+      canQueueSelectedEvent,
+      selectedEventQueued,
+      queuedVoyageEvent: queuedEvent
     };
   }
 
@@ -281,6 +359,18 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       this.render({ force: true });
     });
 
+    this.element.querySelector("[data-action='queue-voyage-event']")?.addEventListener("click", () => {
+      if (!eventIsActive() || !this.selectedEventId || this.selectedEventId === currentEventState()?.eventId) return;
+      this.queuedEventId = this.selectedEventId;
+      ui.notifications?.info(`Queued Arkflight Voyage: ${eventCatalog(this.queuedEventId).selected?.title ?? this.queuedEventId}`);
+      this.render({ force: true });
+    });
+
+    this.element.querySelector("[data-action='clear-queued-voyage']")?.addEventListener("click", () => {
+      this.queuedEventId = null;
+      this.render({ force: true });
+    });
+
     this.element.querySelector("[data-action='launch-voyage-event']")?.addEventListener("click", async () => {
       if (!this.selectedEventId || !this.selectedShipId || eventIsActive() || combatIsActive()) return;
       const catalog = eventCatalog(this.selectedEventId);
@@ -293,12 +383,31 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       if (button) button.disabled = true;
       try {
         await game.arkflight.openEvent(this.selectedEventId, { shipActorId: this.selectedShipId });
+        if (this.queuedEventId === this.selectedEventId) this.queuedEventId = null;
         this.operationsTab = "active";
         this.render({ force: true });
       } catch (error) {
         console.error("Arkflight | Unable to launch Voyage from GM Operations", error);
         ui.notifications?.error(error?.message ?? "Unable to launch Arkflight Voyage.");
         if (button) button.disabled = false;
+      }
+    });
+
+    this.element.querySelector("[data-action='end-voyage']")?.addEventListener("click", async () => {
+      const active = currentEventState();
+      if (!active?.eventId) return;
+      const definition = game.arkflight?.events?.[active.eventId];
+      const ship = active.shipActorId ? game.actors.get(active.shipActorId) : null;
+      const confirmed = await confirmEndVoyage(definition?.title ?? active.eventId, ship?.name ?? context.activeEvent?.shipName);
+      if (!confirmed) return;
+      try {
+        await game.arkflight?.endEvent?.();
+        if (this.queuedEventId) this.selectedEventId = this.queuedEventId;
+        this.operationsTab = "voyage-events";
+        this.render({ force: true });
+      } catch (error) {
+        console.error("Arkflight | Unable to end Voyage", error);
+        ui.notifications?.error(error?.message ?? "Unable to end Arkflight Voyage.");
       }
     });
 
