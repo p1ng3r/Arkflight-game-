@@ -175,7 +175,8 @@
   overflow: auto;
 }
 
-.arkflight-gm-placeholder-grid {
+.arkflight-gm-placeholder-grid,
+.arkflight-gm-command-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
@@ -195,10 +196,118 @@
   font-size: 17px;
 }
 
+.arkflight-gm-panel h3 {
+  margin: 5px 0 6px;
+  color: #e8edf2;
+  font-size: 15px;
+}
+
 .arkflight-gm-panel p {
   margin: 0;
   color: #aab4bd;
   line-height: 1.45;
+}
+
+.arkflight-gm-command-card {
+  min-height: 190px;
+}
+
+.arkflight-gm-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.arkflight-gm-card-heading > i {
+  color: #d0a55d;
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+.arkflight-gm-metric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(190, 143, 66, 0.12);
+  color: #aeb8c1;
+}
+
+.arkflight-gm-metric-row strong {
+  color: #eff3f6;
+  font-weight: 700;
+}
+
+.arkflight-gm-muted {
+  margin-top: 11px !important;
+  color: #7f8b95 !important;
+  font-size: 12px;
+}
+
+.arkflight-gm-compact-ship-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(190, 143, 66, 0.18);
+}
+
+.arkflight-gm-compact-ship-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 7px;
+  border-radius: 3px;
+  background: rgba(8, 13, 18, 0.38);
+}
+
+.arkflight-gm-compact-ship-row small {
+  color: #87949f;
+}
+
+.arkflight-gm-command-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.arkflight-gm-command-actions button {
+  width: auto;
+}
+
+.arkflight-gm-warning-list {
+  display: grid;
+  gap: 7px;
+}
+
+.arkflight-gm-warning {
+  display: grid;
+  gap: 2px;
+  padding: 8px 9px;
+  border-left: 3px solid #bf8d42;
+  background: rgba(86, 61, 26, 0.24);
+}
+
+.arkflight-gm-warning.critical {
+  border-left-color: #b9574f;
+  background: rgba(91, 33, 29, 0.3);
+}
+
+.arkflight-gm-warning span {
+  color: #aeb8c1;
+  font-size: 12px;
+}
+
+.arkflight-gm-clear-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  color: #9fc8c9;
+  background: rgba(32, 67, 69, 0.2);
+  border: 1px solid rgba(103, 190, 194, 0.18);
 }
 
 .arkflight-gm-active-operation {
@@ -233,5 +342,6 @@
 
 @media (max-width: 900px) {
   .arkflight-gm-shell { grid-template-columns: 160px minmax(0, 1fr); }
-  .arkflight-gm-placeholder-grid { grid-template-columns: 1fr; }
+  .arkflight-gm-placeholder-grid,
+  .arkflight-gm-command-grid { grid-template-columns: 1fr; }
 }
