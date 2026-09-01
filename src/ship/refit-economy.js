@@ -2,12 +2,15 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import {
   REFIT_COMPONENT_FAMILIES,
   componentQuantity,
+  consumeComponent,
   grantComponent,
+  grantSalvageParts,
   knowsBlueprint,
   salvageParts,
   spendSalvageParts,
   unlockBlueprint
 } from "./refit-state.js";
+import { componentEconomyQuote } from "./refit-value.js";
 
 function positiveQuantity(value = 1) {
   return Math.max(1, Math.trunc(Number(value) || 1));
@@ -23,6 +26,12 @@ export function resolveRefitComponent(family, componentId, catalogs = SHIP_CATAL
   const id = String(componentId ?? "").trim();
   if (!id) return null;
   return catalogs?.[catalogKey(family)]?.[id] ?? null;
+}
+
+export function refitComponentEconomyQuote(family, componentId, catalogs = SHIP_CATALOGS) {
+  const component = resolveRefitComponent(family, componentId, catalogs);
+  if (!component) return Object.freeze({ ok: false, reason: "unknown-component", family, componentId: String(componentId ?? "") });
+  return componentEconomyQuote(component);
 }
 
 export function learnBlueprint(ship, family, componentId, catalogs = SHIP_CATALOGS) {
@@ -50,7 +59,11 @@ export function buildComponentQuote(ship, family, componentId, quantity = 1, cat
   const blueprintKnown = !requiresBlueprint || knowsBlueprint(ship, family, component.id);
   if (!blueprintKnown) return Object.freeze({ ok: false, reason: "blueprint-required", component, quantity: count });
 
-  const partsCost = Number(refit.build?.partsCost ?? 0) * count;
+  const economy = componentEconomyQuote(component);
+  const authoredPartsCost = Number(refit.build?.partsCost);
+  const partsCost = (Number.isFinite(authoredPartsCost) && authoredPartsCost >= 0)
+    ? authoredPartsCost * count
+    : (economy.ok ? economy.fabrication.aetherScrap * count : 0);
   const availableParts = salvageParts(ship);
   return Object.freeze({
     ok: true,
@@ -63,13 +76,11 @@ export function buildComponentQuote(ship, family, componentId, quantity = 1, cat
     canAfford: availableParts >= partsCost,
     timeHours: Number(refit.build?.timeHours ?? 0) * count,
     craftingDC: Number(refit.build?.dc ?? 0),
-    shipyardGold: Number(refit.build?.shipyardGold ?? 0) * count
+    shipyardGold: Number(refit.build?.shipyardGold ?? 0) * count,
+    economy
   });
 }
 
-// Part 3 settlement primitive. Part 6 work orders will call this only when a
-// build job completes; until then it also provides a deterministic domain
-// operation for tests, GM tools, rewards, and future UI wiring.
 export function buildComponentFromBlueprint(ship, family, componentId, quantity = 1, catalogs = SHIP_CATALOGS) {
   const quote = buildComponentQuote(ship, family, componentId, quantity, catalogs);
   if (!quote.ok) return Object.freeze({ ...quote, ship });
@@ -97,6 +108,7 @@ export function buildComponentFromBlueprint(ship, family, componentId, quantity 
     timeHours: quote.timeHours,
     craftingDC: quote.craftingDC,
     shipyardGold: quote.shipyardGold,
+    economy: quote.economy,
     ship: nextShip
   });
 }
@@ -116,6 +128,52 @@ export function acquireIntactComponent(ship, family, componentId, quantity = 1, 
   });
 }
 
+export function breakdownComponentQuote(ship, family, componentId, quantity = 1, catalogs = SHIP_CATALOGS) {
+  const component = resolveRefitComponent(family, componentId, catalogs);
+  if (!component) return Object.freeze({ ok: false, reason: "unknown-component", family, componentId: String(componentId ?? "") });
+  const count = positiveQuantity(quantity);
+  const available = componentQuantity(ship, family, component.id);
+  if (count > available) return Object.freeze({ ok: false, reason: "insufficient-components", required: count, available, component, ship });
+  const economy = componentEconomyQuote(component);
+  if (!economy.ok) return Object.freeze({ ...economy, ship });
+  return Object.freeze({
+    ok: true,
+    component,
+    family,
+    quantity: count,
+    aetherScrapRecovered: economy.breakdown.aetherScrap * count,
+    gpEquivalent: economy.breakdown.gpValue * count,
+    ship
+  });
+}
+
+export function breakdownIntactComponent(ship, family, componentId, quantity = 1, catalogs = SHIP_CATALOGS) {
+  const quote = breakdownComponentQuote(ship, family, componentId, quantity, catalogs);
+  if (!quote.ok) return quote;
+  const consumed = consumeComponent(ship, family, quote.component.id, quote.quantity);
+  if (!consumed.ok) return consumed;
+  const nextShip = grantSalvageParts(consumed.ship, quote.aetherScrapRecovered);
+  return Object.freeze({ ...quote, ship: nextShip });
+}
+
+export function resaleComponentQuote(ship, family, componentId, quantity = 1, catalogs = SHIP_CATALOGS) {
+  const component = resolveRefitComponent(family, componentId, catalogs);
+  if (!component) return Object.freeze({ ok: false, reason: "unknown-component", family, componentId: String(componentId ?? "") });
+  const count = positiveQuantity(quantity);
+  const available = componentQuantity(ship, family, component.id);
+  if (count > available) return Object.freeze({ ok: false, reason: "insufficient-components", required: count, available, component, ship });
+  const economy = componentEconomyQuote(component);
+  if (!economy.ok) return Object.freeze({ ...economy, ship });
+  return Object.freeze({
+    ok: true,
+    component,
+    family,
+    quantity: count,
+    resaleGp: economy.resale.gpValue * count,
+    ship
+  });
+}
+
 export function availableComponentEntries(ship, family, catalogs = SHIP_CATALOGS) {
   const catalog = catalogs?.[catalogKey(family)] ?? {};
   return Object.freeze(Object.values(catalog)
@@ -124,7 +182,8 @@ export function availableComponentEntries(ship, family, catalogs = SHIP_CATALOGS
       id: component.id,
       component,
       quantity: componentQuantity(ship, family, component.id),
-      refit: component.data?.refit ?? null
+      refit: component.data?.refit ?? null,
+      economy: componentEconomyQuote(component)
     }))
     .filter((entry) => entry.quantity > 0)
     .sort((a, b) => a.component.name.localeCompare(b.component.name)));
@@ -134,7 +193,7 @@ export function knownBlueprintEntries(ship, family, catalogs = SHIP_CATALOGS) {
   const catalog = catalogs?.[catalogKey(family)] ?? {};
   return Object.freeze(Object.values(catalog)
     .filter((component) => knowsBlueprint(ship, family, component.id))
-    .map((component) => Object.freeze({ family, id: component.id, component, refit: component.data?.refit ?? null }))
+    .map((component) => Object.freeze({ family, id: component.id, component, refit: component.data?.refit ?? null, economy: componentEconomyQuote(component) }))
     .sort((a, b) => a.component.name.localeCompare(b.component.name)));
 }
 
