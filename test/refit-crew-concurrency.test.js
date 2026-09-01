@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createShip } from "../src/ship/ship-schema.js";
+import { SHIP_CATALOGS } from "../src/content/index.js";
 import { createRefitJob, REFIT_JOB_STATES, REFIT_JOB_TYPES, REFIT_METHODS } from "../src/ship/refit-rules.js";
 import { advanceRefitWorkOrders } from "../src/ship/refit-time.js";
+import { findAvailableRefitSocketAssignment } from "../src/ship/refit-sockets.js";
 import { resolveCrewWorkConcurrency, startRefitJob } from "../src/ship/refit-work-orders.js";
 
 function repairJob(id, method, status, remainingHours) {
@@ -80,4 +82,14 @@ test("legacy multiple crew jobs can be repaired by choosing the one that stays a
   assert.equal(jobs["crew-a"].status, REFIT_JOB_STATES.PLANNED);
   assert.equal(jobs["crew-a"].remainingHours, 3);
   assert.equal(jobs["yard-a"].status, REFIT_JOB_STATES.WORKING);
+});
+
+test("queued installs can be reassigned to the next free socket after an earlier install completes", () => {
+  const ship = createShip({ shipMods: ["reinforced-structural-ribbing"] });
+  const assignment = findAvailableRefitSocketAssignment(ship, SHIP_CATALOGS, {
+    family: "shipMod",
+    componentId: "reinforced-structural-ribbing"
+  });
+  assert.equal(assignment.ok, true);
+  assert.deepEqual([...assignment.socketIndices], [1]);
 });
