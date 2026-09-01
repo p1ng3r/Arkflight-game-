@@ -35,6 +35,74 @@ function contextualDefaultSection() {
   return eventIsActive() || combatIsActive() ? "operations" : "command";
 }
 
+function commandShipSource() {
+  const source = game.arkflight?.ships;
+  if (!source) return { current: null, others: [] };
+
+  let rows = [];
+  if (typeof source.list === "function") rows = source.list() ?? [];
+  else if (Array.isArray(source)) rows = source;
+  else if (Array.isArray(source.contents)) rows = source.contents;
+
+  const normalized = rows.map((entry) => ({
+    id: entry.id ?? entry.actor?.id ?? null,
+    name: entry.name ?? entry.actor?.name ?? entry.ship?.identity?.name ?? "Unnamed Vessel",
+    level: entry.level ?? entry.ship?.level ?? entry.system?.details?.level?.value ?? null,
+    status: entry.status ?? entry.readiness ?? "Available",
+    player: entry.player !== false && entry.isNPC !== true,
+    current: entry.current === true || entry.selected === true || entry.active === true
+  })).filter((entry) => entry.player);
+
+  const current = normalized.find((entry) => entry.current) ?? normalized[0] ?? null;
+  return { current, others: normalized.filter((entry) => entry !== current) };
+}
+
+function buildCommandDashboard(eventState, eventDefinition, combatActive) {
+  const ships = commandShipSource();
+  const eventActive = Boolean(eventState?.eventId);
+  const workOrders = game.arkflight?.workOrders;
+  const activeWorkOrders = typeof workOrders?.listActive === "function" ? (workOrders.listActive() ?? []) : [];
+  const warnings = [];
+
+  if (typeof game.arkflight?.getGMAlerts === "function") {
+    for (const alert of game.arkflight.getGMAlerts() ?? []) {
+      const severity = alert.severity ?? alert.level ?? "attention";
+      if (!["critical", "danger", "warning", "attention"].includes(severity)) continue;
+      warnings.push({
+        severity: ["critical", "danger"].includes(severity) ? "critical" : "attention",
+        title: alert.title ?? "Arkflight warning",
+        detail: alert.detail ?? alert.message ?? "Requires GM attention."
+      });
+    }
+  }
+
+  return {
+    world: {
+      seconds: Number(game.time?.worldTime ?? 0),
+      workOrderCount: activeWorkOrders.length,
+      authoritativeCalendarPending: true
+    },
+    currentShip: ships.current,
+    otherShips: ships.others,
+    hasOtherShips: ships.others.length > 0,
+    operation: eventActive ? {
+      type: "Voyage",
+      name: eventDefinition?.name ?? eventDefinition?.title ?? eventState.eventId,
+      phase: eventState.phase ?? "active",
+      round: Number(eventState.roundIndex ?? 0) + 1,
+      action: "resume-event"
+    } : combatActive ? {
+      type: "Ship Combat",
+      name: "Active Ship Combat",
+      phase: currentCombatState()?.status ?? "active",
+      round: currentCombatState()?.round ?? null,
+      action: null
+    } : null,
+    warnings,
+    hasWarnings: warnings.length > 0
+  };
+}
+
 export class ArkflightGMOperations extends HandlebarsApplication {
   static DEFAULT_OPTIONS = {
     id: "arkflight-gm-operations",
@@ -94,6 +162,7 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       library: activeSection === "library",
       eventActive,
       combatActive,
+      commandDashboard: buildCommandDashboard(eventState, eventDefinition, combatActive),
       activeEvent: eventActive ? {
         id: eventState.eventId,
         name: eventDefinition?.name ?? eventDefinition?.title ?? eventState.eventId,
@@ -116,8 +185,13 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       });
     }
 
-    this.element.querySelector("[data-action='resume-event']")?.addEventListener("click", () => {
-      game.arkflight?.openBoard?.();
+    for (const button of this.element.querySelectorAll("[data-action='resume-event']")) {
+      button.addEventListener("click", () => game.arkflight?.openBoard?.());
+    }
+
+    this.element.querySelector("[data-action='open-operations']")?.addEventListener("click", () => {
+      this.activeSection = "operations";
+      this.render({ force: true });
     });
   }
 }
