@@ -36,7 +36,8 @@
     "styles/gm-operations-ships.css",
     "styles/gm-operations-ship-status.css",
     "styles/gm-operations-ship-classification.css",
-    "styles/gm-operations-ship-readiness.css"
+    "styles/gm-operations-ship-readiness.css",
+    "styles/gm-operations-generator.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -45,6 +46,7 @@
     "src/ui/opening-branding-ui.js",
     "src/ui/opening-stakes-tooltip-ui.js",
     "src/ui/ship-classification-ui.js",
-    "src/ui/ship-readiness-ui.js"
+    "src/ui/ship-readiness-ui.js",
+    "src/ui/enemy-generator-ui.js"
   ]
 }
