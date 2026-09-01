@@ -16,13 +16,7 @@ function stationRows(entry) {
   const stations = entry?.ship?.crew?.stations ?? {};
   const preferredOrder = ["captain", "engineer", "navigator", "watchmaster", "veilwarden"];
   const keys = [...preferredOrder.filter((key) => key in stations), ...Object.keys(stations).filter((key) => !preferredOrder.includes(key))];
-  return keys.map((key) => ({
-    id: key,
-    label: titleCase(key),
-    actorId: stations[key] ?? null,
-    name: actorName(stations[key]),
-    assigned: Boolean(stations[key])
-  }));
+  return keys.map((key) => ({ label: titleCase(key), name: actorName(stations[key]), assigned: Boolean(stations[key]) }));
 }
 
 function derivedRows(entry) {
@@ -39,9 +33,7 @@ function derivedRows(entry) {
 }
 
 function conditionRows(entry) {
-  const conditions = entry?.conditions ?? [];
-  return conditions.map((condition, index) => ({
-    id: condition.id ?? `condition-${index + 1}`,
+  return (entry?.conditions ?? []).map((condition, index) => ({
     label: condition.label ?? condition.name ?? titleCase(condition.id ?? `Condition ${index + 1}`),
     system: titleCase(condition.system ?? "ship"),
     state: titleCase(condition.state ?? "condition"),
@@ -53,7 +45,6 @@ function conditionRows(entry) {
 
 function damagedSystemRows(entry) {
   return (entry?.damagedSystems ?? []).map((row) => ({
-    id: `system-${row.system}`,
     label: `${titleCase(row.system)} System`,
     system: titleCase(row.system),
     state: titleCase(row.state),
@@ -61,6 +52,13 @@ function damagedSystemRows(entry) {
     source: "Persistent ship system state",
     detail: `${titleCase(row.system)} is currently ${titleCase(row.state).toLowerCase()}.`
   }));
+}
+
+function appendTextCell(parent, tag, text) {
+  const node = document.createElement(tag);
+  node.textContent = String(text ?? "");
+  parent.append(node);
+  return node;
 }
 
 function buildReadinessPanel(entry) {
@@ -80,7 +78,8 @@ function buildReadinessPanel(entry) {
   statsGrid.className = "arkflight-gm-derived-readiness-strip";
   for (const row of stats) {
     const cell = document.createElement("div");
-    cell.innerHTML = `<span>${row.label}</span><strong>${row.value}</strong>`;
+    appendTextCell(cell, "span", row.label);
+    appendTextCell(cell, "strong", row.value);
     statsGrid.append(cell);
   }
   wrapper.append(statsGrid);
@@ -96,7 +95,8 @@ function buildReadinessPanel(entry) {
   for (const station of stations) {
     const row = document.createElement("div");
     row.className = `arkflight-gm-station-assignment ${station.assigned ? "assigned" : "missing"}`;
-    row.innerHTML = `<span>${station.label}</span><strong>${station.name}</strong>`;
+    appendTextCell(row, "span", station.label);
+    appendTextCell(row, "strong", station.name);
     crewList.append(row);
   }
   if (!stations.length) crewList.innerHTML = `<div class="arkflight-gm-muted">No station assignments are defined on this ship.</div>`;
@@ -111,12 +111,13 @@ function buildReadinessPanel(entry) {
     const details = document.createElement("details");
     details.className = `arkflight-gm-condition-detail severity-${Math.min(3, Math.max(0, issue.severity))}`;
     const summary = document.createElement("summary");
-    summary.innerHTML = `<span>${issue.label}</span><small>${issue.system} · ${issue.state}${issue.severity ? ` · Severity ${issue.severity}` : ""}</small>`;
+    appendTextCell(summary, "span", issue.label);
+    appendTextCell(summary, "small", `${issue.system} · ${issue.state}${issue.severity ? ` · Severity ${issue.severity}` : ""}`);
     const body = document.createElement("div");
     body.className = "arkflight-gm-condition-detail-body";
     const source = document.createElement("div");
-    source.innerHTML = `<span>Source</span><strong></strong>`;
-    source.querySelector("strong").textContent = issue.source;
+    appendTextCell(source, "span", "Source");
+    appendTextCell(source, "strong", issue.source);
     const text = document.createElement("p");
     text.textContent = issue.detail;
     body.append(source, text);
@@ -150,3 +151,5 @@ function enhanceGMOperations(app) {
 export function installShipReadinessUI() {
   Hooks.on("renderApplicationV2", (app) => enhanceGMOperations(app));
 }
+
+installShipReadinessUI();
