@@ -153,7 +153,14 @@ function validateResistance(resistance, errors) {
 
 export function validateShipModProgression(mod) {
   const errors = [];
+  const legacyCompat = mod?.data?.catalogStatus === "legacy-compat";
   const rarity = mod?.data?.rarity;
+
+  if (legacyCompat) {
+    if (!hasMechanicalPurpose(mod)) errors.push("no-mechanical-purpose");
+    return Object.freeze({ ok: errors.length === 0, errors: Object.freeze(errors) });
+  }
+
   if (!SHIP_MOD_RARITIES.includes(rarity)) errors.push("invalid-rarity");
 
   const minShipLevel = Number(mod?.data?.minShipLevel);
