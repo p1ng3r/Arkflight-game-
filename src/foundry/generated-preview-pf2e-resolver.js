@@ -49,9 +49,10 @@ async function resolveOfficers(preview, personalBudget) {
   let remaining = personalBudget;
   const perOfficer = personalBudget / Math.max(1, preview.crew.officers.length);
   for (const officer of preview.crew.officers) {
-    const resolved = await resolveOfficerWeapon(officer.weaponIntent, { maxGp:Math.max(5, Math.min(perOfficer, remaining)) });
+    const resolved = await resolveOfficerWeapon(officer.weaponIntent, { maxGp:Math.max(5, Math.min(perOfficer, remaining || perOfficer)) });
     officers.push(embedResolvedWeapon(officer, resolved));
-    remaining = Math.max(0, remaining - resolved.estimatedGp);
+    const reserve = resolved.estimatedGp <= remaining ? resolved.estimatedGp : 0;
+    remaining = Math.max(0, remaining - reserve);
     personal.push(Object.freeze({
       kind:"signature-gear",
       officer:officer.name,
@@ -59,12 +60,14 @@ async function resolveOfficers(preview, personalBudget) {
       name:resolved.name,
       uuid:resolved.uuid,
       gp:resolved.estimatedGp,
+      budgetReservedGp:money(reserve),
+      budgetEligible:reserve === resolved.estimatedGp,
       recoverable:true,
       autoAward:false,
       rewardDecision:"pending"
     }));
   }
-  return { officers:Object.freeze(officers), personal:Object.freeze(personal), remaining:money(remaining) };
+  return { officers:Object.freeze(officers), personal:Object.freeze(personal), unallocated:money(remaining) };
 }
 
 async function resolveCargo(preview, cargoBudget) {
@@ -108,9 +111,9 @@ export async function resolveGeneratedPreviewPF2e(preview) {
   const cargoBudget = money(budget.gp * preview.loot.distribution.shipCargo);
   const salvageBudget = money(budget.gp * preview.loot.distribution.arkflightSalvage);
   const officerResolution = await resolveOfficers(preview, personalBudget);
-  const cargo = await resolveCargo(preview, cargoBudget + officerResolution.remaining);
+  const cargo = await resolveCargo(preview, cargoBudget);
   const salvage = resolveSalvage(preview, salvageBudget);
-  const personalSpent = money(officerResolution.personal.reduce((sum,row) => sum + Number(row.gp ?? 0), 0));
+  const personalReserved = money(officerResolution.personal.reduce((sum,row) => sum + Number(row.budgetReservedGp ?? 0), 0));
   const cargoValue = money(cargo.reduce((sum,row) => sum + Number(row.gp ?? 0), 0));
   const salvageValue = money(salvage.reduce((sum,row) => sum + Number(row.budgetGp ?? 0), 0));
   const loot = Object.freeze({
@@ -119,7 +122,7 @@ export async function resolveGeneratedPreviewPF2e(preview) {
     personal:officerResolution.personal,
     shipCargo:cargo,
     salvage,
-    accounting:Object.freeze({ ceilingGp:budget.gp, personalGp:personalSpent, cargoGp:cargoValue, salvageGp:salvageValue, totalGp:money(personalSpent+cargoValue+salvageValue) }),
+    accounting:Object.freeze({ ceilingGp:budget.gp, personalReservedGp:personalReserved, personalUnallocatedGp:officerResolution.unallocated, cargoGp:cargoValue, salvageGp:salvageValue, totalReservedGp:money(personalReserved+cargoValue+salvageValue) }),
     state:"resolved"
   });
   return Object.freeze({
