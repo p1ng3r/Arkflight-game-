@@ -51,6 +51,7 @@
     "src/ui/ship-readiness-ui.js",
     "src/ui/enemy-generator-ui.js",
     "src/ui/enemy-generator-ayerstone-ui.js",
-    "src/ui/enemy-generator-officer-detail-ui.js"
+    "src/ui/enemy-generator-officer-detail-ui.js",
+    "src/ui/enemy-generator-crew-and-name-ui.js"
   ]
 }
