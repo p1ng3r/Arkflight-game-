@@ -1,6 +1,8 @@
 import { generateEnemyShipPreview } from "./enemy-ship-generator.js";
 import { generatePF2eOfficerActorDraft } from "./pf2e-officer-actor-draft.js";
 import { applyCrewAffiliation } from "./ayerstone-crew-affiliation.js";
+import { generateAyerstoneShipName } from "./ayerstone-ship-names.js";
+import { generatePF2eCrewTemplates } from "./pf2e-crew-template-generator.js";
 
 const LOOT_SPLITS = Object.freeze({
   poor: Object.freeze({ personal: 0.25, cargo: 0.40, salvage: 0.35, multiplier: 0.55 }),
@@ -41,14 +43,23 @@ function lootContract(basePreview, input) {
   });
 }
 
+function doctrineWarning(base) {
+  const preferred = base.doctrine?.preferredArchetypes ?? [];
+  if (!preferred.length || preferred.includes(base.config.archetypeId)) return null;
+  return `Faction doctrine usually favors ${preferred.join(", ")}; keeping GM-selected ${base.archetype.label}.`;
+}
+
 export function generateEnemyEncounterPreview(input = {}) {
   const base = generateEnemyShipPreview(input);
   const partyLevel = clampLevel(input.partyLevel ?? base.config.level);
+  const shipName = generateAyerstoneShipName({ faction: base.config.faction, archetypeLabel: base.archetype.label, seed: base.config.seed, override: input.shipName });
+  const ship = Object.freeze({ ...base.ship, identity: Object.freeze({ ...(base.ship.identity ?? {}), name: shipName }) });
   const officers = base.crew.officers.map((officer) => {
     const seed = `${base.config.seed}:${officer.station}`;
     const draft = generatePF2eOfficerActorDraft({ station: officer.station, level: officer.level, quality: base.config.difficulty, faction: base.config.faction, theme: base.config.theme, seed });
     return applyCrewAffiliation(draft, { faction: base.config.faction, seed });
   });
+  const templates = generatePF2eCrewTemplates({ shipLevel: base.config.level, quality: base.config.difficulty, faction: base.config.faction });
   const loot = lootContract(base, { ...input, partyLevel });
   const blockers = [
     ...(base.validation.ok ? [] : base.validation.errors),
@@ -58,9 +69,11 @@ export function generateEnemyEncounterPreview(input = {}) {
 
   return Object.freeze({
     ...base,
-    version: 5,
-    config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto" }),
-    crew: Object.freeze({ ...base.crew, officers: Object.freeze(officers) }),
+    version: 6,
+    ship,
+    config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto", shipName }),
+    doctrine: Object.freeze({ ...base.doctrine, warning: doctrineWarning(base) }),
+    crew: Object.freeze({ ...base.crew, officers: Object.freeze(officers), templates: Object.freeze(templates) }),
     loot,
     canCommit: blockers.length === 0,
     blockers: Object.freeze(blockers)
