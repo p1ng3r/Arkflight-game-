@@ -94,6 +94,7 @@
     "src/ui/ship-level-reset-fix-ui.js",
     "src/ui/ship-sheet-polish-ui.js",
     "src/ui/ship-portrait-ui.js",
+    "src/ui/ship-crew-assignment-ui.js",
     "src/ui/ship-token-authority-ui.js",
     "src/ui/shipwright-bay-ui.js",
     "src/ui/shipwright-arkengine-socket-ui.js",
