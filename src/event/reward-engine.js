@@ -43,7 +43,7 @@ export function endingDefinition({ id, label, bands, vignette, rewards = rewardP
   if (!id || !label) throw new Error("Event ending requires id and label");
   if (!Array.isArray(bands) || bands.length < 1) throw new Error(`Event ending ${id} requires one or more final round bands`);
   const sentenceCount = String(vignette ?? "").split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length;
-  if (sentenceCount < 3 || sentenceCount > 6) throw new Error(`Event ending ${id} vignette must be 3-6 sentences; received ${sentenceCount}`);
+  if (sentenceCount < 3 || sentenceCount > 10) throw new Error(`Event ending ${id} vignette must be 3-10 sentences; received ${sentenceCount}`);
   return Object.freeze({ id, label, bands: Object.freeze([...bands]), vignette, rewards });
 }
 
