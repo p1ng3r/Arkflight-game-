@@ -21,39 +21,91 @@ async function beginResolution(controller) {
   await refreshEventBoard();
 }
 
+function installWindowDrag(chrome, root, app) {
+  if (!chrome || chrome.dataset.paWindowDragBound === "true") return;
+  chrome.dataset.paWindowDragBound = "true";
+
+  chrome.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || event.target?.closest?.("button, select, input, a")) return;
+    event.preventDefault();
+
+    const rect = root.getBoundingClientRect();
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = Number(app?.position?.left ?? rect.left);
+    const startTop = Number(app?.position?.top ?? rect.top);
+    const width = Number(app?.position?.width ?? rect.width);
+    const height = Number(app?.position?.height ?? rect.height);
+    const viewportWidth = Math.max(0, Number(globalThis.innerWidth ?? document.documentElement?.clientWidth ?? width));
+    const viewportHeight = Math.max(0, Number(globalThis.innerHeight ?? document.documentElement?.clientHeight ?? height));
+
+    chrome.classList.add("is-dragging");
+    chrome.setPointerCapture?.(event.pointerId);
+
+    const onMove = (moveEvent) => {
+      const maxLeft = Math.max(0, viewportWidth - Math.min(width, 180));
+      const maxTop = Math.max(0, viewportHeight - 40);
+      const left = Math.max(0, Math.min(maxLeft, startLeft + moveEvent.clientX - startX));
+      const top = Math.max(0, Math.min(maxTop, startTop + moveEvent.clientY - startY));
+      if (typeof app?.setPosition === "function") app.setPosition({ left, top });
+      else {
+        root.style.left = `${left}px`;
+        root.style.top = `${top}px`;
+      }
+    };
+
+    const onUp = (upEvent) => {
+      chrome.classList.remove("is-dragging");
+      chrome.releasePointerCapture?.(upEvent.pointerId);
+      chrome.removeEventListener("pointermove", onMove);
+      chrome.removeEventListener("pointerup", onUp);
+      chrome.removeEventListener("pointercancel", onUp);
+    };
+
+    chrome.addEventListener("pointermove", onMove);
+    chrome.addEventListener("pointerup", onUp);
+    chrome.addEventListener("pointercancel", onUp);
+  });
+}
+
 function installWindowChrome(root, app) {
   if (!root || !["planning", "locked"].includes(game.arkflight?.controller?.state?.phase)) return;
   const board = root.querySelector?.(".pa-board");
-  if (!board || board.querySelector("[data-pa-window-chrome]")) return;
+  if (!board) return;
 
-  const chrome = document.createElement("header");
-  chrome.className = "pa-window-chrome";
-  chrome.dataset.paWindowChrome = "true";
-  chrome.innerHTML = `
-    <div class="pa-window-chrome-title"><i class="fa-solid fa-compass"></i><span>Arkflight Event</span></div>
-    <div class="pa-window-chrome-actions">
-      <button type="button" data-pa-window-minimize title="Minimize Arkflight Event"><i class="fa-solid fa-window-minimize"></i></button>
-      <button type="button" data-pa-window-close title="Close Arkflight Event"><i class="fa-solid fa-xmark"></i></button>
-    </div>`;
-  board.prepend(chrome);
+  let chrome = board.querySelector("[data-pa-window-chrome]");
+  if (!chrome) {
+    chrome = document.createElement("header");
+    chrome.className = "pa-window-chrome";
+    chrome.dataset.paWindowChrome = "true";
+    chrome.innerHTML = `
+      <div class="pa-window-chrome-title"><i class="fa-solid fa-compass"></i><span>Arkflight Event</span></div>
+      <div class="pa-window-chrome-actions">
+        <button type="button" data-pa-window-minimize title="Minimize Arkflight Event"><i class="fa-solid fa-window-minimize"></i></button>
+        <button type="button" data-pa-window-close title="Close Arkflight Event"><i class="fa-solid fa-xmark"></i></button>
+      </div>`;
+    board.prepend(chrome);
 
-  chrome.querySelector("[data-pa-window-minimize]")?.addEventListener("click", async (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    try {
-      if (typeof app?.minimize === "function") await app.minimize();
-      else root.classList.toggle("pa-window-collapsed");
-    } catch (error) {
-      console.warn("Arkflight | Event window minimize failed", error);
-    }
-  });
+    chrome.querySelector("[data-pa-window-minimize]")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        if (typeof app?.minimize === "function") await app.minimize();
+        else root.classList.toggle("pa-window-collapsed");
+      } catch (error) {
+        console.warn("Arkflight | Event window minimize failed", error);
+      }
+    });
 
-  chrome.querySelector("[data-pa-window-close]")?.addEventListener("click", async (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    try { await app?.close?.(); }
-    catch (error) { console.warn("Arkflight | Event window close failed", error); }
-  });
+    chrome.querySelector("[data-pa-window-close]")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try { await app?.close?.(); }
+      catch (error) { console.warn("Arkflight | Event window close failed", error); }
+    });
+  }
+
+  installWindowDrag(chrome, root, app);
 }
 
 function installAuthoritativeLockDelegation(root) {
