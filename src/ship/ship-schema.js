@@ -1,4 +1,4 @@
-export const SHIP_SCHEMA_VERSION = 5;
+export const SHIP_SCHEMA_VERSION = 6;
 
 export const SHIP_AREA_KEYS = Object.freeze([
   "hull",
@@ -100,14 +100,16 @@ function normalizeComponentCounts(values = {}) {
 function normalizeBlueprints(blueprints = {}) {
   return {
     shipModIds: normalizeIdList(blueprints.shipModIds),
-    arkengineModIds: normalizeIdList(blueprints.arkengineModIds)
+    arkengineModIds: normalizeIdList(blueprints.arkengineModIds),
+    weaponIds: normalizeIdList(blueprints.weaponIds)
   };
 }
 
 function normalizeInventory(inventory = {}) {
   return {
     shipMods: normalizeComponentCounts(inventory.shipMods),
-    arkengineMods: normalizeComponentCounts(inventory.arkengineMods)
+    arkengineMods: normalizeComponentCounts(inventory.arkengineMods),
+    weapons: normalizeComponentCounts(inventory.weapons)
   };
 }
 
@@ -139,8 +141,8 @@ export function createShip(overrides = {}) {
     crew: { stations: Object.fromEntries(STATION_KEYS.map((key) => [key, null])), specialists: [] },
     cargo: { used: 0, notes: "" },
     resources: { hull: resource(), lifeveil: resource(), strain: resource(), supplies: resource(), morale: resource(3, 5), salvageParts: counter() },
-    blueprints: { shipModIds: [], arkengineModIds: [] },
-    inventory: { shipMods: {}, arkengineMods: {} },
+    blueprints: { shipModIds: [], arkengineModIds: [], weaponIds: [] },
+    inventory: { shipMods: {}, arkengineMods: {}, weapons: {} },
     refit: { workOrders: [] },
     areas: Object.fromEntries(SHIP_AREA_KEYS.map((key) => [key, area()])),
     progression: normalizeProgression(),
@@ -176,8 +178,20 @@ function mergeShip(base, overrides) {
     crew: { ...base.crew, ...(overrides.crew ?? {}), stations: { ...base.crew.stations, ...(overrides.crew?.stations ?? {}) }, specialists: [...(overrides.crew?.specialists ?? base.crew.specialists)] },
     cargo: { ...base.cargo, ...(overrides.cargo ?? {}) },
     resources: { ...base.resources, ...(overrides.resources ?? {}) },
-    blueprints: { ...base.blueprints, ...(overrides.blueprints ?? {}), shipModIds: [...(overrides.blueprints?.shipModIds ?? base.blueprints.shipModIds)], arkengineModIds: [...(overrides.blueprints?.arkengineModIds ?? base.blueprints.arkengineModIds)] },
-    inventory: { ...base.inventory, ...(overrides.inventory ?? {}), shipMods: { ...base.inventory.shipMods, ...(overrides.inventory?.shipMods ?? {}) }, arkengineMods: { ...base.inventory.arkengineMods, ...(overrides.inventory?.arkengineMods ?? {}) } },
+    blueprints: {
+      ...base.blueprints,
+      ...(overrides.blueprints ?? {}),
+      shipModIds: [...(overrides.blueprints?.shipModIds ?? base.blueprints.shipModIds)],
+      arkengineModIds: [...(overrides.blueprints?.arkengineModIds ?? base.blueprints.arkengineModIds)],
+      weaponIds: [...(overrides.blueprints?.weaponIds ?? base.blueprints.weaponIds)]
+    },
+    inventory: {
+      ...base.inventory,
+      ...(overrides.inventory ?? {}),
+      shipMods: { ...base.inventory.shipMods, ...(overrides.inventory?.shipMods ?? {}) },
+      arkengineMods: { ...base.inventory.arkengineMods, ...(overrides.inventory?.arkengineMods ?? {}) },
+      weapons: { ...base.inventory.weapons, ...(overrides.inventory?.weapons ?? {}) }
+    },
     refit: { ...base.refit, ...(overrides.refit ?? {}), workOrders: [...(overrides.refit?.workOrders ?? base.refit.workOrders)] },
     areas: { ...base.areas, ...(overrides.areas ?? {}) },
     progression: { ...base.progression, ...(overrides.progression ?? {}), talentIds: [...(overrides.progression?.talentIds ?? base.progression.talentIds)], arkcraftUpgrades: { ...base.progression.arkcraftUpgrades, ...(overrides.progression?.arkcraftUpgrades ?? {}) } },
