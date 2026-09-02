@@ -1,16 +1,29 @@
 <form class="arkflight-ship-shell {{cssClass}}" autocomplete="off">
-  <header class="arkflight-ship-header">
-    <img class="arkflight-ship-portrait" src="{{arkflight.actorImg}}" alt="{{actor.name}}">
-    <div class="arkflight-ship-identity">
-      <div class="arkflight-ship-kicker">ARKFLIGHT VESSEL</div>
-      <div class="arkflight-ship-name-row"><h1>{{actor.name}}</h1><span class="arkflight-tier">LEVEL {{arkflight.level}}</span></div>
-      <div class="arkflight-ship-registry-row"><span>{{arkflight.hullName}}</span><span>{{arkflight.hullPatternName}}</span>{{#if arkflight.ship.identity.registry}}<span>REG {{arkflight.ship.identity.registry}}</span>{{/if}}{{#if arkflight.ship.identity.callsign}}<span>CALLSIGN {{arkflight.ship.identity.callsign}}</span>{{/if}}</div>
-      <div class="arkflight-powertrain-line"><strong>{{arkflight.arkengineName}}</strong><span>{{arkflight.arkenginePatternName}}</span></div>
-    </div>
-    <div class="arkflight-ship-header-actions">
-      <div class="arkflight-readiness {{arkflight.validation.statusClass}}"><i class="fa-solid {{#if arkflight.validation.ok}}fa-circle-check{{else}}fa-triangle-exclamation{{/if}}"></i> {{arkflight.validation.label}}</div>
-      <div class="arkflight-access-note">{{#if arkflight.canManageRefit}}REFIT AUTHORIZED{{else}}REFIT VIEW ONLY{{/if}}</div>
-    </div>
+  <header class="arkflight-ship-header arkflight-ship-header-v2">
+    <section class="arkflight-header-vessel">
+      <div class="arkflight-header-vessel-top">
+        <div class="arkflight-ship-portrait-frame">
+          <img class="arkflight-ship-portrait" src="{{arkflight.actorImg}}" alt="{{actor.name}}">
+        </div>
+        <div class="arkflight-ship-identity">
+          <div class="arkflight-ship-kicker">ARKFLIGHT VESSEL</div>
+          <div class="arkflight-ship-name-row"><h1>{{actor.name}}</h1><span class="arkflight-tier">LEVEL {{arkflight.level}}</span></div>
+          <div class="arkflight-ship-registry-row"><span>{{arkflight.hullName}}</span><span>{{arkflight.hullPatternName}}</span>{{#if arkflight.ship.identity.registry}}<span>REG {{arkflight.ship.identity.registry}}</span>{{/if}}{{#if arkflight.ship.identity.callsign}}<span>CALLSIGN {{arkflight.ship.identity.callsign}}</span>{{/if}}</div>
+          <div class="arkflight-powertrain-line"><strong>{{arkflight.arkengineName}}</strong><span>{{arkflight.arkenginePatternName}}</span></div>
+        </div>
+      </div>
+      <div class="arkflight-ship-xp-host" data-ship-xp-host></div>
+    </section>
+
+    <section class="arkflight-header-voyage">
+      <div class="arkflight-header-section-label">VOYAGE STATUS</div>
+      <div class="arkflight-ship-header-actions">
+        <div class="arkflight-readiness {{arkflight.validation.statusClass}}"><i class="fa-solid {{#if arkflight.validation.ok}}fa-circle-check{{else}}fa-triangle-exclamation{{/if}}"></i> {{arkflight.validation.label}}</div>
+        <div class="arkflight-access-note">{{#if arkflight.canManageRefit}}REFIT AUTHORIZED{{else}}REFIT VIEW ONLY{{/if}}</div>
+      </div>
+    </section>
+
+    <section class="arkflight-header-status" data-operational-status-host></section>
   </header>
 
   <nav class="arkflight-sheet-tabs" aria-label="Arkflight ship sheet sections">
