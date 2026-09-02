@@ -1,0 +1,216 @@
+.application:has(.arkflight-install-scroll) {
+  width: min(1220px, 95vw) !important;
+  height: min(840px, 92vh) !important;
+  min-width: min(980px, 92vw) !important;
+  min-height: min(700px, 88vh) !important;
+}
+
+.application:has(.arkflight-install-scroll) .window-content {
+  padding: 14px 18px 18px !important;
+  overflow: auto !important;
+  background: #0b0a09 !important;
+}
+
+.application:has(.arkflight-install-scroll) .dialog-content,
+.application:has(.arkflight-install-scroll) form {
+  min-height: 0;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll {
+  width: min(100%, 1040px);
+  min-height: 590px;
+  margin: 0 auto;
+  padding: 76px 92px 62px;
+  box-sizing: border-box;
+  background: var(--install-scroll) center/100% 100% no-repeat;
+  color: #17110c;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  text-shadow: none;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll header {
+  grid-template-columns: minmax(0,1fr) 108px;
+  gap: 20px;
+  align-items: center;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll header span {
+  color: #4c3018;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll header h2 {
+  margin: 4px 0 2px;
+  color: #120c08;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  font-size: 38px;
+  font-variant: small-caps;
+  font-weight: 900;
+  letter-spacing: .025em;
+  line-height: 1.05;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll header p {
+  margin: 0;
+  color: #3a281a;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll header img {
+  width: 102px;
+  height: 102px;
+  filter: drop-shadow(0 3px 3px rgba(38,24,10,.35));
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll-grid {
+  grid-template-columns: .92fr 1.08fr;
+  gap: 34px;
+  margin-top: 30px;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll h3 {
+  margin: 0 0 14px;
+  padding-bottom: 5px;
+  border-bottom: 2px solid rgba(73,46,21,.48);
+  color: #18100a;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  font-size: 28px;
+  font-variant: small-caps;
+  font-weight: 900;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll dl {
+  gap: 10px;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll dl > div {
+  align-items: baseline;
+  gap: 18px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(87,58,31,.18);
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll dt,
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll dd {
+  color: #17110c;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll dt {
+  font-weight: 900;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll dd {
+  font-weight: 800;
+  text-align: right;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options {
+  gap: 16px;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options label {
+  position: relative;
+  gap: 8px;
+  min-height: 238px;
+  padding: 16px 14px 14px;
+  border: 2px solid rgba(74,47,24,.48);
+  background: rgba(247,224,177,.24);
+  color: #17110c;
+  box-shadow: inset 0 0 18px rgba(91,55,19,.08);
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options label:has(input:checked) {
+  border-color: #8f5f20;
+  background: rgba(232,193,116,.36);
+  box-shadow: inset 0 0 20px rgba(139,88,24,.15), 0 0 0 2px rgba(139,88,24,.12);
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options img {
+  width: 126px;
+  height: 126px;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options input[type="radio"] {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: #8d5a1e;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options strong {
+  color: #160f0a;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options small {
+  color: #493321;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-payment-options label.is-disabled {
+  opacity: .48;
+  filter: grayscale(.35);
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll footer {
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 14px;
+  border-top: 2px solid rgba(70,49,29,.35);
+  color: #2b1c12;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll footer img {
+  width: 46px;
+  height: 46px;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll footer span {
+  color: #2d1d12;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.application:has(.arkflight-install-scroll) .form-footer,
+.application:has(.arkflight-install-scroll) footer.form-footer,
+.application:has(.arkflight-install-scroll) .dialog-buttons {
+  gap: 12px;
+  padding: 12px 18px 16px;
+}
+
+.application:has(.arkflight-install-scroll) .form-footer button,
+.application:has(.arkflight-install-scroll) footer.form-footer button,
+.application:has(.arkflight-install-scroll) .dialog-buttons button {
+  min-height: 50px;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+@media (max-width: 1050px) {
+  .application:has(.arkflight-install-scroll) {
+    width: 96vw !important;
+    min-width: 0 !important;
+    height: 94vh !important;
+    min-height: 0 !important;
+  }
+
+  .application:has(.arkflight-install-scroll) .arkflight-install-scroll {
+    width: 100%;
+    min-height: 0;
+    padding: 58px 58px 50px;
+  }
+
+  .application:has(.arkflight-install-scroll) .arkflight-install-scroll-grid {
+    grid-template-columns: 1fr;
+  }
+}
