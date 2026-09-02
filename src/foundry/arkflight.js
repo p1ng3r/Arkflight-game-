@@ -209,7 +209,7 @@ Hooks.once("init", () => {
 Hooks.once("ready", async () => {
   controller = new PlanningController({
     onStateChange: (state) => {
-      renderBoard();
+      if (board?.rendered) renderBoard();
       if (gmOperations?.rendered) gmOperations.render({ force: true });
       announceStateRewards(state);
     },
@@ -217,7 +217,12 @@ Hooks.once("ready", async () => {
     applyShipEffects: (effects) => applyEventShipEffects(effects)
   });
   controller.activateSockets();
-  if (controller.state?.eventId) { await bindExistingEventShipIfNeeded(); game.arkflight.stationOptions = stationOptionsForShip(activeVoyageShip()); renderBoard(); announceStateRewards(controller.state); }
+  if (controller.state?.eventId) {
+    await bindExistingEventShipIfNeeded();
+    game.arkflight.stationOptions = stationOptionsForShip(activeVoyageShip());
+    // Preserve the saved event state, but do not force any Event or Rewards UI
+    // open during world startup. The GM/player opens the board explicitly.
+  }
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
