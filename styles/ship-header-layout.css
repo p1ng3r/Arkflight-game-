@@ -1,0 +1,102 @@
+.arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header {
+  grid-template-columns: 156px minmax(280px, 1fr) minmax(230px, 280px) minmax(190px, 230px);
+  gap: 14px;
+  align-items: start;
+  min-height: 0;
+}
+
+.arkflight-ship-portrait-stack {
+  width: 156px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-portrait-frame {
+  width: 138px;
+  align-self: center;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-xp {
+  width: 100%;
+  margin: 0;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-xp-head {
+  gap: 4px;
+  margin-bottom: 3px;
+  font-size: 7px;
+  letter-spacing: .05em;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-xp-next {
+  font-size: 7px;
+  white-space: nowrap;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-xp-bar {
+  height: 19px;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-xp-value {
+  gap: 3px;
+  font-size: 8px;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-xp-value input {
+  width: 45px;
+  height: 15px;
+  padding: 0 2px;
+}
+
+.arkflight-ship-portrait-stack .arkflight-ship-level-reset {
+  display: none;
+}
+
+.arkflight-ship-command-polished[data-arkflight-header-layout="true"] > .arkflight-ship-header .arkflight-operational-status {
+  align-self: center;
+  width: 100%;
+  margin: 4px 0 0;
+}
+
+.arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-operational-status-effects {
+  min-height: 44px;
+}
+
+.arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header-actions {
+  min-width: 0;
+  gap: 9px;
+  padding-top: 4px;
+}
+
+.arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-progression-launch[hidden] {
+  display: none !important;
+}
+
+.arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-progression-launch.has-unspent-tp {
+  border-color: #9b7837;
+  color: #f1d48a;
+}
+
+@media (max-width: 1100px) {
+  .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header {
+    grid-template-columns: 148px minmax(260px, 1fr) minmax(210px, 250px);
+  }
+  .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header-actions {
+    grid-column: 2 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 820px) {
+  .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header {
+    grid-template-columns: 138px minmax(0, 1fr);
+  }
+  .arkflight-ship-command-polished[data-arkflight-header-layout="true"] > .arkflight-ship-header .arkflight-operational-status,
+  .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header-actions {
+    grid-column: 1 / -1;
+  }
+}
