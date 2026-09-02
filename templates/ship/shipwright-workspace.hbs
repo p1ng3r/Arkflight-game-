@@ -1,9 +1,17 @@
 <section class="arkflight-workspace-shell">
   <header class="arkflight-workspace-topbar">
     <div><span>SHIPWRIGHT WORKSPACE</span><h1>{{actorName}}</h1></div>
-    <div class="arkflight-workspace-status"><span>{{serviceLabel}}</span><strong>{{scrap}} Aether Scrap</strong></div>
+    <div class="arkflight-workspace-status">
+      <span>{{statusLabel}} · {{serviceLabel}}</span>
+      <strong>{{scrap}} Aether Scrap</strong>
+      {{#if hasPartyTreasury}}<small>Party Treasury {{partyGold}} gp</small>{{/if}}
+    </div>
     {{#unless workbench}}<button type="button" data-workbench-home><i class="fa-solid fa-arrow-left"></i> Back to Workbench</button>{{/unless}}
   </header>
+
+  {{#unless serviceAllowed}}
+    <div class="arkflight-workspace-service-warning"><i class="fa-solid fa-triangle-exclamation"></i> {{statusLabel}} does not currently permit {{serviceLabel}} installation work. Secure the vessel before beginning a refit.</div>
+  {{/unless}}
 
   {{#if workbench}}
     <section class="arkflight-workbench-stage" aria-label="Shipwright workbench">
@@ -45,10 +53,19 @@
           <img class="arkflight-workspace-board-art" src="{{boardArt}}" alt="Fitting board">
           <div class="arkflight-workspace-socket-layer">
             {{#each sockets as |socket|}}
-              <button type="button" class="arkflight-workspace-socket {{#if socket.occupied}}is-occupied{{/if}}" style="left:{{socket.left}}%;top:{{socket.top}}%" data-workspace-socket data-socket-index="{{socket.index}}" data-occupied="{{socket.occupied}}" title="Socket {{socket.index}}">
+              <button type="button" class="arkflight-workspace-socket {{#if socket.occupied}}is-occupied{{/if}} {{#if socket.reserved}}is-reserved{{/if}} {{#if socket.working}}is-working{{/if}} {{#if socket.selected}}is-selected{{/if}}" style="left:{{socket.left}}%;top:{{socket.top}}%" data-workspace-socket data-socket-index="{{socket.index}}" data-occupied="{{socket.occupied}}" data-reserved="{{socket.reserved}}" title="Socket {{socket.index}} {{socket.componentName}}">
                 <img class="arkflight-workspace-socket-base" src="{{socket.art}}" alt="">
-                {{#if socket.occupied}}<img class="arkflight-workspace-socket-state" src="{{../assets.completed}}" alt="Installed">{{else}}<img class="arkflight-workspace-socket-state" src="{{../assets.compatible}}" alt="Available">{{/if}}
+                {{#if socket.occupied}}
+                  <img class="arkflight-workspace-socket-state" src="{{../assets.completed}}" alt="Installed">
+                {{else if socket.working}}
+                  <img class="arkflight-workspace-socket-state" src="{{../assets.working}}" alt="Work in progress">
+                {{else if socket.reserved}}
+                  <img class="arkflight-workspace-socket-state" src="{{../assets.reserved}}" alt="Reserved">
+                {{else}}
+                  <img class="arkflight-workspace-socket-state" src="{{../assets.compatible}}" alt="Available">
+                {{/if}}
                 {{#if socket.occupied}}<span>{{socket.index}}</span>{{/if}}
+                {{#if socket.reserved}}<span class="arkflight-socket-job-mark"><i class="fa-solid fa-hourglass-half"></i></span>{{/if}}
               </button>
             {{/each}}
           </div>
@@ -57,21 +74,25 @@
 
       <aside class="arkflight-workspace-sidecol">
         <section class="arkflight-workspace-tray" data-inventory-tray style="--tray-art:url('{{assets.inventoryTray}}')">
-          <header><h2>Owned Fittings</h2><small>Click a socket to highlight compatible inventory, or drag a fitting directly onto a socket.</small></header>
+          <header>
+            <h2>Owned Fittings</h2>
+            {{#if hasSelectedSocket}}<small class="arkflight-selected-socket-note">Socket {{selectedSocket}} selected — choose a fitting below or drag it onto the socket.</small>{{else}}<small>Click an empty socket to choose from compatible inventory, or drag a fitting directly onto a socket.</small>{{/if}}
+          </header>
           <div class="arkflight-workspace-inventory-list">
             {{#each inventory as |item|}}
-              <article draggable="true" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}">
-                <strong>{{item.name}}</strong><span>x{{item.quantity}}</span>
+              <article draggable="true" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}" class="{{#if ../hasSelectedSocket}}is-compatible{{/if}}">
+                <div><strong>{{item.name}}</strong><small>Physical fitting aboard</small></div><span>x{{item.quantity}}</span>
+                {{#if ../hasSelectedSocket}}<button type="button" data-install-selected><i class="fa-solid fa-hammer"></i> Install in Selected Socket</button>{{/if}}
               </article>
             {{/each}}
-            {{#unless inventory.length}}<p>{{#if ../isWeapon}}Weapon inventory persistence is the next backend migration; installed hardpoints are already shown on the board.{{else}}No physical fittings of this type are currently aboard.{{/if}}</p>{{/unless}}
+            {{#unless inventory.length}}<p>{{#if ../isWeapon}}Weapon inventory persistence is the remaining weapon-backend migration.{{else}}No physical fittings of this type are currently aboard.{{/if}}</p>{{/unless}}
           </div>
         </section>
 
         <section class="arkflight-workspace-tray arkflight-workspace-worktray" style="--tray-art:url('{{assets.workTray}}')">
-          <header><h2>Active Work</h2></header>
+          <header><h2>Active Work</h2><small>Reserved sockets remain unavailable until their work order resolves.</small></header>
           {{#if hasWorkOrders}}
-            <div class="arkflight-workspace-work-list">{{#each workOrders as |job|}}<article class="{{#if job.working}}is-working{{/if}}"><img src="{{../assets.hourglass}}" alt=""><div><strong>{{job.name}}</strong><span>{{job.status}} · {{job.hours}}h remaining</span></div></article>{{/each}}</div>
+            <div class="arkflight-workspace-work-list">{{#each workOrders as |job|}}<article class="{{#if job.working}}is-working{{/if}}"><img src="{{../assets.hourglass}}" alt=""><div><strong>{{job.name}}</strong><span>{{job.status}} · {{job.hours}}h remaining · {{job.payment}}</span></div></article>{{/each}}</div>
           {{else}}<p>No active refit work orders.</p>{{/if}}
         </section>
       </aside>
