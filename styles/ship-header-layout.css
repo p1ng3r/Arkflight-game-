@@ -1,17 +1,28 @@
 .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header {
-  grid-template-columns: 156px minmax(280px, 1fr) minmax(190px, 230px) minmax(230px, 280px);
-  gap: 14px;
+  display: grid;
+  grid-template-columns: 156px minmax(190px, 230px) minmax(230px, 290px) minmax(180px, 1fr);
+  grid-template-areas:
+    "portrait identity identity identity"
+    "portrait readiness status progression";
+  column-gap: 14px;
+  row-gap: 10px;
   align-items: start;
   min-height: 0;
 }
 
 .arkflight-ship-portrait-stack {
+  grid-area: portrait;
   width: 156px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 6px;
+}
+
+.arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-identity {
+  grid-area: identity;
+  align-self: start;
 }
 
 .arkflight-ship-portrait-stack .arkflight-ship-portrait-frame {
@@ -56,24 +67,27 @@
 }
 
 .arkflight-ship-readiness-stack {
-  align-self: center;
+  grid-area: readiness;
+  align-self: start;
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-top: 4px;
+  gap: 8px;
+  margin: 0;
 }
 
 .arkflight-ship-readiness-stack .arkflight-readiness,
 .arkflight-ship-readiness-stack .arkflight-access-note {
   width: 100%;
+  min-height: 36px;
   box-sizing: border-box;
 }
 
 .arkflight-ship-command-polished[data-arkflight-header-layout="true"] > .arkflight-ship-header .arkflight-operational-status {
-  align-self: center;
+  grid-area: status;
+  align-self: start;
   width: 100%;
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-operational-status-effects {
@@ -81,9 +95,11 @@
 }
 
 .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header-actions {
+  grid-area: progression;
   min-width: 0;
-  gap: 9px;
-  padding-top: 4px;
+  gap: 8px;
+  padding: 0;
+  align-self: start;
 }
 
 .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-progression-launch[hidden] {
@@ -97,17 +113,22 @@
 
 @media (max-width: 1100px) {
   .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header {
-    grid-template-columns: 148px minmax(250px, 1fr) minmax(180px, 220px) minmax(210px, 250px);
+    grid-template-columns: 148px minmax(180px, 220px) minmax(210px, 260px) minmax(160px, 1fr);
   }
 }
 
 @media (max-width: 900px) {
   .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header {
     grid-template-columns: 138px minmax(0, 1fr);
+    grid-template-areas:
+      "portrait identity"
+      "portrait identity"
+      "readiness status"
+      "progression progression";
   }
   .arkflight-ship-readiness-stack,
   .arkflight-ship-command-polished[data-arkflight-header-layout="true"] > .arkflight-ship-header .arkflight-operational-status,
   .arkflight-ship-command-polished[data-arkflight-header-layout="true"] .arkflight-ship-header-actions {
-    grid-column: 1 / -1;
+    width: 100%;
   }
 }
