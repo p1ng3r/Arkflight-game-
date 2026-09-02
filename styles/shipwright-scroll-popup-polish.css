@@ -1,13 +1,13 @@
 .application:has(.arkflight-install-scroll) {
   width: min(1160px, 95vw) !important;
   height: auto !important;
-  max-height: 92vh !important;
+  max-height: 94vh !important;
   min-width: min(980px, 92vw) !important;
   min-height: 0 !important;
 }
 
 .application:has(.arkflight-install-scroll) .window-content {
-  padding: 10px 16px 12px !important;
+  padding: 8px 14px 10px !important;
   overflow: auto !important;
   background: #0b0a09 !important;
 }
@@ -18,55 +18,69 @@
   margin: 0 !important;
 }
 
-/* The art has heavy wooden posts and rolled parchment ends. Keep every word inside the flat parchment safe area. */
+/*
+ * Shipwright work-order scroll.
+ * Treat the artwork as a 4:3 UI frame and keep all copy inside a conservative
+ * parchment safe area. This also gives the existing wide scroll more vertical
+ * room until the dedicated 4:3 art is dropped in.
+ */
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll {
   width: min(100%, 1030px);
-  min-height: 540px;
+  aspect-ratio: 4 / 3;
+  min-height: 0 !important;
+  height: auto !important;
   margin: 0 auto;
-  padding: 104px 118px 86px;
+  padding: 140px 122px 112px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   background: var(--install-scroll) center/100% 100% no-repeat;
   color: #17110c;
   font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
   text-shadow: none;
+  overflow: hidden;
 }
 
+/* Header sits fully below the top roller/ornament band. */
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll header {
   display: grid;
-  grid-template-columns: minmax(0,1fr) 82px;
-  gap: 18px;
+  grid-template-columns: minmax(0,1fr) 76px;
+  gap: 16px;
   align-items: start;
-  min-height: 86px;
+  min-height: 78px;
+  margin: 0;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll header span {
+  display: block;
   color: #4c3018;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
-  letter-spacing: .16em;
+  letter-spacing: .15em;
   text-transform: uppercase;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll header h2 {
-  margin: 4px 0 3px;
+  margin: 3px 0 2px;
   color: #120c08;
-  font-size: 34px;
+  font-size: 30px;
   font-variant: small-caps;
   font-weight: 900;
-  letter-spacing: .02em;
+  letter-spacing: .018em;
   line-height: 1.02;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll header p {
   margin: 0;
   color: #352317;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll header img {
-  width: 78px;
-  height: 78px;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
   filter: drop-shadow(0 3px 3px rgba(38,24,10,.35));
 }
@@ -74,23 +88,28 @@
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll-grid {
   display: grid;
   grid-template-columns: .95fr 1.05fr;
-  gap: 28px;
-  margin-top: 18px;
+  gap: 26px;
+  margin-top: 14px;
+  min-height: 0;
+}
+
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll-grid > section {
+  min-width: 0;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll h3 {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   padding-bottom: 4px;
   border-bottom: 2px solid rgba(73,46,21,.48);
   color: #18100a;
-  font-size: 25px;
+  font-size: 23px;
   font-variant: small-caps;
   font-weight: 900;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll dl {
   display: grid;
-  gap: 7px;
+  gap: 5px;
   margin: 0;
 }
 
@@ -98,34 +117,38 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 14px;
-  padding-bottom: 4px;
+  gap: 12px;
+  padding-bottom: 3px;
   border-bottom: 1px solid rgba(87,58,31,.18);
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll dt,
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll dd {
   color: #17110c;
-  font-size: 16px;
-  line-height: 1.2;
+  font-size: 15px;
+  line-height: 1.18;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll dt { font-weight: 900; }
-.application:has(.arkflight-install-scroll) .arkflight-install-scroll dd { margin: 0; font-weight: 800; text-align: right; }
+.application:has(.arkflight-install-scroll) .arkflight-install-scroll dd {
+  margin: 0;
+  font-weight: 800;
+  text-align: right;
+}
 
 .application:has(.arkflight-install-scroll) .arkflight-payment-options {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-payment-options label {
   display: grid;
   justify-items: center;
   align-content: center;
-  gap: 5px;
-  min-height: 190px;
-  padding: 10px 10px 9px;
+  gap: 4px;
+  min-height: 172px;
+  padding: 8px 9px;
   border: 2px solid rgba(74,47,24,.48);
   background: rgba(247,224,177,.24);
   color: #17110c;
@@ -139,27 +162,27 @@
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-payment-options img {
-  width: 94px;
-  height: 94px;
+  width: 82px;
+  height: 82px;
   object-fit: contain;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-payment-options input[type="radio"] {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   margin: 0;
   accent-color: #8d5a1e;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-payment-options strong {
   color: #160f0a;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 900;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-payment-options small {
   color: #493321;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -168,36 +191,38 @@
   filter: grayscale(.35);
 }
 
-/* Service/Engineer note belongs on the parchment, not below it in the black dialog field. */
+/* Pin the service/Engineer note to the lower parchment safe area. */
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll footer {
   display: flex;
-  gap: 10px;
+  gap: 9px;
   align-items: center;
-  margin-top: 16px;
-  padding-top: 9px;
+  margin-top: auto;
+  padding-top: 10px;
   border-top: 2px solid rgba(70,49,29,.35);
   color: #2b1c12;
+  min-height: 46px;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll footer img {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
 }
 
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll footer span {
   color: #24170f;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1.2;
 }
 
-/* Keep actions tucked immediately under the scroll instead of leaving a large black void. */
+/* Dialog actions belong immediately below the artwork, not in a large black void. */
 .application:has(.arkflight-install-scroll) .form-footer,
 .application:has(.arkflight-install-scroll) footer.form-footer,
 .application:has(.arkflight-install-scroll) .dialog-buttons {
   gap: 10px;
-  margin: 2px auto 0 !important;
-  padding: 8px 18px 10px !important;
+  margin: 0 auto !important;
+  padding: 6px 18px 8px !important;
   width: min(100%, 1030px);
   box-sizing: border-box;
 }
@@ -205,7 +230,7 @@
 .application:has(.arkflight-install-scroll) .form-footer button,
 .application:has(.arkflight-install-scroll) footer.form-footer button,
 .application:has(.arkflight-install-scroll) .dialog-buttons button {
-  min-height: 46px;
+  min-height: 44px;
   font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
   font-size: 17px;
   font-weight: 800;
@@ -220,11 +245,17 @@
 
   .application:has(.arkflight-install-scroll) .arkflight-install-scroll {
     width: 100%;
-    min-height: 0;
-    padding: 86px 74px 72px;
+    aspect-ratio: auto;
+    min-height: 690px !important;
+    padding: 116px 78px 92px;
+    overflow: visible;
   }
 
   .application:has(.arkflight-install-scroll) .arkflight-install-scroll-grid {
     grid-template-columns: 1fr;
+  }
+
+  .application:has(.arkflight-install-scroll) .arkflight-payment-options label {
+    min-height: 150px;
   }
 }
