@@ -48,6 +48,21 @@ function progressionButtonState(actor, button) {
   }
 }
 
+function actionStack(header, identity, headerActions) {
+  let stack = header.querySelector(":scope > .arkflight-ship-readiness-stack");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.className = "arkflight-ship-readiness-stack";
+    identity?.insertAdjacentElement("afterend", stack);
+  }
+
+  const readiness = headerActions?.querySelector(":scope > .arkflight-readiness");
+  const access = headerActions?.querySelector(":scope > .arkflight-access-note");
+  if (readiness && readiness.parentElement !== stack) stack.append(readiness);
+  if (access && access.parentElement !== stack) stack.append(access);
+  return stack;
+}
+
 function enhance(app, html) {
   const root = rootFrom(app, html);
   const actor = actorFrom(app);
@@ -60,8 +75,10 @@ function enhance(app, html) {
   if (stack && xp && xp.parentElement !== stack) stack.append(xp);
 
   const identity = header.querySelector(":scope > .arkflight-ship-identity");
+  const headerActions = header.querySelector(":scope > .arkflight-ship-header-actions");
+  const readinessStack = actionStack(header, identity, headerActions);
   const status = root.querySelector("[data-operational-status-root]");
-  if (identity && status && status.parentElement !== header) identity.insertAdjacentElement("afterend", status);
+  if (readinessStack && status && status.parentElement !== header) readinessStack.insertAdjacentElement("afterend", status);
 
   const levelButton = root.querySelector(".arkflight-progression-launch, [data-action='arkflight-progression']");
   progressionButtonState(actor, levelButton);
