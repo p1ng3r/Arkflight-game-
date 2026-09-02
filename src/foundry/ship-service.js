@@ -5,6 +5,7 @@ const MODULE_ID = "arkflight-game";
 const CURRENT_SHIP_SETTING = "currentShipActorId";
 const CLASSIFICATION_FLAG = "shipClassification";
 const CLASSIFICATIONS = new Set(["auto", "player", "npc"]);
+const PERMANENT_STATIONS = Object.freeze(["captain", "engineer", "navigator", "battlewatch", "veilwarden"]);
 
 function extractShip(actor) {
   return actor?.flags?.[MODULE_ID]?.ship
@@ -31,9 +32,9 @@ function weaponNames(installs = []) {
 }
 
 function stationReadiness(ship) {
-  const stations = Object.entries(ship?.crew?.stations ?? {});
-  const assigned = stations.filter(([, actorId]) => Boolean(actorId)).length;
-  return { assigned, total: stations.length, ready: stations.length > 0 && assigned === stations.length };
+  const stations = ship?.crew?.stations ?? {};
+  const assigned = PERMANENT_STATIONS.filter((id) => Boolean(stations[id])).length;
+  return { assigned, total: PERMANENT_STATIONS.length, ready: assigned === PERMANENT_STATIONS.length };
 }
 
 function damagedSystems(ship) {
@@ -134,6 +135,7 @@ async function writeStationAssignment(actor, stationId, crewActorId) {
     const ship = structuredClone(actor.flags[MODULE_ID].ship);
     ship.crew ??= {};
     ship.crew.stations ??= {};
+    delete ship.crew.stations.watchmaster;
     ship.crew.stations[stationId] = crewActorId || null;
     await actor.setFlag(MODULE_ID, "ship", ship);
     return;
@@ -166,7 +168,7 @@ export function createShipService() {
       return (game.actors?.contents ?? [])
         .filter(isArkflightShipActor)
         .map((actor) => normalizeActor(actor, currentId))
-        .sort((a, b) => Number(b.current) - Number(a.current) || Number(b.player) - Number(a.player) || a.name.localeCompare(b.name));
+        .sort((a, b) => Number(b.current) - Number(a.player) || Number(b.player) - Number(a.player) || a.name.localeCompare(b.name));
     },
 
     get(actorId) {
@@ -201,17 +203,17 @@ export function createShipService() {
     },
 
     async setStationAssignment(actorId, stationId, crewActorId = null) {
-      if (!game.user?.isGM) throw new Error("Only the GM may change permanent Arkflight crew assignments.");
       const entry = this.get(actorId);
       if (!entry) throw new Error("That Actor is not an Arkflight ship.");
+      if (!game.user?.isGM && !entry.actor?.isOwner) throw new Error("You must own this Arkflight ship to change its permanent crew assignments.");
+      if (!PERMANENT_STATIONS.includes(stationId)) throw new Error(`Unknown Arkflight station: ${stationId}`);
       const stations = entry.ship?.crew?.stations ?? {};
-      if (!(stationId in stations)) throw new Error(`Unknown Arkflight station: ${stationId}`);
       if (crewActorId) {
         const crewActor = game.actors?.get(crewActorId);
         if (!crewActor) throw new Error("Assigned crew Actor could not be found.");
         if (crewActor.type === "vehicle") throw new Error("A vehicle cannot be assigned as permanent ship crew.");
-        const duplicate = Object.entries(stations).find(([otherStationId, assignedActorId]) => otherStationId !== stationId && assignedActorId === crewActorId);
-        if (duplicate) throw new Error(`${crewActor.name} is already permanently assigned to the ${duplicate[0]} station on ${entry.name}. One officer may hold only one permanent station per ship.`);
+        const duplicate = PERMANENT_STATIONS.find((otherStationId) => otherStationId !== stationId && stations[otherStationId] === crewActorId);
+        if (duplicate) throw new Error(`${crewActor.name} is already permanently assigned to the ${duplicate} station on ${entry.name}. One officer may hold only one permanent station per ship.`);
       }
       await writeStationAssignment(entry.actor, stationId, crewActorId);
       return this.get(actorId);
