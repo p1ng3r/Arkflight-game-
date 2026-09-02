@@ -1,20 +1,25 @@
 .arkflight-player-action-mode {
   overflow: hidden !important;
+  max-height: calc(100vh - 16px) !important;
 }
 
 .arkflight-player-action-mode .window-content {
   min-height: 0;
+  height: 100% !important;
+  max-height: calc(100vh - 52px) !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .arkflight-player-action-mode .pa-board {
   width: 100%;
   min-width: 0;
-  min-height: 100%;
-  height: auto;
+  min-height: 0 !important;
+  height: auto !important;
   overflow: visible;
-  padding-bottom: 12px;
+  padding-bottom: 28px;
 }
 
 .arkflight-player-action-mode .pa-top {
@@ -60,6 +65,42 @@
 .arkflight-player-action-mode .pa-footer {
   position: relative;
   z-index: 1;
+  margin-bottom: 16px;
+}
+
+/* On the common 900-1000px-tall desktop viewport, keep the action board
+   compact enough that the footer starts in view while preserving scroll for
+   anything below it. */
+@media (max-height: 1000px) {
+  .arkflight-player-action-mode .pa-top {
+    min-height: 190px;
+  }
+
+  .arkflight-player-action-mode .pa-round-art img {
+    height: 174px;
+  }
+
+  .arkflight-player-action-mode .pa-round-copy {
+    padding-top: 9px;
+    padding-bottom: 7px;
+  }
+
+  .arkflight-player-action-mode .pa-momentum-card,
+  .arkflight-player-action-mode .pa-strain-card,
+  .arkflight-player-action-mode .pa-area-card {
+    min-height: 88px;
+    padding: 6px;
+  }
+
+  .arkflight-player-action-mode .pa-detail-grid {
+    min-height: 330px;
+  }
+
+  .arkflight-player-action-mode .pa-action-panel,
+  .arkflight-player-action-mode .pa-check-panel,
+  .arkflight-player-action-mode .pa-mastery-panel {
+    padding: 9px;
+  }
 }
 
 @media (max-width: 1120px) {
