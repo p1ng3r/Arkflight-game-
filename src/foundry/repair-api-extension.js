@@ -83,6 +83,7 @@ Hooks.once("ready", () => {
     async completeWork(actor, jobId, options = {}) {
       const completed = await base.completeWork(actor, jobId, options);
       if (!completed?.ok || completed.job?.type !== "repair") return completed;
+      if (completed.job?.result?.repairApplied) return { ...completed, repairApplied: true };
       const repair = completed.job?.result?.repair;
       if (!repair || !validRepairTarget(repair.targetType, repair.targetKey)) return completed;
 
