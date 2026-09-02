@@ -114,6 +114,7 @@
     "src/ui/shipwright-workspace-ui.js",
     "src/ui/shipwright-repairs-fabrication-ui.js",
     "src/ui/shipwright-repair-controls-ui.js",
+    "src/ui/shipwright-repair-dialog-reset-ui.js",
     "src/ui/ship-repair-shortcuts-ui.js",
     "src/ui/ship-sheet-consolidation-ui.js",
     "src/ui/ship-sheet-refit-gameplay-ui.js",
