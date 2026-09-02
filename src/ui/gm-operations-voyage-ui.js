@@ -1,4 +1,11 @@
 const GM_OPERATIONS_ID = "arkflight-gm-operations";
+const STATIONS = Object.freeze([
+  ["captain", "Captain"],
+  ["engineer", "Engineer"],
+  ["navigator", "Navigator"],
+  ["battlewatch", "Battlewatch"],
+  ["veilwarden", "Veilwarden"]
+]);
 
 function eventTitle(eventId, definition) {
   return definition?.title ?? definition?.name ?? eventId;
@@ -24,6 +31,85 @@ function launchBlockers(ship) {
   if (!ship.crew?.ready) blockers.push(`${ship.crew?.assigned ?? 0}/${ship.crew?.total ?? 0} permanent stations assigned.`);
   if (game.arkflight?.controller?.state?.eventId) blockers.push("A Voyage Event is already active.");
   return [...new Set(blockers)];
+}
+
+function crewCandidates(ship, stationId) {
+  const stations = ship?.ship?.crew?.stations ?? {};
+  const assignedElsewhere = new Map(
+    Object.entries(stations)
+      .filter(([id, actorId]) => id !== stationId && actorId)
+      .map(([id, actorId]) => [actorId, id])
+  );
+  return (game.actors?.contents ?? [])
+    .filter((actor) => actor.type !== "vehicle")
+    .map((actor) => ({
+      id: actor.id,
+      name: actor.name,
+      conflictStation: assignedElsewhere.get(actor.id) ?? null
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function buildCrewAssignments(app, ship) {
+  const section = document.createElement("section");
+  section.className = "arkflight-gm-voyage-crew";
+
+  const heading = document.createElement("div");
+  heading.className = "arkflight-gm-section-heading";
+  heading.innerHTML = `<div><div class="arkflight-gm-kicker">PERMANENT CREW</div><h3>Station Assignments</h3></div><span>${Number(ship?.crew?.assigned ?? 0)} / ${Number(ship?.crew?.total ?? 5)} assigned</span>`;
+  section.append(heading);
+
+  const grid = document.createElement("div");
+  grid.className = "arkflight-gm-station-grid arkflight-gm-voyage-station-grid";
+  const stations = ship?.ship?.crew?.stations ?? {};
+
+  for (const [stationId, label] of STATIONS) {
+    const row = document.createElement("label");
+    row.className = `arkflight-gm-station-row arkflight-gm-voyage-station-row${stations[stationId] ? "" : " unassigned"}`;
+
+    const title = document.createElement("span");
+    title.className = "arkflight-gm-voyage-station-label";
+    title.innerHTML = `<strong>${label}</strong><small>${stations[stationId] ? "Assigned" : "Choose officer"}</small>`;
+
+    const select = document.createElement("select");
+    select.className = "arkflight-gm-voyage-crew-select";
+    select.dataset.assignVoyageStation = stationId;
+    select.setAttribute("aria-label", `Assign ${label}`);
+
+    const unassigned = document.createElement("option");
+    unassigned.value = "";
+    unassigned.textContent = "Unassigned";
+    select.append(unassigned);
+
+    for (const candidate of crewCandidates(ship, stationId)) {
+      const option = document.createElement("option");
+      option.value = candidate.id;
+      option.textContent = candidate.conflictStation
+        ? `${candidate.name} — assigned to ${candidate.conflictStation}`
+        : candidate.name;
+      option.disabled = Boolean(candidate.conflictStation);
+      option.selected = candidate.id === stations[stationId];
+      select.append(option);
+    }
+
+    select.addEventListener("change", async () => {
+      select.disabled = true;
+      try {
+        await game.arkflight?.ships?.setStationAssignment?.(ship.id, stationId, select.value || null);
+        app.render({ force: true });
+      } catch (error) {
+        console.error("Arkflight crew assignment failed", error);
+        ui.notifications?.warn(error?.message ?? `Unable to assign ${label}.`);
+        select.disabled = false;
+      }
+    });
+
+    row.append(title, select);
+    grid.append(row);
+  }
+
+  section.append(grid);
+  return section;
 }
 
 async function launchEvent(app, eventId) {
@@ -62,6 +148,8 @@ function buildEventLibrary(app) {
   shipStatus.className = "arkflight-gm-metric-row";
   shipStatus.innerHTML = `<span>Status</span><strong>${foundry.utils.escapeHTML(ship?.status ?? "Unavailable")}</strong>`;
   shipPanel.append(shipStatus);
+
+  if (ship) shipPanel.append(buildCrewAssignments(app, ship));
 
   if (blockers.length) {
     const gate = document.createElement("div");
