@@ -22,12 +22,12 @@ import {
   REFIT_METHODS
 } from "../src/ship/refit-rules.js";
 
-test("schema v5 creates Salvage Parts, blueprint, inventory, and refit state", () => {
+test("schema v6 creates Salvage Parts, blueprint, inventory, and refit state", () => {
   const ship = createShip();
   assert.equal(ship.schemaVersion, SHIP_SCHEMA_VERSION);
   assert.deepEqual(ship.resources.salvageParts, { value: 0 });
-  assert.deepEqual(ship.blueprints, { shipModIds: [], arkengineModIds: [] });
-  assert.deepEqual(ship.inventory, { shipMods: {}, arkengineMods: {} });
+  assert.deepEqual(ship.blueprints, { shipModIds: [], arkengineModIds: [], weaponIds: [] });
+  assert.deepEqual(ship.inventory, { shipMods: {}, arkengineMods: {}, weapons: {} });
   assert.deepEqual(ship.refit, { workOrders: [] });
 });
 
@@ -43,7 +43,9 @@ test("older ships migrate into the refit economy without changing installed mods
   assert.deepEqual(migrated.arkengine.modIds, ["pressure-lattice-tuning"]);
   assert.equal(migrated.resources.salvageParts.value, 0);
   assert.deepEqual(migrated.blueprints.shipModIds, []);
+  assert.deepEqual(migrated.blueprints.weaponIds, []);
   assert.deepEqual(migrated.inventory.arkengineMods, {});
+  assert.deepEqual(migrated.inventory.weapons, {});
 });
 
 test("Salvage Parts grant and spending are non-negative and atomic", () => {
