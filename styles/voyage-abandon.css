@@ -1,0 +1,31 @@
+.arkflight-abandon-event-button {
+  width: auto;
+  border: 1px solid rgba(211, 91, 78, 0.72);
+  color: #ffd9d4;
+  background: linear-gradient(180deg, rgba(116, 39, 32, 0.92), rgba(72, 22, 19, 0.96));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.arkflight-abandon-event-button:hover {
+  color: #fff3f1;
+  border-color: rgba(235, 112, 99, 0.95);
+  background: linear-gradient(180deg, rgba(145, 47, 38, 0.96), rgba(87, 25, 21, 0.98));
+}
+
+.arkflight-gm-active-operation > .arkflight-abandon-event-button {
+  margin-left: 8px;
+}
+
+.arkflight-abandon-event-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 3px 8px;
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.arkflight-abandon-confirm p {
+  line-height: 1.45;
+}
