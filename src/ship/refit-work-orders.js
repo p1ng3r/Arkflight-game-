@@ -6,15 +6,22 @@ import { validateRefitSocketAssignment } from "./refit-sockets.js";
 function catalogFor(catalogs, family) {
   if (family === "shipMod") return catalogs?.shipMods ?? {};
   if (family === "arkengineMod") return catalogs?.arkengineMods ?? {};
+  if (family === "weapon") return catalogs?.weapons ?? {};
   throw new Error(`Unknown Arkflight refit family: ${family}`);
 }
 function nowIso(value) { return value ?? new Date().toISOString(); }
 function idFactoryDefault() { return globalThis.crypto?.randomUUID?.() ?? `refit-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
-function installArray(ship, family) { return family === "shipMod" ? ship.shipMods ?? [] : ship.arkengine?.modIds ?? []; }
+function installArray(ship, family) {
+  if (family === "shipMod") return ship.shipMods ?? [];
+  if (family === "arkengineMod") return ship.arkengine?.modIds ?? [];
+  if (family === "weapon") return ship.weapons ?? [];
+  return [];
+}
 function withInstallArray(ship, family, values) {
-  return family === "shipMod"
-    ? normalizeShip({ ...ship, shipMods: values })
-    : normalizeShip({ ...ship, arkengine: { ...ship.arkengine, modIds: values } });
+  if (family === "shipMod") return normalizeShip({ ...ship, shipMods: values });
+  if (family === "arkengineMod") return normalizeShip({ ...ship, arkengine: { ...ship.arkengine, modIds: values } });
+  if (family === "weapon") return normalizeShip({ ...ship, weapons: values });
+  throw new Error(`Unknown Arkflight refit family: ${family}`);
 }
 function addJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: [...(ship.refit?.workOrders ?? []), job] } }); }
 function replaceJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: (ship.refit?.workOrders ?? []).map((entry) => entry.id === job.id ? job : entry) } }); }
@@ -184,7 +191,8 @@ export function completeRefitJob(ship, jobId, catalogs, { completedAt = null, re
     const socketValidation = validateRefitSocketAssignment(next, catalogs, {
       family: found.componentFamily,
       componentId: found.componentId,
-      socketIndices: found.socketIndices
+      socketIndices: found.socketIndices,
+      sourceJobId: found.id
     });
     if (!socketValidation.ok) return { ...socketValidation, ship: next };
     next = withInstallArray(next, found.componentFamily, [...installArray(next, found.componentFamily), found.componentId]);
