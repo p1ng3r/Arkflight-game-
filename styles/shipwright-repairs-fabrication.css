@@ -1,0 +1,20 @@
+.arkflight-rf-card > h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.arkflight-rf-card > h3 > img {
+  width: 56px !important;
+  height: 56px !important;
+  flex: 0 0 56px;
+  object-fit: contain;
+}
+
+.arkflight-rf-card > h3 > i {
+  width: 56px;
+  min-width: 56px;
+  font-size: 56px;
+  line-height: 1;
+  text-align: center;
+}
