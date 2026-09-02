@@ -52,6 +52,7 @@
     "styles/ship-header-layout.css",
     "styles/ship-sheet-visual-boards.css",
     "styles/ship-sheet-refit-gameplay.css",
+    "styles/shipwright-workspace.css",
     "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
@@ -105,6 +106,7 @@
     "src/ui/ship-operational-status-ui.js",
     "src/ui/ship-header-layout-ui.js",
     "src/ui/ship-sheet-visual-boards-ui.js",
+    "src/ui/shipwright-workspace-ui.js",
     "src/ui/ship-sheet-refit-gameplay-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
   ]
