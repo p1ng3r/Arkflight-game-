@@ -1,6 +1,7 @@
 import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
 
 const EVENT_BOARD_ID = "arkflight-event-board";
+const HEROIC_PREFIX = "★ HEROIC — ";
 
 function isHeroicAction(action) {
   return Boolean((action?.skills ?? []).some((skill) => (skill?.riskBids?.length ?? 0) > 0));
@@ -15,27 +16,49 @@ function actionsForStation(stationId) {
 
 function relabelActionSelect(select) {
   const stationId = select?.dataset?.station;
-  if (!stationId) return;
+  if (!stationId) return false;
+
   const actions = new Map(actionsForStation(stationId).map((action) => [action.id, action]));
+  let changed = false;
   for (const option of select.options ?? []) {
     if (!option.value) continue;
     const action = actions.get(option.value);
     if (!action) continue;
-    const base = String(action.name ?? option.textContent ?? "Action").replace(/^★\s*HEROIC\s*[—-]\s*/i, "");
-    const nextLabel = isHeroicAction(action) ? `★ HEROIC — ${base}` : base;
-    if (option.textContent !== nextLabel) option.textContent = nextLabel;
+
+    const base = String(action.name ?? option.textContent ?? "Action")
+      .replace(/^★\s*HEROIC\s*[—-]\s*/i, "");
+    const nextLabel = isHeroicAction(action) ? `${HEROIC_PREFIX}${base}` : base;
+    if (option.textContent !== nextLabel) {
+      option.textContent = nextLabel;
+      changed = true;
+    }
   }
+  return changed;
 }
 
 function relabelAll(root) {
-  for (const select of root?.querySelectorAll?.('select[data-pa-select="action"]') ?? []) relabelActionSelect(select);
+  let found = 0;
+  for (const select of root?.querySelectorAll?.('select[data-pa-select="action"]') ?? []) {
+    found += 1;
+    relabelActionSelect(select);
+  }
+  return found;
 }
 
 function scheduleRelabel(root) {
-  // Player Action Board swaps the base Event Board DOM shortly after render.
-  // Use bounded passes instead of a MutationObserver so changing option text
-  // can never trigger an infinite mutation/relabel loop and freeze Foundry.
-  for (const delay of [0, 50, 150]) setTimeout(() => relabelAll(root), delay);
+  // Multiple Arkflight UI layers replace the Event Board DOM after the base
+  // ApplicationV2 render hook. A short bounded polling window survives those
+  // swaps without using MutationObserver (which previously caused a freeze).
+  let passes = 0;
+  const maxPasses = 30;
+  const timer = setInterval(() => {
+    passes += 1;
+    relabelAll(root);
+    if (passes >= maxPasses || !root.isConnected) clearInterval(timer);
+  }, 100);
+
+  // Also run immediately so already-rendered/resumed boards update at once.
+  relabelAll(root);
 }
 
 Hooks.on("renderApplicationV2", (app, element) => {
