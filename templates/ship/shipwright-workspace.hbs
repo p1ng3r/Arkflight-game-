@@ -1,0 +1,75 @@
+<section class="arkflight-workspace-shell">
+  <header class="arkflight-workspace-topbar">
+    <div><span>SHIPWRIGHT WORKSPACE</span><h1>{{actorName}}</h1></div>
+    <div class="arkflight-workspace-status"><span>{{serviceLabel}}</span><strong>{{scrap}} Aether Scrap</strong></div>
+    {{#unless workbench}}<button type="button" data-workbench-home><i class="fa-solid fa-arrow-left"></i> Back to Workbench</button>{{/unless}}
+  </header>
+
+  {{#if workbench}}
+    <section class="arkflight-workbench-stage" style="--workbench-table:url('{{assets.table}}')">
+      <button type="button" class="arkflight-workbench-hotspot is-arkengine" data-workbench-category="arkengine">
+        <img class="arkflight-workbench-backer" src="{{assets.categories.arkengine.backer}}" alt="">
+        <img class="arkflight-workbench-feature" src="{{assets.categories.arkengine.feature}}" alt="Arkengine">
+        <img class="arkflight-workbench-hover" src="{{assets.hover}}" alt="">
+        <span class="arkflight-workbench-label" style="--label-plaque:url('{{assets.plaque}}')">Arkengine Mods</span>
+      </button>
+      <button type="button" class="arkflight-workbench-hotspot is-ship" data-workbench-category="ship">
+        <img class="arkflight-workbench-backer" src="{{assets.categories.ship.backer}}" alt="">
+        <img class="arkflight-workbench-feature" src="{{assets.categories.ship.feature}}" alt="Ship">
+        <img class="arkflight-workbench-hover" src="{{assets.hover}}" alt="">
+        <span class="arkflight-workbench-label" style="--label-plaque:url('{{assets.plaque}}')">Ship Mods</span>
+      </button>
+      <button type="button" class="arkflight-workbench-hotspot is-weapon" data-workbench-category="weapon">
+        <img class="arkflight-workbench-backer" src="{{assets.categories.weapon.backer}}" alt="">
+        <img class="arkflight-workbench-feature" src="{{assets.categories.weapon.feature}}" alt="Weapons">
+        <img class="arkflight-workbench-hover" src="{{assets.hover}}" alt="">
+        <span class="arkflight-workbench-label" style="--label-plaque:url('{{assets.plaque}}')">Weapons</span>
+      </button>
+    </section>
+    <p class="arkflight-workbench-help">Choose a system on the workbench to open its fitting board.</p>
+  {{else}}
+    <nav class="arkflight-workspace-tabs">
+      <button type="button" data-workbench-category="ship" class="{{#if isShip}}is-active{{/if}}">Ship Mods</button>
+      <button type="button" data-workbench-category="arkengine" class="{{#if isArkengine}}is-active{{/if}}">Arkengine Mods</button>
+      <button type="button" data-workbench-category="weapon" class="{{#if isWeapon}}is-active{{/if}}">Weapons</button>
+    </nav>
+
+    <main class="arkflight-workspace-board-layout">
+      <section class="arkflight-workspace-board-panel">
+        <div class="arkflight-workspace-board-stage">
+          <img class="arkflight-workspace-board-art" src="{{boardArt}}" alt="Fitting board">
+          <div class="arkflight-workspace-socket-layer">
+            {{#each sockets as |socket|}}
+              <button type="button" class="arkflight-workspace-socket {{#if socket.occupied}}is-occupied{{/if}}" style="left:{{socket.left}}%;top:{{socket.top}}%" data-workspace-socket data-socket-index="{{socket.index}}" data-occupied="{{socket.occupied}}" title="Socket {{socket.index}}">
+                <img class="arkflight-workspace-socket-base" src="{{socket.art}}" alt="">
+                {{#if socket.occupied}}<img class="arkflight-workspace-socket-state" src="{{../assets.completed}}" alt="Installed">{{else}}<img class="arkflight-workspace-socket-state" src="{{../assets.compatible}}" alt="Available">{{/if}}
+                {{#if socket.occupied}}<span>{{socket.index}}</span>{{/if}}
+              </button>
+            {{/each}}
+          </div>
+        </div>
+      </section>
+
+      <aside class="arkflight-workspace-sidecol">
+        <section class="arkflight-workspace-tray" data-inventory-tray style="--tray-art:url('{{assets.inventoryTray}}')">
+          <header><h2>Owned Fittings</h2><small>Click a socket to highlight compatible inventory, or drag a fitting directly onto a socket.</small></header>
+          <div class="arkflight-workspace-inventory-list">
+            {{#each inventory as |item|}}
+              <article draggable="true" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}">
+                <strong>{{item.name}}</strong><span>x{{item.quantity}}</span>
+              </article>
+            {{/each}}
+            {{#unless inventory.length}}<p>{{#if ../isWeapon}}Weapon inventory persistence is the next backend migration; installed hardpoints are already shown on the board.{{else}}No physical fittings of this type are currently aboard.{{/if}}</p>{{/unless}}
+          </div>
+        </section>
+
+        <section class="arkflight-workspace-tray arkflight-workspace-worktray" style="--tray-art:url('{{assets.workTray}}')">
+          <header><h2>Active Work</h2></header>
+          {{#if hasWorkOrders}}
+            <div class="arkflight-workspace-work-list">{{#each workOrders as |job|}}<article class="{{#if job.working}}is-working{{/if}}"><img src="{{../assets.hourglass}}" alt=""><div><strong>{{job.name}}</strong><span>{{job.status}} · {{job.hours}}h remaining</span></div></article>{{/each}}</div>
+          {{else}}<p>No active refit work orders.</p>{{/if}}
+        </section>
+      </aside>
+    </main>
+  {{/if}}
+</section>
