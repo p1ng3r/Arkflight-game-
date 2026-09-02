@@ -87,6 +87,7 @@
     "src/ui/voyage-ship-binding-ui.js",
     "src/ui/unified-ship-state-ui.js",
     "src/ui/player-action-board-ui.js",
+    "src/ui/player-action-heroic-badge-ui.js",
     "src/ui/player-action-board-order-ui.js",
     "src/ui/player-action-board-cleanup-ui.js",
     "src/ui/player-action-board-gm-ui.js",
