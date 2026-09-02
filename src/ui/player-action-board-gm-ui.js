@@ -22,10 +22,21 @@ function getRoot(app, element) {
   return element instanceof HTMLElement ? element : element?.[0] ?? app?.element ?? null;
 }
 
+function eventBoardApp() {
+  return Object.values(ui?.windows ?? {}).find((entry) => entry?.id === BOARD_ID) ?? null;
+}
+
+async function refreshEventBoard() {
+  const board = eventBoardApp();
+  if (!board?.render) return;
+  await board.render({ force: true });
+}
+
 async function beginResolution(controller) {
   if (controller.state?.phase !== "locked") throw new Error(`Cannot begin Arkflight Resolution from ${controller.state?.phase ?? "unknown"} phase.`);
   await controller.beginResolution();
   if (controller.state?.phase !== "resolution") throw new Error("Arkflight did not enter Resolution after GM approval.");
+  await refreshEventBoard();
 }
 
 function installGmControls(root) {
@@ -80,6 +91,13 @@ function installGmControls(root) {
 
     try {
       const phase = controller.state?.phase;
+      if (phase === "resolution") {
+        // A stale planning DOM can survive for a moment after the controller advances.
+        // Never throw or attempt to advance again; replace it with the authoritative
+        // Resolution board immediately.
+        await refreshEventBoard();
+        return;
+      }
       if (phase === "planning") {
         await controller.lockPlan();
         if (controller.state?.phase !== "locked") return;
