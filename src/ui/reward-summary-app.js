@@ -12,6 +12,10 @@ function hasPf2eGrantableRewards(rewards) {
     || (rewards.pf2eItems?.length ?? 0) > 0;
 }
 
+function hasAetherScrapReward(rewards) {
+  return Number(rewards?.aetherScrap ?? 0) > 0;
+}
+
 export class ArkflightRewardSummary extends HandlebarsApplication {
   static DEFAULT_OPTIONS = {
     id: "arkflight-reward-summary",
@@ -36,6 +40,8 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
     const ending = state?.eventEnding ?? null;
     const rewards = state?.eventRewards ?? null;
     const rows = rewardRows(rewards);
+    const hasPf2e = hasPf2eGrantableRewards(rewards);
+    const hasScrap = hasAetherScrapReward(rewards);
     return {
       ...context,
       empty: !state || state.phase !== "event-complete" || !ending,
@@ -47,10 +53,13 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
       edgeHandCount: state?.crewEdgeHand?.length ?? 0,
       edgeOverflow: (rewards?.overflowEdgeCards ?? []).length > 0,
       hasRewards: rows.length > 0,
-      hasPf2eGrantableRewards: hasPf2eGrantableRewards(rewards),
+      hasPf2eGrantableRewards: hasPf2e,
+      hasAetherScrapReward: hasScrap,
+      hasGrantableRewards: hasPf2e || hasScrap,
       isGM: game.user.isGM,
       rewardsGranted: Boolean(rewards?.granted),
       rewardRecipientName: rewards?.recipientActorName ?? null,
+      activeShipName: game.arkflight?.activeShip?.name ?? null,
       recipients: pf2eRewardRecipients()
     };
   }
@@ -62,29 +71,51 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
 
     button.addEventListener("click", async (event) => {
       event.preventDefault();
+      const rewards = this.controller.state?.eventRewards;
+      const needsPf2eRecipient = hasPf2eGrantableRewards(rewards);
+      const scrapAmount = Math.max(0, Math.trunc(Number(rewards?.aetherScrap) || 0));
       const select = this.element.querySelector("[data-ark-reward-recipient]");
       const actor = select?.value ? game.actors.get(select.value) : null;
-      if (!actor) {
+      const ship = game.arkflight?.activeShip ?? null;
+
+      if (needsPf2eRecipient && !actor) {
         ui.notifications?.warn("Choose a PF2e reward recipient first.");
+        return;
+      }
+      if (scrapAmount > 0 && !ship) {
+        ui.notifications?.warn("No active Arkflight ship is bound to receive Aether Scrap.");
         return;
       }
 
       button.disabled = true;
       try {
-        const rewards = this.controller.state?.eventRewards;
         if (rewards?.granted) throw new Error(`These rewards were already granted to ${rewards.recipientActorName ?? "a recipient"}.`);
-        const result = await grantPf2eRewards({ actor, rewards });
+
+        let pf2eResult = null;
+        if (needsPf2eRecipient) pf2eResult = await grantPf2eRewards({ actor, rewards });
+
+        if (scrapAmount > 0) {
+          const grantScrap = game.arkflight?.refit?.grantAetherScrap;
+          if (typeof grantScrap !== "function") throw new Error("Arkflight Aether Scrap grant API is unavailable.");
+          await grantScrap(ship, scrapAmount);
+        }
+
+        const recipientName = pf2eResult?.actorName ?? ship?.name ?? "Arkflight rewards";
         await this.controller.command({
           type: "mark-rewards-granted",
-          actorId: result.actorId,
-          actorName: result.actorName,
-          createdItemIds: result.createdItemIds,
-          createdItemNames: result.createdItemNames
+          actorId: pf2eResult?.actorId ?? ship?.id ?? null,
+          actorName: recipientName,
+          createdItemIds: pf2eResult?.createdItemIds ?? [],
+          createdItemNames: pf2eResult?.createdItemNames ?? []
         });
-        ui.notifications?.info(`Arkflight rewards granted to ${result.actorName} as native PF2e inventory items.`);
+
+        const parts = [];
+        if (pf2eResult) parts.push(`PF2e rewards granted to ${pf2eResult.actorName}`);
+        if (scrapAmount > 0) parts.push(`${scrapAmount} Aether Scrap added to ${ship.name}`);
+        ui.notifications?.info(parts.join("; ") || "Arkflight rewards granted.");
         this.render({ force: true });
       } catch (error) {
-        console.error("Arkflight | PF2e reward grant failed", error);
+        console.error("Arkflight | reward grant failed", error);
         ui.notifications?.error(error.message);
         button.disabled = false;
       }
