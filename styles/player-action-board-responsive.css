@@ -7,7 +7,7 @@
   min-height: 0;
   height: 100% !important;
   max-height: calc(100vh - 52px) !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   overflow-x: hidden !important;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -19,7 +19,7 @@
   min-height: 0 !important;
   height: auto !important;
   overflow: visible;
-  padding-bottom: 28px;
+  padding-bottom: 0;
 }
 
 .arkflight-player-action-mode .pa-top {
@@ -62,44 +62,66 @@
   text-overflow: ellipsis;
 }
 
+/* The footer owns the actual continue/Lock Plan controls. Keep it pinned to the
+   bottom edge of the Event window instead of allowing the tall station detail
+   area to push it behind Foundry's hotbar. The content pane itself scrolls, so
+   the rest of the board remains reachable without hiding the footer. */
 .arkflight-player-action-mode .pa-footer {
-  position: relative;
-  z-index: 1;
-  margin-bottom: 16px;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 20;
+  margin: 7px 0 0;
+  padding-bottom: 6px;
+  background: #080b0d;
+  box-shadow: 0 -8px 14px rgba(0,0,0,.72);
 }
 
-/* On the common 900-1000px-tall desktop viewport, keep the action board
-   compact enough that the footer starts in view while preserving scroll for
-   anything below it. */
+/* On the common 900-1000px-tall desktop viewport, compact the upper board so
+   more of the station-detail area remains visible above the pinned footer. */
 @media (max-height: 1000px) {
   .arkflight-player-action-mode .pa-top {
-    min-height: 190px;
+    min-height: 170px;
   }
 
   .arkflight-player-action-mode .pa-round-art img {
-    height: 174px;
+    height: 154px;
   }
 
   .arkflight-player-action-mode .pa-round-copy {
-    padding-top: 9px;
-    padding-bottom: 7px;
+    padding-top: 7px;
+    padding-bottom: 5px;
+  }
+
+  .arkflight-player-action-mode .pa-round-copy h1 {
+    font-size: 24px;
   }
 
   .arkflight-player-action-mode .pa-momentum-card,
   .arkflight-player-action-mode .pa-strain-card,
   .arkflight-player-action-mode .pa-area-card {
-    min-height: 88px;
-    padding: 6px;
+    min-height: 76px;
+    padding: 5px;
   }
 
   .arkflight-player-action-mode .pa-detail-grid {
-    min-height: 330px;
+    min-height: 300px;
   }
 
   .arkflight-player-action-mode .pa-action-panel,
   .arkflight-player-action-mode .pa-check-panel,
   .arkflight-player-action-mode .pa-mastery-panel {
-    padding: 9px;
+    padding: 8px;
+  }
+
+  .arkflight-player-action-mode .pa-footer {
+    grid-template-columns: 34% 28% 18% 20%;
+  }
+
+  .arkflight-player-action-mode .pa-ship-abilities,
+  .arkflight-player-action-mode .pa-tactics,
+  .arkflight-player-action-mode .pa-scoring,
+  .arkflight-player-action-mode .pa-lock {
+    min-height: 122px;
   }
 }
 
