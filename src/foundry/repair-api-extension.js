@@ -48,7 +48,6 @@ Hooks.once("ready", () => {
       if (!quote.ok) return quote;
       if (targetType === "resource" && quote.current >= quote.max) return { ok: false, reason: "already-fully-repaired", quote };
       if (targetType === "area" && quote.currentState === quote.afterState) return { ok: false, reason: "already-stable", quote };
-      if (paymentMethod === "gold" && serviceMode === "crew") return { ok: false, reason: "gold-payment-requires-dock", quote };
 
       const partsCost = Math.max(0, Number(options.partsCostOverride ?? quote.partsCost));
       const goldCost = Math.max(0, Number(options.goldCost ?? 0));
