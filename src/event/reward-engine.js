@@ -10,6 +10,7 @@ function cloneList(value) {
 
 export function rewardPackage({
   gold = 0,
+  aetherScrap = 0,
   valuables = [],
   pf2eItems = [],
   salvage = [],
@@ -20,11 +21,13 @@ export function rewardPackage({
   edgeCards = []
 } = {}) {
   const normalizedGold = Math.max(0, Number(gold) || 0);
+  const normalizedAetherScrap = Math.max(0, Math.trunc(Number(aetherScrap) || 0));
   for (const tacticId of edgeCards) {
     if (!getCrewEdgeCard(tacticId)) throw new Error(`Unknown Crew Tactic: ${tacticId}`);
   }
   return Object.freeze({
     gold: normalizedGold,
+    aetherScrap: normalizedAetherScrap,
     valuables: Object.freeze(cloneList(valuables)),
     pf2eItems: Object.freeze(cloneList(pf2eItems)),
     salvage: Object.freeze(cloneList(salvage)),
@@ -115,6 +118,7 @@ export function rewardRows(rewards) {
   if (!rewards) return [];
   const rows = [];
   if (Number(rewards.gold ?? 0) > 0) rows.push({ type: "gold", label: `${Number(rewards.gold)} gp`, detail: "Coin / liquid reward" });
+  if (Number(rewards.aetherScrap ?? 0) > 0) rows.push({ type: "aether-scrap", label: `${Math.trunc(Number(rewards.aetherScrap))} Aether Scrap`, detail: "Arkflight ship refit currency" });
   for (const entry of rewards.valuables ?? []) rows.push({ type: "valuable", label: entry.name ?? "Valuable", detail: entry.valueGp ? `${entry.valueGp} gp value` : entry.description ?? "" });
   for (const entry of rewards.pf2eItems ?? []) rows.push({ type: "item", label: entry.name ?? entry.uuid ?? "PF2e Item", detail: entry.quantity && entry.quantity > 1 ? `×${entry.quantity}` : entry.description ?? "" });
   for (const entry of rewards.salvage ?? []) rows.push({ type: "salvage", label: entry.name ?? "Salvage", detail: entry.description ?? (entry.valueGp ? `${entry.valueGp} gp value` : "") });
