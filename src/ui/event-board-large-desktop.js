@@ -7,11 +7,14 @@ const MIN_HEIGHT = 760;
 const LARGE_WIDTH = 1380;
 const LARGE_HEIGHT = 820;
 
-// Planning / locked play uses the wide Player Action Board. Do not collapse the
-// same Event Board application back to the old 1180px legacy layout when the
-// opening screen advances into crew actions.
+// Planning / locked play uses the wide Player Action Board. Keep enough vertical
+// clearance for Foundry's bottom hotbar and Windows taskbar while letting the
+// board scroll internally. A taller application can technically fit in the
+// browser viewport but still leaves its footer hidden behind Foundry chrome.
 const NORMAL_WIDTH = 1540;
-const NORMAL_HEIGHT = 820;
+const NORMAL_HEIGHT = 760;
+const NORMAL_VERTICAL_RESERVE = 170;
+const NORMAL_MIN_HEIGHT = 620;
 
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
@@ -41,9 +44,10 @@ function desiredNormalRect() {
   const viewportWidth = Math.max(0, Number(globalThis.innerWidth ?? document.documentElement?.clientWidth ?? NORMAL_WIDTH));
   const viewportHeight = Math.max(0, Number(globalThis.innerHeight ?? document.documentElement?.clientHeight ?? NORMAL_HEIGHT));
   const width = Math.min(NORMAL_WIDTH, Math.max(1100, viewportWidth - 64));
-  const height = Math.min(NORMAL_HEIGHT, Math.max(700, viewportHeight - 96));
+  const availableHeight = Math.max(NORMAL_MIN_HEIGHT, viewportHeight - NORMAL_VERTICAL_RESERVE);
+  const height = Math.min(NORMAL_HEIGHT, availableHeight);
   const left = Math.max(24, Math.round((viewportWidth - width) / 2));
-  const top = Math.max(24, Math.round((viewportHeight - height) / 2));
+  const top = Math.max(36, Math.round((viewportHeight - height) / 2) - 12);
   return { width, height, left, top };
 }
 
