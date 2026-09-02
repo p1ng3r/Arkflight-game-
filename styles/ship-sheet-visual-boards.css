@@ -1,0 +1,177 @@
+.arkflight-visual-fitting-shell {
+  margin: 12px 0 18px;
+  border: 1px solid rgba(190, 145, 67, 0.45);
+  background: linear-gradient(180deg, rgba(13, 16, 20, 0.96), rgba(7, 10, 14, 0.98));
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.45);
+}
+
+.arkflight-visual-board-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(190, 145, 67, 0.32);
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.arkflight-visual-board-tabs button {
+  min-height: 38px;
+  border: 1px solid rgba(190, 145, 67, 0.38);
+  background: linear-gradient(180deg, rgba(25, 27, 30, 0.96), rgba(11, 13, 16, 0.96));
+  color: #d9c89f;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.arkflight-visual-board-tabs button.is-active {
+  border-color: rgba(103, 214, 255, 0.9);
+  color: #f1d795;
+  box-shadow: inset 0 0 18px rgba(69, 190, 232, 0.18), 0 0 8px rgba(69, 190, 232, 0.16);
+}
+
+.arkflight-visual-board-panel {
+  padding: 12px;
+}
+
+.arkflight-visual-board-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.arkflight-visual-board-heading span {
+  display: block;
+  color: #b8914f;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  font-weight: 800;
+}
+
+.arkflight-visual-board-heading h2 {
+  margin: 2px 0 0;
+  color: #e8ddc0;
+  font-size: 20px;
+}
+
+.arkflight-visual-board-heading p {
+  margin: 2px 0 0;
+  color: #9f9a8e;
+  font-size: 12px;
+}
+
+.arkflight-visual-board-heading > strong {
+  color: #d5bd7b;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.arkflight-visual-board {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid rgba(190, 145, 67, 0.26);
+  background:
+    radial-gradient(circle at center, rgba(26, 59, 75, 0.12), transparent 55%),
+    linear-gradient(180deg, rgba(3, 5, 7, 0.98), rgba(7, 9, 12, 0.98));
+}
+
+.arkflight-visual-board-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 18px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.arkflight-visual-board.is-ship .arkflight-visual-board-art {
+  padding: 34px 42px;
+}
+
+.arkflight-visual-board.is-arkengine .arkflight-visual-board-art,
+.arkflight-visual-board.is-weapon .arkflight-visual-board-art {
+  padding: 18px 70px;
+}
+
+.arkflight-visual-socket-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.arkflight-visual-socket {
+  position: absolute;
+  width: 54px;
+  height: 54px;
+  transform: translate(-50%, -50%);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  overflow: visible;
+}
+
+.arkflight-visual-socket-base,
+.arkflight-visual-socket-state {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.arkflight-visual-socket-state {
+  opacity: 0;
+  transition: opacity 120ms ease, filter 120ms ease;
+}
+
+.arkflight-visual-socket:hover .arkflight-visual-socket-state,
+.arkflight-visual-socket.is-drop-ready .arkflight-visual-socket-state {
+  opacity: 1;
+  filter: drop-shadow(0 0 8px rgba(98, 218, 255, 0.95));
+}
+
+.arkflight-visual-socket.is-filled::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 12px rgba(88, 203, 255, 0.4);
+  pointer-events: none;
+}
+
+.arkflight-visual-socket-installed {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(4, 12, 18, 0.9);
+  border: 1px solid rgba(120, 222, 255, 0.75);
+  color: #dff7ff;
+  font-size: 10px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.arkflight-visual-board-help {
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-top: 1px solid rgba(190, 145, 67, 0.2);
+  color: #aaa395;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .arkflight-visual-board { min-height: 340px; }
+  .arkflight-visual-socket { width: 46px; height: 46px; }
+}
