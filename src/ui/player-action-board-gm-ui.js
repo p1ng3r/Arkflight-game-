@@ -21,11 +21,68 @@ async function beginResolution(controller) {
   await refreshEventBoard();
 }
 
+function eventWindowRect(root, app) {
+  const rect = root?.getBoundingClientRect?.();
+  return {
+    left: Number(app?.position?.left ?? rect?.left ?? 0),
+    top: Number(app?.position?.top ?? rect?.top ?? 0),
+    width: Number(app?.position?.width ?? rect?.width ?? 1180),
+    height: Number(app?.position?.height ?? rect?.height ?? 820)
+  };
+}
+
+function pillRect() {
+  const viewportWidth = Math.max(0, Number(globalThis.innerWidth ?? document.documentElement?.clientWidth ?? 1280));
+  const width = Math.min(320, Math.max(250, viewportWidth - 48));
+  return {
+    width,
+    height: 38,
+    left: Math.max(12, Math.round((viewportWidth - width) / 2)),
+    top: 10
+  };
+}
+
+function setEventWindowPosition(app, root, rect) {
+  if (typeof app?.setPosition === "function") app.setPosition(rect);
+  else if (root) {
+    if (Number.isFinite(rect.left)) root.style.left = `${rect.left}px`;
+    if (Number.isFinite(rect.top)) root.style.top = `${rect.top}px`;
+    if (Number.isFinite(rect.width)) root.style.width = `${rect.width}px`;
+    if (Number.isFinite(rect.height)) root.style.height = `${rect.height}px`;
+  }
+}
+
+function setPillState(root, app, minimized) {
+  if (!root) return;
+  const button = root.querySelector?.("[data-pa-window-minimize]");
+
+  if (minimized) {
+    if (!app._arkflightRestoreRect) app._arkflightRestoreRect = eventWindowRect(root, app);
+    root.classList.add("pa-window-pill");
+    setEventWindowPosition(app, root, pillRect());
+    if (button) {
+      button.title = "Restore Arkflight Event";
+      button.innerHTML = '<i class="fa-solid fa-window-maximize"></i>';
+    }
+    return;
+  }
+
+  root.classList.remove("pa-window-pill");
+  const restore = app._arkflightRestoreRect;
+  app._arkflightRestoreRect = null;
+  if (restore) setEventWindowPosition(app, root, restore);
+  if (button) {
+    button.title = "Minimize Arkflight Event";
+    button.innerHTML = '<i class="fa-solid fa-window-minimize"></i>';
+  }
+}
+
 function installWindowDrag(chrome, root, app) {
   if (!chrome || chrome.dataset.paWindowDragBound === "true") return;
   chrome.dataset.paWindowDragBound = "true";
 
   chrome.addEventListener("pointerdown", (event) => {
+    if (root.classList.contains("pa-window-pill")) return;
     if (event.button !== 0 || event.target?.closest?.("button, select, input, a")) return;
     event.preventDefault();
 
@@ -47,11 +104,7 @@ function installWindowDrag(chrome, root, app) {
       const maxTop = Math.max(0, viewportHeight - 40);
       const left = Math.max(0, Math.min(maxLeft, startLeft + moveEvent.clientX - startX));
       const top = Math.max(0, Math.min(maxTop, startTop + moveEvent.clientY - startY));
-      if (typeof app?.setPosition === "function") app.setPosition({ left, top });
-      else {
-        root.style.left = `${left}px`;
-        root.style.top = `${top}px`;
-      }
+      setEventWindowPosition(app, root, { left, top });
     };
 
     const onUp = (upEvent) => {
@@ -86,15 +139,16 @@ function installWindowChrome(root, app) {
       </div>`;
     board.prepend(chrome);
 
-    chrome.querySelector("[data-pa-window-minimize]")?.addEventListener("click", async (event) => {
+    chrome.querySelector("[data-pa-window-minimize]")?.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      try {
-        if (typeof app?.minimize === "function") await app.minimize();
-        else root.classList.toggle("pa-window-collapsed");
-      } catch (error) {
-        console.warn("Arkflight | Event window minimize failed", error);
-      }
+      setPillState(root, app, !root.classList.contains("pa-window-pill"));
+    });
+
+    chrome.addEventListener("dblclick", (event) => {
+      if (!root.classList.contains("pa-window-pill") || event.target?.closest?.("button")) return;
+      event.preventDefault();
+      setPillState(root, app, false);
     });
 
     chrome.querySelector("[data-pa-window-close]")?.addEventListener("click", async (event) => {
