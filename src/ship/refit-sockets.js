@@ -5,12 +5,14 @@ const UNCOMMISSIONED_CAPACITY = Number.MAX_SAFE_INTEGER;
 function catalogFor(catalogs, family) {
   if (family === "shipMod") return catalogs?.shipMods ?? {};
   if (family === "arkengineMod") return catalogs?.arkengineMods ?? {};
+  if (family === "weapon") return catalogs?.weapons ?? {};
   throw new Error(`Unknown Arkflight refit family: ${family}`);
 }
 
 function installedIds(ship, family) {
   if (family === "shipMod") return [...(ship?.shipMods ?? [])];
   if (family === "arkengineMod") return [...(ship?.arkengine?.modIds ?? [])];
+  if (family === "weapon") return [...(ship?.weapons ?? [])];
   return [];
 }
 
@@ -20,12 +22,31 @@ function slotCost(catalogs, family, componentId) {
   return Number.isFinite(value) ? Math.max(1, Math.trunc(value)) : 1;
 }
 
+function weaponMountCapacity(ship, catalogs, derived) {
+  const hull = catalogs?.hulls?.[ship?.hull?.chassisId] ?? null;
+  const mounts = hull?.data?.weaponMounts
+    ?? hull?.data?.weaponSockets
+    ?? hull?.weaponMounts
+    ?? hull?.weaponSockets
+    ?? derived?.stats?.weaponMounts
+    ?? derived?.stats?.weaponCapacity
+    ?? 0;
+  if (Array.isArray(mounts)) return mounts.length;
+  if (mounts && typeof mounts === "object") {
+    return Object.values(mounts).reduce((sum, row) => sum + Math.max(0, Math.trunc(Number(row?.count ?? row?.max ?? row) || 0)), 0);
+  }
+  return Math.max(0, Math.trunc(Number(mounts) || 0));
+}
+
 export function refitSocketCapacity(ship, catalogs, family) {
   if (!ship?.hull?.chassisId) return UNCOMMISSIONED_CAPACITY;
 
   const derived = deriveShip(ship, catalogs);
   if (family === "shipMod") {
     return Math.max(0, Math.trunc(Number(derived?.stats?.shipModCapacity ?? 0)));
+  }
+  if (family === "weapon") {
+    return Math.max(weaponMountCapacity(ship, catalogs, derived), ship?.weapons?.length ?? 0);
   }
 
   const engine = catalogs?.arkengines?.[ship?.arkengine?.chassisId] ?? null;
@@ -175,7 +196,8 @@ export function validateRefitSocketAssignment(ship, catalogs, { family, componen
   if (indices.some((index) => index >= layout.capacity)) {
     return Object.freeze({ ok: false, reason: "socket-out-of-range", capacity: layout.capacity });
   }
-  const occupied = new Set([...layout.occupied, ...reservedSocketSet(ship, family, sourceJobId)]);
+  const reserved = reservedSocketSet(ship, family, sourceJobId);
+  const occupied = new Set([...layout.occupied, ...reserved]);
   for (const entry of draft?.assignments ?? []) {
     if (entry.family !== family) continue;
     for (const index of entry.socketIndices ?? []) occupied.add(index);
@@ -183,8 +205,8 @@ export function validateRefitSocketAssignment(ship, catalogs, { family, componen
   if (indices.some((index) => occupied.has(index))) {
     return Object.freeze({ ok: false, reason: "socket-occupied" });
   }
-  if (layout.usedSlots + reservedSocketSet(ship, family, sourceJobId).size + cost > layout.capacity) {
-    return Object.freeze({ ok: false, reason: "capacity-exceeded", capacity: layout.capacity, used: layout.usedSlots, required: cost });
+  if (layout.usedSlots + reserved.size + cost > layout.capacity) {
+    return Object.freeze({ ok: false, reason: "capacity-exceeded", capacity: layout.capacity, used: layout.usedSlots + reserved.size, required: cost });
   }
-  return Object.freeze({ ok: true, capacity: layout.capacity, used: layout.usedSlots, required: cost, socketIndices: Object.freeze(indices) });
+  return Object.freeze({ ok: true, capacity: layout.capacity, used: layout.usedSlots + reserved.size, required: cost, socketIndices: Object.freeze(indices) });
 }
