@@ -1,5 +1,4 @@
 import { SHIP_CATALOGS } from "../content/index.js";
-import { deriveShip } from "../ship/derive-ship.js";
 import { componentEconomyQuote } from "../ship/refit-value.js";
 import { resolveEngineeringInstallOutcome } from "../ship/refit-engineering.js";
 import { installedSocketLayout, pendingSocketReservations } from "../ship/refit-sockets.js";
@@ -54,6 +53,7 @@ function isShip(actor) { return actor?.type === "vehicle" && Boolean(shipFlag(ac
 function service(actor) { const value = actor?.getFlag?.(MODULE_ID, SERVICE_FLAG); return ["crew","dock","shipyard"].includes(value) ? value : "crew"; }
 function serviceLabel(mode) { return mode === "shipyard" ? "Shipyard" : mode === "dock" ? "Docked" : "Crew Refit"; }
 function familyFor(group) { return group === "arkengine" ? "arkengineMod" : group === "ship" ? "shipMod" : "weapon"; }
+function groupForFamily(family) { return family === "arkengineMod" ? "arkengine" : family === "weapon" ? "weapon" : "ship"; }
 function catalogFor(group) { return group === "arkengine" ? SHIP_CATALOGS.arkengineMods : group === "ship" ? SHIP_CATALOGS.shipMods : SHIP_CATALOGS.weapons; }
 function escape(value) { return foundry.utils.escapeHTML(String(value ?? "")); }
 function currentScrap(actor) { return Math.max(0, Math.trunc(Number(shipFlag(actor)?.resources?.salvageParts?.value ?? 0))); }
@@ -61,13 +61,11 @@ function partyTreasury() { return game.actors?.party ?? null; }
 function gpToCp(gp) { return Math.max(0, Math.ceil(Number(gp || 0) * 100)); }
 function partyCopper() { return Math.max(0, Number(partyTreasury()?.inventory?.coins?.copperValue ?? 0)); }
 function partyGoldDisplay() { return partyCopper() / 100; }
-function canUseCurrentService(actor) { return shipAllowsRefitMode(shipFlag(actor), service(actor)); }
 
 function inventoryRows(actor, group) {
   const ship = shipFlag(actor);
   const catalog = catalogFor(group) ?? {};
-  if (group === "weapon") return [];
-  const counts = group === "ship" ? ship?.inventory?.shipMods ?? {} : ship?.inventory?.arkengineMods ?? {};
+  const counts = group === "ship" ? ship?.inventory?.shipMods ?? {} : group === "arkengine" ? ship?.inventory?.arkengineMods ?? {} : ship?.inventory?.weapons ?? {};
   return Object.entries(counts).filter(([, qty]) => Number(qty) > 0).map(([id, qty]) => ({
     id,
     name: catalog[id]?.name ?? id,
@@ -79,32 +77,16 @@ function inventoryRows(actor, group) {
 
 function socketRows(actor, group) {
   const ship = shipFlag(actor);
-  const derived = deriveShip(ship, SHIP_CATALOGS);
-  let capacity = 0;
-  let occupied = new Set();
-  let reserved = new Set();
-  let placements = [];
+  const family = familyFor(group);
+  const layout = installedSocketLayout(ship, SHIP_CATALOGS, family);
+  const occupied = new Set(layout.occupied);
+  const reserved = new Set(pendingSocketReservations(ship, family));
+  const placements = layout.placements ?? [];
   const activeJobs = ship?.refit?.workOrders ?? [];
-  if (group === "ship" || group === "arkengine") {
-    const family = familyFor(group);
-    const layout = installedSocketLayout(ship, SHIP_CATALOGS, family);
-    capacity = layout.capacity;
-    occupied = new Set(layout.occupied);
-    reserved = new Set(pendingSocketReservations(ship, family));
-    placements = layout.placements ?? [];
-  } else {
-    const hull = SHIP_CATALOGS.hulls?.[ship?.hull?.chassisId] ?? null;
-    const mounts = hull?.data?.weaponMounts ?? hull?.data?.weaponSockets ?? hull?.weaponMounts ?? hull?.weaponSockets ?? derived?.stats?.weaponMounts ?? [];
-    if (Array.isArray(mounts)) capacity = mounts.length;
-    else if (mounts && typeof mounts === "object") capacity = Object.values(mounts).reduce((sum, row) => sum + Math.max(0, Math.trunc(Number(row?.count ?? row?.max ?? row) || 0)), 0);
-    else capacity = Math.max(0, Math.trunc(Number(mounts) || 0));
-    capacity = Math.max(capacity, ship?.weapons?.length ?? 0);
-    occupied = new Set(Array.from({ length: ship?.weapons?.length ?? 0 }, (_, index) => index));
-  }
-  return Array.from({ length: capacity }, (_, index) => {
+  return Array.from({ length: layout.capacity }, (_, index) => {
     const [left, top] = POSITIONS[group][index % POSITIONS[group].length];
     const placement = placements.find((row) => row.socketIndices?.includes(index));
-    const pending = activeJobs.find((job) => job.type === "install" && ["PLANNED","WORKING","planned","working"].includes(job.status) && job.socketIndices?.includes(index));
+    const pending = activeJobs.find((job) => job.type === "install" && job.componentFamily === family && ["PLANNED","WORKING","planned","working"].includes(job.status) && job.socketIndices?.includes(index));
     return {
       index, left, top,
       occupied: occupied.has(index),
@@ -120,7 +102,7 @@ function socketRows(actor, group) {
 function workOrders(actor) {
   return (shipFlag(actor)?.refit?.workOrders ?? []).filter((job) => ["PLANNED","WORKING","planned","working"].includes(job.status)).map((job) => ({
     id: job.id,
-    name: catalogFor(job.componentFamily === "arkengineMod" ? "arkengine" : "ship")?.[job.componentId]?.name ?? job.componentName ?? job.componentId ?? "Refit work",
+    name: catalogFor(groupForFamily(job.componentFamily))?.[job.componentId]?.name ?? job.componentName ?? job.componentId ?? "Refit work",
     status: String(job.status).toUpperCase(),
     hours: Number(job.remainingHours ?? 0),
     working: String(job.status).toUpperCase() === "WORKING",
@@ -146,7 +128,6 @@ async function rollCrafting(engineer, dc, slug) {
 
 function anchoredAssignment(actor, group, componentId, socketIndex) {
   const family = familyFor(group);
-  if (family === "weapon") return null;
   const item = catalogFor(group)?.[componentId];
   const layout = installedSocketLayout(shipFlag(actor), SHIP_CATALOGS, family);
   const reserved = new Set(pendingSocketReservations(shipFlag(actor), family));
@@ -261,10 +242,6 @@ function choosePaymentDialog({ actor, item, mode, socketIndex, spec, scrapCost, 
 }
 
 async function installDialog(actor, group, componentId, socketIndex) {
-  if (group === "weapon") {
-    ui.notifications?.warn?.("Weapon hardpoints are not yet migrated into the refit inventory backend.");
-    return;
-  }
   const item = catalogFor(group)?.[componentId];
   const economy = componentEconomyQuote(item);
   const spec = item?.data?.refit?.install;
