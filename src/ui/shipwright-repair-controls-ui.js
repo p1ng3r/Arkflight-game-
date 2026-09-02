@@ -63,7 +63,7 @@ function renderRepairCard(actor, card) {
   card.classList.add("arkflight-repair-controls-card");
   card.innerHTML = `
     <h3><i class="fa-solid fa-hammer"></i> Ship Repairs</h3>
-    <p>Repair numeric ship damage or restore damaged ship areas. Crew repairs use the assigned Engineer's Crafting check. Dock and Shipyard repairs are professional.</p>
+    <p>Repair numeric ship damage or restore damaged ship areas. Crew repairs are field repairs and may be performed while underway; Dock and Shipyard repairs are professional.</p>
     <div class="arkflight-repair-section">
       <h4>Resource Repairs</h4>
       <article class="arkflight-repair-target"><header><strong>Hull Integrity</strong><span>${Number(ship.resources?.hull?.value ?? 0)} / ${Number(ship.resources?.hull?.max ?? 0)}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"resource","hull")}</div></article>
@@ -73,7 +73,7 @@ function renderRepairCard(actor, card) {
       <h4>System &amp; Area Repairs</h4>
       ${Object.entries(AREA_LABELS).map(([key,label])=>`<article class="arkflight-repair-target"><header><strong>${escape(label)}</strong><span>${escape(title(ship.areas?.[key]?.state ?? "stable"))}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"area",key)}</div></article>`).join("")}
     </div>
-    <div class="arkflight-repair-service-note">Crew: full Scrap cost · Dock: 25% less · Shipyard: 50% less</div>`;
+    <div class="arkflight-repair-service-note">Crew field repair: full Scrap cost · Dock: 25% less · Shipyard: 50% less</div>`;
 
   for (const button of card.querySelectorAll("[data-repair-package]")) {
     button.addEventListener("click", async () => {
@@ -83,7 +83,7 @@ function renderRepairCard(actor, card) {
         const targetKey = button.dataset.repairTargetKey;
         const packageId = button.dataset.repairPackage;
         const mode = service(actor);
-        if (!shipAllowsRefitMode(shipFlag(actor), mode)) throw new Error(`${shipOperationalStatus(shipFlag(actor)).label} does not currently permit ${mode === "shipyard" ? "Shipyard" : mode === "dock" ? "Docked" : "Crew Refit"} repair work.`);
+        if (mode !== "crew" && !shipAllowsRefitMode(shipFlag(actor), mode)) throw new Error(`${shipOperationalStatus(shipFlag(actor)).label} does not currently permit ${mode === "shipyard" ? "Shipyard" : "Docked"} repair work.`);
         const quote = game.arkflight.refit.quoteRepair(actor, targetType, targetKey, packageId, mode);
         if (!quote?.ok) throw new Error(quote?.reason ?? "Repair quote failed.");
         if (Number(shipFlag(actor)?.resources?.salvageParts?.value ?? 0) < quote.partsCost) throw new Error(`This repair requires ${quote.partsCost} Aether Scrap.`);
