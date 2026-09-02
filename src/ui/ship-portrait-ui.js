@@ -17,7 +17,6 @@ function wirePortrait(app, root) {
   if (!portrait || portrait.dataset.arkflightPortraitWired === "true") return;
 
   portrait.dataset.arkflightPortraitWired = "true";
-  portrait.dataset.edit = "img";
   portrait.title = "Vessel Portrait — click to choose portrait art. Token art is configured separately with the Token button.";
   portrait.classList.add("arkflight-editable-portrait");
 
@@ -26,16 +25,12 @@ function wirePortrait(app, root) {
     event.preventDefault();
     event.stopPropagation();
 
-    if (typeof app?._onEditImage === "function") {
-      await app._onEditImage(event);
-      return;
-    }
-
     const Picker = globalThis.FilePicker?.implementation ?? globalThis.FilePicker;
     if (!Picker) {
       ui.notifications?.warn?.("Foundry image picker is unavailable.");
       return;
     }
+
     const picker = new Picker({
       type: "image",
       current: actor.img,
