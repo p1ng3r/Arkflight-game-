@@ -168,7 +168,7 @@ export function createShipService() {
       return (game.actors?.contents ?? [])
         .filter(isArkflightShipActor)
         .map((actor) => normalizeActor(actor, currentId))
-        .sort((a, b) => Number(b.current) - Number(a.player) || Number(b.player) - Number(a.player) || a.name.localeCompare(b.name));
+        .sort((a, b) => Number(b.current) - Number(a.current) || Number(b.player) - Number(a.player) || a.name.localeCompare(b.name));
     },
 
     get(actorId) {
