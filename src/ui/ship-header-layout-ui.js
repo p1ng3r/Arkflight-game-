@@ -16,16 +16,23 @@ function actorFrom(app) {
 
 function ship(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 
-function portraitStack(header) {
-  let stack = header.querySelector(":scope > .arkflight-ship-portrait-stack");
-  if (stack) return stack;
+function primaryColumn(header) {
+  let primary = header.querySelector(":scope > .arkflight-ship-primary-column");
+  if (primary) return primary;
+
   const portrait = header.querySelector(":scope > .arkflight-ship-portrait-frame, :scope > .arkflight-ship-portrait");
-  if (!portrait) return null;
-  stack = document.createElement("div");
-  stack.className = "arkflight-ship-portrait-stack";
-  portrait.before(stack);
-  stack.append(portrait);
-  return stack;
+  const identity = header.querySelector(":scope > .arkflight-ship-identity");
+  if (!portrait || !identity) return null;
+
+  primary = document.createElement("div");
+  primary.className = "arkflight-ship-primary-column";
+  const top = document.createElement("div");
+  top.className = "arkflight-ship-primary-top";
+
+  portrait.before(primary);
+  primary.append(top);
+  top.append(portrait, identity);
+  return primary;
 }
 
 function progressionButtonState(actor, button) {
@@ -48,12 +55,12 @@ function progressionButtonState(actor, button) {
   }
 }
 
-function actionStack(header, identity, headerActions) {
+function readinessColumn(header, headerActions) {
   let stack = header.querySelector(":scope > .arkflight-ship-readiness-stack");
   if (!stack) {
     stack = document.createElement("div");
     stack.className = "arkflight-ship-readiness-stack";
-    identity?.insertAdjacentElement("afterend", stack);
+    header.append(stack);
   }
 
   const readiness = headerActions?.querySelector(":scope > .arkflight-readiness");
@@ -70,18 +77,21 @@ function enhance(app, html) {
   const header = root.querySelector(".arkflight-ship-header");
   if (!header) return;
 
-  const stack = portraitStack(header);
+  const primary = primaryColumn(header);
   const xp = root.querySelector("[data-ship-xp]");
-  if (stack && xp && xp.parentElement !== stack) stack.append(xp);
+  if (primary && xp && xp.parentElement !== primary) primary.append(xp);
 
-  const identity = header.querySelector(":scope > .arkflight-ship-identity");
   const headerActions = header.querySelector(":scope > .arkflight-ship-header-actions");
-  const readinessStack = actionStack(header, identity, headerActions);
+  const readinessStack = readinessColumn(header, headerActions);
+
   const status = root.querySelector("[data-operational-status-root]");
-  if (readinessStack && status && status.parentElement !== header) readinessStack.insertAdjacentElement("afterend", status);
+  if (status && status.parentElement !== header) header.append(status);
 
   const levelButton = root.querySelector(".arkflight-progression-launch, [data-action='arkflight-progression']");
   progressionButtonState(actor, levelButton);
+  if (levelButton && levelButton.parentElement !== readinessStack) readinessStack.append(levelButton);
+
+  if (headerActions && headerActions.children.length === 0) headerActions.hidden = true;
   root.dataset.arkflightHeaderLayout = "true";
 }
 
