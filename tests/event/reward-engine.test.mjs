@@ -51,11 +51,11 @@ test("Glassback mixed rounds award tactical Crew Edge rewards", () => {
   assert.deepEqual(mixed, [["hold-together"], ["ride-the-momentum"], ["clear-opening"]]);
 });
 
-test("Glassback final outcomes can author gold and salvage", () => {
+test("Glassback final outcomes can author gold and Aether Scrap", () => {
   const extraordinary = resolveEventEnding(GLASSBACK_CINDERWAKE, "extraordinary");
   const mixed = resolveEventEnding(GLASSBACK_CINDERWAKE, "mixed-success");
   assert.equal(extraordinary.rewards.gold, 25);
-  assert.ok(extraordinary.rewards.salvage.length > 0);
+  assert.equal(extraordinary.rewards.aetherScrap, 4);
   assert.equal(mixed.rewards.gold, 15);
-  assert.ok(mixed.rewards.salvage.length > 0);
+  assert.equal(mixed.rewards.aetherScrap, 2);
 });
