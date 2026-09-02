@@ -40,9 +40,8 @@
   text-align: right;
 }
 
-.arkflight-workspace-status strong {
-  color: #9ed4df;
-}
+.arkflight-workspace-status strong { color: #9ed4df; }
+.arkflight-workspace-status small { color: #b7aa8d; font-size: 9px; }
 
 .arkflight-workspace-topbar button,
 .arkflight-workspace-tabs button {
@@ -53,6 +52,15 @@
   background: #151614;
   color: #d5c18b;
   font-weight: 800;
+}
+
+.arkflight-workspace-service-warning {
+  margin-top: 8px;
+  padding: 8px 11px;
+  border: 1px solid #84533d;
+  color: #efb38f;
+  background: rgba(91,43,25,.25);
+  font-size: 10px;
 }
 
 /* Workbench landing screen */
@@ -145,9 +153,7 @@
 }
 
 .arkflight-workbench-hotspot:hover .arkflight-workbench-hover,
-.arkflight-workbench-hotspot:focus-visible .arkflight-workbench-hover {
-  opacity: .9;
-}
+.arkflight-workbench-hotspot:focus-visible .arkflight-workbench-hover { opacity: .9; }
 
 .arkflight-workbench-label {
   position: absolute;
@@ -246,12 +252,22 @@
 .arkflight-workspace-socket-state { opacity: .62; }
 
 .arkflight-workspace-socket:hover .arkflight-workspace-socket-state,
-.arkflight-workspace-socket.is-drop-ready .arkflight-workspace-socket-state {
+.arkflight-workspace-socket.is-drop-ready .arkflight-workspace-socket-state,
+.arkflight-workspace-socket.is-selected .arkflight-workspace-socket-state {
   opacity: 1;
   filter: drop-shadow(0 0 8px rgba(119,215,239,.7));
 }
 
-.arkflight-workspace-socket.is-occupied { cursor: not-allowed; }
+.arkflight-workspace-socket.is-selected {
+  outline: 1px solid rgba(121,204,225,.7);
+  outline-offset: 3px;
+}
+
+.arkflight-workspace-socket.is-occupied,
+.arkflight-workspace-socket.is-reserved { cursor: not-allowed; }
+
+.arkflight-workspace-socket.is-reserved .arkflight-workspace-socket-state { opacity: .9; }
+.arkflight-workspace-socket.is-working .arkflight-workspace-socket-state { filter: drop-shadow(0 0 8px rgba(197,158,84,.55)); }
 
 .arkflight-workspace-socket span {
   position: absolute;
@@ -261,6 +277,13 @@
   color: #effcff;
   font-weight: 900;
   text-shadow: 0 1px 3px #000;
+}
+
+.arkflight-workspace-socket .arkflight-socket-job-mark {
+  inset: auto 0 -12px;
+  height: 22px;
+  color: #d9c17b;
+  font-size: 12px;
 }
 
 /* Inventory and work trays */
@@ -281,6 +304,7 @@
 
 .arkflight-workspace-tray header h2 { margin: 0; color: #e0c77f; }
 .arkflight-workspace-tray header small { display: block; margin-top: 3px; color: #82999c; font-size: 9px; }
+.arkflight-workspace-tray .arkflight-selected-socket-note { color: #9ed4df; }
 .arkflight-workspace-inventory-list,
 .arkflight-workspace-work-list { display: grid; gap: 6px; margin-top: 12px; }
 
@@ -301,6 +325,19 @@
 
 .arkflight-workspace-inventory-list article strong { color: #e8d8ac; }
 .arkflight-workspace-inventory-list article span { color: #9ed4df; }
+.arkflight-workspace-inventory-list article small { display: block; margin-top: 2px; color: #71898d; font-size: 8px; }
+.arkflight-workspace-inventory-list article button {
+  grid-column: 1 / -1;
+  min-height: 28px;
+  margin-top: 2px;
+  border: 1px solid #4f8793;
+  border-radius: 0;
+  color: #cceaf0;
+  background: rgba(18,52,59,.65);
+  font-size: 9px;
+  font-weight: 800;
+}
+
 .arkflight-workspace-worktray { min-height: 190px; }
 
 .arkflight-workspace-work-list article {
@@ -369,10 +406,7 @@
 }
 
 .arkflight-payment-options img { width: 90px; height: 90px; object-fit: contain; }
-.arkflight-payment-options input { position: absolute; opacity: 0; }
-.arkflight-payment-options label:has(input:checked) { outline: 2px solid #6c8f96; background: rgba(136,193,203,.15); }
-.arkflight-payment-options label.is-disabled,
-.arkflight-payment-options label.is-pending { opacity: .48; }
+.arkflight-payment-options label.is-disabled { opacity: .42; filter: grayscale(.5); }
 .arkflight-payment-options small { font-size: 9px; }
 
 .arkflight-install-scroll footer {
