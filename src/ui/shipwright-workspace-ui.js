@@ -2,7 +2,8 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { componentEconomyQuote } from "../ship/refit-value.js";
 import { resolveEngineeringInstallOutcome } from "../ship/refit-engineering.js";
-import { installedSocketLayout } from "../ship/refit-sockets.js";
+import { installedSocketLayout, pendingSocketReservations } from "../ship/refit-sockets.js";
+import { shipAllowsRefitMode, shipOperationalStatus } from "../ship/operational-status.js";
 
 const MODULE_ID = "arkflight-game";
 const ROOT = `modules/${MODULE_ID}/assets/ui/shipwright`;
@@ -56,6 +57,11 @@ function familyFor(group) { return group === "arkengine" ? "arkengineMod" : grou
 function catalogFor(group) { return group === "arkengine" ? SHIP_CATALOGS.arkengineMods : group === "ship" ? SHIP_CATALOGS.shipMods : SHIP_CATALOGS.weapons; }
 function escape(value) { return foundry.utils.escapeHTML(String(value ?? "")); }
 function currentScrap(actor) { return Math.max(0, Math.trunc(Number(shipFlag(actor)?.resources?.salvageParts?.value ?? 0))); }
+function partyTreasury() { return game.actors?.party ?? null; }
+function gpToCp(gp) { return Math.max(0, Math.ceil(Number(gp || 0) * 100)); }
+function partyCopper() { return Math.max(0, Number(partyTreasury()?.inventory?.coins?.copperValue ?? 0)); }
+function partyGoldDisplay() { return partyCopper() / 100; }
+function canUseCurrentService(actor) { return shipAllowsRefitMode(shipFlag(actor), service(actor)); }
 
 function inventoryRows(actor, group) {
   const ship = shipFlag(actor);
@@ -76,11 +82,15 @@ function socketRows(actor, group) {
   const derived = deriveShip(ship, SHIP_CATALOGS);
   let capacity = 0;
   let occupied = new Set();
+  let reserved = new Set();
   let placements = [];
+  const activeJobs = ship?.refit?.workOrders ?? [];
   if (group === "ship" || group === "arkengine") {
-    const layout = installedSocketLayout(ship, SHIP_CATALOGS, familyFor(group));
+    const family = familyFor(group);
+    const layout = installedSocketLayout(ship, SHIP_CATALOGS, family);
     capacity = layout.capacity;
     occupied = new Set(layout.occupied);
+    reserved = new Set(pendingSocketReservations(ship, family));
     placements = layout.placements ?? [];
   } else {
     const hull = SHIP_CATALOGS.hulls?.[ship?.hull?.chassisId] ?? null;
@@ -94,17 +104,27 @@ function socketRows(actor, group) {
   return Array.from({ length: capacity }, (_, index) => {
     const [left, top] = POSITIONS[group][index % POSITIONS[group].length];
     const placement = placements.find((row) => row.socketIndices?.includes(index));
-    return { index, left, top, occupied: occupied.has(index), componentId: placement?.componentId ?? "", art: SOCKET_ART[group] };
+    const pending = activeJobs.find((job) => job.type === "install" && ["PLANNED","WORKING","planned","working"].includes(job.status) && job.socketIndices?.includes(index));
+    return {
+      index, left, top,
+      occupied: occupied.has(index),
+      reserved: reserved.has(index),
+      working: pending?.status === "WORKING" || pending?.status === "working",
+      componentId: placement?.componentId ?? pending?.componentId ?? "",
+      componentName: (catalogFor(group)?.[placement?.componentId ?? pending?.componentId]?.name) ?? "",
+      art: SOCKET_ART[group]
+    };
   });
 }
 
 function workOrders(actor) {
-  return (shipFlag(actor)?.refit?.workOrders ?? []).filter((job) => ["PLANNED","WORKING"].includes(job.status)).map((job) => ({
+  return (shipFlag(actor)?.refit?.workOrders ?? []).filter((job) => ["PLANNED","WORKING","planned","working"].includes(job.status)).map((job) => ({
     id: job.id,
-    name: job.componentName ?? job.componentId ?? "Refit work",
-    status: job.status,
+    name: catalogFor(job.componentFamily === "arkengineMod" ? "arkengine" : "ship")?.[job.componentId]?.name ?? job.componentName ?? job.componentId ?? "Refit work",
+    status: String(job.status).toUpperCase(),
     hours: Number(job.remainingHours ?? 0),
-    working: job.status === "WORKING"
+    working: String(job.status).toUpperCase() === "WORKING",
+    payment: job.result?.paymentMethod === "gold" ? `${Number(job.result?.goldCost ?? job.goldCost ?? 0).toLocaleString()} gp` : `${Number(job.partsCost ?? 0)} Scrap`
   }));
 }
 
@@ -129,8 +149,9 @@ function anchoredAssignment(actor, group, componentId, socketIndex) {
   if (family === "weapon") return null;
   const item = catalogFor(group)?.[componentId];
   const layout = installedSocketLayout(shipFlag(actor), SHIP_CATALOGS, family);
+  const reserved = new Set(pendingSocketReservations(shipFlag(actor), family));
   const cost = Math.max(1, Math.trunc(Number(item?.data?.refit?.slotCost ?? item?.capacityCost ?? 1)));
-  const occupied = new Set(layout.occupied);
+  const occupied = new Set([...layout.occupied, ...reserved]);
   if (occupied.has(socketIndex)) return null;
   const picks = [socketIndex];
   for (let index = 0; index < layout.capacity && picks.length < cost; index += 1) if (index !== socketIndex && !occupied.has(index)) picks.push(index);
@@ -146,43 +167,102 @@ async function startQueued(actor, queued, noun) {
   return started;
 }
 
-async function installWithAether(actor, group, componentId, socketIndex) {
+async function spendPartyGold(gp) {
+  const party = partyTreasury();
+  const cp = gpToCp(gp);
+  if (!party?.inventory?.removeCoins) return { ok: false, reason: "no-party-treasury" };
+  if (partyCopper() < cp) return { ok: false, reason: "insufficient-party-gold", requiredCp: cp, availableCp: partyCopper() };
+  const removed = await party.inventory.removeCoins({ cp }, { byValue: true });
+  return removed ? { ok: true, party, cp } : { ok: false, reason: "insufficient-party-gold", requiredCp: cp, availableCp: partyCopper() };
+}
+async function refundPartyGold(payment) {
+  if (payment?.ok && payment.party?.inventory?.addCoins && payment.cp > 0) await payment.party.inventory.addCoins({ cp: payment.cp });
+}
+
+async function installWithPayment(actor, group, componentId, socketIndex, paymentMethod, gpCost = 0) {
   const family = familyFor(group);
   const item = catalogFor(group)?.[componentId];
   const spec = item?.data?.refit?.install;
   const assignment = anchoredAssignment(actor, group, componentId, socketIndex);
   if (!item || !spec || !assignment) throw new Error("That fitting cannot be assigned to the selected socket.");
   const mode = service(actor);
-  if (mode === "crew") {
-    const engineer = await resolveEngineer(actor);
-    if (!engineer) throw new Error(`Assign an Engineer to ${actor.name} before crew installation.`);
-    const check = await rollCrafting(engineer, spec.dc, `install:${componentId}`);
-    const outcome = resolveEngineeringInstallOutcome(check.outcome, spec.timeHours);
-    if (!outcome.install) {
-      const failed = await game.arkflight?.refit?.recordInstallFailure?.(actor, assignment, { workerActorUuid: engineer.uuid, outcome: check.outcome, elapsedHours: outcome.timeHours });
-      if (!failed?.ok) throw new Error(failed?.reason ?? "Failed installation could not be recorded.");
-      ui.notifications?.warn?.(`${item.name} was not installed. ${failed.partsSpent} Aether Scrap was consumed.`);
+  if (!shipAllowsRefitMode(shipFlag(actor), mode)) throw new Error(`${shipOperationalStatus(shipFlag(actor)).label} does not allow ${serviceLabel(mode)} installation work.`);
+  if (paymentMethod === "gold" && mode === "crew") throw new Error("Gold payment requires Docked or Shipyard service.");
+
+  let goldPayment = null;
+  if (paymentMethod === "gold") {
+    goldPayment = await spendPartyGold(gpCost);
+    if (!goldPayment.ok) throw new Error(goldPayment.reason === "no-party-treasury" ? "No active PF2e Party treasury is available." : `The Party treasury cannot cover ${Number(gpCost).toLocaleString()} gp.`);
+  }
+
+  try {
+    if (mode === "crew") {
+      const engineer = await resolveEngineer(actor);
+      if (!engineer) throw new Error(`Assign an Engineer to ${actor.name} before crew installation.`);
+      const check = await rollCrafting(engineer, spec.dc, `install:${componentId}`);
+      const outcome = resolveEngineeringInstallOutcome(check.outcome, spec.timeHours);
+      if (!outcome.install) {
+        const failed = await game.arkflight?.refit?.recordInstallFailure?.(actor, assignment, { workerActorUuid: engineer.uuid, outcome: check.outcome, elapsedHours: outcome.timeHours });
+        if (!failed?.ok) throw new Error(failed?.reason ?? "Failed installation could not be recorded.");
+        ui.notifications?.warn?.(`${item.name} was not installed. ${failed.partsSpent} Aether Scrap was consumed.`);
+        return;
+      }
+      const queued = await game.arkflight?.refit?.beginInstallDraft?.(actor, { actorUuid: actor.uuid, assignments: [assignment] }, { method: "crew", serviceMode: "crew", paymentMethod: "scrap" });
+      const job = queued?.jobs?.[0];
+      if (job && check.outcome === "criticalSuccess") {
+        const current = shipFlag(actor);
+        const reduced = Math.max(1, Math.ceil(job.durationHours / 2));
+        const patched = { ...job, durationHours: reduced, remainingHours: reduced, result: { ...(job.result ?? {}), outcome: check.outcome, workerActorUuid: engineer.uuid } };
+        await actor.update({ [`flags.${MODULE_ID}.ship.refit.workOrders`]: current.refit.workOrders.map((entry) => entry.id === job.id ? patched : entry) });
+        queued.jobs = [patched];
+      }
+      await startQueued(actor, queued, `Install ${item.name}`);
       return;
     }
-    const queued = await game.arkflight?.refit?.beginInstallDraft?.(actor, { actorUuid: actor.uuid, assignments: [assignment] }, { method: "crew", serviceMode: "crew" });
-    const job = queued?.jobs?.[0];
-    if (job && check.outcome === "criticalSuccess") {
-      const current = shipFlag(actor);
-      const reduced = Math.max(1, Math.ceil(job.durationHours / 2));
-      const patched = { ...job, durationHours: reduced, remainingHours: reduced, result: { ...(job.result ?? {}), outcome: check.outcome, workerActorUuid: engineer.uuid } };
-      await actor.update({ [`flags.${MODULE_ID}.ship.refit.workOrders`]: current.refit.workOrders.map((entry) => entry.id === job.id ? patched : entry) });
-      queued.jobs = [patched];
-    }
+
+    const queued = await game.arkflight?.refit?.beginInstallDraft?.(actor, { actorUuid: actor.uuid, assignments: [assignment] }, {
+      method: mode === "shipyard" ? "shipyard" : "crew",
+      serviceMode: mode,
+      paymentMethod,
+      goldCost: paymentMethod === "gold" ? Number(gpCost) : 0
+    });
+    if (!queued?.ok) throw new Error(queued?.reason ?? "Installation could not be queued.");
     await startQueued(actor, queued, `Install ${item.name}`);
-    return;
+  } catch (error) {
+    if (goldPayment?.ok) await refundPartyGold(goldPayment);
+    throw error;
   }
-  const queued = await game.arkflight?.refit?.beginInstallDraft?.(actor, { actorUuid: actor.uuid, assignments: [assignment] }, { method: mode === "shipyard" ? "shipyard" : "crew", serviceMode: mode });
-  await startQueued(actor, queued, `Install ${item.name}`);
+}
+
+function choosePaymentDialog({ actor, item, mode, socketIndex, spec, scrapCost, gpCost, engineer }) {
+  return new Promise((resolve) => {
+    const engineerName = engineer?.name ?? "No Engineer assigned";
+    const crafting = Number(engineer?.skills?.crafting?.mod ?? engineer?.skills?.crafting?.modifier ?? 0);
+    const canAffordScrap = currentScrap(actor) >= scrapCost;
+    const party = partyTreasury();
+    const goldAllowed = mode !== "crew" && Boolean(party?.inventory?.removeCoins);
+    const canAffordGold = goldAllowed && partyCopper() >= gpToCp(gpCost);
+    const content = `<div class="arkflight-install-scroll" style="--install-scroll:url('${ASSETS.scroll}')">
+      <header><div><span>SHIPWRIGHT WORK ORDER</span><h2>${escape(item.name)}</h2><p>${escape(serviceLabel(mode))} · Socket ${socketIndex + 1}</p></div><img src="${ASSETS.engineerSeal}" alt="Engineer seal"></header>
+      <div class="arkflight-install-scroll-grid"><section><h3>Installation</h3><dl><div><dt>Install DC</dt><dd>${Number(spec.dc ?? 0)}</dd></div><div><dt>Base Time</dt><dd>${Number(spec.timeHours ?? 0)} hours</dd></div><div><dt>Engineer</dt><dd>${escape(engineerName)}${engineer ? ` (${crafting >= 0 ? "+" : ""}${crafting} Crafting)` : ""}</dd></div></dl></section>
+      <section><h3>Payment</h3><div class="arkflight-payment-options"><label class="${canAffordScrap ? "" : "is-disabled"}"><img src="${ASSETS.scrap}" alt="Aether Scrap"><strong>${scrapCost} Aether Scrap</strong><small>You have ${currentScrap(actor)}</small></label><label class="${canAffordGold ? "" : "is-disabled"}"><img src="${ASSETS.gold}" alt="Gold"><strong>${Number(gpCost).toLocaleString()} gp</strong><small>${mode === "crew" ? "Dock/Shipyard only" : party ? `Party treasury: ${partyGoldDisplay().toLocaleString()} gp` : "No active Party treasury"}</small></label></div></section></div>
+      <footer><img src="${ASSETS.hourglass}" alt=""><span>${mode === "crew" ? "Engineer rolls Crafting. Success creates a timed work order." : "Professional installation creates a timed work order automatically."}</span></footer></div>`;
+    new DialogV2({
+      window: { title: `Install ${item.name}` },
+      content,
+      buttons: [
+        { action: "cancel", label: "Cancel", icon: "fa-solid fa-xmark", callback: () => resolve(null) },
+        { action: "scrap", label: mode === "crew" ? "Pay Scrap & Roll" : "Pay Aether Scrap", icon: "fa-solid fa-gem", disabled: !canAffordScrap, callback: () => resolve("scrap") },
+        ...(mode === "crew" ? [] : [{ action: "gold", label: "Pay Party Gold", icon: "fa-solid fa-coins", disabled: !canAffordGold, callback: () => resolve("gold") }])
+      ],
+      close: () => resolve(null)
+    }).render({ force: true });
+  });
 }
 
 async function installDialog(actor, group, componentId, socketIndex) {
   if (group === "weapon") {
-    ui.notifications?.warn?.("Weapon inventory/refit persistence is not migrated into the timed refit backend yet. The hardpoint board is visual-only in this first build.");
+    ui.notifications?.warn?.("Weapon hardpoints are not yet migrated into the refit inventory backend.");
     return;
   }
   const item = catalogFor(group)?.[componentId];
@@ -190,62 +270,91 @@ async function installDialog(actor, group, componentId, socketIndex) {
   const spec = item?.data?.refit?.install;
   if (!item || !economy?.ok || !spec) throw new Error("That fitting has no valid installation specification.");
   const mode = service(actor);
+  if (!shipAllowsRefitMode(shipFlag(actor), mode)) throw new Error(`${shipOperationalStatus(shipFlag(actor)).label} does not allow refit installation. Secure the vessel first.`);
   const scrapCost = economy.installation?.[mode]?.aetherScrap ?? economy.installation?.crew?.aetherScrap ?? 0;
   const gpCost = economy.installation?.[mode]?.gpValue ?? economy.installation?.crew?.gpValue ?? 0;
   const engineer = await resolveEngineer(actor);
-  const engineerName = engineer?.name ?? "No Engineer assigned";
-  const crafting = Number(engineer?.skills?.crafting?.mod ?? engineer?.skills?.crafting?.modifier ?? 0);
-  const canAffordScrap = currentScrap(actor) >= scrapCost;
-  const goldAllowed = mode !== "crew";
-  const content = `<div class="arkflight-install-scroll" style="--install-scroll:url('${ASSETS.scroll}')">
-    <header><div><span>SHIPWRIGHT WORK ORDER</span><h2>${escape(item.name)}</h2><p>${escape(serviceLabel(mode))} · Socket ${socketIndex + 1}</p></div><img src="${ASSETS.engineerSeal}" alt="Engineer seal"></header>
-    <div class="arkflight-install-scroll-grid"><section><h3>Installation</h3><dl><div><dt>Install DC</dt><dd>${Number(spec.dc ?? 0)}</dd></div><div><dt>Base Time</dt><dd>${Number(spec.timeHours ?? 0)} hours</dd></div><div><dt>Engineer</dt><dd>${escape(engineerName)}${engineer ? ` (${crafting >= 0 ? "+" : ""}${crafting} Crafting)` : ""}</dd></div></dl></section>
-    <section><h3>Payment</h3><div class="arkflight-payment-options"><label class="${canAffordScrap ? "" : "is-disabled"}"><input type="radio" name="arkflight-payment" value="scrap" ${canAffordScrap ? "checked" : "disabled"}><img src="${ASSETS.scrap}" alt="Aether Scrap"><strong>${scrapCost} Aether Scrap</strong><small>You have ${currentScrap(actor)}</small></label><label class="${goldAllowed ? "is-pending" : "is-disabled"}"><input type="radio" name="arkflight-payment" value="gold" disabled><img src="${ASSETS.gold}" alt="Gold"><strong>${Number(gpCost).toLocaleString()} gp</strong><small>${goldAllowed ? "Party treasury hookup pending" : "Available only Docked or at a Shipyard"}</small></label></div></section></div>
-    <footer><img src="${ASSETS.hourglass}" alt=""><span>${mode === "crew" ? "Engineer rolls Crafting. Success creates a timed work order." : "Professional installation creates a timed work order automatically."}</span></footer></div>`;
-  const confirmed = await DialogV2.confirm({ window: { title: `Install ${item.name}` }, content, yes: { label: mode === "crew" ? "Roll Installation" : "Begin Installation", icon: "fa-solid fa-hammer" }, no: { label: "Cancel", icon: "fa-solid fa-xmark" } });
-  if (!confirmed) return;
-  if (!canAffordScrap) throw new Error(`Not enough Aether Scrap. ${scrapCost} required.`);
-  await installWithAether(actor, group, componentId, socketIndex);
+  const payment = await choosePaymentDialog({ actor, item, mode, socketIndex, spec, scrapCost, gpCost, engineer });
+  if (!payment) return;
+  await installWithPayment(actor, group, componentId, socketIndex, payment, gpCost);
 }
 
 export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
   static DEFAULT_OPTIONS = { id: "arkflight-shipwright-workspace", classes: ["arkflight", "arkflight-shipwright-workspace"], position: { width: 1100, height: 750 }, window: { title: "Arkflight Shipwright Workspace", icon: "fa-solid fa-hammer", resizable: true } };
   static PARTS = { main: { template: `modules/${MODULE_ID}/templates/ship/shipwright-workspace.hbs` } };
 
-  constructor(actor, options = {}) { super(options); this.actor = actor; this.activeView = "workbench"; }
+  constructor(actor, options = {}) { super(options); this.actor = actor; this.activeView = "workbench"; this.selectedSocket = null; }
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     const ship = shipFlag(this.actor);
     const mode = service(this.actor);
     const group = ["ship","arkengine","weapon"].includes(this.activeView) ? this.activeView : null;
-    return { ...context, actorName: this.actor.name, activeView: this.activeView, workbench: !group, group, isShip: group === "ship", isArkengine: group === "arkengine", isWeapon: group === "weapon", serviceLabel: serviceLabel(mode), scrap: currentScrap(this.actor), assets: ASSETS, inventory: group ? inventoryRows(this.actor, group) : [], sockets: group ? socketRows(this.actor, group) : [], boardArt: group ? ASSETS.categories[group].board : "", workOrders: workOrders(this.actor), hasWorkOrders: workOrders(this.actor).length > 0 };
+    const status = shipOperationalStatus(ship);
+    const orders = workOrders(this.actor);
+    return {
+      ...context,
+      actorName: this.actor.name,
+      activeView: this.activeView,
+      workbench: !group,
+      group,
+      isShip: group === "ship",
+      isArkengine: group === "arkengine",
+      isWeapon: group === "weapon",
+      serviceLabel: serviceLabel(mode),
+      statusLabel: status.label,
+      serviceAllowed: shipAllowsRefitMode(ship, mode),
+      scrap: currentScrap(this.actor),
+      partyGold: partyGoldDisplay(),
+      hasPartyTreasury: Boolean(partyTreasury()),
+      assets: ASSETS,
+      inventory: group ? inventoryRows(this.actor, group).map((row) => ({ ...row, selectedSocket: this.selectedSocket })) : [],
+      sockets: group ? socketRows(this.actor, group).map((row) => ({ ...row, selected: row.index === this.selectedSocket })) : [],
+      selectedSocket: this.selectedSocket,
+      hasSelectedSocket: Number.isInteger(this.selectedSocket),
+      boardArt: group ? ASSETS.categories[group].board : "",
+      workOrders: orders,
+      hasWorkOrders: orders.length > 0
+    };
   }
 
   async _onRender(context, options) {
     await super._onRender(context, options);
     if (!this.element) return;
-    for (const button of this.element.querySelectorAll("[data-workbench-category]")) button.addEventListener("click", () => { this.activeView = button.dataset.workbenchCategory; this.render({ force: true }); });
-    this.element.querySelector("[data-workbench-home]")?.addEventListener("click", () => { this.activeView = "workbench"; this.render({ force: true }); });
-    for (const card of this.element.querySelectorAll("[data-fitting-drag]")) card.addEventListener("dragstart", (event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("application/x-arkflight-fitting", JSON.stringify({ group: this.activeView, family: card.dataset.family, componentId: card.dataset.componentId })); });
+    for (const button of this.element.querySelectorAll("[data-workbench-category]")) button.addEventListener("click", () => { this.activeView = button.dataset.workbenchCategory; this.selectedSocket = null; this.render({ force: true }); });
+    this.element.querySelector("[data-workbench-home]")?.addEventListener("click", () => { this.activeView = "workbench"; this.selectedSocket = null; this.render({ force: true }); });
+
+    for (const card of this.element.querySelectorAll("[data-fitting-drag]")) {
+      card.addEventListener("dragstart", (event) => {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("application/x-arkflight-fitting", JSON.stringify({ group: this.activeView, family: card.dataset.family, componentId: card.dataset.componentId }));
+      });
+      card.querySelector("[data-install-selected]")?.addEventListener("click", async (event) => {
+        event.preventDefault(); event.stopPropagation();
+        if (!Number.isInteger(this.selectedSocket)) return ui.notifications?.warn?.("Select an empty socket first.");
+        try { await installDialog(this.actor, this.activeView, card.dataset.componentId, this.selectedSocket); this.selectedSocket = null; this.render({ force: true }); this.actor.sheet?.render?.(false); }
+        catch (error) { console.error("Arkflight | Shipwright install failed", error); ui.notifications?.error?.(error?.message ?? "Could not install fitting."); }
+      });
+    }
+
     for (const socket of this.element.querySelectorAll("[data-workspace-socket]")) {
-      socket.addEventListener("dragover", (event) => { if (socket.dataset.occupied === "true") return; event.preventDefault(); socket.classList.add("is-drop-ready"); });
+      const unavailable = socket.dataset.occupied === "true" || socket.dataset.reserved === "true";
+      socket.addEventListener("dragover", (event) => { if (unavailable) return; event.preventDefault(); socket.classList.add("is-drop-ready"); });
       socket.addEventListener("dragleave", () => socket.classList.remove("is-drop-ready"));
       socket.addEventListener("drop", async (event) => {
         event.preventDefault(); socket.classList.remove("is-drop-ready");
-        if (socket.dataset.occupied === "true") return ui.notifications?.warn?.("That socket is already occupied.");
+        if (unavailable) return ui.notifications?.warn?.(socket.dataset.reserved === "true" ? "That socket is reserved by an active work order." : "That socket is already occupied.");
         try {
           const payload = JSON.parse(event.dataTransfer.getData("application/x-arkflight-fitting") || "{}");
           if (payload.group !== this.activeView || !payload.componentId) return ui.notifications?.warn?.("That fitting is not compatible with this board.");
           await installDialog(this.actor, this.activeView, payload.componentId, Number(socket.dataset.socketIndex));
-          this.render({ force: true }); this.actor.sheet?.render?.(false);
+          this.selectedSocket = null; this.render({ force: true }); this.actor.sheet?.render?.(false);
         } catch (error) { console.error("Arkflight | Shipwright drop failed", error); ui.notifications?.error?.(error?.message ?? "Could not install fitting."); }
       });
       socket.addEventListener("click", () => {
-        const index = Number(socket.dataset.socketIndex);
-        for (const row of this.element.querySelectorAll("[data-fitting-drag]")) row.classList.add("is-compatible");
-        const tray = this.element.querySelector("[data-inventory-tray]");
-        tray?.setAttribute("data-selected-socket", String(index));
+        if (unavailable) return;
+        this.selectedSocket = Number(socket.dataset.socketIndex);
+        this.render({ force: true });
       });
     }
   }
@@ -257,6 +366,7 @@ export function openShipwrightWorkspace(actor, view = "workbench") {
   let app = OPEN.get(actor.uuid);
   if (!app) { app = new ArkflightShipwrightWorkspace(actor); OPEN.set(actor.uuid, app); }
   app.activeView = ["workbench","ship","arkengine","weapon"].includes(view) ? view : "workbench";
+  app.selectedSocket = null;
   app.render({ force: true });
   return app;
 }
