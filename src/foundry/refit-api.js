@@ -70,7 +70,8 @@ function economicCatalogs(mode, operation, payment = "scrap") {
   return {
     ...SHIP_CATALOGS,
     shipMods: Object.fromEntries(Object.entries(SHIP_CATALOGS.shipMods ?? {}).map(([id, item]) => [id, pricedItem(item, mode, operation, payment)])),
-    arkengineMods: Object.fromEntries(Object.entries(SHIP_CATALOGS.arkengineMods ?? {}).map(([id, item]) => [id, pricedItem(item, mode, operation, payment)]))
+    arkengineMods: Object.fromEntries(Object.entries(SHIP_CATALOGS.arkengineMods ?? {}).map(([id, item]) => [id, pricedItem(item, mode, operation, payment)])),
+    weapons: Object.fromEntries(Object.entries(SHIP_CATALOGS.weapons ?? {}).map(([id, item]) => [id, pricedItem(item, mode, operation, payment)]))
   };
 }
 function tagService(result, mode, options = {}) {
