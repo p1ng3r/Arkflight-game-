@@ -6,27 +6,32 @@
   </header>
 
   {{#if workbench}}
-    <section class="arkflight-workbench-stage" style="--workbench-table:url('{{assets.table}}')">
-      <button type="button" class="arkflight-workbench-hotspot is-arkengine" data-workbench-category="arkengine">
+    <section class="arkflight-workbench-stage" aria-label="Shipwright workbench">
+      <img class="arkflight-workbench-table-art" src="{{assets.table}}" alt="Shipwright workbench">
+      <div class="arkflight-workbench-table-shade" aria-hidden="true"></div>
+
+      <button type="button" class="arkflight-workbench-hotspot is-arkengine" data-workbench-category="arkengine" aria-label="Open Arkengine Mods" title="Open Arkengine Mods">
         <img class="arkflight-workbench-backer" src="{{assets.categories.arkengine.backer}}" alt="">
         <img class="arkflight-workbench-feature" src="{{assets.categories.arkengine.feature}}" alt="Arkengine">
         <img class="arkflight-workbench-hover" src="{{assets.hover}}" alt="">
         <span class="arkflight-workbench-label" style="--label-plaque:url('{{assets.plaque}}')">Arkengine Mods</span>
       </button>
-      <button type="button" class="arkflight-workbench-hotspot is-ship" data-workbench-category="ship">
+
+      <button type="button" class="arkflight-workbench-hotspot is-ship" data-workbench-category="ship" aria-label="Open Ship Mods" title="Open Ship Mods">
         <img class="arkflight-workbench-backer" src="{{assets.categories.ship.backer}}" alt="">
         <img class="arkflight-workbench-feature" src="{{assets.categories.ship.feature}}" alt="Ship">
         <img class="arkflight-workbench-hover" src="{{assets.hover}}" alt="">
         <span class="arkflight-workbench-label" style="--label-plaque:url('{{assets.plaque}}')">Ship Mods</span>
       </button>
-      <button type="button" class="arkflight-workbench-hotspot is-weapon" data-workbench-category="weapon">
+
+      <button type="button" class="arkflight-workbench-hotspot is-weapon" data-workbench-category="weapon" aria-label="Open Weapons" title="Open Weapons">
         <img class="arkflight-workbench-backer" src="{{assets.categories.weapon.backer}}" alt="">
         <img class="arkflight-workbench-feature" src="{{assets.categories.weapon.feature}}" alt="Weapons">
         <img class="arkflight-workbench-hover" src="{{assets.hover}}" alt="">
         <span class="arkflight-workbench-label" style="--label-plaque:url('{{assets.plaque}}')">Weapons</span>
       </button>
     </section>
-    <p class="arkflight-workbench-help">Choose a system on the workbench to open its fitting board.</p>
+    <p class="arkflight-workbench-help">Select a station on the workbench.</p>
   {{else}}
     <nav class="arkflight-workspace-tabs">
       <button type="button" data-workbench-category="ship" class="{{#if isShip}}is-active{{/if}}">Ship Mods</button>
