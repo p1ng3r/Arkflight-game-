@@ -1,0 +1,71 @@
+.arkflight-player-action-mode {
+  overflow: hidden !important;
+}
+
+.arkflight-player-action-mode .window-content {
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 0 !important;
+}
+
+/* Undo the pinned-footer experiment. The full board should remain one natural
+   document, matching the opening-screen sized window, with one vertical scroll
+   only when the display is shorter than the authored board. */
+.arkflight-player-action-mode .pa-board {
+  min-height: 100% !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding-bottom: 12px !important;
+}
+
+.arkflight-player-action-mode .pa-footer {
+  position: static !important;
+  inset: auto !important;
+  bottom: auto !important;
+  z-index: auto !important;
+  margin-top: 7px !important;
+  margin-bottom: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.pa-footer-drawer-toggle {
+  grid-column: 1 / -1;
+  min-height: 28px;
+  margin: 0;
+  border: 1px solid #604622;
+  background: linear-gradient(180deg,#15120c,#0b0d0e);
+  color: #d9bd82;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font: 700 10px Georgia,"Times New Roman",serif;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.pa-footer-drawer-toggle:hover {
+  border-color: #b67d28;
+  color: #f0d49a;
+}
+
+.pa-footer-drawer-toggle i {
+  color: #c99038;
+  transition: transform .14s ease;
+}
+
+.pa-footer.pa-footer-collapsed > :not(.pa-footer-drawer-toggle) {
+  display: none !important;
+}
+
+.pa-footer.pa-footer-collapsed .pa-footer-drawer-toggle i {
+  transform: rotate(180deg);
+}
+
+.pa-footer.pa-footer-collapsed {
+  grid-template-columns: 1fr !important;
+}
