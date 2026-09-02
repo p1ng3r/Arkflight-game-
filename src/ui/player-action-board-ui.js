@@ -53,6 +53,12 @@ function masteryFor(stationId, state) {
   const mastery = id ? getMasteryTechnique(stationId, id) : null;
   return mastery ? { ...mastery, expended: Boolean(state.masteryUses?.[stationId]) } : null;
 }
+function actionHasRiskBid(action) {
+  return Boolean(action?.skills?.some((skill) => (skill?.riskBids?.length ?? 0) > 0));
+}
+function actionDisplayName(action) {
+  return actionHasRiskBid(action) ? `★ HEROIC — ${action.name}` : action.name;
+}
 function areaCard(ship, key) {
   const state = ship?.areas?.[key]?.state ?? "stable";
   return `<div class="pa-area-card is-${esc(state)}"><span>${esc(AREA_LABELS[key])}</span><i class="fa-solid ${AREA_ICONS[key]}"></i><strong>${esc(titleCase(state))}</strong></div>`;
@@ -86,13 +92,13 @@ function stationRow(round, stationId, state) {
     <span class="pa-order-number">${Number(state.order?.indexOf(stationId) ?? -1)+1}</span>
     <img src="${esc(actor?.img ?? "icons/svg/mystery-man.svg")}" alt="">
     <span class="pa-station-name"><b>${esc(presentation.displayName)}</b><small>${esc(actor?.name ?? "Unassigned")}</small></span>
-    <span class="pa-row-action"><em>ACTION</em><b>${esc(selected?.name ?? "Choose Action")}</b>${skill?`<small>PF2e Skill · ${esc(skill.label)} ${signed(mod)}</small>`:""}</span>
+    <span class="pa-row-action"><em>ACTION</em><b>${esc(selected ? actionDisplayName(selected) : "Choose Action")}</b>${skill?`<small>PF2e Skill · ${esc(skill.label)} ${signed(mod)}</small>`:""}</span>
     <span class="pa-row-mastery"><em>MASTERY</em><b>${esc(mastery?.name ?? "None")}</b><small>${mastery?.expended?"EXPENDED":mastery?"READY":"—"}</small></span>
     <span class="pa-row-ready">${ready?'<i class="fa-solid fa-circle-check"></i><b>READY</b>':'<i class="fa-regular fa-circle"></i><b>SETUP</b>'}</span>
   </button>`;
 }
 function actionOptions(actions, selection) {
-  return `<option value="">Choose action…</option>${actions.map((a)=>`<option value="${esc(a.id)}" ${a.id===selection.actionId?"selected":""}>${esc(a.name)}</option>`).join("")}`;
+  return `<option value="">Choose action…</option>${actions.map((a)=>`<option value="${esc(a.id)}" ${a.id===selection.actionId?"selected":""}>${esc(actionDisplayName(a))}</option>`).join("")}`;
 }
 function skillOptions(action, selection, actor) {
   if (!action) return `<option value="">Choose an action first…</option>`;
@@ -126,7 +132,7 @@ function activeDetail(round, state) {
       <div class="pa-action-panel">
         <label>ACTION</label>
         <select data-pa-select="action" data-station="${stationId}">${actionOptions(actions,selection)}</select>
-        <h3>${esc(selected?.name ?? "Choose an Action")}</h3>
+        <h3>${esc(selected ? actionDisplayName(selected) : "Choose an Action")}</h3>
         <p>${esc(selected?.description ?? "Choose an action to see what your officer is doing in the fiction and what the station is trying to accomplish.")}</p>
         <div class="pa-action-art">${selected?`<div class="pa-action-vignette"><span>ACTION VIGNETTE</span><p>${esc(selected.description)}</p></div>`:'<div class="pa-action-vignette empty"><span>ACTION VIGNETTE</span><p>Your selected action description appears here.</p></div>'}</div>
       </div>
