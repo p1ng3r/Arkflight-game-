@@ -56,6 +56,7 @@
     "styles/shipwright-repairs-fabrication.css",
     "styles/shipwright-workbench-label-polish.css",
     "styles/shipwright-repair-controls.css",
+    "styles/shipwright-scroll-popup-polish.css",
     "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
