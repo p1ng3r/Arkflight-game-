@@ -53,6 +53,7 @@
     "styles/ship-sheet-visual-boards.css",
     "styles/ship-sheet-refit-gameplay.css",
     "styles/shipwright-workspace.css",
+    "styles/shipwright-repairs-fabrication.css",
     "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
