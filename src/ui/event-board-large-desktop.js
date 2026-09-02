@@ -7,9 +7,10 @@ const MIN_HEIGHT = 760;
 const LARGE_WIDTH = 1380;
 const LARGE_HEIGHT = 820;
 
-// The normal planning/resolution board size is defined by ArkflightEventBoard.DEFAULT_OPTIONS.
-// Keep the cinematic resize isolated to Event Setup / opening only.
-const NORMAL_WIDTH = 1180;
+// Planning / locked play uses the wide Player Action Board. Do not collapse the
+// same Event Board application back to the old 1180px legacy layout when the
+// opening screen advances into crew actions.
+const NORMAL_WIDTH = 1540;
 const NORMAL_HEIGHT = 820;
 
 function boardRoot(app, element) {
@@ -39,8 +40,8 @@ function desiredOpeningRect() {
 function desiredNormalRect() {
   const viewportWidth = Math.max(0, Number(globalThis.innerWidth ?? document.documentElement?.clientWidth ?? NORMAL_WIDTH));
   const viewportHeight = Math.max(0, Number(globalThis.innerHeight ?? document.documentElement?.clientHeight ?? NORMAL_HEIGHT));
-  const width = Math.min(NORMAL_WIDTH, Math.max(760, viewportWidth - 64));
-  const height = Math.min(NORMAL_HEIGHT, Math.max(640, viewportHeight - 96));
+  const width = Math.min(NORMAL_WIDTH, Math.max(1100, viewportWidth - 64));
+  const height = Math.min(NORMAL_HEIGHT, Math.max(700, viewportHeight - 96));
   const left = Math.max(24, Math.round((viewportWidth - width) / 2));
   const top = Math.max(24, Math.round((viewportHeight - height) / 2));
   return { width, height, left, top };
