@@ -1,3 +1,5 @@
+import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
+
 const EVENT_BOARD_ID = "arkflight-event-board";
 
 function isHeroicAction(action) {
@@ -8,24 +10,7 @@ function actionsForStation(stationId) {
   const controller = game.arkflight?.controller;
   const round = controller?.getRound?.();
   if (!round || !stationId) return [];
-  const fallback = globalThis.game?.arkflight?.controller ? null : null;
-  // The custom Player Action Board already populated these option values from
-  // fallback + authored actions. Resolve labels from the same live event data.
-  const authored = round.stationActions?.[stationId] ?? [];
-  const all = [...authored];
-  try {
-    const selectedIds = [...document.querySelectorAll(`select[data-pa-select="action"][data-station="${CSS.escape(stationId)}"] option`)]
-      .map((option) => option.value)
-      .filter(Boolean);
-    for (const id of selectedIds) {
-      if (all.some((action) => action?.id === id)) continue;
-      const fallbackAction = globalThis.game?.arkflight?.controller?.getRound ? null : null;
-      // Fallback actions are not required for Heroic labeling unless they
-      // themselves carry risk bids; unresolved IDs are left unchanged.
-      if (fallbackAction) all.unshift(fallbackAction);
-    }
-  } catch (_error) {}
-  return all;
+  return [FALLBACK_ACTIONS[stationId], ...(round.stationActions?.[stationId] ?? [])].filter(Boolean);
 }
 
 function relabelActionSelect(select) {
