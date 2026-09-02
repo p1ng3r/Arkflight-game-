@@ -3,7 +3,7 @@ import { componentEconomyQuote } from "../ship/refit-value.js";
 import { installedSocketLayout } from "../ship/refit-sockets.js";
 
 const MODULE_ID = "arkflight-game";
-const WORKBENCH = `modules/${MODULE_ID}/assets/ui/shipwright/workbench`;
+const WORKBENCH = `/modules/${MODULE_ID}/assets/ui/shipwright/workbench`;
 const SERVICE_FLAG = "refitServiceMode";
 const FAMILIES = Object.freeze([
   { family: "shipMod", label: "Ship Mods", catalog: () => SHIP_CATALOGS.shipMods ?? {} },
@@ -44,7 +44,13 @@ async function startQueued(actor, queued, noun) {
   const job = queued?.job ?? queued?.jobs?.[0];
   if (!queued?.ok || !job) throw new Error(`${noun} could not be queued: ${queued?.reason ?? "unknown error"}.`);
   const started = await game.arkflight?.refit?.startWork?.(actor, job.id);
-  if (!started?.ok) throw new Error(`${noun} was queued but could not start: ${started?.reason ?? "unknown error"}.`);
+  if (!started?.ok) {
+    if (started?.reason === "crew-work-already-active") {
+      ui.notifications?.info?.(`${noun} queued — another Crew Refit job is already active. It remains PLANNED until the crew is available.`);
+      return { ...queued, queuedOnly: true, job };
+    }
+    throw new Error(`${noun} was queued but could not start: ${started?.reason ?? "unknown error"}.`);
+  }
   ui.notifications?.info?.(`${noun} started — ${started.job.remainingHours}h remaining.`);
   return started;
 }
