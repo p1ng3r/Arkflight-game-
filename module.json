@@ -55,12 +55,14 @@
     "styles/shipwright-workspace.css",
     "styles/shipwright-repairs-fabrication.css",
     "styles/shipwright-workbench-label-polish.css",
+    "styles/shipwright-repair-controls.css",
     "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
     "src/foundry/ship-token-authority.js",
     "src/foundry/refit-api.js",
+    "src/foundry/repair-api-extension.js",
     "src/foundry/refit-time.js",
     "src/foundry/refit-diagnostics.js",
     "src/foundry/combat-api.js",
@@ -110,6 +112,7 @@
     "src/ui/ship-sheet-visual-boards-ui.js",
     "src/ui/shipwright-workspace-ui.js",
     "src/ui/shipwright-repairs-fabrication-ui.js",
+    "src/ui/shipwright-repair-controls-ui.js",
     "src/ui/ship-sheet-consolidation-ui.js",
     "src/ui/ship-sheet-refit-gameplay-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
