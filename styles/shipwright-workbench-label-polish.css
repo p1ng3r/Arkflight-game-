@@ -1,0 +1,23 @@
+.arkflight-shipwright-workspace .arkflight-workbench-label {
+  left: 6%;
+  right: 6%;
+  bottom: -1%;
+  min-height: 48px;
+  padding: 9px 19px;
+  color: #17110b;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: .035em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255,238,194,.35);
+  background: var(--label-plaque) center/100% 100% no-repeat;
+}
+
+.arkflight-shipwright-workspace .arkflight-workbench-hotspot.is-repairs-fabrication .arkflight-workbench-label {
+  left: 3%;
+  right: 3%;
+  min-height: 52px;
+  font-size: 15px;
+}
