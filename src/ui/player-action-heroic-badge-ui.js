@@ -22,7 +22,8 @@ function relabelActionSelect(select) {
     const action = actions.get(option.value);
     if (!action) continue;
     const base = String(action.name ?? option.textContent ?? "Action").replace(/^★\s*HEROIC\s*[—-]\s*/i, "");
-    option.textContent = isHeroicAction(action) ? `★ HEROIC — ${base}` : base;
+    const nextLabel = isHeroicAction(action) ? `★ HEROIC — ${base}` : base;
+    if (option.textContent !== nextLabel) option.textContent = nextLabel;
   }
 }
 
@@ -30,17 +31,16 @@ function relabelAll(root) {
   for (const select of root?.querySelectorAll?.('select[data-pa-select="action"]') ?? []) relabelActionSelect(select);
 }
 
-function installObserver(root) {
-  if (!root || root.dataset.arkflightHeroicObserver === "1") return;
-  root.dataset.arkflightHeroicObserver = "1";
-  const observer = new MutationObserver(() => relabelAll(root));
-  observer.observe(root, { childList: true, subtree: true });
-  relabelAll(root);
+function scheduleRelabel(root) {
+  // Player Action Board swaps the base Event Board DOM shortly after render.
+  // Use bounded passes instead of a MutationObserver so changing option text
+  // can never trigger an infinite mutation/relabel loop and freeze Foundry.
+  for (const delay of [0, 50, 150]) setTimeout(() => relabelAll(root), delay);
 }
 
 Hooks.on("renderApplicationV2", (app, element) => {
   if (app?.id !== EVENT_BOARD_ID) return;
   const root = element instanceof HTMLElement ? element : element?.[0] ?? app.element;
   if (!root) return;
-  requestAnimationFrame(() => installObserver(root));
+  scheduleRelabel(root);
 });
