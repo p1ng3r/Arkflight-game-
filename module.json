@@ -107,6 +107,7 @@
     "src/ui/ship-header-layout-ui.js",
     "src/ui/ship-sheet-visual-boards-ui.js",
     "src/ui/shipwright-workspace-ui.js",
+    "src/ui/ship-sheet-consolidation-ui.js",
     "src/ui/ship-sheet-refit-gameplay-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
   ]
