@@ -38,37 +38,8 @@ function stationKeyFromLabel(label) {
 
 function decorateHeader(shell) {
   const header = shell.querySelector(".arkflight-ship-header");
-  if (!header || header.dataset.arkflightPolished === "true") return;
+  if (!header) return;
   header.dataset.arkflightPolished = "true";
-
-  const portrait = header.querySelector(".arkflight-ship-portrait");
-  if (portrait && !portrait.closest(".arkflight-ship-portrait-frame")) {
-    const frame = document.createElement("div");
-    frame.className = "arkflight-ship-portrait-frame";
-    portrait.before(frame);
-    frame.append(portrait);
-    const caption = document.createElement("span");
-    caption.className = "arkflight-portrait-caption";
-    caption.textContent = "VESSEL PORTRAIT";
-    frame.append(caption);
-  }
-
-  const identity = header.querySelector(".arkflight-ship-identity");
-  if (identity && !identity.querySelector(".arkflight-command-motto")) {
-    const motto = document.createElement("div");
-    motto.className = "arkflight-command-motto";
-    motto.textContent = "Her name is carried in brass, timber, aetherlight, and the stories of those who brought her home.";
-    identity.append(motto);
-  }
-
-  if (!header.querySelector(".arkflight-header-watermark")) {
-    const mark = document.createElement("img");
-    mark.className = "arkflight-header-watermark";
-    mark.src = `modules/${MODULE_ID}/assets/ui/branding/arkflight_logo_Simple.webp`;
-    mark.alt = "";
-    mark.setAttribute("aria-hidden", "true");
-    header.append(mark);
-  }
 }
 
 function decorateResources(shell) {
@@ -126,8 +97,6 @@ function decoratePanels(shell) {
 }
 
 function addArtHooks(shell) {
-  // These anchors are intentionally empty now. They give future ship-specific
-  // art a stable place to land without another layout rewrite.
   const vesselPanel = shell.querySelector(".arkflight-vessel-panel");
   if (vesselPanel && !vesselPanel.querySelector(".arkflight-vessel-art-hook")) {
     const hook = document.createElement("div");
