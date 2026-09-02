@@ -7,15 +7,6 @@ const MIN_HEIGHT = 760;
 const LARGE_WIDTH = 1380;
 const LARGE_HEIGHT = 820;
 
-// Planning / locked play uses the wide Player Action Board. Keep enough vertical
-// clearance for Foundry's bottom hotbar and Windows taskbar while letting the
-// board scroll internally. A taller application can technically fit in the
-// browser viewport but still leaves its footer hidden behind Foundry chrome.
-const NORMAL_WIDTH = 1540;
-const NORMAL_HEIGHT = 760;
-const NORMAL_VERTICAL_RESERVE = 170;
-const NORMAL_MIN_HEIGHT = 620;
-
 function boardRoot(app, element) {
   if (app?.id !== "arkflight-event-board") return null;
   if (element instanceof HTMLElement) return element;
@@ -28,7 +19,7 @@ function openingPhase() {
   return Boolean(state && state.phase === "opening" && !state.setupLocked);
 }
 
-function desiredOpeningRect() {
+function desiredBoardRect() {
   const viewportWidth = Math.max(0, Number(globalThis.innerWidth ?? document.documentElement?.clientWidth ?? TARGET_WIDTH));
   const viewportHeight = Math.max(0, Number(globalThis.innerHeight ?? document.documentElement?.clientHeight ?? TARGET_HEIGHT));
 
@@ -37,17 +28,6 @@ function desiredOpeningRect() {
   const left = Math.max(24, Math.round((viewportWidth - width) / 2));
   const top = Math.max(24, Math.round((viewportHeight - height) / 2));
 
-  return { width, height, left, top };
-}
-
-function desiredNormalRect() {
-  const viewportWidth = Math.max(0, Number(globalThis.innerWidth ?? document.documentElement?.clientWidth ?? NORMAL_WIDTH));
-  const viewportHeight = Math.max(0, Number(globalThis.innerHeight ?? document.documentElement?.clientHeight ?? NORMAL_HEIGHT));
-  const width = Math.min(NORMAL_WIDTH, Math.max(1100, viewportWidth - 64));
-  const availableHeight = Math.max(NORMAL_MIN_HEIGHT, viewportHeight - NORMAL_VERTICAL_RESERVE);
-  const height = Math.min(NORMAL_HEIGHT, availableHeight);
-  const left = Math.max(24, Math.round((viewportWidth - width) / 2));
-  const top = Math.max(36, Math.round((viewportHeight - height) / 2) - 12);
   return { width, height, left, top };
 }
 
@@ -67,9 +47,14 @@ function applyBoardScaleClass(root, rect, isOpening) {
 }
 
 function applyBoardSize(app, root) {
+  // The custom minimized Event pill owns its own compact geometry.
+  if (root?.classList?.contains("pa-window-pill")) return;
+
   const isOpening = openingPhase();
-  const rect = isOpening ? desiredOpeningRect() : desiredNormalRect();
-  const mode = isOpening ? "opening" : "normal";
+  // Opening and Player Action phases intentionally use the exact same outer
+  // window geometry. Transitioning into planning must never shrink the board.
+  const rect = desiredBoardRect();
+  const mode = isOpening ? "opening" : "action";
   const key = `${mode}:${rect.width}x${rect.height}@${rect.left},${rect.top}`;
 
   applyBoardScaleClass(root, rect, isOpening);
@@ -102,7 +87,7 @@ Hooks.on("renderApplicationV2", (app, element) => {
 window.addEventListener("resize", () => {
   const app = Object.values(ui?.windows ?? {}).find((entry) => entry?.id === "arkflight-event-board");
   const root = app?.element instanceof HTMLElement ? app.element : app?.element?.[0] ?? null;
-  if (!app || !root) return;
+  if (!app || !root || root.classList.contains("pa-window-pill")) return;
   delete root.dataset.arkflightBoardSize;
   applyBoardSize(app, root);
 });
