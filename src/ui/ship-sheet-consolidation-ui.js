@@ -2,6 +2,7 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 
 const MODULE_ID = "arkflight-game";
+const AETHER_SCRAP_ICON = `/modules/${MODULE_ID}/assets/ui/shipwright/workbench/payment_aether_scrap.webp`;
 
 function actorFrom(app) {
   const actor = app?.actor ?? app?.document ?? null;
@@ -36,6 +37,43 @@ function fixSupplyLedger(root, actor) {
   }
 }
 
+function decorateHoldScrap(root) {
+  if (root.querySelector("[data-arkflight-hold-scrap-icon]")) return;
+  const subhead = [...root.querySelectorAll(".arkflight-log-subhead")].find((entry) => entry.querySelector("span")?.textContent?.trim() === "AETHER SCRAP");
+  const row = subhead?.parentElement?.querySelector(".arkflight-hold-item");
+  const label = row?.firstElementChild;
+  if (!label) return;
+
+  label.style.display = "grid";
+  label.style.gridTemplateColumns = "52px 1fr";
+  label.style.gridTemplateRows = "auto auto";
+  label.style.columnGap = "10px";
+  label.style.alignItems = "center";
+
+  const icon = document.createElement("img");
+  icon.src = AETHER_SCRAP_ICON;
+  icon.alt = "Aether Scrap";
+  icon.dataset.arkflightHoldScrapIcon = "";
+  icon.style.width = "48px";
+  icon.style.height = "48px";
+  icon.style.objectFit = "contain";
+  icon.style.gridRow = "1 / span 2";
+  icon.style.gridColumn = "1";
+  icon.style.border = "0";
+  icon.style.background = "transparent";
+
+  const strong = label.querySelector("strong");
+  const span = label.querySelector("span");
+  if (strong) { strong.style.gridColumn = "2"; strong.style.gridRow = "1"; }
+  if (span) { span.style.gridColumn = "2"; span.style.gridRow = "2"; }
+  label.prepend(icon);
+}
+
+function refreshHoldPolish(root, actor) {
+  fixSupplyLedger(root, actor);
+  decorateHoldScrap(root);
+}
+
 function consolidateNavigation(app, html) {
   const actor = actorFrom(app);
   const root = rootFrom(app, html);
@@ -61,10 +99,10 @@ function consolidateNavigation(app, html) {
   const holdButton = nav.querySelector("[data-hold-tab]");
   if (holdButton && holdButton.dataset.supplyFixWired !== "true") {
     holdButton.dataset.supplyFixWired = "true";
-    holdButton.addEventListener("click", () => setTimeout(() => fixSupplyLedger(root, actor), 0));
+    holdButton.addEventListener("click", () => setTimeout(() => refreshHoldPolish(root, actor), 0));
   }
 
-  fixSupplyLedger(root, actor);
+  refreshHoldPolish(root, actor);
 }
 
 Hooks.on("renderActorSheet", consolidateNavigation);
