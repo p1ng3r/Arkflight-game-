@@ -30,7 +30,7 @@
   min-height: 0 !important;
   height: auto !important;
   margin: 0 auto;
-  padding: 140px 122px 112px;
+  padding: 158px 122px 158px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -89,7 +89,7 @@
   display: grid;
   grid-template-columns: .95fr 1.05fr;
   gap: 26px;
-  margin-top: 14px;
+  margin-top: 26px;
   min-height: 0;
 }
 
@@ -147,7 +147,7 @@
   justify-items: center;
   align-content: center;
   gap: 4px;
-  min-height: 172px;
+  min-height: 160px;
   padding: 8px 9px;
   border: 2px solid rgba(74,47,24,.48);
   background: rgba(247,224,177,.24);
@@ -191,12 +191,13 @@
   filter: grayscale(.35);
 }
 
-/* Pin the service/Engineer note to the lower parchment safe area. */
+/* Pin the service/Engineer note safely above the decorative bottom trim. */
 .application:has(.arkflight-install-scroll) .arkflight-install-scroll footer {
   display: flex;
   gap: 9px;
   align-items: center;
   margin-top: auto;
+  margin-bottom: 8px;
   padding-top: 10px;
   border-top: 2px solid rgba(70,49,29,.35);
   color: #2b1c12;
@@ -247,7 +248,7 @@
     width: 100%;
     aspect-ratio: auto;
     min-height: 690px !important;
-    padding: 116px 78px 92px;
+    padding: 128px 78px 118px;
     overflow: visible;
   }
 
@@ -256,6 +257,6 @@
   }
 
   .application:has(.arkflight-install-scroll) .arkflight-payment-options label {
-    min-height: 150px;
+    min-height: 148px;
   }
 }
