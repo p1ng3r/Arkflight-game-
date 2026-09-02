@@ -10,8 +10,9 @@ test("vessel portrait editor is loaded", () => {
   assert.ok(manifest.styles.includes("styles/ship-portrait.css"));
 });
 
-test("portrait editor updates actor img and never prototype token art", () => {
-  assert.match(source, /dataset\.edit = "img"/);
+test("portrait editor updates actor img through the Foundry image picker and never prototype token art", () => {
+  assert.match(source, /FilePicker/);
+  assert.match(source, /current: actor\.img/);
   assert.match(source, /actor\.update\(\{ img: path \}\)/);
   assert.doesNotMatch(source, /prototypeToken/);
   assert.doesNotMatch(source, /texture\.src/);
