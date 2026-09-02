@@ -18,125 +18,12 @@
   font: inherit;
 }
 
-.arkflight-ship-header {
-  display: grid;
-  grid-template-columns: 116px minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: stretch;
-  padding: 14px;
-  border: 1px solid #7d6434;
-  box-shadow: inset 0 0 0 1px rgba(198, 157, 76, 0.08);
-  background: linear-gradient(180deg, rgba(34, 29, 23, 0.96), rgba(20, 19, 17, 0.94));
-}
-
-.arkflight-ship-portrait {
-  width: 116px;
-  height: 116px;
-  object-fit: cover;
-  border: 1px solid #8d7240;
-  background: #08090a;
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.8);
-}
-
-.arkflight-ship-identity {
-  min-width: 0;
-}
-
 .arkflight-ship-kicker {
   color: #b89550;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-}
-
-.arkflight-ship-name-row {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.arkflight-ship-name-row h1 {
-  margin: 2px 0 6px;
-  color: #f3e7bf;
-  font-size: 30px;
-  line-height: 1;
-  text-shadow: 0 1px 0 #000;
-}
-
-.arkflight-tier {
-  padding: 3px 7px;
-  border: 1px solid #5e543e;
-  color: #cdb77d;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-}
-
-.arkflight-ship-registry-row,
-.arkflight-powertrain-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px 14px;
-  margin-top: 8px;
-  color: #aaa08b;
-  font-size: 12px;
-}
-
-.arkflight-ship-registry-row span:not(:last-child)::after {
-  content: "·";
-  margin-left: 14px;
-  color: #655a45;
-}
-
-.arkflight-powertrain-line strong {
-  color: #d9c188;
-}
-
-.arkflight-ship-header-actions {
-  display: flex;
-  min-width: 190px;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.arkflight-readiness,
-.arkflight-shipwright-toggle {
-  min-height: 34px;
-  padding: 8px 10px;
-  border: 1px solid #4d5d4d;
-  border-radius: 0;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-align: center;
-}
-
-.arkflight-readiness.is-ready {
-  color: #c4f1d0;
-  border-color: #437252;
-  background: rgba(33, 91, 50, 0.2);
-}
-
-.arkflight-readiness.is-incomplete {
-  color: #f1c7a0;
-  border-color: #86563c;
-  background: rgba(99, 51, 29, 0.2);
-}
-
-.arkflight-shipwright-toggle {
-  color: #cbb579;
-  border-color: #6c5932;
-  background: #171512;
-}
-
-.arkflight-shipwright-toggle:hover,
-.arkflight-shipwright-toggle.is-active {
-  color: #d9f5ff;
-  border-color: #3c8291;
-  background: rgba(24, 76, 88, 0.32);
 }
 
 .arkflight-resource-strip {
@@ -474,17 +361,6 @@
 }
 
 @media (max-width: 920px) {
-  .arkflight-ship-header {
-    grid-template-columns: 90px minmax(0, 1fr);
-  }
-  .arkflight-ship-portrait {
-    width: 90px;
-    height: 90px;
-  }
-  .arkflight-ship-header-actions {
-    grid-column: 1 / -1;
-    flex-direction: row;
-  }
   .arkflight-resource-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
