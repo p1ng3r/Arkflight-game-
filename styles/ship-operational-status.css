@@ -1,0 +1,133 @@
+.arkflight-operational-status {
+  position: relative;
+  min-width: 220px;
+  padding: 8px;
+  border: 1px solid #5d4d31;
+  background: rgba(18, 17, 15, 0.96);
+}
+
+.arkflight-operational-status-label {
+  margin-bottom: 5px;
+  color: #b89550;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.arkflight-operational-status-current {
+  width: 100%;
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 9px;
+  border: 1px solid #42656d;
+  color: #dff8ff;
+  background: rgba(18, 55, 62, 0.36);
+  text-align: left;
+}
+
+.arkflight-operational-status-current span {
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.arkflight-operational-status-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  right: 0;
+  width: min(430px, 70vw);
+  padding: 6px;
+  border: 1px solid #80673a;
+  background: rgba(12, 13, 14, 0.99);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+.arkflight-operational-status-menu button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid transparent;
+  color: #d8cfb8;
+  background: transparent;
+  text-align: left;
+}
+
+.arkflight-operational-status-menu button:hover,
+.arkflight-operational-status-menu button.is-active {
+  border-color: #4b7680;
+  background: rgba(26, 69, 78, 0.28);
+}
+
+.arkflight-operational-status-menu button i {
+  margin-top: 2px;
+  color: #9fcfda;
+  text-align: center;
+}
+
+.arkflight-operational-status-menu button strong,
+.arkflight-operational-status-menu button small {
+  display: block;
+}
+
+.arkflight-operational-status-menu button strong {
+  color: #ead9a6;
+  font-size: 11px;
+}
+
+.arkflight-operational-status-menu button small {
+  margin-top: 2px;
+  color: #8c9899;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.arkflight-operational-status-effects {
+  margin-top: 7px;
+  padding-top: 6px;
+  border-top: 1px solid #3b3528;
+}
+
+.arkflight-operational-status-effects > strong {
+  display: none;
+}
+
+.arkflight-operational-status-effects p {
+  margin: 0;
+  color: #9ca6a3;
+  font-size: 9px;
+  line-height: 1.25;
+}
+
+.arkflight-operational-status-effects ul {
+  display: none;
+  margin: 6px 0 0 16px;
+  padding: 0;
+  color: #bcb39d;
+  font-size: 9px;
+}
+
+.arkflight-operational-status:hover .arkflight-operational-status-effects ul,
+.arkflight-operational-status:focus-within .arkflight-operational-status-effects ul {
+  display: block;
+}
+
+.arkflight-operational-status.is-drifting .arkflight-operational-status-current {
+  border-color: #7e5645;
+  color: #f0c5ad;
+  background: rgba(91, 46, 31, 0.3);
+}
+
+.arkflight-operational-status.is-shipyard .arkflight-operational-status-current,
+.arkflight-operational-status.is-docked .arkflight-operational-status-current {
+  border-color: #6f6337;
+  color: #f0ddb0;
+  background: rgba(81, 67, 29, 0.28);
+}
