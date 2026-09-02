@@ -105,11 +105,12 @@ function enhanceShipSheet(app, html) {
   const root = asElement(html);
   if (!root) return;
   root.querySelector("[data-ship-xp]")?.remove();
+  const host = root.querySelector("[data-ship-xp-host]");
+  if (!host) return;
   const view = shipExperienceView(shipFlag(actor));
-  const host = root.querySelector(".arkflight-ship-header-actions") ?? root.querySelector(".window-content") ?? root;
   const wrapper = document.createElement("div");
   wrapper.innerHTML = xpMarkup(view, { compact: true });
-  host.prepend(wrapper.firstElementChild);
+  host.replaceChildren(wrapper.firstElementChild);
   wireXpControls(root, actor, () => app.render?.(false));
 }
 
