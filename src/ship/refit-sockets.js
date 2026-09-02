@@ -51,6 +51,26 @@ function completedInstallJobs(ship, family) {
   );
 }
 
+function pendingInstallJobs(ship, family) {
+  return (ship?.refit?.workOrders ?? []).filter((job) =>
+    job?.type === "install"
+    && ["planned", "working", "PLANNED", "WORKING"].includes(job?.status)
+    && job?.componentFamily === family
+  );
+}
+
+function reservedSocketSet(ship, family, excludeJobId = "") {
+  const reserved = new Set();
+  for (const job of pendingInstallJobs(ship, family)) {
+    if (excludeJobId && job.id === excludeJobId) continue;
+    for (const value of job.socketIndices ?? []) {
+      const index = Math.max(0, Math.trunc(Number(value) || 0));
+      reserved.add(index);
+    }
+  }
+  return reserved;
+}
+
 function validRequestedSockets(indices, cost, capacity, occupied) {
   const unique = [...new Set((indices ?? []).map((value) => Math.max(0, Math.trunc(Number(value) || 0))))];
   return unique.length === cost
@@ -117,26 +137,32 @@ export function installedSocketLayout(ship, catalogs, family) {
   });
 }
 
+export function pendingSocketReservations(ship, family) {
+  return Object.freeze([...reservedSocketSet(ship, family)].sort((a, b) => a - b));
+}
+
 /** Return the first currently legal socket assignment for a component. */
 export function findAvailableRefitSocketAssignment(ship, catalogs, { family, componentId } = {}) {
   const item = catalogFor(catalogs, family)?.[componentId];
   if (!item) return Object.freeze({ ok: false, reason: "unknown-component", socketIndices: Object.freeze([]) });
   const layout = installedSocketLayout(ship, catalogs, family);
   const cost = slotCost(catalogs, family, componentId);
+  const reserved = reservedSocketSet(ship, family);
+  const unavailable = new Set([...layout.occupied, ...reserved]);
   if (layout.usedSlots > layout.capacity) {
     return Object.freeze({ ok: false, reason: "ship-over-capacity", capacity: layout.capacity, used: layout.usedSlots, overBy: layout.overBy, socketIndices: Object.freeze([]) });
   }
-  if (layout.usedSlots + cost > layout.capacity) {
-    return Object.freeze({ ok: false, reason: "capacity-exceeded", capacity: layout.capacity, used: layout.usedSlots, required: cost, socketIndices: Object.freeze([]) });
+  if (layout.usedSlots + reserved.size + cost > layout.capacity) {
+    return Object.freeze({ ok: false, reason: "capacity-exceeded", capacity: layout.capacity, used: layout.usedSlots + reserved.size, required: cost, socketIndices: Object.freeze([]) });
   }
-  const socketIndices = firstFreeSockets(new Set(layout.occupied), layout.capacity, cost);
+  const socketIndices = firstFreeSockets(unavailable, layout.capacity, cost);
   if (socketIndices.length !== cost) {
-    return Object.freeze({ ok: false, reason: "no-legal-socket", capacity: layout.capacity, used: layout.usedSlots, required: cost, socketIndices: Object.freeze([]) });
+    return Object.freeze({ ok: false, reason: "no-legal-socket", capacity: layout.capacity, used: layout.usedSlots + reserved.size, required: cost, socketIndices: Object.freeze([]) });
   }
-  return Object.freeze({ ok: true, capacity: layout.capacity, used: layout.usedSlots, required: cost, socketIndices: Object.freeze(socketIndices) });
+  return Object.freeze({ ok: true, capacity: layout.capacity, used: layout.usedSlots + reserved.size, required: cost, socketIndices: Object.freeze(socketIndices) });
 }
 
-export function validateRefitSocketAssignment(ship, catalogs, { family, componentId, socketIndices = [] } = {}, draft = null) {
+export function validateRefitSocketAssignment(ship, catalogs, { family, componentId, socketIndices = [], sourceJobId = "" } = {}, draft = null) {
   const layout = installedSocketLayout(ship, catalogs, family);
   const cost = slotCost(catalogs, family, componentId);
   const indices = [...new Set((socketIndices ?? []).map((value) => Math.max(0, Math.trunc(Number(value) || 0))))];
@@ -149,7 +175,7 @@ export function validateRefitSocketAssignment(ship, catalogs, { family, componen
   if (indices.some((index) => index >= layout.capacity)) {
     return Object.freeze({ ok: false, reason: "socket-out-of-range", capacity: layout.capacity });
   }
-  const occupied = new Set(layout.occupied);
+  const occupied = new Set([...layout.occupied, ...reservedSocketSet(ship, family, sourceJobId)]);
   for (const entry of draft?.assignments ?? []) {
     if (entry.family !== family) continue;
     for (const index of entry.socketIndices ?? []) occupied.add(index);
@@ -157,7 +183,7 @@ export function validateRefitSocketAssignment(ship, catalogs, { family, componen
   if (indices.some((index) => occupied.has(index))) {
     return Object.freeze({ ok: false, reason: "socket-occupied" });
   }
-  if (layout.usedSlots + cost > layout.capacity) {
+  if (layout.usedSlots + reservedSocketSet(ship, family, sourceJobId).size + cost > layout.capacity) {
     return Object.freeze({ ok: false, reason: "capacity-exceeded", capacity: layout.capacity, used: layout.usedSlots, required: cost });
   }
   return Object.freeze({ ok: true, capacity: layout.capacity, used: layout.usedSlots, required: cost, socketIndices: Object.freeze(indices) });
