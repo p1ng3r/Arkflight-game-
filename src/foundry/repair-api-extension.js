@@ -43,17 +43,21 @@ Hooks.once("ready", () => {
     },
     async queueRepairPackage(actor, targetType, targetKey, packageId = "patch", options = {}) {
       const serviceMode = ["crew", "dock", "shipyard"].includes(options.serviceMode) ? options.serviceMode : "crew";
+      const paymentMethod = options.paymentMethod === "gold" ? "gold" : "scrap";
       const quote = extended.quoteRepair(actor, targetType, targetKey, packageId, serviceMode);
       if (!quote.ok) return quote;
       if (targetType === "resource" && quote.current >= quote.max) return { ok: false, reason: "already-fully-repaired", quote };
       if (targetType === "area" && quote.currentState === quote.afterState) return { ok: false, reason: "already-stable", quote };
+      if (paymentMethod === "gold" && serviceMode === "crew") return { ok: false, reason: "gold-payment-requires-dock", quote };
 
+      const partsCost = Math.max(0, Number(options.partsCostOverride ?? quote.partsCost));
+      const goldCost = Math.max(0, Number(options.goldCost ?? 0));
       const queued = await base.queueRepair(actor, {
         componentFamily: `repair:${targetType}`,
         componentId: targetKey,
         durationHours: quote.durationHours,
         craftingDC: quote.craftingDC,
-        partsCost: quote.partsCost,
+        partsCost,
         method: serviceMode === "shipyard" ? "shipyard" : "crew"
       });
       if (!queued?.ok || !queued.job) return { ...queued, quote };
@@ -61,10 +65,12 @@ Hooks.once("ready", () => {
       const current = shipPayload(actor);
       const taggedJob = {
         ...queued.job,
+        ...(paymentMethod === "gold" ? { goldCost } : {}),
         result: {
           ...(queued.job.result ?? {}),
           serviceMode,
-          paymentMethod: "scrap",
+          paymentMethod,
+          ...(paymentMethod === "gold" ? { goldCost } : {}),
           repair: {
             targetType,
             targetKey,
