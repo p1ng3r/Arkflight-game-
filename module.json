@@ -57,6 +57,7 @@
     "styles/shipwright-workbench-label-polish.css",
     "styles/shipwright-repair-controls.css",
     "styles/shipwright-scroll-popup-polish.css",
+    "styles/voyage-abandon.css",
     "styles/refit-alpha-unified.css"
   ],
   "esmodules": [
@@ -119,6 +120,7 @@
     "src/ui/ship-repair-shortcuts-ui.js",
     "src/ui/ship-sheet-consolidation-ui.js",
     "src/ui/ship-sheet-refit-gameplay-ui.js",
+    "src/ui/voyage-abandon-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
   ]
 }
