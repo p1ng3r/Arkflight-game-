@@ -26,6 +26,42 @@ function withInstallArray(ship, family, values) {
 function addJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: [...(ship.refit?.workOrders ?? []), job] } }); }
 function replaceJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: (ship.refit?.workOrders ?? []).map((entry) => entry.id === job.id ? job : entry) } }); }
 
+function applyRepairEffect(ship, job) {
+  const repair = job?.result?.repair;
+  if (job?.type !== REFIT_JOB_TYPES.REPAIR || !repair) return { ship, applied: false };
+  const next = normalizeShip(ship);
+  if (repair.targetType === "resource" && ["hull", "lifeveil"].includes(repair.targetKey)) {
+    const resource = next.resources?.[repair.targetKey];
+    if (!resource) return { ship: next, applied: false };
+    const amount = Math.max(0, Number(repair.restoreAmount ?? 0));
+    const max = Math.max(0, Number(resource.max ?? 0));
+    const value = Math.max(0, Number(resource.value ?? 0));
+    return {
+      ship: normalizeShip({
+        ...next,
+        resources: {
+          ...next.resources,
+          [repair.targetKey]: { ...resource, value: Math.min(max, value + amount) }
+        }
+      }),
+      applied: amount > 0
+    };
+  }
+  if (repair.targetType === "area" && repair.targetKey && repair.afterState) {
+    return {
+      ship: normalizeShip({
+        ...next,
+        areas: {
+          ...next.areas,
+          [repair.targetKey]: { ...(next.areas?.[repair.targetKey] ?? {}), state: repair.afterState }
+        }
+      }),
+      applied: true
+    };
+  }
+  return { ship: next, applied: false };
+}
+
 function validateInstallAssignments(ship, assignments, catalogs) {
   const staged = { assignments: [] };
   for (const assignment of assignments) {
@@ -201,7 +237,9 @@ export function completeRefitJob(ship, jobId, catalogs, { completedAt = null, re
     const arr = [...installArray(next, found.componentFamily)]; const index = arr.indexOf(found.componentId); if (index < 0) return { ok: false, reason: "component-not-installed", ship: next };
     arr.splice(index, 1); next = grantComponent(withInstallArray(next, found.componentFamily, arr), found.componentFamily, found.componentId, 1);
   }
-  const mergedResult = Object.freeze({ ...(found.result ?? {}), ...(result ?? {}) });
+  const repairEffect = applyRepairEffect(next, found);
+  next = repairEffect.ship;
+  const mergedResult = Object.freeze({ ...(found.result ?? {}), ...(result ?? {}), ...(repairEffect.applied ? { repairApplied: true } : {}) });
   const job = createRefitJob({ ...found, status: REFIT_JOB_STATES.COMPLETE, remainingHours: 0, result: mergedResult, completedAt: nowIso(completedAt) });
   next = replaceJob(next, job); return { ok: true, ship: next, job };
 }
