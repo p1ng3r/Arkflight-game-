@@ -1,4 +1,6 @@
 import { component, COMPONENT_TYPES } from "../ship/component-rules.js";
+import { defaultRefitCosts, refitSpec } from "../ship/refit-rules.js";
+import { shipModRarityRule } from "../ship/ship-mod-rarity.js";
 
 const D = {
   "deck-ballista": [
@@ -72,25 +74,49 @@ const CAP = {
   "grapnel-harpoon": ["ship-grappling"]
 };
 
-export const WEAPONS = Object.freeze(Object.fromEntries(Object.entries(D).map(([id, v]) => [id, component({
-  id,
-  name: v[0],
-  type: COMPONENT_TYPES.WEAPON,
-  description: v[1],
-  capacityCost: v[2],
-  tags: v[3],
-  traits: v[3].filter((x) => !["weapon", v[4], v[5], v[6]].includes(x)),
-  capabilities: CAP[id] ?? [],
-  data: {
-    size: v[4],
-    family: v[5],
-    category: v[6],
-    crewRequired: v[7],
-    reload: v[8],
-    arcs: v[9],
-    damageProfile: v[10],
-    mountType: v[11],
-    systemThreat: v[12],
-    cargo: v[13]
-  }
-})])));
+const RARITY_BY_REFIT_TIER = Object.freeze({ 1: "standard", 2: "rare", 3: "epic", 4: "legendary", 5: "mythic" });
+
+function refitFor(v) {
+  const tier = Math.max(1, Math.trunc(Number(v[2]) || 1));
+  const slotCost = Math.max(1, Math.trunc(Number(v[2]) || 1));
+  const costs = defaultRefitCosts(tier, slotCost);
+  return refitSpec({
+    family: "weapon",
+    slotClass: "weapon",
+    tier,
+    slotCost,
+    ...costs
+  });
+}
+
+export const WEAPONS = Object.freeze(Object.fromEntries(Object.entries(D).map(([id, v]) => {
+  const refitTier = Math.max(1, Math.trunc(Number(v[2]) || 1));
+  const rarity = RARITY_BY_REFIT_TIER[refitTier] ?? "standard";
+  const rarityRule = shipModRarityRule(rarity);
+  return [id, component({
+    id,
+    name: v[0],
+    type: COMPONENT_TYPES.WEAPON,
+    description: v[1],
+    capacityCost: v[2],
+    tags: ["ship-weapon", rarity, ...v[3]],
+    traits: v[3].filter((x) => !["weapon", v[4], v[5], v[6]].includes(x)),
+    capabilities: CAP[id] ?? [],
+    data: {
+      rarity,
+      minShipLevel: rarityRule.minShipLevel,
+      legacyRefitTier: refitTier,
+      size: v[4],
+      family: v[5],
+      category: v[6],
+      crewRequired: v[7],
+      reload: v[8],
+      arcs: v[9],
+      damageProfile: v[10],
+      mountType: v[11],
+      systemThreat: v[12],
+      cargo: v[13],
+      refit: refitFor(v)
+    }
+  })];
+})));
