@@ -148,7 +148,7 @@ export const GLASSBACK_CINDERWAKE = eventDefinition({
       vignette: "The blue seam opens at exactly the right heartbeat, and the ship drives through it before the Glassback can finish its turn. Fire and black wreckage vanish behind a curtain of cold sapphire light as the Arkengine catches cleanly and the Lifeveil settles around the hull. For several breaths there is only the fading thunder of the leviathan somewhere beyond the seam. The crew has not merely escaped Cinderwake Wreck—they have stolen the passage from the beast itself.",
       rewards: rewardPackage({
         gold: 25,
-        salvage: [{ name: "Glassback Wake Shard", valueGp: 40, description: "A fused shard of black glassy scale and aether-burned wreck metal recovered during the escape." }],
+        aetherScrap: 4,
         routeKnowledge: [{ name: "Cinderwake Blue-Seam Timing", description: "The crew now knows how to read the brief blue seams that form behind a Glassback's turn." }],
         edgeCards: ["protect-the-system"]
       })
@@ -160,7 +160,7 @@ export const GLASSBACK_CINDERWAKE = eventDefinition({
       vignette: "The ship punches through the narrowing blue seam with the Cinderwake still clawing at its stern. Behind you, the Glassback rolls through the wreckage and disappears into a storm of embers and shattered spars. The vessel bears the marks of the crossing, but the Arkengine keeps its rhythm and the Lifeveil holds. Cinderwake Wreck falls away into the dark, and for the first time since the leviathan appeared, the crew has room to breathe.",
       rewards: rewardPackage({
         gold: 15,
-        salvage: [{ name: "Scorched Wreck Salvage", valueGp: 20, description: "Recoverable brass, fittings, and aether-hardened fragments pulled clear during the escape." }],
+        aetherScrap: 2,
         routeKnowledge: [{ name: "Cinderwake Passage Notes", description: "A rough but useful record of currents, hazards, and timing around the wreck." }]
       })
     }),
@@ -170,7 +170,7 @@ export const GLASSBACK_CINDERWAKE = eventDefinition({
       label: "Scorched Escape",
       vignette: "The blue seam begins to collapse before the ship is fully through, forcing the crew to tear the vessel across the threshold under brutal strain. The Glassback's shadow fills the burning wreck behind you as the last edge of the seam snaps shut. Warning bells and groaning timbers answer the silence on the far side, proof that the escape extracted its price. You are alive and clear of the beast, but the ship carries Cinderwake with it in scorched metal, strained veilwork, and damaged hull.",
       rewards: rewardPackage({
-        salvage: [{ name: "Damaged Cinderwake Salvage", valueGp: 8, description: "A small amount of battered material that survived the crossing." }]
+        aetherScrap: 1
       })
     }),
     disaster: endingDefinition({
