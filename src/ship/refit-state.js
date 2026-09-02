@@ -2,7 +2,8 @@ import { normalizeShip } from "./ship-schema.js";
 
 export const REFIT_COMPONENT_FAMILIES = Object.freeze({
   SHIP_MOD: "shipMod",
-  ARKENGINE_MOD: "arkengineMod"
+  ARKENGINE_MOD: "arkengineMod",
+  WEAPON: "weapon"
 });
 
 function normalizeQuantity(value = 1) {
@@ -12,12 +13,14 @@ function normalizeQuantity(value = 1) {
 function inventoryKey(family) {
   if (family === REFIT_COMPONENT_FAMILIES.SHIP_MOD) return "shipMods";
   if (family === REFIT_COMPONENT_FAMILIES.ARKENGINE_MOD) return "arkengineMods";
+  if (family === REFIT_COMPONENT_FAMILIES.WEAPON) return "weapons";
   throw new Error(`Unknown Arkflight refit component family: ${family}`);
 }
 
 function blueprintKey(family) {
   if (family === REFIT_COMPONENT_FAMILIES.SHIP_MOD) return "shipModIds";
   if (family === REFIT_COMPONENT_FAMILIES.ARKENGINE_MOD) return "arkengineModIds";
+  if (family === REFIT_COMPONENT_FAMILIES.WEAPON) return "weaponIds";
   throw new Error(`Unknown Arkflight refit component family: ${family}`);
 }
 
