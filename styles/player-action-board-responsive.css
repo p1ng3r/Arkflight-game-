@@ -1,0 +1,80 @@
+.arkflight-player-action-mode .pa-board {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.arkflight-player-action-mode .pa-top {
+  grid-template-columns: minmax(250px, 29%) minmax(250px, 1fr) minmax(400px, 1.25fr);
+}
+
+.arkflight-player-action-mode .pa-status-wrap,
+.arkflight-player-action-mode .pa-round-copy,
+.arkflight-player-action-mode .pa-detail,
+.arkflight-player-action-mode .pa-action-panel,
+.arkflight-player-action-mode .pa-check-panel,
+.arkflight-player-action-mode .pa-mastery-panel {
+  min-width: 0;
+}
+
+.arkflight-player-action-mode .pa-ship-status {
+  grid-template-columns: minmax(82px, .8fr) minmax(118px, 1.15fr) repeat(5, minmax(58px, .72fr));
+}
+
+.arkflight-player-action-mode .pa-main {
+  grid-template-columns: minmax(405px, 42%) minmax(0, 58%);
+}
+
+.arkflight-player-action-mode .pa-station-row {
+  grid-template-columns: 31px 42px minmax(86px, .85fr) minmax(92px, 1fr) minmax(96px, .95fr) 48px;
+  gap: 5px;
+}
+
+.arkflight-player-action-mode .pa-station-row img {
+  width: 38px;
+  height: 38px;
+}
+
+.arkflight-player-action-mode .pa-detail-grid {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .9fr) minmax(0, 1.05fr);
+}
+
+.arkflight-player-action-mode .pa-detail select {
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1120px) {
+  .arkflight-player-action-mode .pa-top {
+    grid-template-columns: minmax(245px, 31%) minmax(0, 1fr);
+  }
+
+  .arkflight-player-action-mode .pa-status-wrap {
+    grid-column: 1 / -1;
+    padding: 8px 10px;
+  }
+
+  .arkflight-player-action-mode .pa-main {
+    grid-template-columns: minmax(390px, 41%) minmax(0, 59%);
+  }
+
+  .arkflight-player-action-mode .pa-station-row {
+    grid-template-columns: 30px 38px minmax(78px, .8fr) minmax(86px, 1fr) minmax(88px, .9fr) 44px;
+  }
+
+  .arkflight-player-action-mode .pa-row-action small,
+  .arkflight-player-action-mode .pa-row-mastery small {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 980px) {
+  .arkflight-player-action-mode .pa-main {
+    grid-template-columns: 1fr;
+  }
+
+  .arkflight-player-action-mode .pa-detail-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
