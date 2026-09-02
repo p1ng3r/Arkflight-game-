@@ -32,7 +32,6 @@ function currentStatus(actor) {
 
 function effectHtml(status) {
   return `<div class="arkflight-operational-status-effects">
-    <strong>${status.label}</strong>
     <p>${status.summary}</p>
     <ul>${status.effects.map((effect) => `<li>${effect}</li>`).join("")}</ul>
   </div>`;
@@ -72,13 +71,12 @@ async function applyStatus(actor, value) {
 function enhance(app, html) {
   const root = rootFrom(app, html);
   const actor = actorFrom(app);
-  if (!root || !actor || !ship(actor) || root.dataset.arkflightOperationalStatus === "true") return;
-  const headerActions = root.querySelector(".arkflight-ship-header-actions");
-  if (!headerActions) return;
+  if (!root || !actor || !ship(actor)) return;
+  const host = root.querySelector("[data-operational-status-host]");
+  if (!host) return;
 
   const node = selector(actor);
-  headerActions.append(node);
-  root.dataset.arkflightOperationalStatus = "true";
+  host.replaceChildren(node);
 
   const toggle = node.querySelector("[data-operational-status-toggle]");
   const menu = node.querySelector("[data-operational-status-menu]");
