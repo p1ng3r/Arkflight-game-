@@ -225,16 +225,9 @@ function choosePaymentDialog({ actor, item, mode, socketIndex, spec, scrapCost, 
     const canAffordGold = goldAllowed && partyCopper() >= gpToCp(gpCost);
     const content = `<div class="arkflight-install-scroll" style="--install-scroll:url('${ASSETS.scroll}')">
       <header><div><span>SHIPWRIGHT WORK ORDER</span><h2>${escape(item.name)}</h2><p>${escape(serviceLabel(mode))} · Socket ${socketIndex + 1}</p></div><img src="${ASSETS.engineerSeal}" alt="Engineer seal"></header>
-      <div class="arkflight-install-scroll-grid"><section><h3>Installation</h3><dl><div><dt>Install DC</dt><dd>${spec.dc}</dd></div><div><dt>Estimated Time</dt><dd>${spec.timeHours}h</dd></div><div><dt>Assigned Engineer</dt><dd>${escape(engineerName)} ${mode === "crew" ? `(+${crafting})` : ""}</dd></div></dl></section><section><h3>Payment</h3><div class="arkflight-payment-options">
-        <label class="${canAffordScrap ? "" : "is-disabled"}"><input type="radio" name="arkflight-payment" value="scrap" ${canAffordScrap ? "checked" : "disabled"}><img src="${ASSETS.scrap}" alt=""><strong>${scrapCost} Aether Scrap</strong><small>${currentScrap(actor)} aboard</small></label>
-        <label class="${canAffordGold ? "" : "is-disabled"}"><input type="radio" name="arkflight-payment" value="gold" ${canAffordGold && !canAffordScrap ? "checked" : ""} ${canAffordGold ? "" : "disabled"}><img src="${ASSETS.gold}" alt=""><strong>${Number(gpCost).toLocaleString()} gp</strong><small>${goldAllowed ? `Party treasury ${partyGoldDisplay().toLocaleString()} gp` : "Dock/Shipyard only"}</small></label>
-      </div></section></div>
-      <footer><img src="${ASSETS.hourglass}" alt=""><span>${mode === "crew" ? "Crew work begins after the Engineer's Crafting check." : "Professional service queues the timed work order automatically."}</span></footer></div>`;
-    const dialog = new DialogV2({ window: { title: `Install ${item.name}` }, content, buttons: [
-      { action: "cancel", label: "Cancel", callback: () => resolve(null) },
-      { action: "install", label: mode === "crew" ? "Roll Installation" : "Confirm Professional Install", default: true, callback: (_event, button, dlg) => resolve(dlg.element.querySelector('input[name="arkflight-payment"]:checked')?.value ?? null) }
-    ], close: () => resolve(null) });
-    dialog.render(true);
+      <div class="arkflight-install-scroll-grid"><section><h3>Installation</h3><dl><div><dt>Install DC</dt><dd>${Number(spec.dc ?? 0)}</dd></div><div><dt>Estimated Time</dt><dd>${Number(spec.timeHours ?? 0)}h</dd></div><div><dt>Service</dt><dd>${escape(serviceLabel(mode))}</dd></div></dl></section><section><h3>Payment</h3><div class="arkflight-payment-options"><label class="${canAffordScrap ? "" : "is-disabled"}"><img src="${ASSETS.scrap}" alt="Aether Scrap"><input type="radio" name="arkflight-payment" value="scrap" ${canAffordScrap ? "checked" : "disabled"}><strong>${scrapCost} Aether Scrap</strong><small>${currentScrap(actor)} aboard</small></label><label class="${canAffordGold ? "" : "is-disabled"}"><img src="${ASSETS.gold}" alt="Gold"><input type="radio" name="arkflight-payment" value="gold" ${canAffordGold && !canAffordScrap ? "checked" : ""} ${goldAllowed ? "" : "disabled"}><strong>${Number(gpCost).toLocaleString()} gp</strong><small>${goldAllowed ? `Party treasury ${partyGoldDisplay().toLocaleString()} gp` : "Dock or Shipyard only"}</small></label></div></section></div>
+      <footer><img src="${ASSETS.engineerSeal}" alt=""><span>${mode === "crew" ? `${escape(engineerName)} · Crafting ${crafting >= 0 ? "+" : ""}${crafting}` : `${escape(serviceLabel(mode))} professional installation`}</span></footer></div>`;
+    new DialogV2({ window: { title: `Install ${item.name}` }, content, buttons: [{ action: "cancel", label: "Cancel" }, { action: "confirm", label: mode === "crew" ? "Roll Installation" : "Confirm Professional Install", default: true, callback: (_event, button, dialog) => resolve(dialog.element.querySelector('input[name="arkflight-payment"]:checked')?.value ?? null) }], close: () => resolve(null) }).render({ force: true });
   });
 }
 
@@ -242,10 +235,7 @@ async function installDialog(actor, group, componentId, socketIndex) {
   const item = catalogFor(group)?.[componentId];
   const spec = item?.data?.refit?.install;
   if (!item || !spec) return ui.notifications?.warn?.("That fitting has no installation specification.");
-  const assignment = anchoredAssignment(actor, group, componentId, socketIndex);
-  if (!assignment) return ui.notifications?.warn?.("That socket is occupied, reserved, or there are not enough free sockets for this fitting.");
   const mode = service(actor);
-  if (!shipAllowsRefitMode(shipFlag(actor), mode)) return ui.notifications?.warn?.(`${shipOperationalStatus(shipFlag(actor)).label} does not allow ${serviceLabel(mode)} installation work.`);
   const quote = componentEconomyQuote(item);
   const scrapCost = quote?.ok ? (quote.installation[mode]?.aetherScrap ?? quote.installation.crew.aetherScrap) : Number(spec.partsCost ?? 0);
   const gpCost = quote?.ok ? (quote.installation[mode]?.gp ?? quote.installation.crew.gp) : 0;
@@ -257,7 +247,7 @@ async function installDialog(actor, group, componentId, socketIndex) {
 
 export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
   constructor(actor, options = {}) { super(options); this.actor = actor; this.group = null; this.selectedSocket = null; }
-  static DEFAULT_OPTIONS = { id: "arkflight-shipwright-{id}", classes: ["arkflight-shipwright-workspace"], position: { width: 1100, height: 750 }, window: { title: "Arkflight Shipwright Workspace", resizable: true } };
+  static DEFAULT_OPTIONS = { id: "arkflight-shipwright-{id}", classes: ["arkflight-shipwright-workspace"], position: { width: 1350, height: 800 }, window: { title: "Arkflight Shipwright Workspace", resizable: true } };
   static PARTS = { main: { template: `modules/${MODULE_ID}/templates/ship/shipwright-workspace.hbs` } };
 
   async _prepareContext() {
