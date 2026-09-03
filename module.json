@@ -60,7 +60,8 @@
     "styles/shipwright-repair-controls.css",
     "styles/shipwright-scroll-popup-polish.css",
     "styles/voyage-abandon.css",
-    "styles/refit-alpha-unified.css"
+    "styles/refit-alpha-unified.css",
+    "styles/event-board-navy-bars-fix.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
