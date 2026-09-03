@@ -43,8 +43,8 @@ export function validateRoomPurpose(room) {
 
 export const WEAPON_REQUIRED_FIELDS = Object.freeze([
   "crewRequired",
-  "reload",
-  "arcs",
+  "allowedMounts",
+  "combat",
   "mountType",
   "damageProfile",
   "systemThreat",
@@ -58,11 +58,17 @@ export function validateWeaponDefinition(weapon) {
   const data = weapon.data ?? {};
   const missing = WEAPON_REQUIRED_FIELDS.filter((field) => {
     const value = data[field];
-    if (field === "arcs") return !Array.isArray(value) || value.length === 0;
-    if (field === "reload" || field === "damageProfile") return !value || typeof value !== "object";
+    if (field === "allowedMounts") return !Array.isArray(value) || value.length === 0;
+    if (field === "combat" || field === "damageProfile") return !value || typeof value !== "object";
     return value === undefined || value === null || value === "";
   });
-  return Object.freeze({ ok: missing.length === 0, missing: Object.freeze(missing) });
+  const combat = data.combat ?? {};
+  if (!(Number.isInteger(combat.fireAP) && combat.fireAP >= 1)) missing.push("combat.fireAP");
+  if (!(Number.isInteger(combat.reloadRounds) && combat.reloadRounds >= 0)) missing.push("combat.reloadRounds");
+  if (!combat.arcTemplate) missing.push("combat.arcTemplate");
+  const range = combat.rangeHexes;
+  if (!range || !Number.isFinite(Number(range.min)) || !Number.isFinite(Number(range.max)) || Number(range.max) < Number(range.min)) missing.push("combat.rangeHexes");
+  return Object.freeze({ ok: missing.length === 0, missing: Object.freeze([...new Set(missing)]) });
 }
 
 export function weaponCrewPenalty(requiredCrew, availableCrew) {
