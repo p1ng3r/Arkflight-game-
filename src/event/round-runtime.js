@@ -155,9 +155,23 @@ export function cinematicRoundNarrative({ round, bandId, results, consequenceNar
 }
 
 function finalFailureEffect(event, eventResult) {
-  if (eventResult?.id === "failure") return { kind: "add-condition", condition: { id: `${event.id}-event-failure`, name: `${event.title}: Major System Disadvantage`, source: event.id, severity: "major", eventResult: "failure" } };
-  if (eventResult?.id === "criticalFailure") return { kind: "add-condition", condition: { id: `${event.id}-event-critical-failure`, name: `${event.title}: Massive System Disadvantage`, source: event.id, severity: "massive", eventResult: "criticalFailure" } };
+  if (eventResult?.id === "failure") return { kind: "add-condition", condition: { id: `${event.id}-event-failure`, name: `${event.title}: Massive System Disadvantage`, source: event.id, severity: "massive", eventResult: "failure" } };
+  if (eventResult?.id === "criticalFailure") return { kind: "add-condition", condition: { id: `${event.id}-event-critical-failure`, name: `${event.title}: Catastrophic System Disadvantage`, source: event.id, severity: "catastrophic", eventResult: "criticalFailure" } };
   return null;
+}
+
+function sentenceCount(text) { return String(text ?? "").split(/[.!?]+/).map((row) => row.trim()).filter(Boolean).length; }
+function roundTitle(event, entry) { return event?.rounds?.find((round) => round.id === entry?.roundId)?.title ?? `Round ${Number(entry?.roundIndex ?? 0) + 1}`; }
+function cinematicEventNarrative(event, eventResult, ending, history = []) {
+  const rows = [...history].sort((a, b) => Number(b.score) - Number(a.score));
+  const best = rows[0] ?? null; const worst = rows.at(-1) ?? null;
+  const authored = String(ending?.vignette ?? "").trim();
+  const authoredSentences = sentenceCount(authored);
+  const summary = `Across ${rows.length} rounds, the crew's combined performance resolves as ${eventResult.label}, with an average round score of ${Number(eventResult.averageRoundScore).toFixed(1)}.`;
+  const contrast = best && worst && best.roundId !== worst.roundId ? `${roundTitle(event, best)} was the crew's strongest passage, while ${roundTitle(event, worst)} exacted the greatest price.` : best ? `${roundTitle(event, best)} became the defining passage of the event.` : "The event is decided by the crew's accumulated choices.";
+  if (authoredSentences >= 10) return authored;
+  if (authoredSentences === 9) return `${summary} ${authored}`;
+  return `${summary} ${contrast} ${authored}`;
 }
 
 export function finalizeRound(event, state) {
@@ -184,7 +198,8 @@ export function advanceToNextRound(event, state) {
   const nextIndex = Number(state.roundIndex ?? 0) + 1; const nextRound = event?.rounds?.[nextIndex];
   if (!nextRound) {
     const eventResult = state.eventResultPreview ?? scoreEvent(state.eventHistory);
-    const eventEnding = resolveEventEnding(event, eventResult.id);
+    const authoredEnding = resolveEventEnding(event, eventResult.id);
+    const eventEnding = { ...authoredEnding, label: `${eventResult.label} — ${authoredEnding.label}`, vignette: cinematicEventNarrative(event, eventResult, authoredEnding, state.eventHistory) };
     let next = { ...state, phase: "event-complete", eventResult, eventEnding, eventResultPreview: null };
     const failureEffect = finalFailureEffect(event, eventResult); if (failureEffect) next = appendShipEffect(next, failureEffect, `Final Event Result — ${eventResult.label}`);
     return applyRewardPackageToState(next, eventEnding.rewards, { eventResultId: eventResult.id });
