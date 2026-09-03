@@ -1,6 +1,5 @@
 import { getMasteryTechnique } from "../content/base-mastery.js";
 import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
-import { STATIONS } from "../event/event-schema.js";
 import { stationPresentation } from "./station-presentation.js";
 
 function rootFor(app, element) {
@@ -44,30 +43,6 @@ async function showMastery(state, stationId) {
   });
 }
 
-function compactMasteries(strip, state) {
-  const chips = [...strip.querySelectorAll(".arkflight-mastery-chip")];
-  for (const chip of chips) {
-    const stationId = STATIONS.find((id) => {
-      const mastery = getMasteryTechnique(id, state.masterySelections?.[id]);
-      return mastery && chip.textContent.includes(mastery.name);
-    });
-    if (!stationId) continue;
-    const details = masteryDetails(state, stationId);
-    if (!details) continue;
-    chip.innerHTML = `<span class="arkflight-ability-info-link" role="link" tabindex="0"></span><span class="arkflight-ability-state">${details.expended ? "USED" : "READY"}</span>`;
-    const link = chip.querySelector(".arkflight-ability-info-link");
-    link.textContent = `${details.stationName} — ${details.mastery.name}`;
-    const open = async (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      await showMastery(state, stationId);
-    };
-    link.addEventListener("click", open, true);
-    link.addEventListener("keydown", async (event) => { if (event.key === "Enter" || event.key === " ") await open(event); }, true);
-  }
-}
-
 function compactTactics(strip) {
   const chips = [...strip.querySelectorAll(".arkflight-tactic-chip")];
   for (const chip of chips) {
@@ -89,12 +64,12 @@ function compactTactics(strip) {
   strip.querySelector(".arkflight-tactics-panel")?.classList.toggle("is-empty", chips.length === 0);
 }
 
-function compactUtility(root, state) {
+function compactUtility(root) {
   const strip = root.querySelector(".arkflight-utility-strip");
   if (!strip || strip.dataset.planningPolished === "true") return;
-  strip.classList.add("arkflight-planning-utility-compact");
+  strip.classList.add("arkflight-planning-utility-compact", "arkflight-planning-utility-no-mastery");
   strip.dataset.planningPolished = "true";
-  compactMasteries(strip, state);
+  strip.querySelector(".arkflight-mastery-panel")?.remove();
   compactTactics(strip);
 }
 
@@ -110,6 +85,17 @@ function bindMasteryCard(root, state) {
   card.addEventListener("click", () => showMastery(state, focused));
 }
 
+function openActorSheet(actor) {
+  const sheet = actor?.sheet;
+  if (!sheet?.render) return;
+  try {
+    sheet.render({ force: true });
+  } catch (error) {
+    console.warn("Arkflight | ApplicationV2 actor sheet render fallback", error);
+    sheet.render(true);
+  }
+}
+
 function compactStationRows(root, state) {
   for (const row of root.querySelectorAll(".arkflight-planning-station-row")) {
     const focus = row.querySelector("[data-arkflight-focus-station]");
@@ -120,24 +106,39 @@ function compactStationRows(root, state) {
     const masteryNode = summary?.querySelector(".arkflight-planning-mastery");
     const readyNode = focus.querySelector(".arkflight-planning-ready-state");
     const details = masteryDetails(state, stationId);
+    const actorId = state.assignments?.[stationId]?.actorId ?? null;
+    const actor = actorId ? game.actors.get(actorId) : null;
 
     row.classList.add("arkflight-command-summary-row");
     readyNode?.remove();
 
-    if (masteryNode && details && masteryNode.dataset.masteryLink !== "true") {
-      masteryNode.dataset.masteryLink = "true";
-      masteryNode.classList.add("arkflight-rail-mastery-link");
-      masteryNode.setAttribute("role", "link");
-      masteryNode.setAttribute("tabindex", "0");
-      masteryNode.innerHTML = `<span>${details.mastery.name}</span><strong>${details.expended ? "USED" : "READY"}</strong>`;
-      const open = async (event) => {
+    if (masteryNode) masteryNode.remove();
+    if (details && !row.querySelector(":scope > .arkflight-rail-mastery-link")) {
+      const masteryButton = document.createElement("button");
+      masteryButton.type = "button";
+      masteryButton.className = "arkflight-rail-mastery-link";
+      masteryButton.dataset.stationMastery = stationId;
+      masteryButton.innerHTML = `<span>${details.mastery.name}</span><strong>${details.expended ? "USED" : "READY"}</strong>`;
+      masteryButton.title = "Click for Mastery details";
+      masteryButton.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await showMastery(state, stationId);
+      });
+      const controls = row.querySelector(":scope > .arkflight-planning-order-controls");
+      row.insertBefore(masteryButton, controls ?? null);
+    }
+
+    const avatar = focus.querySelector(".arkflight-planning-avatar");
+    if (avatar && actor && avatar.dataset.sheetBound !== "true") {
+      avatar.dataset.sheetBound = "true";
+      avatar.title = `Double-click to open ${actor.name}`;
+      avatar.addEventListener("dblclick", (event) => {
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
-        await showMastery(state, stationId);
-      };
-      masteryNode.addEventListener("click", open, true);
-      masteryNode.addEventListener("keydown", async (event) => { if (event.key === "Enter" || event.key === " ") await open(event); }, true);
+        openActorSheet(actor);
+      }, true);
     }
   }
 }
@@ -159,7 +160,7 @@ function polishPlanning(root, controller) {
   if (controller.state?.phase !== "planning") return;
   root.querySelector(".arkflight-order-bar")?.remove();
   root.querySelector(".arkflight-score-key")?.remove();
-  compactUtility(root, controller.state);
+  compactUtility(root);
   compactStationRows(root, controller.state);
   expandStationHitArea(root);
   bindMasteryCard(root, controller.state);
