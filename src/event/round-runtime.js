@@ -1,4 +1,5 @@
 import { clampMomentum } from "./event-schema.js";
+import { appendRoundHistory, scoreEvent } from "./event-outcome.js";
 import { applyRewardPackageToState, applyRoundRewardPackageToState, resolveEventEnding } from "./reward-engine.js";
 
 function cloneSourceMap(source) { return Object.fromEntries(Object.entries(source ?? {}).map(([key, rows]) => [key, [...(rows ?? [])]])); }
@@ -20,7 +21,9 @@ function cloneEncounter(encounter) {
     momentumLossGuard: Number(encounter?.momentumLossGuard ?? 0),
     riskOverrides: { ...(encounter?.riskOverrides ?? {}) },
     hazardShelters: { ...(encounter?.hazardShelters ?? {}) },
-    suppressedHazards: [...(encounter?.suppressedHazards ?? [])]
+    suppressedHazards: [...(encounter?.suppressedHazards ?? [])],
+    rollTwiceBest: { ...(encounter?.rollTwiceBest ?? {}) },
+    riskTierOverrides: { ...(encounter?.riskTierOverrides ?? {}) }
   };
 }
 
@@ -63,6 +66,7 @@ export function consumeCheckAdjustments(state, stationId) {
   delete encounter.checkBonuses[stationId]; delete encounter.dcAdjustments[stationId]; delete encounter.degreeLifts[stationId];
   delete encounter.checkBonusSources[stationId]; delete encounter.dcAdjustmentSources[stationId]; delete encounter.degreeLiftSources[stationId];
   delete encounter.hazardShelters[stationId]; delete encounter.riskOverrides[stationId];
+  delete encounter.rollTwiceBest[stationId]; delete encounter.riskTierOverrides[stationId];
   return { ...state, encounter };
 }
 
@@ -121,7 +125,6 @@ function guardedStrainEffect(encounter, effect) {
 function normalizedShipEffect(effect) {
   if (!effect) return null;
   if (effect.kind === "gain-strain") return { kind: "gain-strain", value: Number(effect.value ?? 0), area: effect.area ?? null };
-  // Temporary authoring migration: old event content is interpreted, but no Pressure state is created.
   if (effect.kind === "pressure") return { kind: "gain-strain", value: Number(effect.value ?? 0), area: effect.system ?? null };
   if (effect.kind === "reduce-highest-pressure") return { kind: "gain-strain", value: -Math.abs(Number(effect.value ?? 1)), area: null };
   if (["damage-hull", "damage-lifeveil", "change-morale", "degrade-area", "recover-area", "add-condition", "remove-condition"].includes(effect.kind)) return { ...effect };
@@ -151,6 +154,12 @@ export function cinematicRoundNarrative({ round, bandId, results, consequenceNar
   return `${opening} ${middle} ${riskSentence} ${consequenceNarrative}`;
 }
 
+function finalFailureEffect(event, eventResult) {
+  if (eventResult?.id === "failure") return { kind: "add-condition", condition: { id: `${event.id}-event-failure`, name: `${event.title}: Major System Disadvantage`, source: event.id, severity: "major", eventResult: "failure" } };
+  if (eventResult?.id === "criticalFailure") return { kind: "add-condition", condition: { id: `${event.id}-event-critical-failure`, name: `${event.title}: Massive System Disadvantage`, source: event.id, severity: "massive", eventResult: "criticalFailure" } };
+  return null;
+}
+
 export function finalizeRound(event, state) {
   if (state?.phase !== "round-result" || !state.roundResult) return state;
   if (state.consequenceApplied) return state;
@@ -159,20 +168,29 @@ export function finalizeRound(event, state) {
   const encounter = cloneEncounter(state.encounter); const momentumBefore = Number(encounter.momentum ?? 0); let momentumDelta = Number(state.roundResult.momentumDelta ?? 0);
   if (momentumDelta < 0 && encounter.momentumLossGuard > 0) { momentumDelta = Math.min(0, momentumDelta + encounter.momentumLossGuard); encounter.momentumLossGuard = 0; }
   encounter.momentum = clampMomentum(momentumBefore + momentumDelta); const momentumAfter = encounter.momentum;
+  const effectsBefore = (state.pendingShipEffects ?? []).length;
   let next = { ...state, encounter };
   next = applyOutcomeEffects(next, encounter, outcome.effects ?? []);
   const roundNarrative = cinematicRoundNarrative({ round, bandId: state.roundResult.bandId, results: state.results, consequenceNarrative: outcome.narrative });
   next = { ...next, encounter, roundNarrative, consequenceNarrative: outcome.narrative, consequenceApplied: true, roundMomentumBefore: momentumBefore, roundMomentumAward: momentumDelta, roundMomentumAfter: momentumAfter, roundRewards: null };
   if (outcome.rewards) next = applyRoundRewardPackageToState(next, outcome.rewards, { roundId: round.id, bandId: state.roundResult.bandId });
+  next = appendRoundHistory(next, { roundId: round.id, roundIndex: state.roundIndex, roundResult: state.roundResult, momentumBefore, momentumAfter, pendingShipEffects: (next.pendingShipEffects ?? []).slice(effectsBefore), results: state.results });
+  if (Number(state.roundIndex ?? 0) >= event.rounds.length - 1) next = { ...next, eventResultPreview: scoreEvent(next.eventHistory) };
   return next;
 }
 
 export function advanceToNextRound(event, state) {
   if (state?.phase !== "round-result" || !state.consequenceApplied) throw new Error("Finish the current round before advancing.");
   const nextIndex = Number(state.roundIndex ?? 0) + 1; const nextRound = event?.rounds?.[nextIndex];
-  if (!nextRound) { const eventEnding = resolveEventEnding(event, state.roundResult?.bandId); let next = { ...state, phase: "event-complete", eventEnding }; return applyRewardPackageToState(next, eventEnding.rewards); }
+  if (!nextRound) {
+    const eventResult = state.eventResultPreview ?? scoreEvent(state.eventHistory);
+    const eventEnding = resolveEventEnding(event, eventResult.id);
+    let next = { ...state, phase: "event-complete", eventResult, eventEnding, eventResultPreview: null };
+    const failureEffect = finalFailureEffect(event, eventResult); if (failureEffect) next = appendShipEffect(next, failureEffect, `Final Event Result — ${eventResult.label}`);
+    return applyRewardPackageToState(next, eventEnding.rewards, { eventResultId: eventResult.id });
+  }
   const encounter = cloneEncounter(state.encounter);
   for (const hazardId of encounter.suppressedHazards) if (!encounter.hazards.includes(hazardId)) encounter.hazards.push(hazardId);
-  encounter.suppressedHazards = []; encounter.strainGuards = {}; encounter.generalStrainGuard = 0; encounter.hazardGuard = 0; encounter.momentumLossGuard = 0; encounter.riskOverrides = {}; encounter.hazardShelters = {};
-  return { ...state, encounter, roundIndex: nextIndex, roundId: nextRound.id, phase: "round-opening", planningStartedAt: null, planningEndsAt: null, lockedAt: null, activeOrderIndex: null, results: {}, roundResult: null, roundNarrative: null, consequenceNarrative: null, consequenceApplied: false, roundRewards: null, selections: Object.fromEntries(Object.entries(state.selections).map(([stationId, selection]) => [stationId, { ...selection, actionId: null, skillId: null, riskTier: null, componentAbilityId: null }])) };
+  encounter.suppressedHazards = []; encounter.strainGuards = {}; encounter.generalStrainGuard = 0; encounter.hazardGuard = 0; encounter.momentumLossGuard = 0; encounter.riskOverrides = {}; encounter.hazardShelters = {}; encounter.rollTwiceBest = {}; encounter.riskTierOverrides = {};
+  return { ...state, encounter, roundIndex: nextIndex, roundId: nextRound.id, phase: "round-opening", planningStartedAt: null, planningEndsAt: null, lockedAt: null, activeOrderIndex: null, results: {}, roundResult: null, roundNarrative: null, consequenceNarrative: null, consequenceApplied: false, roundRewards: null, eventResultPreview: null, selections: Object.fromEntries(Object.entries(state.selections).map(([stationId, selection]) => [stationId, { ...selection, actionId: null, skillId: null, riskTier: null, componentAbilityId: null }])) };
 }
