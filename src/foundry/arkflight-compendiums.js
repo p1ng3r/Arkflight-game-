@@ -284,23 +284,48 @@ async function syncPack(packKey, definition, entries, folder, { force = false } 
   const desiredIds = new Set(entries.map((entry) => entry.sourceId));
   const creates = [];
   const updates = [];
+  let replacedItemSubtypes = 0;
+
   for (const entry of entries) {
     const data = documentData(packKey, entry);
     const existing = existingBySource.get(entry.sourceId);
     if (!existing) { creates.push(data); continue; }
+
+    if (definition.documentName === "Item" && definition.itemType && existing.type !== definition.itemType) {
+      stale.push(existing.id);
+      creates.push(data);
+      replacedItemSubtypes += 1;
+      continue;
+    }
+
     const oldHash = managedFlag(existing)?.sourceHash;
     const newHash = data.flags[FLAG_SCOPE][FLAG_KEY].sourceHash;
-    if (force || oldHash !== newHash || existing.name !== data.name || (definition.itemType && existing.type !== definition.itemType)) updates.push({ _id: existing.id, ...data });
+    if (force || oldHash !== newHash || existing.name !== data.name) updates.push({ _id: existing.id, ...data });
   }
+
   for (const [sourceId, document] of existingBySource.entries()) if (!desiredIds.has(sourceId)) stale.push(document.id);
 
   const DocumentClass = documentClass(definition.documentName);
   if (!DocumentClass?.createDocuments || !DocumentClass?.updateDocuments || !DocumentClass?.deleteDocuments) throw new Error(`Foundry ${definition.documentName} document API is unavailable.`);
+
+  const deleteIds = [...new Set(stale)];
+  if (deleteIds.length) await DocumentClass.deleteDocuments(deleteIds, { pack: collection });
   if (creates.length) await DocumentClass.createDocuments(creates, { pack: collection });
   if (updates.length) await DocumentClass.updateDocuments(updates, { pack: collection });
-  if (stale.length) await DocumentClass.deleteDocuments([...new Set(stale)], { pack: collection });
 
-  return { pack: collection, label: definition.label, documentName: definition.documentName, itemType: definition.itemType ?? null, createdPack, replacedWrongType, created: creates.length, updated: updates.length, deleted: [...new Set(stale)].length, total: entries.length };
+  return {
+    pack: collection,
+    label: definition.label,
+    documentName: definition.documentName,
+    itemType: definition.itemType ?? null,
+    createdPack,
+    replacedWrongType,
+    replacedItemSubtypes,
+    created: creates.length,
+    updated: updates.length,
+    deleted: deleteIds.length,
+    total: entries.length
+  };
 }
 
 async function syncAll({ force = false, notify = true } = {}) {
@@ -309,11 +334,16 @@ async function syncAll({ force = false, notify = true } = {}) {
   const content = desiredContent();
   const results = [];
   for (const [packKey, definition] of Object.entries(PACKS)) results.push(await syncPack(packKey, definition, content[packKey] ?? [], folder, { force }));
-  const changed = results.some((result) => result.createdPack || result.replacedWrongType || result.created || result.updated || result.deleted);
+  const changed = results.some((result) => result.createdPack || result.replacedWrongType || result.replacedItemSubtypes || result.created || result.updated || result.deleted);
   if (notify && changed) {
     const total = results.reduce((sum, result) => sum + result.total, 0);
-    const replaced = results.filter((result) => result.replacedWrongType).length;
-    ui.notifications?.info?.(`Arkflight compendiums synced: ${total} managed entries across ${results.length} packs.${replaced ? ` Rebuilt ${replaced} wrong-type pack${replaced === 1 ? "" : "s"}.` : ""}`);
+    const rebuiltPacks = results.filter((result) => result.replacedWrongType).length;
+    const rebuiltItems = results.reduce((sum, result) => sum + result.replacedItemSubtypes, 0);
+    const details = [
+      rebuiltPacks ? ` Rebuilt ${rebuiltPacks} wrong-type pack${rebuiltPacks === 1 ? "" : "s"}.` : "",
+      rebuiltItems ? ` Recreated ${rebuiltItems} managed Item${rebuiltItems === 1 ? "" : "s"} with the correct PF2e subtype.` : ""
+    ].join("");
+    ui.notifications?.info?.(`Arkflight compendiums synced: ${total} managed entries across ${results.length} packs.${details}`);
   }
   console.info("Arkflight | Compendium sync complete", results);
   return results;
@@ -323,7 +353,17 @@ function status() {
   return Object.fromEntries(Object.entries(PACKS).map(([key, definition]) => {
     const pack = game.packs.get(`world.${definition.name}`);
     const folderId = typeof pack?.folder === "string" ? pack.folder : pack?.folder?.id ?? null;
-    return [key, { id: pack?.collection ?? `world.${definition.name}`, label: definition.label, expectedDocumentName: definition.documentName, expectedItemType: definition.itemType ?? null, documentName: pack?.documentName ?? null, folderId, correctType: Boolean(pack && pack.documentName === definition.documentName), exists: Boolean(pack), indexedEntries: pack?.index?.size ?? 0 }];
+    return [key, {
+      id: pack?.collection ?? `world.${definition.name}`,
+      label: definition.label,
+      expectedDocumentName: definition.documentName,
+      expectedItemType: definition.itemType ?? null,
+      documentName: pack?.documentName ?? null,
+      folderId,
+      correctType: Boolean(pack && pack.documentName === definition.documentName),
+      exists: Boolean(pack),
+      indexedEntries: pack?.index?.size ?? 0
+    }];
   }));
 }
 
