@@ -15,21 +15,21 @@ function validateWeaponInstalls(ship, catalogs, hull, errors, warnings) {
     if (!weapon) { errors.push(`Unknown weapon: ${id || "<empty>"}.`); continue; }
     if (typeof install === "string") { warnings.push(`${weapon.name} has no assigned weapon mount yet.`); continue; }
 
-    const arc = install?.arc;
+    const mountFacing = install?.arc;
     const mountIndex = Number(install?.mountIndex);
-    const mount = mounts?.[arc];
+    const mount = mounts?.[mountFacing];
     if (!mount || !Number.isInteger(mountIndex) || mountIndex < 0 || mountIndex >= Number(mount.count ?? 0)) {
-      errors.push(`${weapon.name} is assigned to an invalid ${arc || "unknown"} mount.`); continue;
+      errors.push(`${weapon.name} is assigned to an invalid ${mountFacing || "unknown"} mount.`); continue;
     }
 
-    const key = `${arc}:${mountIndex}`;
-    if (occupied.has(key)) { errors.push(`Multiple weapons are assigned to ${arc} mount ${mountIndex + 1}.`); continue; }
+    const key = `${mountFacing}:${mountIndex}`;
+    if (occupied.has(key)) { errors.push(`Multiple weapons are assigned to ${mountFacing} mount ${mountIndex + 1}.`); continue; }
     occupied.add(key);
 
-    if (!(weapon.data?.arcs ?? []).includes(arc)) errors.push(`${weapon.name} cannot fire from the ${arc} arc.`);
+    if (!(weapon.data?.allowedMounts ?? []).includes(mountFacing)) errors.push(`${weapon.name} cannot be installed on a ${mountFacing} mount.`);
     const weaponSize = weapon.data?.size ?? "small";
     const maxSize = mount.maxSize ?? "small";
-    if ((SIZE_RANK[weaponSize] ?? 99) > (SIZE_RANK[maxSize] ?? 0)) errors.push(`${weapon.name} (${weaponSize}) is too large for ${arc} mount ${mountIndex + 1} (${maxSize} max).`);
+    if ((SIZE_RANK[weaponSize] ?? 99) > (SIZE_RANK[maxSize] ?? 0)) errors.push(`${weapon.name} (${weaponSize}) is too large for ${mountFacing} mount ${mountIndex + 1} (${maxSize} max).`);
   }
 }
 
