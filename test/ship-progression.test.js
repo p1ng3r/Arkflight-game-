@@ -128,11 +128,11 @@ test("Maneuverability is the single handling stat", () => {
   assert.equal("facingAllowance" in derived.stats, false);
 });
 
-test("Legendary Action and Reaction talents affect combat profile", () => {
+test("Legendary AP and RP talents affect combat profile", () => {
   const ship = sloop({ progression: { level: 15, talentIds: ["expanded-action-economy", "expanded-reaction-economy"], arkcraftUpgrades: {} } });
   const profile = hullCombatProfile(ship);
-  assert.equal(profile.actions, 4);
-  assert.equal(profile.reactions, 2);
+  assert.equal(profile.ap, 4);
+  assert.equal(profile.rp, 2);
 });
 
 test("progression budget rejects overspending", () => {
