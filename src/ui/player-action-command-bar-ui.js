@@ -95,6 +95,7 @@ function installCommandBar(root, app) {
         await controller.lockPlan();
         phase = controller.state?.phase;
       }
+      // Legacy recovery only: current lockPlan is atomic and enters Resolution.
       if (phase === "locked") {
         await controller.beginResolution();
         phase = controller.state?.phase;
@@ -102,7 +103,7 @@ function installCommandBar(root, app) {
       if (phase !== "resolution") throw new Error(`Arkflight failed to enter Resolution; current phase is ${phase ?? "unknown"}.`);
       await app.render({ force: true });
     } catch (error) {
-      console.error("Arkflight | Atomic Lock Plan → Resolution failed", error);
+      console.error("Arkflight | Lock Plan → Resolution failed", error);
       ui.notifications?.warn(error.message);
       button.disabled = false;
     }
@@ -113,5 +114,7 @@ Hooks.on("renderApplicationV2", (app, element) => {
   if (app?.id !== BOARD_ID) return;
   const root = getRoot(app, element);
   if (!root) return;
-  setTimeout(() => installCommandBar(root, app), 90);
+  // Player Action Board installs on the same render hook. Queue immediately
+  // behind it so the legacy footer never sits on screen waiting for a delayed overlay.
+  setTimeout(() => installCommandBar(root, app), 0);
 });
