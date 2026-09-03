@@ -44,11 +44,10 @@ function sectionWithTitle(card, text) {
   return [...card.querySelectorAll(":scope > .arkflight-card-section")].find((section) => section.querySelector(":scope > .arkflight-section-title")?.textContent?.includes(text)) ?? null;
 }
 
-function buildRow(station, label, section, sideContent = null, extraClass = "") {
+function buildRow(label, section, sideContent = null, extraClass = "") {
   if (!section) return null;
   const row = document.createElement("section");
   row.className = `arkflight-detail-row ${extraClass}`.trim();
-  const logo = stationIcon(station);
   const main = document.createElement("div");
   main.className = "arkflight-detail-main";
   const heading = document.createElement("div");
@@ -59,7 +58,7 @@ function buildRow(station, label, section, sideContent = null, extraClass = "") 
     if (child.classList.contains("arkflight-section-title")) continue;
     main.append(child);
   }
-  row.append(logo, main);
+  row.append(main);
   if (sideContent) {
     const side = document.createElement("div");
     side.className = "arkflight-detail-side";
@@ -118,10 +117,10 @@ function rebuild(root) {
     vignetteBox.innerHTML = '<div class="arkflight-detail-label">ACTION VIGNETTE</div>';
     vignetteBox.append(actionVignette);
   }
-  const actionRow = buildRow(station, "CHOOSE ACTION", actionSection, vignetteBox, "arkflight-detail-action-row");
+  const actionRow = buildRow("CHOOSE ACTION", actionSection, vignetteBox, "arkflight-detail-action-row");
   if (actionRow) shell.append(actionRow);
 
-  const skillRow = buildRow(station, "CHOOSE PF2E SKILL", skillSection, null, "arkflight-detail-skill-row");
+  const skillRow = buildRow("CHOOSE PF2E SKILL", skillSection, null, "arkflight-detail-skill-row");
   if (skillRow) shell.append(skillRow);
 
   if (riskSection) {
@@ -136,7 +135,7 @@ function rebuild(root) {
         benefitBox.innerHTML = '<div class="arkflight-detail-label">RISK BID BENEFIT</div>';
         benefitBox.append(benefit);
       }
-      const riskRow = buildRow(station, "HEROIC / RISK BID", riskSection, benefitBox, "arkflight-detail-risk-row");
+      const riskRow = buildRow("HEROIC / RISK BID", riskSection, benefitBox, "arkflight-detail-risk-row");
       if (riskRow) shell.append(riskRow);
     } else {
       riskSection.remove();
