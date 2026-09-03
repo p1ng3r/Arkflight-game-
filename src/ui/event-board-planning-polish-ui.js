@@ -88,17 +88,24 @@ function bindMasteryCard(root, state) {
 async function openActorDocument(actor) {
   if (!actor) return;
   try {
-    console.log("Arkflight | Opening assigned officer", { actorId: actor.id, actorName: actor.name });
-    if (typeof actor.render === "function") {
-      const result = actor.render();
-      if (result?.then) await result;
-    } else if (actor.sheet?.render) {
-      const result = actor.sheet.render(true);
-      if (result?.then) await result;
-    } else {
+    console.log("Arkflight | Force-opening assigned officer sheet", { actorId: actor.id, actorName: actor.name });
+    const sheet = actor.sheet;
+    if (!sheet || typeof sheet.render !== "function") {
       throw new Error("Assigned PF2e Actor has no renderable sheet API.");
     }
-    console.log("Arkflight | Assigned officer sheet requested", { actorId: actor.id, actorName: actor.name });
+
+    // PF2e v8.4.1 uses the legacy CharacterSheetPF2e application. Passing true is
+    // the important part: it forces a closed sheet to open rather than merely
+    // requesting a refresh of an already-rendered application.
+    const result = sheet.render(true);
+    if (result?.then) await result;
+
+    console.log("Arkflight | Assigned officer sheet force-open requested", {
+      actorId: actor.id,
+      actorName: actor.name,
+      sheetClass: sheet.constructor?.name,
+      rendered: sheet.rendered
+    });
   } catch (error) {
     console.error("Arkflight | Could not open assigned officer sheet", error);
     ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
