@@ -3,6 +3,7 @@ import { STATIONS } from "../event/event-schema.js";
 import { planningReady } from "../event/planning-state.js";
 
 const BOARD_ID = "arkflight-event-board";
+const pendingObservers = new WeakMap();
 
 function getRoot(app, element) {
   return element instanceof HTMLElement ? element : element?.[0] ?? app?.element ?? null;
@@ -39,8 +40,10 @@ function tacticsDrawerHtml(state) {
 function installCommandBar(root, app) {
   const controller = game.arkflight?.controller;
   const state = controller?.state;
+  if (!controller || !state || !["planning", "locked"].includes(state.phase)) return true;
+
   const board = root?.querySelector?.(".pa-board");
-  if (!controller || !state || !board || !["planning", "locked"].includes(state.phase)) return;
+  if (!board) return false;
 
   board.querySelector(".pa-footer")?.remove();
   board.querySelector("[data-pa-command-shell]")?.remove();
@@ -108,13 +111,34 @@ function installCommandBar(root, app) {
       button.disabled = false;
     }
   });
+
+  return true;
+}
+
+function installWhenBoardExists(root, app) {
+  if (installCommandBar(root, app)) {
+    pendingObservers.get(root)?.disconnect();
+    pendingObservers.delete(root);
+    return;
+  }
+
+  pendingObservers.get(root)?.disconnect();
+  const observer = new MutationObserver(() => {
+    if (!installCommandBar(root, app)) return;
+    observer.disconnect();
+    pendingObservers.delete(root);
+  });
+  observer.observe(root, { childList: true, subtree: true });
+  pendingObservers.set(root, observer);
 }
 
 Hooks.on("renderApplicationV2", (app, element) => {
   if (app?.id !== BOARD_ID) return;
   const root = getRoot(app, element);
   if (!root) return;
-  // Player Action Board installs on the same render hook. Queue immediately
-  // behind it so the legacy footer never sits on screen waiting for a delayed overlay.
-  setTimeout(() => installCommandBar(root, app), 0);
+
+  // The Player Action Board replaces the application DOM from its own render hook.
+  // Observe that replacement instead of depending on hook/timer ordering. This makes
+  // the compact command bar authoritative every time planning UI is created.
+  installWhenBoardExists(root, app);
 });
