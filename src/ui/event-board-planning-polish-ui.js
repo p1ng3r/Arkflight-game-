@@ -85,18 +85,27 @@ function bindMasteryCard(root, state) {
   card.addEventListener("click", () => showMastery(state, focused));
 }
 
-function openActorSheet(actor) {
+async function openActorSheet(actor) {
   if (!actor) return;
   const sheet = actor.sheet;
   if (!sheet || typeof sheet.render !== "function") {
     ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
     return;
   }
+
   try {
-    sheet.render(true);
-  } catch (error) {
-    console.error("Arkflight | Could not open assigned actor sheet", error);
-    ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
+    const result = sheet.render({ force: true, focus: true });
+    if (result?.then) await result;
+    return;
+  } catch (applicationV2Error) {
+    try {
+      const result = sheet.render(true, { focus: true });
+      if (result?.then) await result;
+      return;
+    } catch (legacyError) {
+      console.error("Arkflight | Could not open assigned actor sheet", { applicationV2Error, legacyError });
+      ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
+    }
   }
 }
 
@@ -145,9 +154,25 @@ function compactStationRows(root, state) {
 function bindPortraitSheetOpening(root, controller) {
   if (root.dataset.portraitSheetDelegation === "true") return;
   root.dataset.portraitSheetDelegation = "true";
-  root.addEventListener("dblclick", (event) => {
+
+  // A portrait lives inside the station-focus button. Consume normal portrait clicks
+  // in capture phase so the two clicks which make up a double-click never rerender
+  // the Event Board before the actor sheet can open.
+  root.addEventListener("click", (event) => {
     const avatar = event.target.closest?.(".arkflight-planning-avatar");
     if (!avatar || !root.contains(avatar)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  }, true);
+
+  root.addEventListener("dblclick", async (event) => {
+    const avatar = event.target.closest?.(".arkflight-planning-avatar");
+    if (!avatar || !root.contains(avatar)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
     const row = avatar.closest(".arkflight-planning-station-row");
     const stationId = row?.dataset.stationId ?? row?.querySelector("[data-arkflight-focus-station]")?.dataset.arkflightFocusStation;
     if (!stationId) return;
@@ -157,9 +182,8 @@ function bindPortraitSheetOpening(root, controller) {
       ui.notifications?.warn?.("No PF2e character is assigned to this station.");
       return;
     }
-    event.preventDefault();
-    event.stopPropagation();
-    openActorSheet(actor);
+
+    await openActorSheet(actor);
   }, true);
 }
 
