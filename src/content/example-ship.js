@@ -21,8 +21,8 @@ export function buildExampleBrigantine() {
     rooms: ["workshop", "observatory", "chart-room", "infirmary"],
     shipMods: ["stabilized-helm-relays", "lookout-spire"],
     weapons: [
-      { id: "deck-ballista", arc: "fore" },
-      { id: "grapnel-harpoon", arc: "port" }
+      { id: "deck-ballista", arc: "fore", mountIndex: 0 },
+      { id: "grapnel-harpoon", arc: "port", mountIndex: 0 }
     ],
     crew: {
       specialists: ["veteran-chief-engineer", "old-star-cartographer"]
