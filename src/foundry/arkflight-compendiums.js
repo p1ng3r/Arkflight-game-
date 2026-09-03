@@ -11,28 +11,38 @@ const PACKS = Object.freeze({
   shipMods: Object.freeze({
     name: "arkflight-ship-mods",
     label: "Arkflight — Ship Mods",
-    kind: "ship-mod"
+    kind: "ship-mod",
+    documentName: "Item"
   }),
   arkengineMods: Object.freeze({
     name: "arkflight-arkengine-mods",
     label: "Arkflight — Arkengine Mods",
-    kind: "arkengine-mod"
+    kind: "arkengine-mod",
+    documentName: "Item"
   }),
   masteries: Object.freeze({
     name: "arkflight-masteries",
     label: "Arkflight — Masteries",
-    kind: "mastery"
+    kind: "mastery",
+    documentName: "Item"
   }),
   crewTactics: Object.freeze({
     name: "arkflight-crew-tactics",
     label: "Arkflight — Crew Tactics",
-    kind: "crew-tactic"
+    kind: "crew-tactic",
+    documentName: "Item"
   }),
   events: Object.freeze({
     name: "arkflight-ship-events",
     label: "Arkflight — Ship Events",
-    kind: "ship-event"
+    kind: "ship-event",
+    documentName: "JournalEntry"
   })
+});
+
+const DEFAULT_ITEM_IMAGES = Object.freeze({
+  mastery: "icons/svg/upgrade.svg",
+  "crew-tactic": "icons/svg/card-joker.svg"
 });
 
 function cloneSerializable(value) {
@@ -69,9 +79,20 @@ function labelize(value) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function slugify(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function compactList(value) {
   if (!Array.isArray(value) || value.length === 0) return "";
-  return value.map((entry) => typeof entry === "string" ? entry : entry?.name ?? entry?.id ?? String(entry)).filter(Boolean).join(", ");
+  return value
+    .map((entry) => typeof entry === "string" ? entry : entry?.name ?? entry?.id ?? String(entry))
+    .filter(Boolean)
+    .join(", ");
 }
 
 function detailRows(rows) {
@@ -80,7 +101,7 @@ function detailRows(rows) {
   return `<dl>${visible.map(([label, value]) => `<dt><strong>${escapeHtml(label)}</strong></dt><dd>${escapeHtml(Array.isArray(value) ? compactList(value) : value)}</dd>`).join("")}</dl>`;
 }
 
-function journalArticle({ eyebrow, title, description, rows = [], extra = "", sourceId }) {
+function article({ eyebrow, title, description, rows = [], extra = "", sourceId }) {
   return `<article class="arkflight-compendium-entry">
     <p><strong>${escapeHtml(eyebrow)}</strong></p>
     <h1>${escapeHtml(title)}</h1>
@@ -92,74 +113,159 @@ function journalArticle({ eyebrow, title, description, rows = [], extra = "", so
   </article>`;
 }
 
+function pf2eRarity(rarity) {
+  switch (rarity) {
+    case "rare": return "rare";
+    case "epic":
+    case "legendary":
+    case "mythic": return "unique";
+    default: return "common";
+  }
+}
+
+function itemSystem({ id, description, level = 1, rarity = "standard", tags = [], prerequisites = [] }) {
+  const otherTags = [...new Set(["arkflight", ...tags].map(slugify).filter(Boolean))];
+  return {
+    description: { value: description ?? "" },
+    rules: [],
+    slug: slugify(id),
+    level: { value: Math.max(1, Math.min(30, Number(level) || 1)) },
+    traits: {
+      value: [],
+      rarity: pf2eRarity(rarity),
+      otherTags
+    },
+    category: "bonus",
+    onlyLevel1: false,
+    maxTakable: 1,
+    actionType: { value: "passive" },
+    actions: { value: null },
+    prerequisites: {
+      value: prerequisites.filter(Boolean).map((value) => ({ value: String(value) }))
+    }
+  };
+}
+
+function upgradePrerequisites(data) {
+  const chain = data?.upgradeChain ?? {};
+  const ids = [
+    ...(chain.requiresMods ?? []),
+    ...(chain.requiresArkengineMods ?? []),
+    ...(chain.requiresShipMods ?? [])
+  ];
+  return ids.map((id) => `Requires ${labelize(id)}`);
+}
+
 function modEntry(mod, kind) {
   const source = cloneSerializable(mod);
-  const data = source.data ?? source;
+  const data = source.data ?? {};
   const id = source.id ?? data.id;
   const name = source.name ?? data.name ?? labelize(id);
   const description = source.description ?? data.description ?? "";
   const tags = source.tags ?? data.tags ?? [];
   const rarity = data.rarity ?? source.rarity ?? "standard";
+  const level = data.minShipLevel ?? data.level ?? data.tier ?? source.level ?? 1;
+  const image = source.img ?? data.art?.img ?? "icons/svg/item-bag.svg";
   return {
     sourceId: id,
     name,
     source,
-    html: journalArticle({
-      eyebrow: kind === "ship-mod" ? "SHIP MOD" : "ARKENGINE MOD",
-      title: name,
-      description,
-      sourceId: id,
-      rows: [
-        ["Rarity", labelize(rarity)],
-        ["Level / Tier", data.level ?? data.tier ?? source.level ?? source.tier],
-        ["Slot", data.slotClass ?? data.slot ?? source.slotClass ?? source.slot],
-        ["Tags", tags]
-      ]
-    })
+    documentName: "Item",
+    documentData: {
+      name,
+      type: "feat",
+      img: image,
+      system: itemSystem({
+        id,
+        description: article({
+          eyebrow: kind === "ship-mod" ? "SHIP MOD" : "ARKENGINE MOD",
+          title: name,
+          description,
+          sourceId: id,
+          rows: [
+            ["Arkflight Rarity", labelize(rarity)],
+            ["Minimum Ship Level", data.minShipLevel],
+            ["Refit Tier", data.legacyRefitTier ?? data.tier],
+            ["Mod Type", labelize(data.modType ?? data.effectFamily)],
+            ["Tags", tags]
+          ]
+        }),
+        level,
+        rarity,
+        tags: [kind, rarity, ...tags],
+        prerequisites: upgradePrerequisites(data)
+      })
+    }
   };
 }
 
 function masteryEntry(mastery) {
   const source = cloneSerializable(mastery);
   const station = source.station ?? String(source.id ?? "").split("-")[0];
+  const tier = source.tier ?? "base";
   return {
     sourceId: source.id,
     name: source.name,
     source,
-    html: journalArticle({
-      eyebrow: "MASTERY",
-      title: source.name,
-      description: source.description,
-      sourceId: source.id,
-      rows: [
-        ["Station", labelize(station)],
-        ["Tier", labelize(source.tier ?? "base")],
-        ["Trigger", source.triggerLabel],
-        ["Timing", labelize(source.timing)],
-        ["Target", labelize(source.target)]
-      ]
-    })
+    documentName: "Item",
+    documentData: {
+      name: source.name,
+      type: "feat",
+      img: source.img ?? DEFAULT_ITEM_IMAGES.mastery,
+      system: itemSystem({
+        id: source.id,
+        description: article({
+          eyebrow: "MASTERY",
+          title: source.name,
+          description: source.description,
+          sourceId: source.id,
+          rows: [
+            ["Station", labelize(station)],
+            ["Tier", labelize(tier)],
+            ["Trigger", source.triggerLabel],
+            ["Timing", labelize(source.timing)],
+            ["Target", labelize(source.target)]
+          ]
+        }),
+        level: tier === "legendary" ? 12 : tier === "specialist" ? 7 : 1,
+        rarity: tier === "legendary" ? "legendary" : "standard",
+        tags: ["mastery", station, tier]
+      })
+    }
   };
 }
 
 function tacticEntry(tactic) {
   const source = cloneSerializable(tactic);
+  const rarity = source.rarity ?? "standard";
   return {
     sourceId: source.id,
     name: source.name,
     source,
-    html: journalArticle({
-      eyebrow: "CREW TACTIC",
-      title: source.name,
-      description: source.effect,
-      sourceId: source.id,
-      rows: [
-        ["Theater", labelize(source.theater)],
-        ["Rarity", labelize(source.rarity ?? "standard")],
-        ["Trigger", source.trigger],
-        ["Tags", source.tags ?? []]
-      ]
-    })
+    documentName: "Item",
+    documentData: {
+      name: source.name,
+      type: "feat",
+      img: source.img ?? DEFAULT_ITEM_IMAGES["crew-tactic"],
+      system: itemSystem({
+        id: source.id,
+        description: article({
+          eyebrow: "CREW TACTIC",
+          title: source.name,
+          description: source.effect,
+          sourceId: source.id,
+          rows: [
+            ["Theater", labelize(source.theater)],
+            ["Arkflight Rarity", labelize(rarity)],
+            ["Trigger", source.trigger],
+            ["Tags", source.tags ?? []]
+          ]
+        }),
+        level: rarity === "rare" ? 5 : 1,
+        rarity,
+        tags: ["crew-tactic", source.theater, rarity, ...(source.tags ?? [])]
+      })
+    }
   };
 }
 
@@ -169,22 +275,34 @@ function eventEntry(event) {
   const roundHtml = rounds.length
     ? `<h2>Rounds</h2><ol>${rounds.map((round) => `<li><strong>${escapeHtml(round.title ?? round.name ?? round.id)}</strong>${round.situation ? ` — ${escapeHtml(round.situation)}` : ""}</li>`).join("")}</ol>`
     : "";
+  const name = source.title ?? source.name ?? labelize(source.id);
   return {
     sourceId: source.id,
-    name: source.title ?? source.name ?? labelize(source.id),
+    name,
     source,
-    html: journalArticle({
-      eyebrow: "SHIP EVENT",
-      title: source.title ?? source.name ?? labelize(source.id),
-      description: source.openingVignette ?? source.description ?? "",
-      sourceId: source.id,
-      rows: [
-        ["Goal", source.goal],
-        ["Rounds", rounds.length],
-        ["Image", source.image]
-      ],
-      extra: roundHtml
-    })
+    documentName: "JournalEntry",
+    documentData: {
+      name,
+      pages: [{
+        name: "Overview",
+        type: "text",
+        text: {
+          format: globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1,
+          content: article({
+            eyebrow: "SHIP EVENT",
+            title: name,
+            description: source.openingVignette ?? source.description ?? "",
+            sourceId: source.id,
+            rows: [
+              ["Goal", source.goal],
+              ["Rounds", rounds.length],
+              ["Image", source.image]
+            ],
+            extra: roundHtml
+          })
+        }
+      }]
+    }
   };
 }
 
@@ -198,32 +316,6 @@ function desiredContent() {
   };
 }
 
-function documentData(packKey, entry) {
-  const sourceHash = stableHash(entry.source);
-  return {
-    name: entry.name,
-    flags: {
-      [FLAG_SCOPE]: {
-        [FLAG_KEY]: {
-          managed: true,
-          packKey,
-          sourceId: entry.sourceId,
-          sourceHash,
-          source: entry.source
-        }
-      }
-    },
-    pages: [{
-      name: "Overview",
-      type: "text",
-      text: {
-        format: globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1,
-        content: entry.html
-      }
-    }]
-  };
-}
-
 function managedFlag(document) {
   return document?.flags?.[FLAG_SCOPE]?.[FLAG_KEY] ?? null;
 }
@@ -234,11 +326,18 @@ function packId(pack) {
 
 async function ensureWorldPack(definition) {
   const id = `world.${definition.name}`;
-  const existing = game.packs.get(id);
-  if (existing) {
-    if (existing.documentName !== "JournalEntry") throw new Error(`${definition.label} exists but is not a JournalEntry compendium.`);
-    return { pack: existing, created: false };
+  let existing = game.packs.get(id);
+  let replacedWrongType = false;
+
+  if (existing && existing.documentName !== definition.documentName) {
+    console.warn(`Arkflight | Replacing ${definition.label}: expected ${definition.documentName}, found ${existing.documentName}.`);
+    if (typeof existing.deleteCompendium !== "function") throw new Error(`${definition.label} has the wrong document type and cannot be replaced automatically.`);
+    await existing.deleteCompendium();
+    existing = null;
+    replacedWrongType = true;
   }
+
+  if (existing) return { pack: existing, created: false, replacedWrongType };
 
   const CompendiumClass = foundry?.documents?.collections?.CompendiumCollection ?? globalThis.CompendiumCollection;
   if (!CompendiumClass?.createCompendium) throw new Error("Foundry CompendiumCollection API is unavailable.");
@@ -246,14 +345,39 @@ async function ensureWorldPack(definition) {
   const pack = await CompendiumClass.createCompendium({
     name: definition.name,
     label: definition.label,
-    type: "JournalEntry",
+    type: definition.documentName,
     package: "world"
   });
-  return { pack, created: true };
+  return { pack, created: true, replacedWrongType };
+}
+
+function documentData(packKey, entry) {
+  const sourceHash = stableHash({ source: entry.source, documentData: entry.documentData });
+  return {
+    ...cloneSerializable(entry.documentData),
+    flags: {
+      ...(entry.documentData?.flags ?? {}),
+      [FLAG_SCOPE]: {
+        [FLAG_KEY]: {
+          managed: true,
+          packKey,
+          sourceId: entry.sourceId,
+          sourceHash,
+          source: entry.source
+        }
+      }
+    }
+  };
+}
+
+function documentClass(documentName) {
+  if (documentName === "Item") return CONFIG?.Item?.documentClass ?? globalThis.Item;
+  if (documentName === "JournalEntry") return CONFIG?.JournalEntry?.documentClass ?? globalThis.JournalEntry;
+  return null;
 }
 
 async function syncPack(packKey, definition, entries, { force = false } = {}) {
-  const { pack, created: createdPack } = await ensureWorldPack(definition);
+  const { pack, created: createdPack, replacedWrongType } = await ensureWorldPack(definition);
   const collection = packId(pack);
   if (!collection) throw new Error(`Could not resolve ${definition.label} compendium ID.`);
 
@@ -287,19 +411,21 @@ async function syncPack(packKey, definition, entries, { force = false } = {}) {
     if (!desiredIds.has(sourceId)) stale.push(document.id);
   }
 
-  const JournalClass = CONFIG?.JournalEntry?.documentClass ?? globalThis.JournalEntry;
-  if (!JournalClass?.createDocuments || !JournalClass?.updateDocuments || !JournalClass?.deleteDocuments) {
-    throw new Error("Foundry JournalEntry document API is unavailable.");
+  const DocumentClass = documentClass(definition.documentName);
+  if (!DocumentClass?.createDocuments || !DocumentClass?.updateDocuments || !DocumentClass?.deleteDocuments) {
+    throw new Error(`Foundry ${definition.documentName} document API is unavailable.`);
   }
 
-  if (creates.length) await JournalClass.createDocuments(creates, { pack: collection });
-  if (updates.length) await JournalClass.updateDocuments(updates, { pack: collection });
-  if (stale.length) await JournalClass.deleteDocuments([...new Set(stale)], { pack: collection });
+  if (creates.length) await DocumentClass.createDocuments(creates, { pack: collection });
+  if (updates.length) await DocumentClass.updateDocuments(updates, { pack: collection });
+  if (stale.length) await DocumentClass.deleteDocuments([...new Set(stale)], { pack: collection });
 
   return {
     pack: collection,
     label: definition.label,
+    documentName: definition.documentName,
     createdPack,
+    replacedWrongType,
     created: creates.length,
     updated: updates.length,
     deleted: [...new Set(stale)].length,
@@ -316,10 +442,12 @@ async function syncAll({ force = false, notify = true } = {}) {
     results.push(await syncPack(packKey, definition, content[packKey] ?? [], { force }));
   }
 
-  const changed = results.some((result) => result.createdPack || result.created || result.updated || result.deleted);
+  const changed = results.some((result) => result.createdPack || result.replacedWrongType || result.created || result.updated || result.deleted);
   if (notify && changed) {
     const total = results.reduce((sum, result) => sum + result.total, 0);
-    ui.notifications?.info?.(`Arkflight compendiums synced: ${total} managed entries across ${results.length} packs.`);
+    const replaced = results.filter((result) => result.replacedWrongType).length;
+    const suffix = replaced ? ` Rebuilt ${replaced} pack${replaced === 1 ? "" : "s"} with the correct document type.` : "";
+    ui.notifications?.info?.(`Arkflight compendiums synced: ${total} managed entries across ${results.length} packs.${suffix}`);
   }
   console.info("Arkflight | Compendium sync complete", results);
   return results;
@@ -331,6 +459,9 @@ function status() {
     return [key, {
       id: pack?.collection ?? `world.${definition.name}`,
       label: definition.label,
+      expectedDocumentName: definition.documentName,
+      documentName: pack?.documentName ?? null,
+      correctType: Boolean(pack && pack.documentName === definition.documentName),
       exists: Boolean(pack),
       indexedEntries: pack?.index?.size ?? 0
     }];
