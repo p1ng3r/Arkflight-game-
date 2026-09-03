@@ -35,6 +35,23 @@ function findMinimizeControl(header) {
     ?? null;
 }
 
+function findAbandonControl(header) {
+  return header?.querySelector?.('[data-arkflight-abandon-event]') ?? null;
+}
+
+function insertBeforeWindowControls(header, node) {
+  const minimize = findMinimizeControl(header);
+  const close = findCloseControl(header);
+  const anchor = minimize ?? close;
+  if (anchor?.parentElement === header) {
+    header.insertBefore(node, anchor);
+    return;
+  }
+  const controls = anchor?.parentElement ?? header.querySelector(".window-controls, .window-header-controls, .header-controls");
+  if (controls) controls.insertBefore(node, anchor ?? controls.firstChild);
+  else header.append(node);
+}
+
 function toggleLayoutTuner(root, button) {
   const internalToggle = root.querySelector?.("[data-af-tuner-toggle]");
   const panel = root.querySelector?.("[data-af-tuner]");
@@ -80,15 +97,47 @@ function ensureMinimizeControl(header, app) {
   return button;
 }
 
+function ensureAbandonControl(header, app) {
+  if (!game.user?.isGM || !game.arkflight?.controller?.state?.eventId) {
+    findAbandonControl(header)?.remove();
+    return null;
+  }
+  const existing = findAbandonControl(header);
+  if (existing) return existing;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "arkflight-abandon-event-button arkflight-abandon-event-header";
+  button.dataset.arkflightAbandonEvent = "true";
+  button.title = "Abandon this Voyage Event";
+  button.innerHTML = '<i class="fa-solid fa-trash-can"></i><span>Abandon Event</span>';
+  button.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      const abandon = game.arkflight?.abandonEvent;
+      if (typeof abandon !== "function") throw new Error("Arkflight abandon control is not ready yet.");
+      if (await abandon()) await app?.close?.();
+    } catch (error) {
+      console.error("Arkflight | Event Board abandon failed", error);
+      ui.notifications?.warn?.(error.message);
+    }
+  });
+  insertBeforeWindowControls(header, button);
+  return button;
+}
+
 function installHeaderTools(root, app) {
   const header = applicationHeader(root);
   if (!header) return false;
 
-  // Window chrome belongs to the Event application, not to one phase.
+  // These controls belong to the Event application itself. They must survive
+  // Opening, Planning, Resolution, Round Report, and Event Complete renders.
   ensureMinimizeControl(header, app);
+  ensureAbandonControl(header, app);
 
-  // The layout tuner is opening-only. The normal window controls remain for
-  // opening, planning, resolution, round report, and event complete screens.
+  // The layout tuner is opening-only. Do not remove the normal GM event controls
+  // just because the board has advanced to another phase.
   const opening = root?.classList?.contains("arkflight-opening-mode");
   if (!game.user?.isGM || !opening) {
     header.querySelector?.(".arkflight-gm-header-tools")?.remove();
@@ -115,16 +164,7 @@ function installHeaderTools(root, app) {
     });
 
     tools.append(layout);
-
-    const minimize = findMinimizeControl(header);
-    const close = findCloseControl(header);
-    const anchor = minimize ?? close;
-    if (anchor?.parentElement === header) header.insertBefore(tools, anchor);
-    else {
-      const controls = anchor?.parentElement ?? header.querySelector(".window-controls, .window-header-controls, .header-controls");
-      if (controls) controls.insertBefore(tools, anchor ?? controls.firstChild);
-      else header.append(tools);
-    }
+    insertBeforeWindowControls(header, tools);
   }
 
   const panel = root.querySelector("[data-af-tuner]");
