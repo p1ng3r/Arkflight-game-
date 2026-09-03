@@ -65,6 +65,7 @@
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
+    "src/foundry/arkflight-compendiums.js",
     "src/foundry/ship-token-authority.js",
     "src/foundry/refit-api.js",
     "src/foundry/repair-api-extension.js",
