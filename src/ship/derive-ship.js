@@ -1,5 +1,6 @@
 import { AREA_STATES } from "./ship-schema.js";
 import { applyTalentProgression, progressionView } from "./progression.js";
+import { CORE_COMBAT_ACTIONS_BY_STATION } from "../content/combat-actions.js";
 import {
   assertCanonicalEffectTarget,
   createDefaultDerivedStats,
@@ -38,7 +39,11 @@ function installedComponents(ship, catalogs) {
 }
 
 function emptyStationCapabilities() {
-  return Object.fromEntries(["captain", "engineer", "navigator", "battlewatch", "veilwarden"].map((id) => [id, { masteries: new Set(), combatActions: new Set(), passiveEffects: new Set() }]));
+  return Object.fromEntries(["captain", "engineer", "navigator", "battlewatch", "veilwarden"].map((id) => [id, {
+    masteries: new Set(),
+    combatActions: new Set(CORE_COMBAT_ACTIONS_BY_STATION[id] ?? []),
+    passiveEffects: new Set()
+  }]));
 }
 function canonicalStation(id) { return id === "watchmaster" ? "battlewatch" : id; }
 function addStationUnlocks(target, component) {
