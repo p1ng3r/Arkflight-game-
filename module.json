@@ -72,6 +72,7 @@
     "src/foundry/refit-time.js",
     "src/foundry/refit-diagnostics.js",
     "src/foundry/combat-api.js",
+    "src/foundry/combat-tracker-integration.js",
     "src/foundry/generated-crew-folders.js",
     "src/foundry/generated-package-commit-api.js",
     "src/ui/mastery-clarity-ui.js",
