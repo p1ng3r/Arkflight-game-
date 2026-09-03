@@ -1,10 +1,12 @@
 import { combatEconomyBonuses } from "../ship/progression.js";
 
-export const COMBAT_STATIONS = Object.freeze(["captain", "engineer", "navigator", "battlewatch", "veilwarden"]);
-
-export const LEGACY_STATION_ALIASES = Object.freeze({
-  watchmaster: "battlewatch"
-});
+export const COMBAT_STATIONS = Object.freeze([
+  "captain",
+  "engineer",
+  "navigator",
+  "battlewatch",
+  "veilwarden"
+]);
 
 export const STATION_AREAS = Object.freeze({
   captain: "morale",
@@ -14,32 +16,28 @@ export const STATION_AREAS = Object.freeze({
   veilwarden: "lifeveil"
 });
 
-export const COMBAT_FACINGS = Object.freeze(["fore", "starboard", "aft", "port"]);
-export const COMBAT_RANGES = Object.freeze(["contact", "close", "near", "far", "distant"]);
-
-export const COMBAT_ACTION_TYPES = Object.freeze({
-  ACTION: "action",
-  REACTION: "reaction"
-});
+export const COMBAT_POINT_TYPES = Object.freeze({ AP: "ap", RP: "rp" });
+export const HEX_HEADINGS = Object.freeze([0, 60, 120, 180, 240, 300]);
+export const WEAPON_MOUNTS = Object.freeze(["fore", "port", "starboard", "aft", "deck"]);
+export const WEAPON_ARC_TEMPLATES = Object.freeze(["forward", "rear", "broadside", "wide", "turret", "line"]);
 
 export const HULL_COMBAT_PROFILES = Object.freeze({
-  "void-skiff": Object.freeze({ actions: 2, reactions: 1 }),
-  sloop: Object.freeze({ actions: 3, reactions: 1 }),
-  cutter: Object.freeze({ actions: 3, reactions: 1 }),
-  brigantine: Object.freeze({ actions: 4, reactions: 1 }),
-  frigate: Object.freeze({ actions: 4, reactions: 1 }),
-  galleon: Object.freeze({ actions: 5, reactions: 1 }),
-  hammerhead: Object.freeze({ actions: 5, reactions: 1 }),
-  arkcruiser: Object.freeze({ actions: 6, reactions: 2 }),
-  "dread-caravel": Object.freeze({ actions: 6, reactions: 2 }),
-  "cathedral-ship": Object.freeze({ actions: 6, reactions: 2 }),
-  "leviathan-class-platform": Object.freeze({ actions: 8, reactions: 2 })
+  "void-skiff": Object.freeze({ ap: 2, rp: 1 }),
+  sloop: Object.freeze({ ap: 3, rp: 1 }),
+  cutter: Object.freeze({ ap: 3, rp: 1 }),
+  brigantine: Object.freeze({ ap: 4, rp: 1 }),
+  frigate: Object.freeze({ ap: 4, rp: 1 }),
+  galleon: Object.freeze({ ap: 5, rp: 1 }),
+  hammerhead: Object.freeze({ ap: 5, rp: 1 }),
+  arkcruiser: Object.freeze({ ap: 6, rp: 2 }),
+  "dread-caravel": Object.freeze({ ap: 6, rp: 2 }),
+  "cathedral-ship": Object.freeze({ ap: 6, rp: 2 }),
+  "leviathan-class-platform": Object.freeze({ ap: 8, rp: 2 })
 });
 
 export function canonicalCombatStation(station) {
-  const canonical = LEGACY_STATION_ALIASES[station] ?? station;
-  if (!COMBAT_STATIONS.includes(canonical)) throw new Error(`Unknown Arkflight combat station: ${station}`);
-  return canonical;
+  if (!COMBAT_STATIONS.includes(station)) throw new Error(`Unknown Arkflight combat station: ${station}`);
+  return station;
 }
 
 export function stationArea(station) {
@@ -48,10 +46,30 @@ export function stationArea(station) {
 
 export function hullCombatProfile(ship, { actionBonus = 0, reactionBonus = 0 } = {}) {
   const hullId = ship?.hull?.chassisId;
-  const base = HULL_COMBAT_PROFILES[hullId] ?? { actions: 3, reactions: 1 };
+  const base = HULL_COMBAT_PROFILES[hullId] ?? { ap: 3, rp: 1 };
   const progression = combatEconomyBonuses(ship);
   return Object.freeze({
-    actions: Math.max(1, Number(base.actions) + Number(progression.actions || 0) + Number(actionBonus || 0)),
-    reactions: Math.max(0, Number(base.reactions) + Number(progression.reactions || 0) + Number(reactionBonus || 0))
+    ap: Math.max(1, Number(base.ap) + Number(progression.actions || 0) + Number(actionBonus || 0)),
+    rp: Math.max(0, Number(base.rp) + Number(progression.reactions || 0) + Number(reactionBonus || 0))
+  });
+}
+
+export function normalizeHexHeading(rotation = 0) {
+  const normalized = ((Number(rotation) || 0) % 360 + 360) % 360;
+  return (Math.round(normalized / 60) * 60) % 360;
+}
+
+export function headingStepDistance(from, to) {
+  const a = normalizeHexHeading(from) / 60;
+  const b = normalizeHexHeading(to) / 60;
+  const clockwise = (b - a + 6) % 6;
+  const counterClockwise = (a - b + 6) % 6;
+  return Math.min(clockwise, counterClockwise);
+}
+
+export function effectiveMobility({ combatSpeed = 1, maneuverability = 1, speedPenalty = 0, maneuverPenalty = 0 } = {}) {
+  return Object.freeze({
+    speed: Math.max(1, Math.trunc(Number(combatSpeed) || 1) - Math.max(0, Math.trunc(Number(speedPenalty) || 0))),
+    maneuverability: Math.max(1, Math.trunc(Number(maneuverability) || 1) - Math.max(0, Math.trunc(Number(maneuverPenalty) || 0)))
   });
 }
