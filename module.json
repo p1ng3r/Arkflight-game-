@@ -80,6 +80,7 @@
     "src/ui/opening-chrome-ui.js",
     "src/ui/opening-layout-ui.js",
     "src/ui/opening-layout-tuner-ui.js",
+    "src/ui/event-board-planning-layout-migration.js",
     "src/ui/event-board-planning-layout-tuner-ui.js",
     "src/ui/event-board-gm-header-tools.js",
     "src/ui/event-board-pending-mastery-ui.js",
