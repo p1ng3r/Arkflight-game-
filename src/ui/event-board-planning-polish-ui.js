@@ -85,28 +85,66 @@ function bindMasteryCard(root, state) {
   card.addEventListener("click", () => showMastery(state, focused));
 }
 
-async function openActorSheet(actor) {
+async function openActorDocument(actor) {
   if (!actor) return;
-  const sheet = actor.sheet;
-  if (!sheet || typeof sheet.render !== "function") {
-    ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
-    return;
-  }
-
   try {
-    const result = sheet.render({ force: true, focus: true });
-    if (result?.then) await result;
-    return;
-  } catch (applicationV2Error) {
-    try {
-      const result = sheet.render(true, { focus: true });
+    console.log("Arkflight | Opening assigned officer", { actorId: actor.id, actorName: actor.name });
+    if (typeof actor.render === "function") {
+      const result = actor.render();
       if (result?.then) await result;
-      return;
-    } catch (legacyError) {
-      console.error("Arkflight | Could not open assigned actor sheet", { applicationV2Error, legacyError });
-      ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
+    } else if (actor.sheet?.render) {
+      const result = actor.sheet.render(true);
+      if (result?.then) await result;
+    } else {
+      throw new Error("Assigned PF2e Actor has no renderable sheet API.");
     }
+
+    const sheet = actor.sheet;
+    if (sheet?.minimized && typeof sheet.maximize === "function") await sheet.maximize();
+    if (typeof sheet?.bringToFront === "function") sheet.bringToFront();
+    else if (typeof sheet?.bringToTop === "function") sheet.bringToTop();
+  } catch (error) {
+    console.error("Arkflight | Could not open assigned officer sheet", error);
+    ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
   }
+}
+
+function installPortraitButton(row, focus, state, stationId) {
+  let portraitButton = row.querySelector(":scope > .arkflight-portrait-sheet-button");
+  if (portraitButton) return;
+
+  const avatar = focus.querySelector(".arkflight-planning-avatar");
+  if (!avatar) return;
+
+  const actorId = state.assignments?.[stationId]?.actorId ?? null;
+  const actor = actorId ? game.actors.get(actorId) : null;
+
+  const slot = document.createElement("span");
+  slot.className = "arkflight-planning-avatar-slot";
+  slot.setAttribute("aria-hidden", "true");
+  avatar.replaceWith(slot);
+
+  portraitButton = document.createElement("button");
+  portraitButton.type = "button";
+  portraitButton.className = "arkflight-portrait-sheet-button";
+  portraitButton.dataset.actorId = actorId ?? "";
+  portraitButton.title = actor ? `Open ${actor.name}'s character sheet` : "No assigned officer";
+  portraitButton.setAttribute("aria-label", actor ? `Open ${actor.name}'s character sheet` : "No assigned officer");
+  portraitButton.append(avatar);
+  row.append(portraitButton);
+
+  portraitButton.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+    const currentActorId = state.assignments?.[stationId]?.actorId ?? portraitButton.dataset.actorId ?? null;
+    const currentActor = currentActorId ? game.actors.get(currentActorId) : null;
+    if (!currentActor) {
+      ui.notifications?.warn?.("No PF2e character is assigned to this station.");
+      return;
+    }
+    await openActorDocument(currentActor);
+  });
 }
 
 function compactStationRows(root, state) {
@@ -141,50 +179,8 @@ function compactStationRows(root, state) {
       row.insertBefore(masteryButton, controls ?? null);
     }
 
-    const avatar = focus.querySelector(".arkflight-planning-avatar");
-    const actorId = state.assignments?.[stationId]?.actorId ?? null;
-    const actor = actorId ? game.actors.get(actorId) : null;
-    if (avatar) {
-      avatar.dataset.actorId = actorId ?? "";
-      avatar.title = actor ? `Double-click to open ${actor.name}` : "No assigned officer";
-    }
+    installPortraitButton(row, focus, state, stationId);
   }
-}
-
-function bindPortraitSheetOpening(root, controller) {
-  if (root.dataset.portraitSheetDelegation === "true") return;
-  root.dataset.portraitSheetDelegation = "true";
-
-  // A portrait lives inside the station-focus button. Consume normal portrait clicks
-  // in capture phase so the two clicks which make up a double-click never rerender
-  // the Event Board before the actor sheet can open.
-  root.addEventListener("click", (event) => {
-    const avatar = event.target.closest?.(".arkflight-planning-avatar");
-    if (!avatar || !root.contains(avatar)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-  }, true);
-
-  root.addEventListener("dblclick", async (event) => {
-    const avatar = event.target.closest?.(".arkflight-planning-avatar");
-    if (!avatar || !root.contains(avatar)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    const row = avatar.closest(".arkflight-planning-station-row");
-    const stationId = row?.dataset.stationId ?? row?.querySelector("[data-arkflight-focus-station]")?.dataset.arkflightFocusStation;
-    if (!stationId) return;
-    const actorId = controller.state?.assignments?.[stationId]?.actorId ?? avatar.dataset.actorId ?? null;
-    const actor = actorId ? game.actors.get(actorId) : null;
-    if (!actor) {
-      ui.notifications?.warn?.("No PF2e character is assigned to this station.");
-      return;
-    }
-
-    await openActorSheet(actor);
-  }, true);
 }
 
 function expandStationHitArea(root) {
@@ -194,7 +190,7 @@ function expandStationHitArea(root) {
     row.addEventListener("click", (event) => {
       if (event.target.closest(".arkflight-planning-order-controls")) return;
       if (event.target.closest(".arkflight-rail-mastery-link")) return;
-      if (event.target.closest(".arkflight-planning-avatar")) return;
+      if (event.target.closest(".arkflight-portrait-sheet-button")) return;
       if (event.target.closest(".arkflight-planning-station-focus")) return;
       row.querySelector(".arkflight-planning-station-focus")?.click();
     });
@@ -207,7 +203,6 @@ function polishPlanning(root, controller) {
   root.querySelector(".arkflight-score-key")?.remove();
   compactUtility(root);
   compactStationRows(root, controller.state);
-  bindPortraitSheetOpening(root, controller);
   expandStationHitArea(root);
   bindMasteryCard(root, controller.state);
 }
