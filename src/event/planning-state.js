@@ -1,4 +1,5 @@
 import { STATIONS, PLANNING_SECONDS } from "./event-schema.js";
+import { initializeResolution } from "./resolution-state.js";
 
 function emptySelection() { return { actionId: null, skillId: null, riskTier: null, componentAbilityId: null }; }
 function emptyAssignments() { return Object.fromEntries(STATIONS.map((station) => [station, { actorId: null }])); }
@@ -62,7 +63,12 @@ export function selectRiskTier(state, station, riskTier) { assertStation(station
 export function selectComponentAbility(state, station, componentAbilityId) { assertStation(station); assertSelectionOpen(state, station); return updateSelection(state, station, { componentAbilityId: componentAbilityId || null }); }
 export function moveOrder(state, station, direction) { assertPlanning(state); assertStation(station); const order = [...state.order]; const index = order.indexOf(station); const target = direction === "earlier" ? index - 1 : direction === "later" ? index + 1 : index; if (target < 0 || target >= order.length || target === index) return state; [order[index], order[target]] = [order[target], order[index]]; return { ...state, order }; }
 export function planningReady(state) { if (!state || state.phase !== "planning" || !state.setupLocked) return false; return STATIONS.every((station) => Boolean(state.assignments?.[station]?.actorId && state.selections?.[station]?.actionId && state.selections?.[station]?.skillId)); }
-export function lockPlanning(state, now = Date.now()) { assertPlanning(state); if (!planningReady(state)) throw new Error("Every station must have an action and PF2e skill before the plan can be locked."); return { ...state, phase: "locked", lockedAt: now }; }
+export function lockPlanning(state, now = Date.now()) {
+  assertPlanning(state);
+  if (!planningReady(state)) throw new Error("Every station must have an action and PF2e skill before the plan can be locked.");
+  const locked = { ...state, phase: "locked", lockedAt: now };
+  return initializeResolution(locked);
+}
 export function restartEvent(state, { roundId, preserveAssignments = true, preserveCrewEdgeHand = true, preserveMastery = true, now = Date.now() } = {}) { if (!state?.eventId) throw new Error("No Arkflight Event is active."); return createPlanningState({ eventId: state.eventId, roundId: roundId ?? state.roundId, roundIndex: 0, now, assignments: preserveAssignments ? (state.assignments ?? emptyAssignments()) : null, masterySelections: preserveMastery ? (state.masterySelections ?? emptyMasterySelections()) : null, availableMasteries: state.availableMasteries ?? emptyMasteryAvailability(), crewEdgeHand: preserveCrewEdgeHand ? (state.crewEdgeHand ?? []) : [] }); }
 function updateSelection(state, station, patch) { return { ...state, selections: { ...state.selections, [station]: { ...state.selections[station], ...patch } } }; }
 function assertSelectionOpen(state, station) { if (state?.phase === "planning") return; if (["locked", "resolution"].includes(state?.phase) && state?.reopenedStations?.[station] && !state?.results?.[station]) return; throw new Error("Selections may only change during planning unless a Mastery Technique has reopened this station's plan."); }
