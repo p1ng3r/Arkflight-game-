@@ -52,32 +52,17 @@ function insertBeforeWindowControls(header, node) {
   else header.append(node);
 }
 
-function toggleOpeningLayoutTuner(root, button) {
+function toggleLayoutTuner(root, button) {
   const internalToggle = root.querySelector?.("[data-af-tuner-toggle]");
   const panel = root.querySelector?.("[data-af-tuner]");
   if (!internalToggle || !panel) {
-    ui.notifications?.warn?.("Arkflight opening layout tuner is not ready yet.");
-    return false;
+    ui.notifications?.warn?.("Arkflight layout tuner is not ready yet.");
+    return;
   }
   internalToggle.click();
   const open = !panel.hidden;
   button?.classList?.toggle("active", open);
   button?.setAttribute?.("aria-pressed", open ? "true" : "false");
-  return true;
-}
-
-function toggleLayoutTuner(root, button) {
-  if (root?.classList?.contains("arkflight-opening-mode")) return toggleOpeningLayoutTuner(root, button);
-  if (root?.querySelector?.(".arkflight-planning-workspace")) {
-    const toggle = game.arkflight?.planningLayoutTuner?.toggle;
-    if (typeof toggle !== "function") {
-      ui.notifications?.warn?.("Arkflight planning layout tuner is not ready yet.");
-      return false;
-    }
-    return toggle(root, button);
-  }
-  ui.notifications?.warn?.("UI Layout tools are currently available on the Opening and Crew Planning boards.");
-  return false;
 }
 
 function ensureMinimizeControl(header, app) {
@@ -146,12 +131,15 @@ function installHeaderTools(root, app) {
   const header = applicationHeader(root);
   if (!header) return false;
 
+  // These controls belong to the Event application itself. They must survive
+  // Opening, Planning, Resolution, Round Report, and Event Complete renders.
   ensureMinimizeControl(header, app);
   ensureAbandonControl(header, app);
 
+  // The layout tuner is opening-only. Do not remove the normal GM event controls
+  // just because the board has advanced to another phase.
   const opening = root?.classList?.contains("arkflight-opening-mode");
-  const planning = Boolean(root?.querySelector?.(".arkflight-planning-workspace"));
-  if (!game.user?.isGM || (!opening && !planning)) {
+  if (!game.user?.isGM || !opening) {
     header.querySelector?.(".arkflight-gm-header-tools")?.remove();
     return true;
   }
@@ -179,28 +167,11 @@ function installHeaderTools(root, app) {
     insertBeforeWindowControls(header, tools);
   }
 
+  const panel = root.querySelector("[data-af-tuner]");
   const layoutButton = tools.querySelector('[data-af-gm-tool="layout"]');
-  if (opening) {
-    const panel = root.querySelector("[data-af-tuner]");
-    if (panel && layoutButton) {
-      layoutButton.classList.toggle("active", !panel.hidden);
-      layoutButton.setAttribute("aria-pressed", panel.hidden ? "false" : "true");
-    }
-  } else if (planning) {
-    const panel = root.querySelector("[data-plan-layout-tuner]");
-    if (layoutButton) {
-      layoutButton.classList.toggle("active", Boolean(panel && !panel.hidden));
-      layoutButton.setAttribute("aria-pressed", panel && !panel.hidden ? "true" : "false");
-    }
-    if (root.dataset.arkflightPlanningTunerHeaderBound !== "true") {
-      root.dataset.arkflightPlanningTunerHeaderBound = "true";
-      root.addEventListener("arkflight:planning-layout-tuner", (event) => {
-        const open = Boolean(event.detail?.open);
-        const currentButton = applicationHeader(root)?.querySelector?.('[data-af-gm-tool="layout"]');
-        currentButton?.classList?.toggle("active", open);
-        currentButton?.setAttribute?.("aria-pressed", open ? "true" : "false");
-      });
-    }
+  if (panel && layoutButton) {
+    layoutButton.classList.toggle("active", !panel.hidden);
+    layoutButton.setAttribute("aria-pressed", panel.hidden ? "false" : "true");
   }
 
   return true;
