@@ -47,7 +47,7 @@ test("critical Ease Their Burden reduces the target station DC by 2", () => {
   assert.equal(checkAdjustments(next, "battlewatch").dc, -2);
 });
 
-test("Mixed Success keeps Momentum and queues one global Strain effect threatening Hull", () => {
+test("Mixed Success keeps Momentum, records history, and previews aggregate Event Result", () => {
   const state = {
     phase: "round-result",
     roundIndex: 0,
@@ -69,6 +69,9 @@ test("Mixed Success keeps Momentum and queues one global Strain effect threateni
     { kind: "gain-strain", area: "hull", value: 1 }
   ]);
   assert.equal(next.consequenceApplied, true);
+  assert.equal(next.eventHistory.length, 1);
+  assert.equal(next.eventHistory[0].score, 2);
+  assert.equal(next.eventResultPreview.id, "success");
   assert.match(next.roundNarrative, /crew|ship/i);
   assert.match(next.roundNarrative, /Ease Their Burden/);
 });
