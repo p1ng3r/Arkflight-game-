@@ -1,3 +1,7 @@
+.arkflight-player-action-mode .pa-footer {
+  display: none !important;
+}
+
 .pa-command-shell {
   margin-top: 7px;
   border: 1px solid #644a25;
