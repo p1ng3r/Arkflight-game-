@@ -44,13 +44,15 @@ export function stationArea(station) {
   return STATION_AREAS[canonicalCombatStation(station)];
 }
 
-export function hullCombatProfile(ship, { actionBonus = 0, reactionBonus = 0 } = {}) {
+export function hullCombatProfile(ship, { actionBonus = null, reactionBonus = null } = {}) {
   const hullId = ship?.hull?.chassisId;
   const base = HULL_COMBAT_PROFILES[hullId] ?? { ap: 3, rp: 1 };
   const progression = combatEconomyBonuses(ship);
+  const resolvedActionBonus = actionBonus == null ? Number(progression.actions || 0) : Number(actionBonus || 0);
+  const resolvedReactionBonus = reactionBonus == null ? Number(progression.reactions || 0) : Number(reactionBonus || 0);
   return Object.freeze({
-    ap: Math.max(1, Number(base.ap) + Number(progression.actions || 0) + Number(actionBonus || 0)),
-    rp: Math.max(0, Number(base.rp) + Number(progression.reactions || 0) + Number(reactionBonus || 0))
+    ap: Math.max(1, Number(base.ap) + resolvedActionBonus),
+    rp: Math.max(0, Number(base.rp) + resolvedReactionBonus)
   });
 }
 
