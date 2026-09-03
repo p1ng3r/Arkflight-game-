@@ -5,7 +5,7 @@ function rootFor(app, element) {
   return app.element instanceof HTMLElement ? app.element : app.element?.[0] ?? null;
 }
 
-function resolveActor(root, controller, avatar) {
+function resolveActor(controller, avatar) {
   const row = avatar.closest(".arkflight-planning-station-row");
   const stationId = row?.dataset.stationId
     ?? row?.querySelector("[data-arkflight-focus-station]")?.dataset.arkflightFocusStation
@@ -28,6 +28,47 @@ function bringSheetForward(sheet) {
   }
 }
 
+async function renderSheet(sheet) {
+  const ApplicationV2 = foundry.applications.api.ApplicationV2;
+  const isV2 = Boolean(ApplicationV2 && sheet instanceof ApplicationV2);
+
+  if (isV2) {
+    const result = sheet.render({ force: true });
+    if (result?.then) await result;
+  } else {
+    const result = sheet.render(true, { focus: true });
+    if (result?.then) await result;
+  }
+
+  // Some PF2e sheet implementations are mixed Application generations. If the
+  // first signature did not actually render a window, try the alternate one.
+  if (!sheet.rendered) {
+    try {
+      const fallback = isV2
+        ? sheet.render(true, { focus: true })
+        : sheet.render({ force: true });
+      if (fallback?.then) await fallback;
+    } catch (fallbackError) {
+      console.warn("Arkflight | Alternate actor-sheet render signature failed", fallbackError);
+    }
+  }
+
+  if (sheet.minimized && typeof sheet.maximize === "function") await sheet.maximize();
+  bringSheetForward(sheet);
+
+  requestAnimationFrame(() => {
+    bringSheetForward(sheet);
+    const element = sheet.element?.[0] ?? sheet.element ?? null;
+    element?.focus?.({ preventScroll: true });
+    console.debug("Arkflight | Station actor sheet rendered", {
+      sheetClass: sheet.constructor?.name,
+      rendered: sheet.rendered,
+      minimized: sheet.minimized,
+      connected: Boolean(element?.isConnected)
+    });
+  });
+}
+
 async function openActorSheet(actor) {
   if (!actor) return;
   const sheet = actor.sheet;
@@ -36,40 +77,19 @@ async function openActorSheet(actor) {
     return;
   }
 
-  const ApplicationV2 = foundry.applications.api.ApplicationV2;
-  const isV2 = Boolean(ApplicationV2 && sheet instanceof ApplicationV2);
   console.debug("Arkflight | Opening station actor sheet", {
     actorId: actor.id,
     actorName: actor.name,
     sheetClass: sheet.constructor?.name,
-    applicationV2: isV2,
     renderedBefore: sheet.rendered,
     minimizedBefore: sheet.minimized
   });
 
   try {
-    if (isV2) {
-      const result = sheet.render({ force: true });
-      if (result?.then) await result;
-      if (sheet.minimized && typeof sheet.maximize === "function") await sheet.maximize();
-      bringSheetForward(sheet);
-    } else {
-      const result = sheet.render(true, { focus: true });
-      if (result?.then) await result;
-      bringSheetForward(sheet);
+    await renderSheet(sheet);
+    if (!sheet.rendered) {
+      throw new Error(`PF2e sheet ${sheet.constructor?.name ?? "unknown"} did not enter a rendered state.`);
     }
-
-    requestAnimationFrame(() => {
-      bringSheetForward(sheet);
-      const element = sheet.element?.[0] ?? sheet.element ?? null;
-      console.debug("Arkflight | Station actor sheet rendered", {
-        actorId: actor.id,
-        sheetClass: sheet.constructor?.name,
-        rendered: sheet.rendered,
-        minimized: sheet.minimized,
-        connected: Boolean(element?.isConnected)
-      });
-    });
   } catch (error) {
     console.error("Arkflight | Could not open assigned actor sheet", error);
     ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
@@ -80,30 +100,25 @@ function bind(root, controller) {
   if (controller.state?.phase !== "planning") return;
   if (root.dataset.portraitSheetDelegation === "true") return;
 
-  // Claim portrait handling before the planning-polish module can bind its legacy handler.
+  // Claim portrait handling before the planning-polish module can bind its older
+  // portrait behavior. A single portrait click opens the assigned PF2e Actor.
   root.dataset.portraitSheetDelegation = "true";
   root.dataset.portraitSheetController = "authoritative";
 
-  root.addEventListener("click", (event) => {
+  root.addEventListener("click", async (event) => {
     const avatar = event.target.closest?.(".arkflight-planning-avatar");
     if (!avatar || !root.contains(avatar)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-  }, true);
 
-  root.addEventListener("dblclick", async (event) => {
-    const avatar = event.target.closest?.(".arkflight-planning-avatar");
-    if (!avatar || !root.contains(avatar)) return;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
 
-    const { actor } = resolveActor(root, controller, avatar);
+    const { actor } = resolveActor(controller, avatar);
     if (!actor) {
       ui.notifications?.warn?.("No PF2e character is assigned to this station.");
       return;
     }
+
     await openActorSheet(actor);
   }, true);
 }
