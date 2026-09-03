@@ -1,11 +1,15 @@
-const STORAGE_KEY = "arkflight.planningLayoutTuner.v1";
+const STORAGE_KEY = "arkflight.planningLayoutTuner.v2";
 
 const DEFAULTS = Object.freeze({
   banner: { x: 0, y: 0, width: 0 },
   rail: { x: 0, y: 0, width: 0 },
   detail: { x: 0, y: 0, width: 0 },
   footer: { x: 0, y: 0, width: 0 },
-  workspace: { railWidth: 0, gap: 0 }
+  workspace: { railWidth: 0, gap: 0 },
+  cornerTL: { x: 0, y: 0, size: 0, z: 0 },
+  cornerTR: { x: 0, y: 0, size: 0, z: 0 },
+  cornerBL: { x: 0, y: 0, size: 0, z: 0 },
+  cornerBR: { x: 0, y: 0, size: 0, z: 0 }
 });
 
 const cloneDefaults = () => JSON.parse(JSON.stringify(DEFAULTS));
@@ -25,8 +29,30 @@ function readState() {
 const saveState = (state) => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 const px = (value) => `${Number(value) || 0}px`;
 
+function ensureCornerArt(root) {
+  const shell = root?.querySelector?.(".arkflight-board-shell");
+  if (!shell || !root.querySelector(".arkflight-planning-workspace")) return;
+  const corners = {
+    TL: "ui_panel_frame_corner_top_left.webp",
+    TR: "ui_panel_frame_corner_top_right.webp",
+    BL: "ui_panel_frame_corner_bottom_left.webp",
+    BR: "ui_panel_frame_corner_bottom_right.webp"
+  };
+  for (const [key, file] of Object.entries(corners)) {
+    if (shell.querySelector(`[data-plan-corner="${key}"]`)) continue;
+    const img = document.createElement("img");
+    img.className = `arkflight-planning-corner-art arkflight-planning-corner-${key.toLowerCase()}`;
+    img.dataset.planCorner = key;
+    img.src = `modules/arkflight-game/assets/ui/panels/${file}`;
+    img.alt = "";
+    img.draggable = false;
+    shell.append(img);
+  }
+}
+
 function applyState(root, state) {
   if (!root) return;
+  ensureCornerArt(root);
   const style = root.style;
   for (const target of ["banner", "rail", "detail", "footer"]) {
     const values = state[target];
@@ -36,6 +62,14 @@ function applyState(root, state) {
   }
   style.setProperty("--af-plan-workspace-rail-width", px(state.workspace.railWidth));
   style.setProperty("--af-plan-workspace-gap", px(state.workspace.gap));
+  for (const target of ["cornerTL", "cornerTR", "cornerBL", "cornerBR"]) {
+    const values = state[target];
+    const name = target.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
+    style.setProperty(`--af-plan-${name}-x`, px(values.x));
+    style.setProperty(`--af-plan-${name}-y`, px(values.y));
+    style.setProperty(`--af-plan-${name}-size`, px(values.size));
+    style.setProperty(`--af-plan-${name}-z`, String(Number(values.z) || 0));
+  }
 }
 
 function readout(state, target) {
@@ -58,6 +92,22 @@ function targetMarkup(target, label) {
     <div class="arkflight-planning-tuner-row"><span>Width</span>
       <button type="button" data-plan-field="width" data-plan-dir="-1">−</button>
       <button type="button" data-plan-field="width" data-plan-dir="1">+</button>
+    </div>
+    <button type="button" class="arkflight-planning-tuner-reset" data-plan-reset="${target}">Reset ${label}</button>
+  </section>`;
+}
+
+function cornerMarkup(target, label) {
+  return `<section class="arkflight-planning-tuner-target" data-plan-target="${target}">
+    <header><strong>${label}</strong><small data-plan-readout="${target}"></small></header>
+    ${moveControls()}
+    <div class="arkflight-planning-tuner-row"><span>Size</span>
+      <button type="button" data-plan-field="size" data-plan-dir="-1">−</button>
+      <button type="button" data-plan-field="size" data-plan-dir="1">+</button>
+    </div>
+    <div class="arkflight-planning-tuner-row"><span>Layer</span>
+      <button type="button" data-plan-field="z" data-plan-dir="-1">−</button>
+      <button type="button" data-plan-field="z" data-plan-dir="1">+</button>
     </div>
     <button type="button" class="arkflight-planning-tuner-reset" data-plan-reset="${target}">Reset ${label}</button>
   </section>`;
@@ -95,6 +145,11 @@ function tunerMarkup() {
       ${targetMarkup("rail", "Station Rail")}
       ${targetMarkup("detail", "Station Detail")}
       ${targetMarkup("footer", "Lock Plan Footer")}
+      <div class="arkflight-planning-tuner-group-title">Corner Art</div>
+      ${cornerMarkup("cornerTL", "Top Left Corner")}
+      ${cornerMarkup("cornerTR", "Top Right Corner")}
+      ${cornerMarkup("cornerBL", "Bottom Left Corner")}
+      ${cornerMarkup("cornerBR", "Bottom Right Corner")}
     </div>
   </section>`;
 }
@@ -108,6 +163,7 @@ function refreshReadouts(panel, state) {
 
 function ensurePanel(root) {
   if (!root || !game.user?.isGM || !root.querySelector(".arkflight-planning-workspace")) return null;
+  ensureCornerArt(root);
   let panel = root.querySelector("[data-plan-layout-tuner]");
   if (panel) return panel;
 
@@ -199,5 +255,6 @@ Hooks.on("renderApplicationV2", (app, element) => {
   if (app?.id !== "arkflight-event-board") return;
   const root = element instanceof HTMLElement ? element : element?.[0] ?? app.element?.[0] ?? app.element ?? null;
   if (!root || !game.user?.isGM || !root.querySelector?.(".arkflight-planning-workspace")) return;
+  ensureCornerArt(root);
   applyState(root, readState());
 });
