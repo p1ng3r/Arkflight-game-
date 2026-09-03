@@ -20,6 +20,7 @@ function resolveActor(controller, avatar) {
 }
 
 function bringSheetForward(sheet) {
+  if (!sheet) return;
   try {
     if (typeof sheet.bringToFront === "function") sheet.bringToFront();
     else if (typeof sheet.bringToTop === "function") sheet.bringToTop();
@@ -28,70 +29,43 @@ function bringSheetForward(sheet) {
   }
 }
 
-async function renderSheet(sheet) {
-  const ApplicationV2 = foundry.applications.api.ApplicationV2;
-  const isV2 = Boolean(ApplicationV2 && sheet instanceof ApplicationV2);
-
-  if (isV2) {
-    const result = sheet.render({ force: true });
-    if (result?.then) await result;
-  } else {
-    const result = sheet.render(true, { focus: true });
-    if (result?.then) await result;
-  }
-
-  // Some PF2e sheet implementations are mixed Application generations. If the
-  // first signature did not actually render a window, try the alternate one.
-  if (!sheet.rendered) {
-    try {
-      const fallback = isV2
-        ? sheet.render(true, { focus: true })
-        : sheet.render({ force: true });
-      if (fallback?.then) await fallback;
-    } catch (fallbackError) {
-      console.warn("Arkflight | Alternate actor-sheet render signature failed", fallbackError);
-    }
-  }
-
-  if (sheet.minimized && typeof sheet.maximize === "function") await sheet.maximize();
-  bringSheetForward(sheet);
-
-  requestAnimationFrame(() => {
-    bringSheetForward(sheet);
-    const element = sheet.element?.[0] ?? sheet.element ?? null;
-    element?.focus?.({ preventScroll: true });
-    console.debug("Arkflight | Station actor sheet rendered", {
-      sheetClass: sheet.constructor?.name,
-      rendered: sheet.rendered,
-      minimized: sheet.minimized,
-      connected: Boolean(element?.isConnected)
-    });
-  });
-}
-
 async function openActorSheet(actor) {
   if (!actor) return;
-  const sheet = actor.sheet;
-  if (!sheet || typeof sheet.render !== "function") {
-    ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
-    return;
-  }
 
-  console.debug("Arkflight | Opening station actor sheet", {
+  console.log("Arkflight | Opening station actor through PF2e actor.render", {
     actorId: actor.id,
     actorName: actor.name,
-    sheetClass: sheet.constructor?.name,
-    renderedBefore: sheet.rendered,
-    minimizedBefore: sheet.minimized
+    actorType: actor.type
   });
 
   try {
-    await renderSheet(sheet);
-    if (!sheet.rendered) {
-      throw new Error(`PF2e sheet ${sheet.constructor?.name ?? "unknown"} did not enter a rendered state.`);
-    }
+    // PF2e v14 uses Actor#render() when it wants an Actor's configured sheet
+    // displayed. Let the document resolve the correct registered sheet rather
+    // than holding onto actor.sheet before PF2e performs that resolution.
+    const result = actor.render?.();
+    if (result?.then) await result;
+
+    // Actor#render may create/resolve a fresh configured sheet. Read actor.sheet
+    // only after the document-level render request has completed.
+    const sheet = actor.sheet ?? null;
+    if (sheet?.minimized && typeof sheet.maximize === "function") await sheet.maximize();
+    bringSheetForward(sheet);
+
+    requestAnimationFrame(() => {
+      const currentSheet = actor.sheet ?? sheet;
+      bringSheetForward(currentSheet);
+      const element = currentSheet?.element?.[0] ?? currentSheet?.element ?? null;
+      element?.focus?.({ preventScroll: true });
+      console.log("Arkflight | PF2e actor render completed", {
+        actorId: actor.id,
+        sheetClass: currentSheet?.constructor?.name ?? null,
+        rendered: currentSheet?.rendered ?? null,
+        minimized: currentSheet?.minimized ?? null,
+        connected: Boolean(element?.isConnected)
+      });
+    });
   } catch (error) {
-    console.error("Arkflight | Could not open assigned actor sheet", error);
+    console.error("Arkflight | Could not open assigned actor through actor.render", error);
     ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
   }
 }
