@@ -61,7 +61,8 @@
     "styles/shipwright-scroll-popup-polish.css",
     "styles/voyage-abandon.css",
     "styles/refit-alpha-unified.css",
-    "styles/event-board-navy-bars-fix.css"
+    "styles/event-board-navy-bars-fix.css",
+    "styles/event-board-planning-layout-tuner.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -79,6 +80,7 @@
     "src/ui/opening-chrome-ui.js",
     "src/ui/opening-layout-ui.js",
     "src/ui/opening-layout-tuner-ui.js",
+    "src/ui/event-board-planning-layout-tuner-ui.js",
     "src/ui/event-board-gm-header-tools.js",
     "src/ui/event-board-pending-mastery-ui.js",
     "src/ui/event-board-portrait-sheet-ui.js",
