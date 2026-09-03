@@ -14,9 +14,9 @@ function shipFlag(actor) {
 }
 
 function weaponFits(weapon, arc, maxSize) {
-  const arcs = weapon?.data?.arcs ?? [];
+  const allowedMounts = weapon?.data?.allowedMounts ?? [];
   const size = weapon?.data?.size ?? "small";
-  return arcs.includes(arc) && (SIZE_RANK[size] ?? 99) <= (SIZE_RANK[maxSize] ?? 0);
+  return allowedMounts.includes(arc) && (SIZE_RANK[size] ?? 99) <= (SIZE_RANK[maxSize] ?? 0);
 }
 
 function mountKey(arc, index) {
@@ -67,21 +67,14 @@ function ensureDraft(actor) {
   return draft;
 }
 
-function findApplicationFor(root) {
-  return Object.values(ui.windows ?? {}).find((app) => {
-    const element = app.element?.[0] ?? app.element;
-    return element && (element === root || element.contains?.(root));
-  }) ?? null;
-}
-
-function weaponCard(weapon, selectedMount) {
+function weaponCard(weapon) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "arkflight-armory-weapon";
   button.dataset.weaponId = weapon.id;
   const damage = weapon.data?.damageProfile;
-  const reload = weapon.data?.reload;
-  const crew = weapon.data?.crewRequired ?? reload?.crewRequired ?? "—";
+  const combat = weapon.data?.combat ?? {};
+  const range = combat.rangeHexes ?? {};
   button.innerHTML = `
     <span class="arkflight-armory-install">INSTALL</span>
     <strong>${weapon.name}</strong>
@@ -89,8 +82,11 @@ function weaponCard(weapon, selectedMount) {
     <p>${weapon.description ?? ""}</p>
     <div class="arkflight-armory-tags">
       <span>${damage?.dice ?? "—"} ${damage?.type ?? ""}</span>
-      <span>Crew ${crew}</span>
-      <span>Reload ${reload?.actions ?? "—"}</span>
+      <span>Crew ${weapon.data?.crewRequired ?? "—"}</span>
+      <span>Fire ${combat.fireAP ?? "—"} AP</span>
+      <span>Reload ${combat.reloadRounds ?? "—"}</span>
+      <span>Range ${range.min ?? "—"}–${range.max ?? "—"} hex</span>
+      <span>${String(combat.arcTemplate ?? "—").toUpperCase()} arc</span>
     </div>`;
   return button;
 }
@@ -142,7 +138,7 @@ function renderArmory(root, actor) {
       return;
     }
     for (const weapon of compatible) {
-      const card = weaponCard(weapon, draft.selected);
+      const card = weaponCard(weapon);
       card.addEventListener("click", () => {
         const existing = draft.weapons.findIndex((entry) => entry.arc === arc && entry.mountIndex === index);
         const install = { id: weapon.id, arc, mountIndex: index };
