@@ -11,6 +11,7 @@
   "styles": [
     "styles/arkflight.css",
     "styles/event-round.css",
+    "styles/event-board-planning-restoration.css",
     "styles/arkflight-enhancements.css",
     "styles/image-popout.css",
     "styles/rewards.css",
