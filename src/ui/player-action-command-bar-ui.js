@@ -4,6 +4,7 @@ import { planningReady } from "../event/planning-state.js";
 
 const BOARD_ID = "arkflight-event-board";
 const pendingObservers = new WeakMap();
+const phaseRepairs = new WeakSet();
 
 function getRoot(app, element) {
   return element instanceof HTMLElement ? element : element?.[0] ?? app?.element ?? null;
@@ -37,10 +38,75 @@ function tacticsDrawerHtml(state) {
     </article>`).join("");
 }
 
+function queueAuthoritativePhaseRender(root, app, controller) {
+  if (!root || !app || !controller || phaseRepairs.has(app)) return;
+  phaseRepairs.add(app);
+
+  // Remove the hand-built planning board before asking ApplicationV2 to render its
+  // authoritative phase template. Otherwise a stale .pa-board can survive while
+  // controller.state has already advanced to Resolution.
+  root.querySelector(".pa-board")?.remove();
+  root.classList.remove("arkflight-player-action-mode");
+  pendingObservers.get(root)?.disconnect();
+  pendingObservers.delete(root);
+
+  setTimeout(async () => {
+    try {
+      await app.render({ force: true });
+    } catch (error) {
+      console.error("Arkflight | Could not restore authoritative Event Board phase UI", error);
+      ui.notifications?.warn(error.message);
+    } finally {
+      phaseRepairs.delete(app);
+    }
+  }, 0);
+}
+
+function repairPhaseIfNeeded(root, app, controller) {
+  const state = controller?.state;
+  if (!state) return false;
+
+  // "locked" is now only a legacy/transient phase. Current lockPlan enters
+  // Resolution atomically, so any visible locked state must be recovered.
+  if (state.phase === "locked") {
+    if (phaseRepairs.has(app)) return true;
+    phaseRepairs.add(app);
+    root.querySelector(".pa-board")?.remove();
+    root.classList.remove("arkflight-player-action-mode");
+    pendingObservers.get(root)?.disconnect();
+    pendingObservers.delete(root);
+    setTimeout(async () => {
+      try {
+        if (controller.state?.phase === "locked") await controller.beginResolution();
+        await app.render({ force: true });
+      } catch (error) {
+        console.error("Arkflight | Legacy locked phase recovery failed", error);
+        ui.notifications?.warn(error.message);
+      } finally {
+        phaseRepairs.delete(app);
+      }
+    }, 0);
+    return true;
+  }
+
+  // Planning UI is a hand-built overlay. The instant the domain reaches any other
+  // phase it must yield completely to event-board.hbs. This fixes the case where
+  // state is Resolution but the previous planning DOM is still visible.
+  if (state.phase !== "planning") {
+    if (root.querySelector(".pa-board") || root.classList.contains("arkflight-player-action-mode")) {
+      queueAuthoritativePhaseRender(root, app, controller);
+    }
+    return true;
+  }
+
+  return false;
+}
+
 function installCommandBar(root, app) {
   const controller = game.arkflight?.controller;
   const state = controller?.state;
-  if (!controller || !state || !["planning", "locked"].includes(state.phase)) return true;
+  if (!controller || !state) return true;
+  if (repairPhaseIfNeeded(root, app, controller)) return true;
 
   const board = root?.querySelector?.(".pa-board");
   if (!board) return false;
@@ -66,10 +132,10 @@ function installCommandBar(root, app) {
       <div class="pa-command-readiness ${ready ? "is-ready" : ""}">
         <span>CREW PLAN</span><strong>${count} / ${STATIONS.length} STATIONS READY</strong>
       </div>
-      <button type="button" class="pa-command-lock" data-pa-command-lock ${(!ready && state.phase === "planning") ? "disabled" : ""}>
-        <i class="fa-solid ${state.phase === "locked" ? "fa-dice-d20" : "fa-lock"}"></i>
-        <span>${state.phase === "locked" ? "BEGIN RESOLUTION" : "LOCK PLAN"}</span>
-        <small>${ready || state.phase === "locked" ? "Commit the crew and begin Resolution." : "Complete all five stations first."}</small>
+      <button type="button" class="pa-command-lock" data-pa-command-lock ${!ready ? "disabled" : ""}>
+        <i class="fa-solid fa-lock"></i>
+        <span>LOCK PLAN</span>
+        <small>${ready ? "Commit the crew and begin Resolution." : "Complete all five stations first."}</small>
       </button>
     </div>`;
   board.append(shell);
@@ -93,18 +159,11 @@ function installCommandBar(root, app) {
     if (button.disabled) return;
     button.disabled = true;
     try {
-      let phase = controller.state?.phase;
-      if (phase === "planning") {
-        await controller.lockPlan();
-        phase = controller.state?.phase;
-      }
-      // Legacy recovery only: current lockPlan is atomic and enters Resolution.
-      if (phase === "locked") {
-        await controller.beginResolution();
-        phase = controller.state?.phase;
-      }
-      if (phase !== "resolution") throw new Error(`Arkflight failed to enter Resolution; current phase is ${phase ?? "unknown"}.`);
-      await app.render({ force: true });
+      await controller.lockPlan();
+      const phase = controller.state?.phase;
+      if (phase === "locked") await controller.beginResolution();
+      if (controller.state?.phase !== "resolution") throw new Error(`Arkflight failed to enter Resolution; current phase is ${controller.state?.phase ?? "unknown"}.`);
+      queueAuthoritativePhaseRender(root, app, controller);
     } catch (error) {
       console.error("Arkflight | Lock Plan → Resolution failed", error);
       ui.notifications?.warn(error.message);
@@ -116,6 +175,9 @@ function installCommandBar(root, app) {
 }
 
 function installWhenBoardExists(root, app) {
+  const controller = game.arkflight?.controller;
+  if (repairPhaseIfNeeded(root, app, controller)) return;
+
   if (installCommandBar(root, app)) {
     pendingObservers.get(root)?.disconnect();
     pendingObservers.delete(root);
@@ -124,6 +186,12 @@ function installWhenBoardExists(root, app) {
 
   pendingObservers.get(root)?.disconnect();
   const observer = new MutationObserver(() => {
+    const currentController = game.arkflight?.controller;
+    if (repairPhaseIfNeeded(root, app, currentController)) {
+      observer.disconnect();
+      pendingObservers.delete(root);
+      return;
+    }
     if (!installCommandBar(root, app)) return;
     observer.disconnect();
     pendingObservers.delete(root);
@@ -137,8 +205,7 @@ Hooks.on("renderApplicationV2", (app, element) => {
   const root = getRoot(app, element);
   if (!root) return;
 
-  // The Player Action Board replaces the application DOM from its own render hook.
-  // Observe that replacement instead of depending on hook/timer ordering. This makes
-  // the compact command bar authoritative every time planning UI is created.
+  // Planning is the only phase allowed to own the custom Player Action Board.
+  // Every other phase yields back to event-board.hbs.
   installWhenBoardExists(root, app);
 });
