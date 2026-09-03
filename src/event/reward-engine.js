@@ -1,8 +1,10 @@
 import { CREW_EDGE_HAND_MAX, getCrewEdgeCard } from "../content/crew-edge-cards.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
+import { endingBandCandidates, tacticAwardCountForResult } from "./event-outcome.js";
 
 const MODULE_ID = "arkflight-game";
+const EVENT_RESULT_TACTIC_POOL = Object.freeze(["all-hands-together", "take-the-better-line", "refuse-the-ending"]);
 
 function cloneList(value) {
   return Array.isArray(value) ? value.map((entry) => ({ ...entry })) : [];
@@ -41,15 +43,16 @@ export function rewardPackage({
 
 export function endingDefinition({ id, label, bands, vignette, rewards = rewardPackage() }) {
   if (!id || !label) throw new Error("Event ending requires id and label");
-  if (!Array.isArray(bands) || bands.length < 1) throw new Error(`Event ending ${id} requires one or more final round bands`);
+  if (!Array.isArray(bands) || bands.length < 1) throw new Error(`Event ending ${id} requires one or more Event Result bands`);
   const sentenceCount = String(vignette ?? "").split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length;
   if (sentenceCount < 3 || sentenceCount > 10) throw new Error(`Event ending ${id} vignette must be 3-10 sentences; received ${sentenceCount}`);
   return Object.freeze({ id, label, bands: Object.freeze([...bands]), vignette, rewards });
 }
 
-export function resolveEventEnding(event, finalBandId) {
-  const ending = Object.values(event?.endings ?? {}).find((entry) => entry?.bands?.includes(finalBandId));
-  if (!ending) throw new Error(`Event ${event?.id ?? "unknown"} has no ending authored for final band ${finalBandId}`);
+export function resolveEventEnding(event, eventResultId) {
+  const candidates = endingBandCandidates(eventResultId);
+  const ending = candidates.map((candidate) => Object.values(event?.endings ?? {}).find((entry) => entry?.bands?.includes(candidate))).find(Boolean);
+  if (!ending) throw new Error(`Event ${event?.id ?? "unknown"} has no ending authored for Event Result ${eventResultId}`);
   return ending;
 }
 
@@ -71,6 +74,7 @@ function awardTactics(state, tacticIds = []) {
   const awardedEdgeCards = [];
   const overflowEdgeCards = [];
   for (const tacticId of tacticIds) {
+    if (currentHand.includes(tacticId)) continue;
     if (currentHand.length < handMax) {
       currentHand.push(tacticId);
       awardedEdgeCards.push(tacticId);
@@ -79,6 +83,14 @@ function awardTactics(state, tacticIds = []) {
     }
   }
   return { crewEdgeHand: currentHand, awardedEdgeCards, overflowEdgeCards, handMax };
+}
+
+export function eventResultTacticRewards(state, eventResultId, authored = []) {
+  const targetCount = tacticAwardCountForResult(eventResultId);
+  if (!targetCount) return [...authored];
+  const existing = new Set([...(state?.crewEdgeHand ?? []), ...authored]);
+  const automatic = EVENT_RESULT_TACTIC_POOL.filter((id) => !existing.has(id)).slice(0, targetCount);
+  return [...authored, ...automatic];
 }
 
 export function applyRoundRewardPackageToState(state, rewards, { roundId = null, bandId = null } = {}) {
@@ -98,14 +110,17 @@ export function applyRoundRewardPackageToState(state, rewards, { roundId = null,
   };
 }
 
-export function applyRewardPackageToState(state, rewards) {
-  const award = awardTactics(state, rewards?.edgeCards ?? []);
+export function applyRewardPackageToState(state, rewards, { eventResultId = null } = {}) {
+  const tacticIds = eventResultId ? eventResultTacticRewards(state, eventResultId, rewards?.edgeCards ?? []) : (rewards?.edgeCards ?? []);
+  const award = awardTactics(state, tacticIds);
   return {
     ...state,
     crewEdgeHand: award.crewEdgeHand,
     crewTacticHandMax: award.handMax,
     eventRewards: {
       ...(rewards ?? rewardPackage()),
+      eventResultId,
+      edgeCards: tacticIds,
       awardedEdgeCards: award.awardedEdgeCards,
       overflowEdgeCards: award.overflowEdgeCards,
       crewTacticHandMax: award.handMax,
@@ -128,7 +143,7 @@ export function rewardRows(rewards) {
   for (const entry of rewards.boons ?? []) rows.push({ type: "boon", label: entry.name ?? "Boon", detail: entry.description ?? "" });
   for (const tacticId of rewards.awardedEdgeCards ?? rewards.edgeCards ?? []) {
     const tactic = getCrewEdgeCard(tacticId);
-    if (tactic) rows.push({ type: "edge", label: `Crew Tactic — ${tactic.name}`, detail: `${tactic.trigger} ${tactic.effect}` });
+    if (tactic) rows.push({ type: "edge", label: `Crew Tactic — ${tactic.name}`, detail: `[${tactic.theater}] ${tactic.trigger} ${tactic.effect}` });
   }
   const handMax = Number(rewards.crewTacticHandMax ?? CREW_EDGE_HAND_MAX);
   for (const tacticId of rewards.overflowEdgeCards ?? []) {
