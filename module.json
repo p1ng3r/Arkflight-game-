@@ -16,6 +16,7 @@
     "styles/event-board-station-rail-compact.css",
     "styles/event-board-station-detail.css",
     "styles/event-board-visual-unification.css",
+    "styles/event-board-material-pass.css",
     "styles/arkflight-enhancements.css",
     "styles/image-popout.css",
     "styles/rewards.css",
