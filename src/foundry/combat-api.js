@@ -113,6 +113,13 @@ Hooks.once("ready", () => {
       if (blockers.length) throw new Error(`Cannot launch Arkflight ship combat: ${blockers.join(" ")}`);
       const ship = shipPayload(actor);
       const state = createCombatState(ship, options);
+
+      if (options.rollInitiative !== false) {
+        const tracker = game.arkflight?.combatTracker;
+        if (!tracker) throw new Error("Arkflight Combat Tracker integration is unavailable.");
+        await tracker.rollShipInitiative(actor);
+      }
+
       await game.settings.set(MODULE_ID, SHIP_SETTING, actor.uuid);
       await persistState(state);
       ui.notifications?.info(`Arkflight combat started for ${actor.name}.`);
