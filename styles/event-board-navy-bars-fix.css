@@ -1,0 +1,210 @@
+/* Arkflight Event Board — navy field + proportional bar correction.
+ * Loaded last so it can safely correct the material-pass overreach without
+ * touching event mechanics or the authoritative opening screen.
+ */
+
+/* -------------------------------------------------------------------------
+ * NAVY EVENT FIELD
+ * ---------------------------------------------------------------------- */
+
+.arkflight-event-board:not(.arkflight-opening-mode) {
+  --af-event-navy-deep:#061421;
+  --af-event-navy:#0a1d2d;
+  --af-event-navy-mid:#10283b;
+  --af-event-brass:#b88a3f;
+  --af-event-brass-hi:#d9ae5f;
+  --af-event-brass-dim:rgba(184,138,63,.30);
+  background:
+    radial-gradient(ellipse at 52% 2%,rgba(38,91,124,.16),transparent 38%),
+    radial-gradient(ellipse at center,transparent 54%,rgba(0,0,0,.28) 100%),
+    linear-gradient(180deg,rgba(10,30,46,.96),rgba(5,18,29,.985)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center/860px auto repeat !important;
+  color:#e9dfca !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) :is(
+  .arkflight-event-header,
+  .arkflight-event-summary,
+  .arkflight-utility-strip,
+  .arkflight-hazard-strip,
+  .arkflight-planning-station-rail,
+  .arkflight-planning-detail,
+  .arkflight-round-banner,
+  .arkflight-planning-footer
+) {
+  background-color:var(--af-event-navy-deep) !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-event-header {
+  background:
+    linear-gradient(180deg,rgba(15,41,59,.92),rgba(6,20,31,.97)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center/760px auto no-repeat !important;
+  border-bottom-color:rgba(197,151,71,.42) !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-utility-strip {
+  background:
+    linear-gradient(180deg,rgba(12,34,50,.92),rgba(5,18,29,.97)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center/700px auto no-repeat !important;
+}
+
+/* Station rows should read as blue-black instruments, not black cards. */
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-command-summary-row {
+  background:
+    linear-gradient(90deg,rgba(14,37,52,.94),rgba(6,20,31,.97)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center/420px auto no-repeat !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-command-summary-row.is-focused {
+  background:
+    linear-gradient(90deg,color-mix(in srgb,var(--station-accent,#b18435) 13%,rgba(16,42,57,.97)),rgba(6,20,31,.98) 72%),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center/420px auto no-repeat !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-detail-row {
+  background:
+    linear-gradient(135deg,rgba(13,36,52,.95),rgba(5,18,29,.97)),
+    url("../assets/ui/panels/ui_panel_frame_fill_navy_compass_texture.webp") center/500px auto no-repeat !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-plan-select {
+  background:linear-gradient(180deg,#10283a,#061521) !important;
+}
+
+/* -------------------------------------------------------------------------
+ * PROPORTIONAL BARS — NO STRETCHED EDGE ART
+ * ---------------------------------------------------------------------- */
+
+/* The production edge WebPs were designed for compact 9-slice panels. They
+ * distort badly across the very wide Event Board. Replace those stretched
+ * images with crisp brass rules while retaining the real corner art. */
+.arkflight-event-board:not(.arkflight-opening-mode) :is(
+  .arkflight-round-banner,
+  .arkflight-planning-detail,
+  .arkflight-resolution-focus,
+  .arkflight-resolution-results,
+  .arkflight-round-result-panel,
+  .arkflight-event-complete-panel
+)::after {
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+  background-image:
+    linear-gradient(90deg,transparent,rgba(216,174,95,.62) 8%,rgba(184,138,63,.22) 38%,rgba(184,138,63,.22) 62%,rgba(216,174,95,.62) 92%,transparent),
+    linear-gradient(90deg,transparent,rgba(216,174,95,.50) 8%,rgba(184,138,63,.16) 38%,rgba(184,138,63,.16) 62%,rgba(216,174,95,.50) 92%,transparent) !important;
+  background-repeat:no-repeat !important;
+  background-position:top 7px center,bottom 7px center !important;
+  background-size:calc(100% - 104px) 1px,calc(100% - 104px) 1px !important;
+  opacity:1 !important;
+}
+
+/* Rail bars: short rule, no image scaling. */
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-planning-station-rail::before {
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  pointer-events:none !important;
+  background-image:
+    linear-gradient(90deg,transparent,rgba(207,162,78,.42) 12%,rgba(184,138,63,.15) 50%,rgba(207,162,78,.42) 88%,transparent),
+    linear-gradient(90deg,transparent,rgba(207,162,78,.30) 12%,rgba(184,138,63,.10) 50%,rgba(207,162,78,.30) 88%,transparent) !important;
+  background-repeat:no-repeat !important;
+  background-position:top 5px center,bottom 5px center !important;
+  background-size:calc(100% - 34px) 1px,calc(100% - 34px) 1px !important;
+  opacity:1 !important;
+}
+
+/* Footer keeps real corner pieces at native-ish scale and uses CSS rules for
+ * the long horizontal run. No edge image is stretched to panel width. */
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-planning-footer::after {
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  pointer-events:none !important;
+  background-image:
+    url("../assets/ui/panels/ui_panel_frame_corner_top_left.webp"),
+    url("../assets/ui/panels/ui_panel_frame_corner_top_right.webp"),
+    url("../assets/ui/panels/ui_panel_frame_corner_bottom_left.webp"),
+    url("../assets/ui/panels/ui_panel_frame_corner_bottom_right.webp"),
+    linear-gradient(90deg,transparent,rgba(216,174,95,.48) 7%,rgba(184,138,63,.17) 50%,rgba(216,174,95,.48) 93%,transparent),
+    linear-gradient(90deg,transparent,rgba(216,174,95,.34) 7%,rgba(184,138,63,.12) 50%,rgba(216,174,95,.34) 93%,transparent) !important;
+  background-repeat:no-repeat !important;
+  background-position:top left,top right,bottom left,bottom right,top 6px center,bottom 6px center !important;
+  background-size:34px 34px,34px 34px,34px 34px,34px 34px,calc(100% - 78px) 1px,calc(100% - 78px) 1px !important;
+  opacity:.82 !important;
+}
+
+/* -------------------------------------------------------------------------
+ * OPENING-LANGUAGE GM WINDOW CONTROLS
+ * ---------------------------------------------------------------------- */
+
+.arkflight-gm-header-tools {
+  gap:5px !important;
+}
+
+.arkflight-gm-header-tool,
+.arkflight-event-window-control,
+.arkflight-abandon-event-header {
+  min-height:26px !important;
+  height:26px !important;
+  border:1px solid rgba(186,145,67,.70) !important;
+  border-radius:2px !important;
+  background:
+    linear-gradient(180deg,rgba(15,39,55,.98),rgba(5,17,27,.99)) !important;
+  color:#d7bd7d !important;
+  box-shadow:
+    inset 0 1px rgba(241,208,137,.06),
+    inset 0 0 0 1px rgba(0,0,0,.45),
+    0 2px 5px rgba(0,0,0,.30) !important;
+  font-size:10px !important;
+  font-weight:700 !important;
+  letter-spacing:.02em !important;
+}
+
+.arkflight-event-window-control {
+  width:31px !important;
+  flex-basis:31px !important;
+  padding:0 !important;
+}
+
+.arkflight-gm-header-tool:hover,
+.arkflight-event-window-control:hover {
+  border-color:#d9ad58 !important;
+  color:#ffe3a0 !important;
+  background:linear-gradient(180deg,rgba(24,54,72,.99),rgba(8,24,35,.99)) !important;
+  box-shadow:
+    inset 0 1px rgba(255,222,151,.09),
+    0 0 10px rgba(201,153,70,.12) !important;
+}
+
+/* Abandon stays visually dangerous, but now shares the same opening-screen
+ * control construction instead of the oversized red block treatment. */
+.arkflight-abandon-event-header,
+.arkflight-abandon-event-button.arkflight-abandon-event-header {
+  border-color:rgba(177,83,69,.78) !important;
+  color:#f2c2b9 !important;
+  background:linear-gradient(180deg,rgba(77,34,32,.96),rgba(31,19,22,.99)) !important;
+}
+
+.arkflight-abandon-event-header:hover,
+.arkflight-abandon-event-button.arkflight-abandon-event-header:hover {
+  border-color:rgba(218,108,90,.92) !important;
+  color:#ffe1da !important;
+  background:linear-gradient(180deg,rgba(101,42,36,.98),rgba(43,22,24,.99)) !important;
+}
+
+/* Lock Plan now belongs to the navy/brass command deck rather than a flat
+ * brown slab. */
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-planning-footer .arkflight-primary {
+  background:
+    linear-gradient(180deg,rgba(91,67,28,.96),rgba(39,34,24,.98)) !important;
+  border-left:1px solid rgba(212,166,77,.58) !important;
+  color:#f0d596 !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) .arkflight-planning-footer .arkflight-primary:disabled {
+  background:linear-gradient(180deg,rgba(48,43,31,.94),rgba(27,28,27,.98)) !important;
+  color:#9e947e !important;
+  border-color:rgba(151,119,62,.34) !important;
+}
