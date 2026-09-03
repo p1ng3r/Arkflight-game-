@@ -21,13 +21,16 @@ test("every current Room has at least one explicit gameplay purpose", () => {
   }
 });
 
-test("every current weapon carries complete gameplay metadata", () => {
+test("every current weapon carries complete Arkflight combat metadata", () => {
   for (const weapon of Object.values(WEAPONS)) {
     const result = validateWeaponDefinition(weapon);
     assert.equal(result.ok, true, `${weapon.id} missing: ${result.missing.join(", ")}`);
     assert.ok(weapon.data.crewRequired >= 1, weapon.id);
-    assert.ok(weapon.data.reload.actions >= 1, weapon.id);
-    assert.ok(weapon.data.arcs.length >= 1, weapon.id);
+    assert.ok(weapon.data.allowedMounts.length >= 1, weapon.id);
+    assert.ok(weapon.data.combat.fireAP >= 1, weapon.id);
+    assert.ok(weapon.data.combat.reloadRounds >= 0, weapon.id);
+    assert.ok(weapon.data.combat.arcTemplate, weapon.id);
+    assert.ok(weapon.data.combat.rangeHexes.max >= weapon.data.combat.rangeHexes.min, weapon.id);
     assert.ok(weapon.data.damageProfile.dice, weapon.id);
     assert.ok(weapon.data.systemThreat, weapon.id);
     assert.ok(weapon.data.cargo > 0, weapon.id);
