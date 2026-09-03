@@ -4,7 +4,6 @@ import { planningReady } from "../event/planning-state.js";
 
 const BOARD_ID = "arkflight-event-board";
 const boardObservers = new WeakMap();
-const phaseRepairs = new WeakSet();
 const commandBarInstalls = new WeakSet();
 
 function getRoot(app, element) {
@@ -44,72 +43,33 @@ function disconnectObserver(root) {
   boardObservers.delete(root);
 }
 
-function queueAuthoritativePhaseRender(root, app, controller) {
-  if (!root || !app || !controller || phaseRepairs.has(app)) return;
-  phaseRepairs.add(app);
-
-  root.querySelector(".pa-board")?.remove();
-  root.classList.remove("arkflight-player-action-mode");
+function repairLegacyLockedState(root, controller) {
+  if (controller?.state?.phase !== "locked") return false;
   disconnectObserver(root);
-
   setTimeout(async () => {
     try {
-      await app.render({ force: true });
+      if (controller.state?.phase === "locked") await controller.beginResolution();
     } catch (error) {
-      console.error("Arkflight | Could not restore authoritative Event Board phase UI", error);
+      console.error("Arkflight | Legacy locked phase recovery failed", error);
       ui.notifications?.warn(error.message);
-    } finally {
-      phaseRepairs.delete(app);
     }
   }, 0);
+  return true;
 }
 
-function repairPhaseIfNeeded(root, app, controller) {
-  const state = controller?.state;
-  if (!state) return false;
-
-  if (state.phase === "locked") {
-    if (phaseRepairs.has(app)) return true;
-    phaseRepairs.add(app);
-    root.querySelector(".pa-board")?.remove();
-    root.classList.remove("arkflight-player-action-mode");
-    disconnectObserver(root);
-    setTimeout(async () => {
-      try {
-        if (controller.state?.phase === "locked") await controller.beginResolution();
-        await app.render({ force: true });
-      } catch (error) {
-        console.error("Arkflight | Legacy locked phase recovery failed", error);
-        ui.notifications?.warn(error.message);
-      } finally {
-        phaseRepairs.delete(app);
-      }
-    }, 0);
-    return true;
-  }
-
-  if (state.phase !== "planning") {
-    disconnectObserver(root);
-    if (root.querySelector(".pa-board") || root.classList.contains("arkflight-player-action-mode")) {
-      queueAuthoritativePhaseRender(root, app, controller);
-    }
-    return true;
-  }
-
-  return false;
-}
-
-function installCommandBar(root, app) {
+function installCommandBar(root) {
   const controller = game.arkflight?.controller;
   const state = controller?.state;
   if (!controller || !state) return true;
-  if (repairPhaseIfNeeded(root, app, controller)) return true;
+
+  if (repairLegacyLockedState(root, controller)) return true;
+  if (state.phase !== "planning") {
+    disconnectObserver(root);
+    return true;
+  }
 
   const board = root?.querySelector?.(".pa-board");
   if (!board) return false;
-
-  // Direct station-focus renders rebuild .pa-board with innerHTML. If the current
-  // board already owns a command shell, leave it alone; otherwise restore it.
   if (board.querySelector("[data-pa-command-shell]")) return true;
   if (commandBarInstalls.has(root)) return true;
   commandBarInstalls.add(root);
@@ -163,10 +123,14 @@ function installCommandBar(root, app) {
       button.disabled = true;
       try {
         await controller.lockPlan();
-        const phase = controller.state?.phase;
-        if (phase === "locked") await controller.beginResolution();
-        if (controller.state?.phase !== "resolution") throw new Error(`Arkflight failed to enter Resolution; current phase is ${controller.state?.phase ?? "unknown"}.`);
-        queueAuthoritativePhaseRender(root, app, controller);
+        if (controller.state?.phase === "locked") await controller.beginResolution();
+        if (controller.state?.phase !== "resolution") {
+          throw new Error(`Arkflight failed to enter Resolution; current phase is ${controller.state?.phase ?? "unknown"}.`);
+        }
+        // Do not remove or rerender the Event Board here. PlanningController's
+        // onStateChange is the single owner of the phase render. A second manual
+        // teardown/render races ApplicationV2 and can leave an empty dark window.
+        disconnectObserver(root);
       } catch (error) {
         console.error("Arkflight | Lock Plan → Resolution failed", error);
         ui.notifications?.warn(error.message);
@@ -180,37 +144,41 @@ function installCommandBar(root, app) {
   }
 }
 
-function ensurePersistentObserver(root, app) {
+function ensurePersistentObserver(root) {
   if (boardObservers.has(root)) return;
 
   const observer = new MutationObserver(() => {
     const controller = game.arkflight?.controller;
     if (!controller?.state) return;
     if (controller.state.phase !== "planning") {
-      repairPhaseIfNeeded(root, app, controller);
+      disconnectObserver(root);
       return;
     }
     const board = root.querySelector?.(".pa-board");
     if (!board || board.querySelector("[data-pa-command-shell]")) return;
-    installCommandBar(root, app);
+    installCommandBar(root);
   });
 
   observer.observe(root, { childList: true, subtree: true });
   boardObservers.set(root, observer);
 }
 
-function installWhenBoardExists(root, app) {
+function installWhenBoardExists(root) {
   const controller = game.arkflight?.controller;
-  if (repairPhaseIfNeeded(root, app, controller)) return;
+  if (!controller?.state) return;
+  if (repairLegacyLockedState(root, controller)) return;
+  if (controller.state.phase !== "planning") {
+    disconnectObserver(root);
+    return;
+  }
 
-  ensurePersistentObserver(root, app);
-  installCommandBar(root, app);
+  ensurePersistentObserver(root);
+  installCommandBar(root);
 }
 
 Hooks.on("renderApplicationV2", (app, element) => {
   if (app?.id !== BOARD_ID) return;
   const root = getRoot(app, element);
   if (!root) return;
-
-  installWhenBoardExists(root, app);
+  installWhenBoardExists(root);
 });
