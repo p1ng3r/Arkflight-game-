@@ -57,8 +57,23 @@ const ARKENGINE_FILES = Object.freeze({
   mythic: new Set(["singularity-worldheart-dynamo.webp"])
 });
 
-const SHIP_ALIASES = Object.freeze({
-  "merchant-prime-lattice": "merchant_prime_cargo_lattice.webp"
+// These preserve the catalog/gameplay IDs and rarities while pointing older
+// base-catalog mods at the artwork names already produced for them.
+const SHIP_ART_OVERRIDES = Object.freeze({
+  "reinforced-structural-ribbing": Object.freeze({ folder: "standard", file: "reinforced_hull_plating.webp" }),
+  "expanded-cargo-lattice": Object.freeze({ folder: "standard", file: "cargo_netting.webp" }),
+  "stabilized-helm-relays": Object.freeze({ folder: "standard", file: "gyroscopic_stabilizer.webp" }),
+  "emergency-veil-relay": Object.freeze({ folder: "standard", file: "aether_crystal_capacitor.webp" }),
+  "void-anchor-array": Object.freeze({ folder: "standard", file: "enchanted_compass.webp" }),
+  "deep-void-reinforcement": Object.freeze({ folder: "standard", file: "runed_bulkhead_seal.webp" }),
+  "arc-conduit-stabilizers": Object.freeze({ folder: "standard", file: "aether_vent_conduit.webp" }),
+  "lookout-spire": Object.freeze({ folder: "standard", file: "crystal_lens_optic.webp" }),
+  "reinforced-void-sails": Object.freeze({ folder: "standard", file: "void_sail_weave.webp" }),
+  "pressure-redistribution-network": Object.freeze({ folder: "standard", file: "counterweight_rigging.webp" }),
+  "propulsion-stabilization-fins": Object.freeze({ folder: "standard", file: "propulsion_stabilization_fins.webp" }),
+  "expanded-lifeveil-array": Object.freeze({ folder: "standard", file: "expanded_lifeveil_array.webp" }),
+  "auxiliary-veil-capacitors": Object.freeze({ folder: "standard", file: "auxiliary_veil_capacitors.webp" }),
+  "merchant-prime-lattice": Object.freeze({ folder: "rare", file: "merchant_prime_cargo_lattice.webp" })
 });
 
 function normalizeRarity(value) {
@@ -83,8 +98,7 @@ function shipCandidates(mod, rarity) {
   const id = String(mod?.id ?? mod?.data?.id ?? "");
   const name = String(mod?.name ?? mod?.data?.name ?? "");
   const stems = unique([fileStem(id), fileStem(name)]);
-  const alias = SHIP_ALIASES[id];
-  const candidates = alias ? [alias] : [];
+  const candidates = [];
   for (const stem of stems) {
     candidates.push(`${stem}.webp`);
     candidates.push(`${rarity}_${stem}.webp`);
@@ -114,8 +128,23 @@ function resolveFrom(files, candidates, base) {
 
 export function resolveShipModArt(mod) {
   const rarity = normalizeRarity(mod?.data?.rarity ?? mod?.rarity);
-  const result = resolveFrom(SHIP_FILES[rarity], shipCandidates(mod, rarity), `${MODULE_ROOT}/ship-mods/${rarity}`);
-  return Object.freeze({ ...result, rarity });
+  const id = String(mod?.id ?? mod?.data?.id ?? "");
+  const override = SHIP_ART_OVERRIDES[id];
+  const candidates = shipCandidates(mod, rarity);
+
+  if (override && SHIP_FILES[override.folder]?.has(override.file)) {
+    return Object.freeze({
+      img: `${MODULE_ROOT}/ship-mods/${override.folder}/${override.file}`,
+      matched: override.file,
+      candidates: Object.freeze(unique([override.file, ...candidates])),
+      rarity,
+      assetFolder: override.folder,
+      overridden: true
+    });
+  }
+
+  const result = resolveFrom(SHIP_FILES[rarity], candidates, `${MODULE_ROOT}/ship-mods/${rarity}`);
+  return Object.freeze({ ...result, rarity, assetFolder: rarity, overridden: false });
 }
 
 export function resolveArkengineModArt(mod) {
