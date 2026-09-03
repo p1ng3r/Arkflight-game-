@@ -7,6 +7,26 @@ import { FALLBACK_ACTIONS } from "../../src/content/fallback-actions.js";
 import { RISK_BENEFITS, RISK_BENEFIT_BY_ID } from "../../src/content/risk-benefits.js";
 import { GLASSBACK_CINDERWAKE } from "../../src/content/events/glassback-cinderwake.js";
 
+const PF2E_SKILL_LABELS = Object.freeze({
+  acrobatics: "Acrobatics",
+  arcana: "Arcana",
+  athletics: "Athletics",
+  crafting: "Crafting",
+  deception: "Deception",
+  diplomacy: "Diplomacy",
+  intimidation: "Intimidation",
+  medicine: "Medicine",
+  nature: "Nature",
+  occultism: "Occultism",
+  performance: "Performance",
+  religion: "Religion",
+  society: "Society",
+  stealth: "Stealth",
+  survival: "Survival",
+  thievery: "Thievery",
+  perception: "Perception"
+});
+
 test("Risk library contains at least 50 reusable benefits with extraordinary critical payoffs", () => {
   assert.ok(RISK_BENEFITS.length >= 50);
   for (const benefit of RISK_BENEFITS) {
@@ -19,6 +39,14 @@ test("Risk library contains at least 50 reusable benefits with extraordinary cri
 
 test("all five stations have fallback actions", () => {
   assert.deepEqual(Object.keys(FALLBACK_ACTIONS).sort(), ["battlewatch", "captain", "engineer", "navigator", "veilwarden"]);
+});
+
+test("fallback action menus display real PF2e skill names", () => {
+  for (const action of Object.values(FALLBACK_ACTIONS)) {
+    for (const skill of action.skills) {
+      assert.equal(skill.label, PF2E_SKILL_LABELS[skill.skill], `${action.id} must display the native PF2e name for ${skill.skill}`);
+    }
+  }
 });
 
 test("PF2e degree scoring uses the locked universal bands", () => {
