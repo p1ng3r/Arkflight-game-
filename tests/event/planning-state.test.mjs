@@ -15,6 +15,7 @@ import {
   restartEvent
 } from "../../src/event/planning-state.js";
 import { STATIONS } from "../../src/event/event-schema.js";
+import { activeStationId } from "../../src/event/resolution-state.js";
 
 function readyEventSetup(state) {
   let next = state;
@@ -49,8 +50,12 @@ test("actor, action, and skill are required while Risk Bid remains optional", ()
   let state = planningState();
   for (const station of STATIONS) state = completeStation(state, station);
   assert.equal(planningReady(state), true);
-  const locked = lockPlanning(state);
-  assert.equal(locked.phase, "locked");
+  const resolution = lockPlanning(state, 5000);
+  assert.equal(resolution.phase, "resolution");
+  assert.equal(resolution.lockedAt, 5000);
+  assert.equal(resolution.activeOrderIndex, 0);
+  assert.equal(activeStationId(resolution), resolution.order[0]);
+  assert.deepEqual(resolution.results, {});
 });
 
 test("an unassigned station prevents Round 1 planning from starting", () => {
@@ -79,10 +84,11 @@ test("crew can reorder stations collaboratively during planning", () => {
   assert.deepEqual(state.order.slice(0, 3), ["captain", "navigator", "engineer"]);
 });
 
-test("locked plans reject further planning changes", () => {
+test("locked plans enter resolution and reject further planning changes", () => {
   let state = planningState();
   for (const station of STATIONS) state = completeStation(state, station);
   state = lockPlanning(state);
+  assert.equal(state.phase, "resolution");
   assert.throws(() => selectAction(state, "captain", "new"), /only change during planning/);
   assert.throws(() => assignActor(state, "captain", "other"), /locked for the Event/);
 });
