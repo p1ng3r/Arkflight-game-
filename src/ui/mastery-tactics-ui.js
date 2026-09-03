@@ -38,6 +38,7 @@ function ensureStyles() {
     button.arkflight-mastery-chip:hover, button.arkflight-tactic-chip:hover { border-color:#d8b35d; box-shadow:0 0 0 1px rgba(216,179,93,.15) inset; }
     .arkflight-mastery-chip strong, .arkflight-tactic-chip strong { display:block; font-size:11px; }
     .arkflight-mastery-chip span, .arkflight-tactic-chip span { display:block; opacity:.72; margin-top:2px; }
+    .arkflight-tactic-chip em { display:inline-block; margin-top:3px; font-size:9px; text-transform:uppercase; letter-spacing:.08em; opacity:.65; font-style:normal; }
     .arkflight-mastery-chip.ready strong::before { content:'◆★ '; color:#d8b35d; }
     .arkflight-mastery-chip.expended { opacity:.46; filter:saturate(.45); }
     .arkflight-mastery-chip.expended strong::before { content:'◇ '; }
@@ -190,20 +191,20 @@ async function masteryOptionsForUse(controller, stationId, mastery) {
 
 async function tacticOptionsForUse(controller, tactic) {
   const state = controller.state;
-  const targetIds = ["clear-opening", "ride-the-momentum", "one-more-push", "steady-hands"];
+  const targetIds = ["clear-opening", "ride-the-momentum", "one-more-push", "steady-hands", "take-the-better-line", "measured-gamble"];
   if (targetIds.includes(tactic.id)) {
-    const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Choose station${stationSelectHtml(state)}</label>`, okLabel: "Spend Tactic" });
+    const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>${tactic.theater.toUpperCase()}</strong><br><strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Choose station${stationSelectHtml(state)}</label>`, okLabel: "Spend Tactic" });
     return fd ? { targetStationId: fd.targetStationId } : null;
   }
-  if (["not-yet"].includes(tactic.id)) {
+  if (tactic.id === "not-yet") {
     if (!(state.encounter?.hazards ?? []).length) throw new Error("There is no active Hazard to target.");
     const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Choose Hazard${hazardSelectHtml(state)}</label>`, okLabel: "Spend Tactic" });
     return fd ? { hazardId: fd.hazardId } : null;
   }
   if (["brace-for-it", "protect-the-system"].includes(tactic.id)) {
-    const systems = Object.keys(state.encounter?.pressure ?? {});
-    const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Choose system<select name="system">${systems.map((id) => `<option value="${id}">${id}</option>`).join("")}</select></label>`, okLabel: "Spend Tactic" });
-    return fd ? { system: fd.system } : null;
+    const areas = ["hull", "arkengine", "rigging", "lifeveil", "morale"];
+    const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Choose Area<select name="area">${areas.map((id) => `<option value="${id}">${id}</option>`).join("")}</select></label>`, okLabel: "Spend Tactic" });
+    return fd ? { area: fd.area } : null;
   }
   if (tactic.id === "change-of-course") {
     const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Move station${stationSelectHtml(state)}</label><label>New position<select name="targetIndex">${(state.order ?? []).map((_, index) => `<option value="${index}">${index + 1}</option>`).join("")}</select></label>`, okLabel: "Spend Tactic" });
@@ -219,8 +220,15 @@ async function tacticOptionsForUse(controller, tactic) {
     const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `${tactic.effect} Enter the five station ids in desired order, separated by commas.`, content: `<input name="order" value="${(state.order ?? []).join(",")}">`, okLabel: "Spend Tactic" });
     return fd ? { order: String(fd.order ?? "").split(",").map((id) => id.trim()).filter(Boolean) } : null;
   }
-  const ok = await confirmDialog(`Crew Tactic — ${tactic.name}`, `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}<br><br>This Tactic is discarded after use.`, "Spend Tactic");
+  const ok = await confirmDialog(`Crew Tactic — ${tactic.name}`, `<strong>${tactic.theater.toUpperCase()}</strong><br><strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}<br><br>This Tactic is discarded after use.`, "Spend Tactic");
   return ok ? {} : null;
+}
+
+function activeTacticTheater(state) {
+  if (state.phase === "planning" || state.phase === "round-opening") return "planning";
+  if (state.phase === "resolution") return "resolution";
+  if (state.phase === "round-result") return state.eventResultPreview ? "event-result" : "resolution";
+  return null;
 }
 
 function decorateUtilityStrip(root, controller) {
@@ -241,12 +249,13 @@ function decorateUtilityStrip(root, controller) {
     return `<${tag} ${expended ? "" : 'type="button"'} class="arkflight-mastery-chip ${expended ? "expended" : "ready"}" ${expended ? "" : `data-use-mastery="${stationId}"`} title="${mastery.description}"><strong>${stationPresentation(stationId)?.displayName ?? stationId}: ${mastery.name}</strong><span>${expended ? "EXPENDED" : "ONCE PER EVENT · READY"}</span></${tag}>`;
   }).join("");
 
-  const tactics = [...(state.crewEdgeHand ?? [])].map((id) => getCrewEdgeCard(id)).filter(Boolean);
-  const tacticChips = tactics.length ? tactics.map((tactic) => `<button type="button" class="arkflight-tactic-chip" data-use-tactic="${tactic.id}" title="${tactic.trigger} ${tactic.effect}"><strong>◆ ${tactic.name}</strong><span>${tactic.trigger}</span></button>`).join("") : '<div class="arkflight-tactic-empty">No Ready Tactics. Earn them through Arkflight play.</div>';
+  const theater = activeTacticTheater(state);
+  const tactics = [...(state.crewEdgeHand ?? [])].map((id) => getCrewEdgeCard(id)).filter((tactic) => tactic && tactic.theater === theater);
+  const tacticChips = tactics.length ? tactics.map((tactic) => `<button type="button" class="arkflight-tactic-chip" data-use-tactic="${tactic.id}" title="${tactic.trigger} ${tactic.effect}"><strong>◆ ${tactic.name}</strong><span>${tactic.trigger}</span><em>${tactic.theater}</em></button>`).join("") : `<div class="arkflight-tactic-empty">No ${theater ? theater.replace("-", " ") : "playable"} Crew Tactics are Ready.</div>`;
 
   strip.innerHTML = `
     <div class="arkflight-mastery-panel"><div class="arkflight-utility-head"><h3>Station Mastery</h3><small>This is what my officer can do.</small></div><div class="arkflight-mastery-chips">${masteryChips}</div></div>
-    <div class="arkflight-tactics-panel"><div class="arkflight-utility-head"><h3>Crew Tactics</h3><small>${tactics.length} / 3 · opportunities the crew earned</small></div><div class="arkflight-tactic-chips">${tacticChips}</div></div>
+    <div class="arkflight-tactics-panel"><div class="arkflight-utility-head"><h3>Crew Tactics</h3><small>${theater ? theater.toUpperCase() : "NO ACTIVE THEATER"}</small></div><div class="arkflight-tactic-chips">${tacticChips}</div></div>
   `;
   header.insertAdjacentElement("afterend", strip);
 
