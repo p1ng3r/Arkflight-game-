@@ -2,6 +2,7 @@ import { SHIP_MODS as BASE_SHIP_MODS } from "./ship-mods.js";
 import { EPIC_SHIP_MODS } from "./ship-mods-epic.js";
 import { LEGENDARY_SHIP_MODS } from "./ship-mods-legendary.js";
 import { MYTHIC_SHIP_MODS } from "./ship-mods-mythic.js";
+import { withModArt } from "./mod-art.js";
 
 const LEGACY_COMPAT_SHIP_MOD_IDS = Object.freeze([
   "fleet-signal-array",
@@ -15,16 +16,18 @@ const LEGACY_COMPAT_SHIP_MOD_IDS = Object.freeze([
 const LEGACY_COMPAT_SET = new Set(LEGACY_COMPAT_SHIP_MOD_IDS);
 
 function catalogEntry(mod) {
-  if (!LEGACY_COMPAT_SET.has(mod.id)) return mod;
-  return Object.freeze({
-    ...mod,
-    data: Object.freeze({
-      ...(mod.data ?? {}),
-      legacyRarity: mod.data?.rarity ?? "epic",
-      rarity: "legacy",
-      catalogStatus: "legacy-compat"
-    })
-  });
+  const normalized = LEGACY_COMPAT_SET.has(mod.id)
+    ? Object.freeze({
+        ...mod,
+        data: Object.freeze({
+          ...(mod.data ?? {}),
+          legacyRarity: mod.data?.rarity ?? "epic",
+          rarity: "legacy",
+          catalogStatus: "legacy-compat"
+        })
+      })
+    : mod;
+  return withModArt(normalized, "shipMod");
 }
 
 const merged = {
