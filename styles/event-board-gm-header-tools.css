@@ -7,7 +7,8 @@
   flex: 0 0 auto;
 }
 
-.arkflight-gm-header-tool {
+.arkflight-gm-header-tool,
+.arkflight-event-window-control {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -26,19 +27,28 @@
   white-space: nowrap;
 }
 
+.arkflight-event-window-control {
+  width: 30px;
+  padding: 0;
+  margin-left: 2px;
+  flex: 0 0 30px;
+}
+
 .arkflight-gm-header-tool:hover,
-.arkflight-gm-header-tool.active {
+.arkflight-gm-header-tool.active,
+.arkflight-event-window-control:hover {
   border-color: #d3a857 !important;
   color: #f2d48d !important;
   background: rgba(27, 25, 19, .95) !important;
 }
 
-.arkflight-gm-header-tool i {
+.arkflight-gm-header-tool i,
+.arkflight-event-window-control i {
   font-size: 10px;
 }
 
 /* The original tuner trigger stays as an internal hook only. The visible GM
- * entry point now lives in Foundry's application header beside the close X. */
+ * entry point now lives in Foundry's application header beside window chrome. */
 .arkflight-opening-mode .arkflight-opening-tuner-toggle {
   display: none !important;
 }
