@@ -78,6 +78,7 @@
     "src/ui/opening-layout-tuner-ui.js",
     "src/ui/event-board-gm-header-tools.js",
     "src/ui/event-board-pending-mastery-ui.js",
+    "src/ui/event-board-portrait-sheet-ui.js",
     "src/ui/event-board-planning-polish-ui.js",
     "src/ui/event-board-station-detail-ui.js",
     "src/ui/opening-player-claims-ui.js",
