@@ -98,11 +98,7 @@ async function openActorDocument(actor) {
     } else {
       throw new Error("Assigned PF2e Actor has no renderable sheet API.");
     }
-
-    const sheet = actor.sheet;
-    if (sheet?.minimized && typeof sheet.maximize === "function") await sheet.maximize();
-    if (typeof sheet?.bringToFront === "function") sheet.bringToFront();
-    else if (typeof sheet?.bringToTop === "function") sheet.bringToTop();
+    console.log("Arkflight | Assigned officer sheet requested", { actorId: actor.id, actorName: actor.name });
   } catch (error) {
     console.error("Arkflight | Could not open assigned officer sheet", error);
     ui.notifications?.warn?.(`Could not open ${actor.name}'s character sheet.`);
