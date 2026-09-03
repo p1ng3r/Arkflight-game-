@@ -1,5 +1,6 @@
 import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
+import { getMasteryTechnique } from "../content/base-mastery.js";
 import { STATIONS } from "../event/event-schema.js";
 import { planningReady, planningSecondsRemaining } from "../event/planning-state.js";
 import { activeStationId } from "../event/resolution-state.js";
@@ -45,7 +46,12 @@ export class ArkflightEventBoard extends HandlebarsApplication {
   static DEFAULT_OPTIONS = { id: "arkflight-event-board", classes: ["arkflight", "arkflight-event-board"], position: { width: 1180, height: 820 }, window: { title: "Arkflight Event", icon: "fa-solid fa-compass" } };
   static PARTS = { board: { template: "modules/arkflight-game/templates/event-board.hbs" } };
 
-  constructor(controller, options = {}) { super(options); this.controller = controller; this._timerInterval = null; }
+  constructor(controller, options = {}) {
+    super(options);
+    this.controller = controller;
+    this._timerInterval = null;
+    this._planningFocus = "captain";
+  }
 
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
@@ -203,122 +209,205 @@ export class ArkflightEventBoard extends HandlebarsApplication {
 
   async _onRender(context, options) {
     await super._onRender(context, options);
-    this.#compactPlanningCards();
+    this.#restorePlanningBoardLayout();
     this.#bindActions();
     this.#bindArtPopouts();
     this.#startTimerTicker();
   }
   async _preClose(options) { if (this._timerInterval) clearInterval(this._timerInterval); this._timerInterval = null; return super._preClose(options); }
 
-  #compactPlanningCards() {
-    if (!this.element || !["planning", "locked"].includes(this.controller.state?.phase)) return;
+  #restorePlanningBoardLayout() {
+    if (!this.element || this.controller.state?.phase !== "planning") return;
+    const grid = this.element.querySelector(".arkflight-station-grid");
+    if (!grid || grid.dataset.restored === "true") return;
 
-    for (const card of this.element.querySelectorAll(".arkflight-station-card")) {
-      const station = card.querySelector("[data-station]")?.dataset.station;
-      if (!station) continue;
-      card.classList.add("arkflight-compact-card");
+    const cards = [...grid.querySelectorAll(".arkflight-station-card")];
+    const byStation = new Map();
+    for (const card of cards) {
+      const stationId = card.querySelector("[data-station]")?.dataset.station;
+      if (stationId) byStation.set(stationId, card);
+    }
+    if (!byStation.has(this._planningFocus)) this._planningFocus = this.controller.state.order?.[0] ?? "captain";
+    const focusedCard = byStation.get(this._planningFocus) ?? cards[0];
+    if (!focusedCard) return;
 
-      const actionList = card.querySelector(".arkflight-action-list");
-      const selectedActionButton = actionList?.querySelector(".arkflight-action-choice.selected");
-      const hasAction = Boolean(selectedActionButton);
-      if (actionList) {
-        const select = document.createElement("select");
-        select.className = "arkflight-plan-select arkflight-action-select";
-        select.dataset.arkSelect = "action";
-        select.dataset.station = station;
-        option(select, "", "Choose action…", !hasAction);
-        for (const button of actionList.querySelectorAll(".arkflight-action-choice")) {
-          const name = button.querySelector("span")?.textContent?.trim() || "Action";
-          const kind = button.querySelector("small")?.textContent?.trim() || "";
-          const heroic = Boolean(button.querySelector(".arkflight-heroic-icon"));
-          option(select, button.dataset.actionId, `${heroic ? "★ " : ""}${name}${kind ? ` · ${kind}` : ""}`, button.classList.contains("selected"));
-        }
-        const description = card.querySelector(".arkflight-action-description")?.textContent?.trim();
-        if (description) select.title = description;
-        actionList.replaceChildren(select);
+    const workspace = document.createElement("section");
+    workspace.className = "arkflight-planning-workspace";
+    const rail = document.createElement("nav");
+    rail.className = "arkflight-planning-station-rail";
+    rail.setAttribute("aria-label", "Crew stations");
+
+    const state = this.controller.state;
+    const event = this.controller.getEvent();
+    const round = this.controller.getRound();
+
+    for (const stationId of state.order ?? STATIONS) {
+      const presentation = stationPresentation(stationId) ?? { displayName: titleCase(stationId), iconClass: "fa-solid fa-circle" };
+      const assignment = state.assignments?.[stationId]?.actorId ?? null;
+      const actor = assignment ? game.actors.get(assignment) : null;
+      const selection = state.selections?.[stationId] ?? {};
+      const fallback = FALLBACK_ACTIONS[stationId];
+      const actions = [fallback, ...(round?.stationActions?.[stationId] ?? [])].filter(Boolean);
+      const action = actions.find((entry) => entry.id === selection.actionId) ?? null;
+      const skill = action?.skills?.find((entry) => entry.id === selection.skillId) ?? null;
+      const mastery = getMasteryTechnique(stationId, state.masterySelections?.[stationId]);
+      const complete = Boolean(actor && action && skill);
+      const mod = statisticMod(actor, skill?.skill);
+
+      const row = document.createElement("div");
+      row.className = `arkflight-planning-station-row ${stationId === this._planningFocus ? "is-focused" : ""} ${complete ? "is-ready" : "is-setup"}`;
+
+      const focus = document.createElement("button");
+      focus.type = "button";
+      focus.className = "arkflight-planning-station-focus";
+      focus.dataset.arkflightFocusStation = stationId;
+      focus.innerHTML = `<span class="arkflight-planning-order">${state.order.indexOf(stationId) + 1}</span><span class="arkflight-planning-avatar"></span><span class="arkflight-planning-summary"><strong>${presentation.displayName}</strong><small class="arkflight-planning-officer"></small><span class="arkflight-planning-action"></span><span class="arkflight-planning-skill"></span><span class="arkflight-planning-mastery"></span></span><span class="arkflight-planning-ready-state"><i class="fa-solid ${complete ? "fa-circle-check" : "fa-circle"}"></i>${complete ? "READY" : "SETUP"}</span>`;
+      const avatar = focus.querySelector(".arkflight-planning-avatar");
+      if (actor?.img) {
+        const img = document.createElement("img"); img.src = actor.img; img.alt = ""; avatar.append(img);
+      } else {
+        const icon = document.createElement("i"); icon.className = presentation.iconClass; avatar.append(icon);
       }
-      card.querySelector(".arkflight-action-description")?.remove();
+      focus.querySelector(".arkflight-planning-officer").textContent = actor?.name ?? "Unassigned";
+      focus.querySelector(".arkflight-planning-action").textContent = `Action: ${action?.name ?? "Choose Action"}`;
+      focus.querySelector(".arkflight-planning-skill").textContent = skill ? `PF2e: ${skill.label} ${mod === null ? "" : signed(mod)}` : "PF2e: Choose Skill";
+      focus.querySelector(".arkflight-planning-mastery").textContent = mastery ? `Mastery: ${mastery.name} · ${state.masteryUses?.[stationId] ? "EXPENDED" : "READY"}` : "Mastery: —";
+      row.append(focus);
 
-      const skillList = card.querySelector(".arkflight-skill-list");
-      const selectedSkillButton = skillList?.querySelector(".arkflight-skill-choice.selected");
-      const hasSkill = Boolean(selectedSkillButton);
-      if (skillList) {
-        const select = document.createElement("select");
-        select.className = "arkflight-plan-select arkflight-skill-select";
-        select.dataset.arkSelect = "skill";
-        select.dataset.station = station;
-        option(select, "", "Choose PF2e skill…", !hasSkill);
-        for (const button of skillList.querySelectorAll(".arkflight-skill-choice")) {
-          const name = button.querySelector(".arkflight-skill-name")?.textContent?.trim() || "Skill";
-          const dc = button.querySelector(".arkflight-skill-dc")?.textContent?.trim() || "";
-          const mod = button.querySelector(".arkflight-skill-mod")?.textContent?.trim() || "";
-          const heroic = Boolean(button.querySelector(".arkflight-heroic-icon"));
-          option(select, button.dataset.skillId, `${heroic ? "★ " : ""}${name} · ${dc}${mod ? ` · ${mod}` : ""}`, button.classList.contains("selected"));
-        }
-        skillList.replaceChildren(select);
+      const orderControls = document.createElement("div");
+      orderControls.className = "arkflight-planning-order-controls";
+      const earlier = document.createElement("button");
+      earlier.type = "button"; earlier.dataset.arkAction = "move-earlier"; earlier.dataset.station = stationId; earlier.title = "Resolve earlier"; earlier.disabled = state.order.indexOf(stationId) === 0; earlier.innerHTML = '<i class="fa-solid fa-arrow-up"></i>';
+      const later = document.createElement("button");
+      later.type = "button"; later.dataset.arkAction = "move-later"; later.dataset.station = stationId; later.title = "Resolve later"; later.disabled = state.order.indexOf(stationId) === state.order.length - 1; later.innerHTML = '<i class="fa-solid fa-arrow-down"></i>';
+      orderControls.append(earlier, later);
+      row.append(orderControls);
+      rail.append(row);
+    }
+
+    const detail = document.createElement("section");
+    detail.className = "arkflight-planning-detail";
+    focusedCard.classList.add("arkflight-planning-detail-card");
+    const assignmentSection = focusedCard.querySelector(".arkflight-assignment-section");
+    if (assignmentSection) {
+      const actorId = state.assignments?.[this._planningFocus]?.actorId ?? null;
+      const actor = actorId ? game.actors.get(actorId) : null;
+      assignmentSection.innerHTML = `<div class="arkflight-section-title">Assigned Officer</div><strong class="arkflight-assigned-name"></strong>`;
+      assignmentSection.querySelector(".arkflight-assigned-name").textContent = actor?.name ?? "Unassigned";
+    }
+    focusedCard.querySelector(".arkflight-order-controls")?.remove();
+
+    const actionList = focusedCard.querySelector(".arkflight-action-list");
+    const selectedActionButton = actionList?.querySelector(".arkflight-action-choice.selected");
+    if (actionList) {
+      const select = document.createElement("select");
+      select.className = "arkflight-plan-select arkflight-action-select";
+      select.dataset.arkSelect = "action";
+      select.dataset.station = this._planningFocus;
+      option(select, "", "Choose action…", !selectedActionButton);
+      for (const button of actionList.querySelectorAll(".arkflight-action-choice")) {
+        const name = button.querySelector("span")?.textContent?.trim() || "Action";
+        const kind = button.querySelector("small")?.textContent?.trim() || "";
+        const heroic = Boolean(button.querySelector(".arkflight-heroic-icon"));
+        option(select, button.dataset.actionId, `${heroic ? "★ " : ""}${name}${kind ? ` · ${kind}` : ""}`, button.classList.contains("selected"));
       }
+      actionList.replaceChildren(select);
+    }
+    const actionDescription = focusedCard.querySelector(".arkflight-action-description");
+    if (actionDescription) {
+      actionDescription.classList.add("arkflight-action-vignette-copy");
+      const label = document.createElement("div"); label.className = "arkflight-action-vignette-label"; label.textContent = "ACTION VIGNETTE"; actionDescription.before(label);
+    }
 
-      const riskSection = card.querySelector(".arkflight-risk-section");
-      if (riskSection) {
-        const buttons = [...riskSection.querySelectorAll(".arkflight-risk-clear, .arkflight-risk-choice")];
-        const select = document.createElement("select");
-        select.className = "arkflight-plan-select arkflight-risk-select";
-        select.dataset.arkSelect = "risk";
-        select.dataset.station = station;
-        let selectedDetail = null;
-        for (const button of buttons) {
-          if (button.classList.contains("arkflight-risk-clear")) {
-            option(select, "", `Normal · ${button.textContent.trim().replace(/^Normal\s*[—-]\s*/, "DC ")}`, button.classList.contains("selected"));
-            continue;
+    const skillList = focusedCard.querySelector(".arkflight-skill-list");
+    const selectedSkillButton = skillList?.querySelector(".arkflight-skill-choice.selected");
+    if (skillList) {
+      const select = document.createElement("select");
+      select.className = "arkflight-plan-select arkflight-skill-select";
+      select.dataset.arkSelect = "skill";
+      select.dataset.station = this._planningFocus;
+      option(select, "", "Choose PF2e skill…", !selectedSkillButton);
+      for (const button of skillList.querySelectorAll(".arkflight-skill-choice")) {
+        const name = button.querySelector(".arkflight-skill-name")?.textContent?.trim() || "Skill";
+        const dc = button.querySelector(".arkflight-skill-dc")?.textContent?.trim() || "";
+        const mod = button.querySelector(".arkflight-skill-mod")?.textContent?.trim() || "";
+        const heroic = Boolean(button.querySelector(".arkflight-heroic-icon"));
+        option(select, button.dataset.skillId, `${heroic ? "★ " : ""}${name} · ${dc}${mod ? ` · ${mod}` : ""}`, button.classList.contains("selected"));
+      }
+      skillList.replaceChildren(select);
+    }
+
+    const riskSection = focusedCard.querySelector(".arkflight-risk-section");
+    if (riskSection) {
+      const buttons = [...riskSection.querySelectorAll(".arkflight-risk-clear, .arkflight-risk-choice")];
+      const select = document.createElement("select");
+      select.className = "arkflight-plan-select arkflight-risk-select";
+      select.dataset.arkSelect = "risk";
+      select.dataset.station = this._planningFocus;
+      let selectedDetail = null;
+      for (const button of buttons) {
+        if (button.classList.contains("arkflight-risk-clear")) {
+          option(select, "", button.textContent.trim(), button.classList.contains("selected"));
+          continue;
+        }
+        const tier = button.dataset.riskTier;
+        const headline = button.querySelector("div")?.textContent?.replace(/\s+/g, " ")?.trim() || `Heroic +${tier}`;
+        option(select, tier, `★ ${headline}`, button.classList.contains("selected"));
+        if (button.classList.contains("selected")) {
+          const detailBox = document.createElement("div");
+          detailBox.className = "arkflight-selected-risk-detail";
+          for (const node of button.querySelectorAll("small")) {
+            const line = document.createElement("span"); line.textContent = node.textContent.trim(); detailBox.append(line);
           }
-          const tier = button.dataset.riskTier;
-          const headline = button.querySelector("div")?.textContent?.replace(/\s+/g, " ")?.trim() || `Heroic +${tier}`;
-          option(select, tier, `★ ${headline}`, button.classList.contains("selected"));
-          if (button.classList.contains("selected")) {
-            const detail = document.createElement("div");
-            detail.className = "arkflight-selected-risk-detail";
-            const lines = [...button.querySelectorAll("small")].map((node) => node.textContent.trim()).filter(Boolean);
-            detail.innerHTML = lines.map((line) => `<span>${line}</span>`).join("");
-            selectedDetail = detail;
-          }
+          selectedDetail = detailBox;
         }
-        riskSection.querySelectorAll(".arkflight-risk-clear, .arkflight-risk-choice").forEach((node) => node.remove());
-        riskSection.append(select);
-        if (selectedDetail) riskSection.append(selectedDetail);
       }
+      riskSection.querySelectorAll(".arkflight-risk-clear, .arkflight-risk-choice").forEach((node) => node.remove());
+      riskSection.append(select);
+      if (selectedDetail) riskSection.append(selectedDetail);
+    }
 
-      const loadout = card.querySelector(".arkflight-loadout-section");
-      if (loadout) {
-        const buttons = [...loadout.querySelectorAll(".arkflight-loadout-choice")];
-        const select = document.createElement("select");
-        select.className = "arkflight-plan-select arkflight-signature-select";
-        select.dataset.arkSelect = "ability";
-        select.dataset.station = station;
-        option(select, "", "No Signature selected", !buttons.some((button) => button.classList.contains("selected")));
-        for (const button of buttons) {
-          const isSignature = button.dataset.signatureId;
-          const id = isSignature || button.dataset.abilityId;
-          const prefix = isSignature ? "signature:" : "component:";
-          const name = button.querySelector("strong")?.textContent?.trim() || button.textContent.trim();
-          const description = button.querySelector("small")?.textContent?.trim();
-          option(select, `${prefix}${id}`, `★ ${name}`, button.classList.contains("selected"));
-          if (description && button.classList.contains("selected")) select.title = description;
-        }
-        loadout.querySelectorAll(".arkflight-loadout-choice").forEach((node) => node.remove());
-        loadout.append(select);
+    const loadout = focusedCard.querySelector(".arkflight-loadout-section");
+    if (loadout) {
+      const buttons = [...loadout.querySelectorAll(".arkflight-loadout-choice")];
+      const select = document.createElement("select");
+      select.className = "arkflight-plan-select arkflight-signature-select";
+      select.dataset.arkSelect = "ability";
+      select.dataset.station = this._planningFocus;
+      option(select, "", "No Signature selected", !buttons.some((button) => button.classList.contains("selected")));
+      for (const button of buttons) {
+        const isSignature = button.dataset.signatureId;
+        const id = isSignature || button.dataset.abilityId;
+        const prefix = isSignature ? "signature:" : "component:";
+        const name = button.querySelector("strong")?.textContent?.trim() || button.textContent.trim();
+        option(select, `${prefix}${id}`, `★ ${name}`, button.classList.contains("selected"));
       }
+      loadout.querySelectorAll(".arkflight-loadout-choice").forEach((node) => node.remove());
+      loadout.append(select);
+    }
 
-      const footerStatus = card.querySelector(".arkflight-station-footer>span:first-child");
-      if (footerStatus) {
-        const assigned = Boolean(card.querySelector(".arkflight-actor-select")?.value || card.querySelector(".arkflight-assigned-name")?.textContent?.trim()?.toLowerCase() !== "unassigned");
-        footerStatus.innerHTML = card.classList.contains("complete")
-          ? '<i class="fa-solid fa-check"></i> READY'
-          : !assigned
-            ? '<i class="fa-regular fa-circle"></i> NEEDS OFFICER'
-            : !hasAction
-              ? '<i class="fa-regular fa-circle"></i> NEEDS ACTION'
-              : '<i class="fa-regular fa-circle"></i> NEEDS SKILL';
-      }
+    const mastery = getMasteryTechnique(this._planningFocus, state.masterySelections?.[this._planningFocus]);
+    if (mastery) {
+      const masteryPanel = document.createElement("section");
+      masteryPanel.className = `arkflight-planning-mastery-card ${state.masteryUses?.[this._planningFocus] ? "is-expended" : "is-ready"}`;
+      masteryPanel.innerHTML = '<div class="arkflight-section-title">Mastery — Once Per Event</div><div class="arkflight-planning-mastery-head"><i class="fa-solid fa-star"></i><strong></strong><span></span></div><p></p><small></small>';
+      masteryPanel.querySelector("strong").textContent = mastery.name;
+      masteryPanel.querySelector("span").textContent = state.masteryUses?.[this._planningFocus] ? "EXPENDED" : "READY";
+      masteryPanel.querySelector("p").textContent = mastery.description;
+      masteryPanel.querySelector("small").textContent = `Trigger: ${mastery.triggerLabel ?? "See Mastery trigger"}`;
+      focusedCard.querySelector(".arkflight-station-footer")?.before(masteryPanel);
+    }
+
+    detail.append(focusedCard);
+    workspace.append(rail, detail);
+    grid.replaceWith(workspace);
+    workspace.dataset.restored = "true";
+
+    for (const button of workspace.querySelectorAll("[data-arkflight-focus-station]")) {
+      button.addEventListener("click", async () => {
+        this._planningFocus = button.dataset.arkflightFocusStation;
+        await this.render({ force: true });
+      });
     }
   }
 
@@ -394,7 +483,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
               await this.controller.command({ type: "select-component-ability", station, componentAbilityId: id });
             }
           }
-        } catch (error) { console.error("Arkflight | Compact planning selection failed", error); ui.notifications?.warn(error.message); }
+        } catch (error) { console.error("Arkflight | Planning selection failed", error); ui.notifications?.warn(error.message); }
       });
     }
   }
