@@ -16,7 +16,7 @@ const PERSONALITIES = Object.freeze({
   captain: ["measured and authoritative", "warm until challenged", "grimly practical", "recklessly charismatic"],
   engineer: ["methodical and grease-stained", "dryly sarcastic", "restless and inventive", "quietly obsessive"],
   navigator: ["distant and observant", "calm under impossible pressure", "superstitious but precise", "curious to a fault"],
-  watchmaster: ["vigilant and severe", "competitive and blunt", "patiently predatory", "protective of the deck crew"],
+  battlewatch: ["vigilant and severe", "competitive and blunt", "patiently predatory", "protective of the deck crew"],
   veilwarden: ["soft-spoken and intense", "ritual-minded and compassionate", "eerie but reassuring", "sternly devotional"]
 });
 
@@ -24,7 +24,7 @@ const VISUALS = Object.freeze({
   captain: ["weathered command coat with brass clasps", "dark naval coat and scarred leather gloves", "ornate sash over practical voidfaring leathers"],
   engineer: ["heavy apron, brass tools, and aether-burn scars", "patched work coat with copper fittings", "blackened gloves and a belt crowded with gauges"],
   navigator: ["layered chart-cloth coat and star lenses", "long coat stitched with route sigils", "slender voidfaring leathers hung with brass instruments"],
-  watchmaster: ["reinforced coat with a shoulder spyglass", "scarred brigandine and a compact ranged weapon", "dark watch cloak over practical battle gear"],
+  battlewatch: ["reinforced coat with a shoulder spyglass", "scarred brigandine and a compact ranged weapon", "dark watch cloak over practical battle gear"],
   veilwarden: ["warded robes reinforced with shipboard leathers", "dark vestments with pale aetherite charms", "ritual coat marked with protective silver-white sigils"]
 });
 
@@ -32,7 +32,7 @@ const HOOKS = Object.freeze({
   captain: ["will abandon profit before abandoning crew", "owes a dangerous favor to a rival captain", "keeps a sealed order no one else has read"],
   engineer: ["claims the Arkengine speaks in its sleep", "is hiding a serious flaw in the drive", "collects broken enemy mechanisms as trophies"],
   navigator: ["refuses to cross one particular void route", "has charted a shortcut no sane pilot uses", "believes the ship is being followed by a star that moves wrong"],
-  watchmaster: ["keeps a private list of every vessel they failed to stop", "suspects a crew member is a spy", "never fires the first shot without a reason"],
+  battlewatch: ["keeps a private list of every vessel they failed to stop", "suspects a crew member is a spy", "never fires the first shot without a reason"],
   veilwarden: ["has heard a voice beyond the Lifeveil", "maintains a forbidden secondary ward", "believes the ship carries a spiritual debt"]
 });
 
@@ -40,7 +40,7 @@ const SIGNATURE_GEAR = Object.freeze({
   captain: { category: "weapon", query: "saber OR rapier", label: "officer saber", abstractSecondary: "command pistol or dagger" },
   engineer: { category: "weapon", query: "warhammer OR light hammer", label: "engineer's hammer", abstractSecondary: "aetheric discharge" },
   navigator: { category: "weapon", query: "rapier OR shortsword", label: "navigator's blade", abstractSecondary: "precision sidearm" },
-  watchmaster: { category: "weapon", query: "crossbow OR longbow", label: "watchmaster ranged weapon", abstractSecondary: "boarding blade" },
+  battlewatch: { category: "weapon", query: "crossbow OR longbow", label: "battlewatch ranged weapon", abstractSecondary: "boarding blade" },
   veilwarden: { category: "weapon", query: "staff OR mace", label: "ritual staff", abstractSecondary: "aetheric surge" }
 });
 
@@ -113,7 +113,7 @@ function abstractStrikeItem(benchmark, gear) {
       attackEffects: { value: [] },
       bonus: { value: benchmark.statistics.strike.attack },
       damageRolls: { primary: { damage: benchmark.statistics.strike.damage, damageType: "physical" } },
-      traits: { value: benchmark.station === "watchmaster" ? ["range-increment-60"] : [] },
+      traits: { value: benchmark.station === "battlewatch" ? ["range-increment-60"] : [] },
       description: `<p>Generated Arkflight officer strike. Signature physical item is resolved from PF2e compendia at Commit.</p>`
     },
     flags: { "arkflight-game": { generatedAbstractStrike: true, station: benchmark.station } }
@@ -168,8 +168,14 @@ function actorSourceDraft(benchmark, bio, gear) {
 }
 
 export function generatePF2eOfficerActorDraft({ station, level, quality = "standard", faction = "Independent", theme = "", seed = Date.now() } = {}) {
-  const benchmark = generatePF2eOfficerBenchmark({ station, level, quality });
-  stationRole(station);
+  const benchmarkStation = station === "battlewatch" ? "watchmaster" : station;
+  const legacyBenchmark = generatePF2eOfficerBenchmark({ station: benchmarkStation, level, quality });
+  stationRole(benchmarkStation);
+  const benchmark = Object.freeze({
+    ...legacyBenchmark,
+    station,
+    role: station === "battlewatch" ? "Battlewatch" : legacyBenchmark.role
+  });
   const bio = biography({ station, faction, theme, seed });
   const gear = SIGNATURE_GEAR[station];
   const actorData = actorSourceDraft(benchmark, bio, gear);
