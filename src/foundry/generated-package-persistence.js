@@ -1,5 +1,5 @@
 const MODULE_ID = "arkflight-game";
-const STATIONS = Object.freeze(["captain","engineer","navigator","watchmaster","veilwarden"]);
+const STATIONS = Object.freeze(["captain","engineer","navigator","battlewatch","veilwarden"]);
 
 function shipActorSource(preview, folderId) {
   return {
@@ -56,7 +56,7 @@ export async function persistGeneratedEnemyPackage(preview, { folderConflict="er
     await shipActor.setFlag(MODULE_ID, "shipClassification", "npc");
     await shipActor.setFlag(MODULE_ID, "generatedLoot", structuredClone(preview.loot));
     await shipActor.setFlag(MODULE_ID, "generatedPackage", {
-      version:1,
+      version:2,
       officerActorIds:Object.fromEntries(STATIONS.map((station) => [station, officerActors[station]?.id ?? null])),
       crewTemplateActorIds:created.filter((actor) => actor !== shipActor && actor.flags?.[MODULE_ID]?.generatedCrewTemplate).map((actor) => actor.id)
     });
