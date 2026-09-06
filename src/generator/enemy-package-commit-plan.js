@@ -1,4 +1,4 @@
-const STATIONS = Object.freeze(["captain", "engineer", "navigator", "watchmaster", "veilwarden"]);
+const STATIONS = Object.freeze(["captain", "engineer", "navigator", "battlewatch", "veilwarden"]);
 
 function assertPreview(preview) {
   if (!preview?.ship?.identity?.name) throw new Error("Generated package requires a named ship preview.");
@@ -21,7 +21,7 @@ export function buildEnemyPackageCommitPlan(preview, { folderConflict = "error" 
     .map((template) => Object.freeze({ type: template.type, label: template.label, actorData: template.actorData })));
 
   return Object.freeze({
-    version: 2,
+    version: 3,
     shipName: preview.ship.identity.name,
     folder: Object.freeze({ rootName: "Arkflight", shipFolderName: preview.ship.identity.name, conflictPolicy: folderConflict }),
     ship: Object.freeze({ source: preview.ship, classification: "npc" }),
