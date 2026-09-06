@@ -4,20 +4,20 @@ import { deriveShip, syncResourceMaxima } from "../ship/derive-ship.js";
 import { validateShip } from "../ship/validate-ship.js";
 import { ayerstoneShipDoctrine, combineDoctrine } from "./ayerstone-ship-doctrine.js";
 
-const STATIONS = Object.freeze(["captain", "engineer", "navigator", "watchmaster", "veilwarden"]);
-const BASE_OFFSETS = Object.freeze({ captain: 0, engineer: -1, navigator: -1, watchmaster: -2, veilwarden: -1 });
+const STATIONS = Object.freeze(["captain", "engineer", "navigator", "battlewatch", "veilwarden"]);
+const BASE_OFFSETS = Object.freeze({ captain: 0, engineer: -1, navigator: -1, battlewatch: -2, veilwarden: -1 });
 const SIZE_RANK = Object.freeze({ small: 1, medium: 2, large: 3 });
 
 export const ENEMY_ARCHETYPES = Object.freeze({
-  raider: { label: "Raider", priorityStation: "watchmaster", tags: ["fast", "assault", "boarding", "maneuvering"], weaponFamilies: ["harpoon", "cannon", "ballista"], roomTags: ["military", "containment"], modTags: ["boarding", "maneuvering", "detection"] },
+  raider: { label: "Raider", priorityStation: "battlewatch", tags: ["fast", "assault", "boarding", "maneuvering"], weaponFamilies: ["harpoon", "cannon", "ballista"], roomTags: ["military", "containment"], modTags: ["boarding", "maneuvering", "detection"] },
   pirate: { label: "Pirate / Corsair", priorityStation: "captain", tags: ["fast", "boarding", "smuggler", "warship"], weaponFamilies: ["cannon", "harpoon", "ballista"], roomTags: ["military", "concealed", "social"], modTags: ["boarding", "cargo", "detection"] },
-  patrol: { label: "Patrol", priorityStation: "watchmaster", tags: ["patrol", "durable", "detection"], weaponFamilies: ["ballista", "cannon"], roomTags: ["containment", "navigation", "military"], modTags: ["detection", "command", "structural"] },
-  naval: { label: "Naval Warship", priorityStation: "watchmaster", tags: ["warship", "escort", "military"], weaponFamilies: ["cannon", "lance", "ballista"], roomTags: ["military", "repair"], modTags: ["structural", "command", "lifeveil"] },
+  patrol: { label: "Patrol", priorityStation: "battlewatch", tags: ["patrol", "durable", "detection"], weaponFamilies: ["ballista", "cannon"], roomTags: ["containment", "navigation", "military"], modTags: ["detection", "command", "structural"] },
+  naval: { label: "Naval Warship", priorityStation: "battlewatch", tags: ["warship", "escort", "military"], weaponFamilies: ["cannon", "lance", "ballista"], roomTags: ["military", "repair"], modTags: ["structural", "command", "lifeveil"] },
   merchant: { label: "Merchant", priorityStation: "engineer", tags: ["merchant", "heavy-cargo", "logistics"], weaponFamilies: ["ballista", "cannon"], roomTags: ["cargo", "luxury", "social"], modTags: ["cargo", "logistics", "structural"] },
   smuggler: { label: "Smuggler", priorityStation: "navigator", tags: ["fast", "smuggler", "courier", "concealed"], weaponFamilies: ["ballista", "harpoon"], roomTags: ["concealed", "cargo", "navigation"], modTags: ["maneuvering", "cargo", "detection"] },
   explorer: { label: "Explorer", priorityStation: "navigator", tags: ["scout", "long-range", "explorer-class", "deep-void"], weaponFamilies: ["ballista", "harpoon"], roomTags: ["navigation", "research", "recovery"], modTags: ["detection", "deep-void", "survival"] },
   salvager: { label: "Salvager", priorityStation: "engineer", tags: ["salvage", "logistics", "industrial"], weaponFamilies: ["harpoon", "ballista"], roomTags: ["salvage", "repair", "industrial"], modTags: ["salvage", "docking", "repair"] },
-  bountyHunter: { label: "Bounty Hunter", priorityStation: "watchmaster", tags: ["hunter-killer", "fast", "containment"], weaponFamilies: ["harpoon", "cannon", "lance"], roomTags: ["containment", "military", "navigation"], modTags: ["detection", "boarding", "maneuvering"] },
+  bountyHunter: { label: "Bounty Hunter", priorityStation: "battlewatch", tags: ["hunter-killer", "fast", "containment"], weaponFamilies: ["harpoon", "cannon", "lance"], roomTags: ["containment", "military", "navigation"], modTags: ["detection", "boarding", "maneuvering"] },
   occult: { label: "Cult / Occult Vessel", priorityStation: "veilwarden", tags: ["occult", "ritual", "lifeveil"], weaponFamilies: ["lance", "ballista"], roomTags: ["occult", "ritual", "research"], modTags: ["occult", "lifeveil", "deepVoid"] }
 });
 
@@ -128,7 +128,7 @@ function pickShipMods(rng, hull, archetype) {
 function weaponSlots(hull) {
   const slots = [];
   for (const [arc, mount] of Object.entries(hull?.data?.baseStats?.weaponMounts ?? {})) {
-    for (let i = 0; i < Number(mount?.count ?? 0); i += 1) slots.push({ arc, maxSize: mount?.maxSize ?? "small" });
+    for (let i = 0; i < Number(mount?.count ?? 0); i += 1) slots.push({ arc, mountIndex: i, maxSize: mount?.maxSize ?? "small" });
   }
   return slots;
 }
@@ -139,11 +139,11 @@ function pickWeapons(rng, hull, archetype, difficulty) {
   for (const slot of weaponSlots(hull)) {
     if (rng() > fullness) continue;
     const candidates = Object.values(SHIP_CATALOGS.weapons).filter((weapon) => {
-      const arcs = weapon.data?.arcs ?? [];
-      return sizeFits(weapon.data?.size ?? "small", slot.maxSize) && (!arcs.length || arcs.includes(slot.arc));
+      const allowedMounts = weapon.data?.allowedMounts ?? [];
+      return sizeFits(weapon.data?.size ?? "small", slot.maxSize) && (!allowedMounts.length || allowedMounts.includes(slot.arc));
     });
     const weapon = weightedChoice(rng, candidates, (candidate) => 2 + (archetype.weaponFamilies.includes(candidate.data?.family) ? 6 : 0));
-    if (weapon) installs.push({ id: weapon.id, arc: slot.arc });
+    if (weapon) installs.push({ id: weapon.id, arc: slot.arc, mountIndex: slot.mountIndex });
   }
   return installs;
 }
@@ -190,7 +190,6 @@ export function generateEnemyShipPreview(input = {}) {
   if (!engine) throw new Error(`${hull.name} has no compatible Arkengine available.`);
 
   let ship = createShip({
-    level: config.level,
     identity: { name: `${baseArchetype.label} Vessel`, owner: config.faction, notes: config.theme },
     traits: [...new Set(["generated-enemy", config.archetypeId, ...archetype.tags])],
     hull: { chassisId: hull.id, patternId: "standard" },
@@ -199,7 +198,8 @@ export function generateEnemyShipPreview(input = {}) {
     shipMods: pickShipMods(rng, hull, archetype),
     weapons: pickWeapons(rng, hull, archetype, config.difficulty),
     cargo: { used: 0, notes: "" },
-    resources: { supplies: { value: randomInt(rng, 2, 8), max: 10 }, morale: { value: config.difficulty === "elite" ? 5 : config.difficulty === "poor" ? 2 : 3, max: 5 } }
+    resources: { supplies: { value: randomInt(rng, 2, 8), max: 10 }, morale: { value: config.difficulty === "elite" ? 5 : config.difficulty === "poor" ? 2 : 3, max: 5 } },
+    progression: { level: config.level, xp: 0, talentIds: [], arkcraftUpgrades: {} }
   });
 
   let derived = deriveShip(ship, SHIP_CATALOGS);
@@ -210,7 +210,7 @@ export function generateEnemyShipPreview(input = {}) {
   const validation = validateShip(ship, SHIP_CATALOGS);
 
   return Object.freeze({
-    version: 2,
+    version: 3,
     config: Object.freeze(config),
     archetype: Object.freeze({ id: config.archetypeId, label: baseArchetype.label }),
     doctrine: Object.freeze({ source: doctrine.source, preferredArchetypes: doctrine.preferredArchetypes ?? [], shipTags: doctrine.shipTags ?? [] }),
