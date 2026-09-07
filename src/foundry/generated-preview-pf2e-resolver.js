@@ -1,5 +1,6 @@
 import { encounterTreasureBudget } from "../generator/pf2e-treasure-budget.js";
 import { resolveOfficerWeapon, pf2eTreasureCandidates, materializeTreasureCandidate } from "./pf2e-equipment-resolver.js";
+import { resolveOfficerSpellcasting, PF2E_SPELL_PACK } from "./pf2e-spell-resolver.js";
 
 function seededRng(seed="arkflight") {
   let state = 2166136261;
@@ -23,7 +24,14 @@ function embedResolvedWeapon(officer, resolved) {
   actorData.flags ??= {};
   actorData.flags["arkflight-game"] = {
     ...(actorData.flags["arkflight-game"] ?? {}),
-    resolvedSignatureGear: { name:resolved.name, uuid:resolved.uuid, estimatedGp:resolved.estimatedGp, recoverable:true, autoAward:false }
+    resolvedSignatureGear: {
+      name:resolved.name,
+      uuid:resolved.uuid,
+      itemLevel:resolved.itemLevel,
+      estimatedGp:resolved.estimatedGp,
+      recoverable:true,
+      autoAward:false
+    }
   };
   return Object.freeze({
     ...officer,
@@ -32,6 +40,7 @@ function embedResolvedWeapon(officer, resolved) {
       ...(officer.signatureGear ?? {}),
       resolvedName:resolved.name,
       resolvedUuid:resolved.uuid,
+      itemLevel:resolved.itemLevel,
       estimatedGp:resolved.estimatedGp,
       potency:resolved.potency,
       striking:resolved.striking,
@@ -43,25 +52,56 @@ function embedResolvedWeapon(officer, resolved) {
   });
 }
 
+function embedResolvedSpellcasting(officer, resolved) {
+  if (!resolved) return officer;
+  const actorData = clone(officer.actorData);
+  actorData.items ??= [];
+  actorData.items.push(clone(resolved.entry), ...resolved.spells.map(clone));
+  actorData.flags ??= {};
+  actorData.flags["arkflight-game"] = {
+    ...(actorData.flags["arkflight-game"] ?? {}),
+    resolvedSpellcasting:{
+      state:"resolved",
+      entry:resolved.entry.name,
+      spells:[...resolved.names]
+    }
+  };
+  return Object.freeze({
+    ...officer,
+    actorData:Object.freeze(actorData),
+    spellcasting:Object.freeze({
+      ...(officer.spellcastingIntent ?? {}),
+      resolvedSpells:resolved.names,
+      state:"resolved"
+    })
+  });
+}
+
 async function resolveOfficers(preview, personalBudget) {
   const officers = [];
   const personal = [];
   let remaining = personalBudget;
   const perOfficer = personalBudget / Math.max(1, preview.crew.officers.length);
   for (const officer of preview.crew.officers) {
-    const resolved = await resolveOfficerWeapon(officer.weaponIntent, { maxGp:Math.max(5, Math.min(perOfficer, remaining || perOfficer)) });
-    officers.push(embedResolvedWeapon(officer, resolved));
-    const reserve = resolved.estimatedGp <= remaining ? resolved.estimatedGp : 0;
+    const resolvedWeapon = await resolveOfficerWeapon(officer.weaponIntent, { maxGp:Math.max(5, Math.min(perOfficer, remaining || perOfficer)) });
+    let resolvedOfficer = embedResolvedWeapon(officer, resolvedWeapon);
+    if (officer.spellcastingIntent) {
+      const resolvedSpellcasting = await resolveOfficerSpellcasting(officer.spellcastingIntent);
+      resolvedOfficer = embedResolvedSpellcasting(resolvedOfficer, resolvedSpellcasting);
+    }
+    officers.push(resolvedOfficer);
+    const reserve = resolvedWeapon.estimatedGp <= remaining ? resolvedWeapon.estimatedGp : 0;
     remaining = Math.max(0, remaining - reserve);
     personal.push(Object.freeze({
       kind:"signature-gear",
       officer:officer.name,
       station:officer.station,
-      name:resolved.name,
-      uuid:resolved.uuid,
-      gp:resolved.estimatedGp,
+      name:resolvedWeapon.name,
+      uuid:resolvedWeapon.uuid,
+      itemLevel:resolvedWeapon.itemLevel,
+      gp:resolvedWeapon.estimatedGp,
       budgetReservedGp:money(reserve),
-      budgetEligible:reserve === resolved.estimatedGp,
+      budgetEligible:reserve === resolvedWeapon.estimatedGp,
       recoverable:true,
       autoAward:false,
       rewardDecision:"pending"
@@ -128,10 +168,10 @@ export async function resolveGeneratedPreviewPF2e(preview) {
   });
   return Object.freeze({
     ...preview,
-    version:10,
+    version:11,
     crew:Object.freeze({ ...preview.crew, officers:officerResolution.officers }),
     loot,
-    pf2eResolution:Object.freeze({ state:"resolved", equipmentPack:"pf2e.equipment-srd" }),
+    pf2eResolution:Object.freeze({ state:"resolved", equipmentPack:"pf2e.equipment-srd", spellPack:PF2E_SPELL_PACK }),
     canCommit:true,
     blockers:Object.freeze([])
   });
