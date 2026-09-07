@@ -81,9 +81,18 @@ export function generateEnemyEncounterPreview(input = {}) {
   const rewardWeight = resolvedRewardWeight(base, input);
   const shipName = generateAyerstoneShipName({ faction: base.config.faction, archetypeLabel: base.archetype.label, seed: base.config.seed, override: input.shipName });
   const ship = Object.freeze({ ...base.ship, identity: Object.freeze({ ...(base.ship.identity ?? {}), name: shipName }) });
-  const officers = base.crew.officers.map((officer) => {
+  const officers = base.crew.officers.map((officer, rosterIndex) => {
     const seed = `${base.config.seed}:${officer.station}`;
-    const draft = generatePF2eOfficerActorDraft({ station: officer.station, level: officer.level, quality: base.config.difficulty, faction: base.config.faction, theme: base.config.theme, seed });
+    const draft = generatePF2eOfficerActorDraft({
+      station: officer.station,
+      level: officer.level,
+      quality: base.config.difficulty,
+      faction: base.config.faction,
+      theme: base.config.theme,
+      seed,
+      rosterSeed: base.config.seed,
+      rosterIndex
+    });
     const affiliated = applyCrewAffiliation(draft, { faction: base.config.faction, seed });
     const policyOfficer = applySignatureGearPolicy(affiliated);
     const weaponIntent = buildOfficerWeaponIntent({ faction: base.config.faction, station: officer.station, level: officer.level, quality: base.config.difficulty, rewardWeight });
@@ -101,7 +110,7 @@ export function generateEnemyEncounterPreview(input = {}) {
 
   return Object.freeze({
     ...base,
-    version: 9,
+    version: 10,
     ship,
     config: Object.freeze({ ...base.config, partyLevel, rewardWeight: input.rewardWeight ?? "auto", shipName, crewTemplateTypes: templates.filter((template) => template.selected).map((template) => template.type) }),
     doctrine: Object.freeze({ ...base.doctrine, warning: doctrineWarning(base) }),
