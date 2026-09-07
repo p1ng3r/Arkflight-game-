@@ -244,17 +244,14 @@ function actorSourceDraft(benchmark, bio, gear, archetype, spellIntent) {
 }
 
 export function generatePF2eOfficerActorDraft({ station, level, quality="standard", faction="Independent", theme="", seed=Date.now(), rosterSeed=seed, rosterIndex=0 }={}) {
-  const benchmarkStation = station === "battlewatch" ? "watchmaster" : station;
-  const legacyBenchmark = generatePF2eOfficerBenchmark({ station:benchmarkStation, level, quality });
+  const baseBenchmark = generatePF2eOfficerBenchmark({ station, level, quality });
   const archetype = chooseOfficerArchetype({ station, seed:rosterSeed, rosterIndex });
   const benchmark = Object.freeze({
-    ...legacyBenchmark,
-    station,
-    role:station === "battlewatch" ? "Battlewatch" : legacyBenchmark.role,
+    ...baseBenchmark,
     statistics:Object.freeze({
-      ...legacyBenchmark.statistics,
+      ...baseBenchmark.statistics,
       spellcasting:archetype.spellcasting
-        ? (legacyBenchmark.statistics.spellcasting ?? Object.freeze({ dc:10 + legacyBenchmark.level + 4, attack:legacyBenchmark.statistics.strike.attack, tradition:archetype.spellcasting.tradition }))
+        ? (baseBenchmark.statistics.spellcasting ?? Object.freeze({ dc:10 + baseBenchmark.level + 4, attack:baseBenchmark.statistics.strike.attack, tradition:archetype.spellcasting.tradition }))
         : null
     })
   });
