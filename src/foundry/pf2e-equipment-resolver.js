@@ -16,6 +16,11 @@ function getField(entry, path) {
   return path.split(".").reduce((value, key) => value?.[key], entry);
 }
 
+function itemLevel(entry) {
+  const level = Number(getField(entry, "system.level.value") ?? 0);
+  return Number.isFinite(level) ? Math.max(0, level) : 0;
+}
+
 function fundamentalRunes(level, allowance) {
   if (allowance === "mundane-or-downgraded") return { potency:0, striking:0 };
   const shift = allowance === "budget-capped" ? 2 : 0;
@@ -42,23 +47,44 @@ async function equipmentIndex() {
   return { pack, index:[...index] };
 }
 
-function weaponCandidate(index, candidateSlugs) {
-  const candidates = new Set(candidateSlugs.map(slug));
-  for (const wanted of candidates) {
-    const exact = index.find((entry) => entry.type === "weapon" && (slug(getField(entry,"system.baseItem")) === wanted || slug(entry.name) === wanted));
-    if (exact) return exact;
+export function selectOfficerWeaponCandidate(index, candidateSlugs, { maxLevel = 20 } = {}) {
+  const levelCap = Math.max(0, Number(maxLevel) || 0);
+  for (const requested of candidateSlugs.map(slug)) {
+    const matches = index
+      .filter((entry) => entry.type === "weapon")
+      .filter((entry) => slug(getField(entry, "system.baseItem")) === requested || slug(entry.name) === requested)
+      .filter((entry) => itemLevel(entry) <= levelCap)
+      .sort((a, b) => {
+        const aExactName = slug(a.name) === requested ? 0 : 1;
+        const bExactName = slug(b.name) === requested ? 0 : 1;
+        if (aExactName !== bExactName) return aExactName - bExactName;
+        const aCommon = (getField(a, "system.traits.rarity") ?? "common") === "common" ? 0 : 1;
+        const bCommon = (getField(b, "system.traits.rarity") ?? "common") === "common" ? 0 : 1;
+        if (aCommon !== bCommon) return aCommon - bCommon;
+        const levelDelta = itemLevel(a) - itemLevel(b);
+        if (levelDelta) return levelDelta;
+        return gpFromCoins(getField(a, "system.price.value")) - gpFromCoins(getField(b, "system.price.value"));
+      });
+    if (matches.length) return matches[0];
   }
   return null;
 }
 
 export async function resolveOfficerWeapon(intent, { maxGp = Infinity } = {}) {
   const { pack, index } = await equipmentIndex();
-  const entry = weaponCandidate(index, intent?.candidateSlugs ?? []);
-  if (!entry) throw new Error(`No PF2e weapon matched generated ${intent?.station ?? "officer"} pool: ${(intent?.candidateSlugs ?? []).join(", ")}`);
+  const actorLevel = Math.max(1, Number(intent?.actorLevel) || 1);
+  const entry = selectOfficerWeaponCandidate(index, intent?.candidateSlugs ?? [], { maxLevel:actorLevel });
+  if (!entry) {
+    throw new Error(`No PF2e weapon at or below level ${actorLevel} matched generated ${intent?.station ?? "officer"} pool: ${(intent?.candidateSlugs ?? []).join(", ")}`);
+  }
   const document = await pack.getDocument(entry._id);
   if (!document) throw new Error(`PF2e equipment document ${entry._id} could not be loaded.`);
   const source = document.toObject();
-  const desired = fundamentalRunes(intent?.actorLevel ?? 1, intent?.upgradeAllowance ?? "budget-capped");
+  const sourceLevel = Math.max(0, Number(source?.system?.level?.value ?? itemLevel(entry)) || 0);
+  if (sourceLevel > actorLevel) {
+    throw new Error(`Resolved PF2e weapon ${source.name} is level ${sourceLevel}, above generated officer level ${actorLevel}.`);
+  }
+  const desired = fundamentalRunes(actorLevel, intent?.upgradeAllowance ?? "budget-capped");
   source.system.runes ??= { potency:0, striking:0, property:[] };
   source.system.runes.potency = desired.potency;
   source.system.runes.striking = desired.striking;
@@ -74,6 +100,8 @@ export async function resolveOfficerWeapon(intent, { maxGp = Infinity } = {}) {
     ...(source.flags["arkflight-game"] ?? {}),
     generatedSignatureGear:true,
     station:intent?.station ?? null,
+    generatedForActorLevel:actorLevel,
+    sourceItemLevel:sourceLevel,
     combatMathMode:"npc-benchmark-independent",
     recoverable:true,
     autoAward:false
@@ -82,6 +110,8 @@ export async function resolveOfficerWeapon(intent, { maxGp = Infinity } = {}) {
     name:source.name,
     uuid:`Compendium.${EQUIPMENT_PACK}.Item.${entry._id}`,
     itemData:Object.freeze(source),
+    itemLevel:sourceLevel,
+    actorLevel,
     estimatedGp,
     potency:Number(source.system.runes.potency ?? 0),
     striking:Number(source.system.runes.striking ?? 0),
