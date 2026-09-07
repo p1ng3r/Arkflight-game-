@@ -3,8 +3,8 @@ import { ayerstoneFaction } from "./ayerstone-setting-catalog.js";
 
 const CREW_TYPES = Object.freeze({
   deckhand: { label:"Deckhand", station:"engineer", levelOffset:-4, primary:"athletics", strikeLabel:"boarding tool", role:"General deck crew and rigging hand" },
-  gunner: { label:"Gunner", station:"watchmaster", levelOffset:-3, primary:"warfare-lore", strikeLabel:"crew-served sidearm", role:"Ship weapon crew and tactical deck hand" },
-  marine: { label:"Marine", station:"watchmaster", levelOffset:-2, primary:"athletics", strikeLabel:"boarding weapon", role:"Boarding and shipboard security combatant" },
+  gunner: { label:"Gunner", station:"battlewatch", levelOffset:-3, primary:"warfare-lore", strikeLabel:"crew-served sidearm", role:"Ship weapon crew and tactical deck hand" },
+  marine: { label:"Marine", station:"battlewatch", levelOffset:-2, primary:"athletics", strikeLabel:"boarding weapon", role:"Boarding and shipboard security combatant" },
   shipwright: { label:"Shipwright", station:"engineer", levelOffset:-3, primary:"crafting", strikeLabel:"work hammer", role:"Repair specialist and heavy maintenance crew" }
 });
 
