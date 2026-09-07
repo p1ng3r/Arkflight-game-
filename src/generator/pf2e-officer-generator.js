@@ -47,8 +47,8 @@ const STATION_ROLES = Object.freeze({
       { id: "course-correction", name: "Course Correction", actionCost: 1, kind: "support", summary: "Read the field and redirect an ally toward a better position." }
     ]
   },
-  watchmaster: {
-    label: "Watchmaster",
+  battlewatch: {
+    label: "Battlewatch",
     identity: "Gunnery officer, sentry commander, and tactical observer",
     primarySkills: ["perception", "warfare-lore"],
     secondarySkills: ["athletics", "intimidation"],
