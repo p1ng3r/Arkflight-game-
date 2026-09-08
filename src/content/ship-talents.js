@@ -1,11 +1,14 @@
 const TIER = Object.freeze({ FOUNDATION: "foundation", SPECIALIST: "specialist", LEGENDARY: "legendary", MYTHIC: "mythic" });
 
+export const RETIRED_SHIP_TALENT_IDS = Object.freeze([
+  "captains-vessel",
+  "engineers-vessel",
+  "navigators-vessel",
+  "battlewatch-vessel",
+  "veilwardens-vessel"
+]);
+
 const TALENT_LORE = Object.freeze({
-  "captains-vessel": { quote: "A good captain does not shout louder. The deck simply moves before the order finishes.", credit: "Dockside wisdom" },
-  "engineers-vessel": { quote: "You learn a ship by the rhythm of her knocks, not the shine on her brass.", credit: "Arkengineer's notebook" },
-  "navigators-vessel": { quote: "The stars are suggestions. The current is the argument.", credit: "Navigator's maxim" },
-  "battlewatch-vessel": { quote: "Spot the danger early enough and it becomes someone else's bad day.", credit: "Battlewatch saying" },
-  "veilwardens-vessel": { quote: "Everyone forgets the air until the candles lean the wrong way.", credit: "Veilwarden's warning" },
   "voyage-trained": { quote: "A practiced crew can make three weeks of darkness feel almost like a road.", credit: "Longhaul captain" },
   "battle-trained": { quote: "Drill until the first broadside feels like a bell you already knew would ring.", credit: "Privateer doctrine" },
   "toughness": { quote: "More timber, more iron, fewer prayers whispered after impact.", credit: "Brassworks shipwright" },
@@ -88,13 +91,8 @@ const unlockArkcraft = (stationId, ids) => ({ mode: "unlockArkcraft", station: s
 const upgradeArkcraft = (stationId, ids) => ({ mode: "upgradeArkcraft", station: stationId, ids });
 
 const FOUNDATION = [
-  talent("captains-vessel", "Captain's Vessel", TIER.FOUNDATION, 1, "+1 to all Captain station rolls in Voyage and Combat.", [station("captain", 1)]),
-  talent("engineers-vessel", "Engineer's Vessel", TIER.FOUNDATION, 1, "+1 to all Engineer station rolls in Voyage and Combat.", [station("engineer", 1)]),
-  talent("navigators-vessel", "Navigator's Vessel", TIER.FOUNDATION, 1, "+1 to all Navigator station rolls in Voyage and Combat.", [station("navigator", 1)]),
-  talent("battlewatch-vessel", "Battlewatch Vessel", TIER.FOUNDATION, 1, "+1 to all Battlewatch station rolls in Voyage and Combat.", [station("battlewatch", 1)]),
-  talent("veilwardens-vessel", "Veilwarden's Vessel", TIER.FOUNDATION, 1, "+1 to all Veilwarden station rolls in Voyage and Combat.", [station("veilwarden", 1)]),
-  talent("voyage-trained", "Voyage Trained", TIER.FOUNDATION, 2, "+1 to all station rolls during Voyage Events.", [pillar("voyage", 1)]),
-  talent("battle-trained", "Battle Trained", TIER.FOUNDATION, 2, "+1 to all station rolls during Ship Combat.", [pillar("combat", 1)]),
+  talent("voyage-trained", "Voyage-Trained Crew", TIER.FOUNDATION, 1, "+1 to all station rolls during Voyage Events.", [pillar("voyage", 1)]),
+  talent("battle-trained", "Battle-Trained Crew", TIER.FOUNDATION, 1, "+1 to all station rolls during Ship Combat. This does not modify direct ship weapon attack rolls.", [pillar("combat", 1)]),
   talent("toughness", "Toughness", TIER.FOUNDATION, 1, "+10% base Hull maximum.", [percentBase("hullIntegrity", 10)]),
   talent("greater-frame", "Greater Frame", TIER.FOUNDATION, 2, "+20% base Hull maximum.", [percentBase("hullIntegrity", 20)]),
   talent("reinforced-lifeveil", "Reinforced Lifeveil", TIER.FOUNDATION, 1, "+10% base Lifeveil maximum.", [percentBase("lifeveilCapacity", 10)]),
