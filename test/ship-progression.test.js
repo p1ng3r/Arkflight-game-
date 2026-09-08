@@ -7,6 +7,7 @@ import { addShipExperience, resetShipLevel, setShipExperience, shipExperienceVie
 import { validateShip } from "../src/ship/validate-ship.js";
 import { hullCombatProfile } from "../src/combat/combat-schema.js";
 import { getMasteryTechnique } from "../src/content/base-mastery.js";
+import { RETIRED_SHIP_TALENT_IDS, SHIP_TALENTS } from "../src/content/ship-talents.js";
 import { SHIP_CATALOGS } from "../src/content/index.js";
 
 function sloop(overrides = {}) {
@@ -62,24 +63,24 @@ test("ship XP stops advancing past level 20", () => {
 });
 
 test("GM reset lowers ship level and clears current XP", () => {
-  const ship = sloop({ progression: { level: 9, xp: 640, talentIds: ["toughness", "engineers-vessel"], arkcraftUpgrades: {} } });
+  const ship = sloop({ progression: { level: 9, xp: 640, talentIds: ["toughness", "voyage-trained"], arkcraftUpgrades: {} } });
   const result = resetShipLevel(ship, 5);
   assert.equal(result.previousLevel, 9);
   assert.equal(result.level, 5);
   assert.equal(result.ship.progression.level, 5);
   assert.equal(result.ship.progression.xp, 0);
-  assert.deepEqual(result.ship.progression.talentIds, ["toughness", "engineers-vessel"]);
+  assert.deepEqual(result.ship.progression.talentIds, ["toughness", "voyage-trained"]);
   assert.equal(validateProgression(result.ship).ok, true);
 });
 
 test("GM can reset a ship all the way to level 1", () => {
-  const ship = sloop({ progression: { level: 9, xp: 640, talentIds: ["toughness", "engineers-vessel", "responsive-rigging"], arkcraftUpgrades: {} } });
+  const ship = sloop({ progression: { level: 9, xp: 640, talentIds: ["toughness", "voyage-trained", "responsive-rigging"], arkcraftUpgrades: {} } });
   const result = resetShipLevel(ship, 1);
   assert.equal(result.level, 1);
   assert.equal(result.ship.progression.level, 1);
   assert.equal(result.ship.progression.xp, 0);
+  assert.deepEqual(result.ship.progression.talentIds, ["toughness", "voyage-trained"]);
   assert.equal(validateProgression(result.ship).ok, true);
-  assert.ok(result.ship.progression.talentIds.length <= 2);
 });
 
 test("GM reset refunds talents from tiers no longer unlocked", () => {
@@ -91,12 +92,12 @@ test("GM reset refunds talents from tiers no longer unlocked", () => {
 });
 
 test("GM reset refunds newest legal talents until the lower TP budget is legal", () => {
-  const ship = sloop({ progression: { level: 5, xp: 500, talentIds: ["toughness", "engineers-vessel", "voyage-trained", "battle-trained"], arkcraftUpgrades: {} } });
+  const ship = sloop({ progression: { level: 5, xp: 500, talentIds: ["toughness", "voyage-trained", "battle-trained", "greater-frame"], arkcraftUpgrades: {} } });
   const result = resetShipLevel(ship, 2);
   assert.equal(result.ship.progression.level, 2);
   assert.equal(result.ship.progression.xp, 0);
-  assert.deepEqual(result.ship.progression.talentIds, ["toughness", "engineers-vessel"]);
-  assert.deepEqual(result.refundedTalentIds, ["battle-trained", "voyage-trained"]);
+  assert.deepEqual(result.ship.progression.talentIds, ["toughness", "voyage-trained", "battle-trained"]);
+  assert.deepEqual(result.refundedTalentIds, ["greater-frame"]);
   assert.equal(validateProgression(result.ship).ok, true);
 });
 
@@ -107,11 +108,27 @@ test("Foundation toughness scales from base Hull percentage", () => {
   assert.equal(derived.stats.hullIntegrity, 99);
 });
 
-test("station and Voyage bonuses stack", () => {
-  const ship = sloop({ progression: { level: 5, talentIds: ["engineers-vessel", "voyage-trained"], arkcraftUpgrades: {} } });
+test("Foundation training benefits the whole ship instead of one station", () => {
+  const ship = sloop({ progression: { level: 1, talentIds: ["voyage-trained", "battle-trained"], arkcraftUpgrades: {} } });
   const derived = deriveShip(ship, SHIP_CATALOGS);
-  assert.equal(derived.stats.stationBonuses.engineer, 1);
+  const check = validateProgression(ship);
+  assert.equal(check.ok, true);
+  assert.equal(check.spent, 2);
+  assert.equal(check.available, 0);
   assert.equal(derived.stats.pillarBonuses.voyage, 1);
+  assert.equal(derived.stats.pillarBonuses.combat, 1);
+  assert.deepEqual(derived.stats.stationBonuses, { captain: 0, engineer: 0, navigator: 0, battlewatch: 0, veilwarden: 0 });
+});
+
+test("retired single-station Foundation talents are absent and automatically refunded", () => {
+  for (const id of RETIRED_SHIP_TALENT_IDS) assert.equal(SHIP_TALENTS[id], undefined);
+  const ship = sloop({ progression: { level: 1, talentIds: [...RETIRED_SHIP_TALENT_IDS], arkcraftUpgrades: {} } });
+  const check = validateProgression(ship);
+  const derived = deriveShip(ship, SHIP_CATALOGS);
+  assert.equal(check.ok, true);
+  assert.equal(check.spent, 0);
+  assert.equal(check.available, 2);
+  assert.deepEqual(derived.stats.stationBonuses, { captain: 0, engineer: 0, navigator: 0, battlewatch: 0, veilwarden: 0 });
 });
 
 test("Specialist mechanics are locked before level 6", () => {
@@ -136,10 +153,10 @@ test("Legendary AP and RP talents affect combat profile", () => {
 });
 
 test("progression budget rejects overspending", () => {
-  const ship = sloop({ progression: { level: 1, talentIds: ["voyage-trained", "battle-trained"], arkcraftUpgrades: {} } });
+  const ship = sloop({ progression: { level: 1, talentIds: ["voyage-trained", "battle-trained", "toughness"], arkcraftUpgrades: {} } });
   const check = validateProgression(ship);
   assert.equal(check.ok, false);
-  assert.match(check.errors.join(" "), /spends 4 TP/);
+  assert.match(check.errors.join(" "), /spends 3 TP/);
 });
 
 test("Specialist Arkcraft talent adds a selectable technique", () => {
