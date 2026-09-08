@@ -1,6 +1,9 @@
 # Arkflight Ship Progression — Alpha Implementation Contract
 
-This document supersedes the earlier branching-tree progression experiments for current alpha implementation work.
+> **SUPERSEDED FOR CURRENT PROGRESSION DESIGN.**  
+> Use `docs/SHIP-PROGRESSION-LEVEL-MAP.md` as the current 20-level talent/progression design map. This file is retained as historical Alpha implementation context. In particular, its older 24-TP milestone economy, all-at-once tier access, additive percentage stacking, and statement that ship level never contributes to Armor Class are no longer authoritative where they conflict with the current code/design map.
+
+This document supersedes the earlier branching-tree progression experiments for its original alpha implementation work.
 
 ## Core progression
 
@@ -159,4 +162,4 @@ The GM controls ship level. Owners and the GM may spend available Talent Points 
 
 ## Alpha caution
 
-The progression data contract, tier boundaries, milestone TP economy, Maneuverability consolidation, and pricing principles are the current design direction. Individual talent names, exact numerical values, Arkcraft effects, and mod-type mapping remain alpha balancing content and may be revised after Foundry testing.
+The progression data contract, tier boundaries, milestone TP economy, Maneuverability consolidation, and pricing principles were the design direction for this earlier Alpha contract. Individual talent names, exact numerical values, Arkcraft effects, and mod-type mapping were always intended for revision through Foundry playtesting.
