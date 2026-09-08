@@ -3,6 +3,7 @@ import { EPIC_SHIP_MODS } from "./ship-mods-epic.js";
 import { LEGENDARY_SHIP_MODS } from "./ship-mods-legendary.js";
 import { MYTHIC_SHIP_MODS } from "./ship-mods-mythic.js";
 import { withModArt } from "./mod-art.js";
+import { decorateModTalentSynergies } from "../ship/mod-talent-synergy.js";
 
 const LEGACY_COMPAT_SHIP_MOD_IDS = Object.freeze([
   "fleet-signal-array",
@@ -27,7 +28,7 @@ function catalogEntry(mod) {
         })
       })
     : mod;
-  return withModArt(normalized, "shipMod");
+  return withModArt(decorateModTalentSynergies(normalized), "shipMod");
 }
 
 const merged = {
