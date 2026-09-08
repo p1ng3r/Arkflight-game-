@@ -4,6 +4,23 @@ import { shipModSlotSummary } from "./ship-mod-slots.js";
 
 const SIZE_RANK = Object.freeze({ small: 1, medium: 2, large: 3 });
 
+function validateWeaponUpgrades(install, weapon, errors) {
+  if (!install || typeof install !== "object" || install.upgrades == null) return;
+  const upgrades = install.upgrades;
+  if (!upgrades || typeof upgrades !== "object" || Array.isArray(upgrades)) {
+    errors.push(`${weapon.name} has an invalid upgrades block.`);
+    return;
+  }
+  for (const key of ["potency", "impact"]) {
+    if (upgrades[key] == null) continue;
+    const value = Number(upgrades[key]);
+    if (!Number.isInteger(value) || value < 0 || value > 3) errors.push(`${weapon.name} ${key} upgrade must be an integer from 0 to 3.`);
+  }
+  if (upgrades.properties != null && (!Array.isArray(upgrades.properties) || upgrades.properties.some((value) => typeof value !== "string" || !value.trim()))) {
+    errors.push(`${weapon.name} property upgrades must be non-empty strings.`);
+  }
+}
+
 function validateWeaponInstalls(ship, catalogs, hull, errors, warnings) {
   const installs = ship.weapons ?? [];
   const mounts = hull?.data?.baseStats?.weaponMounts ?? {};
@@ -14,6 +31,8 @@ function validateWeaponInstalls(ship, catalogs, hull, errors, warnings) {
     const weapon = catalogs.weapons?.[id];
     if (!weapon) { errors.push(`Unknown weapon: ${id || "<empty>"}.`); continue; }
     if (typeof install === "string") { warnings.push(`${weapon.name} has no assigned weapon mount yet.`); continue; }
+
+    validateWeaponUpgrades(install, weapon, errors);
 
     const mountFacing = install?.arc;
     const mountIndex = Number(install?.mountIndex);
