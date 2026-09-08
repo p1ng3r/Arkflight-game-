@@ -44,7 +44,7 @@
     "styles/armory-ux.css",
     "styles/crew-ux.css",
     "styles/station-icons.css",
-    "styles/hold-log-ux.js",
+    "styles/hold-log-ux.css",
     "styles/voyage-ship-binding.css",
     "styles/unified-ship-state.css",
     "styles/shipwright-nav-compact.css",
