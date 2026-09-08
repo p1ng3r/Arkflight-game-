@@ -78,7 +78,7 @@ test("final stat floors prevent negative capacities while preserving meaningful 
   assert.equal(normalized.maneuverability, -3);
 });
 
-test("canonical resistance profile takes the strongest unconditional value and preserves conditions separately", () => {
+test("legacy hull physical values do not stack with Hardness while explicit resistances remain active", () => {
   const profile = deriveResistanceProfile(
     { bludgeoning: 4, piercing: 3, slashing: 0 },
     [
@@ -86,6 +86,6 @@ test("canonical resistance profile takes the strongest unconditional value and p
       { id: "veil-refractor", data: { resistances: [{ type: "fire", value: 15, condition: "while Lifeveil is online" }, { type: "force", value: 5 }] } }
     ]
   );
-  assert.deepEqual(profile.values, { bludgeoning: 4, piercing: 5, fire: 10, force: 5 });
+  assert.deepEqual(profile.values, { fire: 10, piercing: 5, force: 5 });
   assert.deepEqual(profile.conditional, [{ type: "fire", value: 15, condition: "while Lifeveil is online", sourceId: "veil-refractor" }]);
 });
