@@ -44,7 +44,7 @@
     "styles/armory-ux.css",
     "styles/crew-ux.css",
     "styles/station-icons.css",
-    "styles/hold-log-ux.css",
+    "styles/hold-log-ux.js",
     "styles/voyage-ship-binding.css",
     "styles/unified-ship-state.css",
     "styles/shipwright-nav-compact.css",
@@ -66,6 +66,7 @@
   "esmodules": [
     "src/foundry/arkflight.js",
     "src/foundry/arkflight-compendiums.js",
+    "src/foundry/weapon-compendium.js",
     "src/foundry/ship-token-authority.js",
     "src/foundry/refit-api.js",
     "src/foundry/repair-api-extension.js",
