@@ -127,7 +127,8 @@ function enhanceTalentCard(card, talent) {
 function refreshLevelGroupVisibility(root) {
   for (const group of root.querySelectorAll("[data-talent-level-group]")) {
     const cards = [...group.querySelectorAll("[data-talent-card]")];
-    group.hidden = cards.length > 0 && cards.every((card) => card.hidden);
+    const shouldHide = cards.length > 0 && cards.every((card) => card.hidden);
+    if (group.hidden !== shouldHide) group.hidden = shouldHide;
   }
 }
 
@@ -230,7 +231,11 @@ function watchFilters(root) {
   if (!board || board.dataset.levelVisibilityWatch === "true") return;
   board.dataset.levelVisibilityWatch = "true";
   const observer = new MutationObserver((mutations) => {
-    if (mutations.some((mutation) => mutation.type === "attributes" && mutation.attributeName === "hidden")) refreshLevelGroupVisibility(root);
+    const cardVisibilityChanged = mutations.some((mutation) => mutation.type === "attributes"
+      && mutation.attributeName === "hidden"
+      && mutation.target instanceof HTMLElement
+      && mutation.target.matches("[data-talent-card]"));
+    if (cardVisibilityChanged) refreshLevelGroupVisibility(root);
   });
   observer.observe(board, { subtree: true, attributes: true, attributeFilter: ["hidden"] });
 }
