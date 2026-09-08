@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS, WEAPONS } from "../content/index.js";
 import { quickInstallWeapon } from "../ship/weapon-loadout.js";
+import { PF2E_SHIP_WEAPON_SCHEMA_VERSION, pf2eShipWeaponDocumentBase } from "./pf2e-ship-weapon-source.js";
 
 const MODULE_ID = "arkflight-game";
 const FLAG_SCOPE = "arkflight";
@@ -8,14 +9,9 @@ const FOLDER_NAME = "Arkflight";
 const PACK_NAME = "arkflight-weapons";
 const PACK_ID = `world.${PACK_NAME}`;
 const PACK_LABEL = "Arkflight — Ship Weapons";
-const DEFAULT_IMAGE = "icons/svg/item-bag.svg";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value ?? {}));
-}
-
-function slugify(value) {
-  return String(value ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
 
 function labelize(value) {
@@ -41,12 +37,6 @@ function stableHash(value) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-function pf2eRarity(rarity) {
-  if (rarity === "rare") return "rare";
-  if (["epic", "legendary", "mythic"].includes(rarity)) return "unique";
-  return "common";
-}
-
 function weaponArticle(weapon) {
   const data = weapon.data ?? {};
   const combat = data.combat ?? {};
@@ -67,11 +57,12 @@ function weaponArticle(weapon) {
   ].filter(([, value]) => value !== undefined && value !== null && value !== "");
 
   return `<article class="arkflight-compendium-entry">
-    <p><strong>SHIP WEAPON</strong></p>
+    <p><strong>ARKFLIGHT SHIP WEAPON · PF2E WEAPON ITEM</strong></p>
     <h1>${escapeHtml(weapon.name)}</h1>
     <p>${escapeHtml(weapon.description ?? "")}</p>
     <dl>${rows.map(([label, value]) => `<dt><strong>${escapeHtml(label)}</strong></dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>
     <hr>
+    <p><small>PF2e provides the Weapon Item document shell. Arkflight remains authoritative for ship AP, attack math, mounts, firing arcs, range bands, reload rounds, system threat, and ship-weapon upgrades.</small></p>
     <p><small>Drag this weapon onto an Arkflight vessel sheet to install it in the first legal free mount.</small></p>
     <p><small>Arkflight Source ID: <code>${escapeHtml(weapon.id)}</code></small></p>
   </article>`;
@@ -80,36 +71,16 @@ function weaponArticle(weapon) {
 function weaponDocumentData(weapon) {
   const data = weapon.data ?? {};
   const rarity = data.rarity ?? "standard";
-  const level = Math.max(1, Math.trunc(Number(data.minShipLevel) || 1));
   const source = clone(weapon);
-  const sourceHash = stableHash(source);
-  const tags = [...new Set(["arkflight", "ship-weapon", rarity, ...(weapon.tags ?? [])].map(slugify).filter(Boolean))];
+  const sourceHash = stableHash({ documentSchemaVersion: PF2E_SHIP_WEAPON_SCHEMA_VERSION, source });
+  const base = pf2eShipWeaponDocumentBase(weapon, { descriptionHtml: weaponArticle(weapon) });
+
   return {
-    name: weapon.name,
-    type: "equipment",
-    img: weapon.img ?? data.art?.img ?? DEFAULT_IMAGE,
-    system: {
-      description: { value: weaponArticle(weapon) },
-      rules: [],
-      slug: slugify(weapon.id),
-      level: { value: level },
-      traits: { value: [], rarity: pf2eRarity(rarity), otherTags: tags },
-      baseItem: null,
-      bulk: { value: 0 },
-      category: "other",
-      containerId: null,
-      equipped: { carryType: "worn", handsHeld: 0, invested: null },
-      hardness: 0,
-      hp: { max: 0, value: 0 },
-      material: { grade: null, type: null },
-      price: { value: {} },
-      quantity: 1,
-      size: "med",
-      usage: { value: "installed-in-arkflight-ship" }
-    },
+    ...base,
     flags: {
       [FLAG_SCOPE]: {
         contentType: "weapon",
+        shipWeapon: true,
         weaponId: weapon.id,
         rarity,
         size: data.size,
@@ -120,6 +91,7 @@ function weaponDocumentData(weapon) {
         crewRequired: data.crewRequired,
         systemThreat: data.systemThreat,
         cargo: data.cargo,
+        tags: clone(weapon.tags ?? []),
         combat: clone(data.combat ?? {}),
         damageProfile: clone(data.damageProfile ?? {}),
         installation: clone(data.refit ?? {}),
@@ -128,6 +100,7 @@ function weaponDocumentData(weapon) {
           managed: true,
           packKey: "weapons",
           sourceId: weapon.id,
+          documentSchemaVersion: PF2E_SHIP_WEAPON_SCHEMA_VERSION,
           sourceHash,
           source
         }
@@ -192,11 +165,16 @@ export async function syncWeaponCompendium({ force = false, notify = true } = {}
       creates.push(data);
       continue;
     }
-    if (current.type !== "equipment") {
+
+    // Foundry/PF2e does not treat an Item type switch as a normal data update.
+    // Delete the old temporary Equipment entry and recreate it as a real PF2e
+    // Weapon Item during the next GM sync.
+    if (current.type !== "weapon") {
       stale.push(current.id);
       creates.push(data);
       continue;
     }
+
     const oldHash = managedSource(current)?.sourceHash;
     const newHash = data.flags[FLAG_SCOPE][SOURCE_FLAG].sourceHash;
     if (force || oldHash !== newHash || current.name !== data.name) updates.push({ _id: current.id, ...data });
@@ -212,7 +190,7 @@ export async function syncWeaponCompendium({ force = false, notify = true } = {}
   if (updates.length) await ItemClass.updateDocuments(updates, { pack: collection });
 
   const result = Object.freeze({ pack: collection, total: Object.keys(WEAPONS).length, created: creates.length, updated: updates.length, deleted: deleteIds.length });
-  if (notify && (creates.length || updates.length || deleteIds.length)) ui.notifications?.info?.(`${PACK_LABEL} synced — ${result.total} weapons ready.`);
+  if (notify && (creates.length || updates.length || deleteIds.length)) ui.notifications?.info?.(`${PACK_LABEL} synced — ${result.total} PF2e Weapon Items ready.`);
   console.info("Arkflight | Weapon compendium sync complete", result);
   return result;
 }
@@ -255,8 +233,8 @@ async function handleWeaponDrop(event, actor) {
   const data = parseDragData(event);
   if (!isWeaponPackDrag(data)) return;
 
-  // Stop PF2e from embedding this equipment Item on the Vehicle actor. Arkflight
-  // consumes it as a ship weapon install instead.
+  // Stop PF2e from embedding the Weapon Item as ordinary Vehicle inventory.
+  // Arkflight consumes the drag as a legal ship-mount installation instead.
   event.preventDefault();
   event.stopPropagation();
   event.stopImmediatePropagation?.();
@@ -271,7 +249,7 @@ async function handleWeaponDrop(event, actor) {
     if (typeof resolveUuid !== "function") throw new Error("Foundry UUID resolver is unavailable.");
     const item = await resolveUuid(data.uuid);
     const weaponId = item?.flags?.[FLAG_SCOPE]?.weaponId ?? item?.flags?.[FLAG_SCOPE]?.[SOURCE_FLAG]?.sourceId;
-    if (!weaponId || !SHIP_CATALOGS.weapons?.[weaponId]) throw new Error("Dropped Item is not a managed Arkflight ship weapon.");
+    if (item?.type !== "weapon" || !weaponId || !SHIP_CATALOGS.weapons?.[weaponId]) throw new Error("Dropped Item is not a managed Arkflight PF2e ship weapon.");
 
     const ship = actor?.flags?.[MODULE_ID]?.ship;
     if (!ship) throw new Error("This actor does not have Arkflight ship data.");
