@@ -1,6 +1,7 @@
 import { COMBAT_POINT_TYPES, effectiveMobility, hullCombatProfile, normalizeHexHeading } from "./combat-schema.js";
+import { normalizeWeaponUpgrades } from "./weapon-combat.js";
 
-export const COMBATANT_STATE_VERSION = 2;
+export const COMBATANT_STATE_VERSION = 3;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -32,6 +33,7 @@ function installedWeaponStates(ship, catalogs = {}) {
       name: weapon?.name ?? id,
       mount: typeof install === "object" ? install?.arc ?? null : null,
       mountIndex: typeof install === "object" ? Number(install?.mountIndex) || 0 : null,
+      upgrades: normalizeWeaponUpgrades(install),
       fireAP: Math.max(1, Math.trunc(Number(combat.fireAP) || 1)),
       reloadRounds: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0)),
       readyRound: 1,
