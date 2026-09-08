@@ -1,4 +1,5 @@
 import { RETIRED_SHIP_TALENT_IDS, SHIP_TALENTS, SHIP_TALENT_TIERS } from "../content/ship-talents.js";
+import { SHIP_TALENT_PROGRESSION, shipTalentProgressionMeta } from "../content/ship-talent-progression.js";
 
 export const SHIP_LEVEL_MIN = 1;
 export const SHIP_LEVEL_MAX = 20;
@@ -41,9 +42,77 @@ export function tierForLevel(level) {
   return Object.values(SHIP_TALENT_TIERS).find((tier) => value >= tier.minLevel && value <= tier.maxLevel) ?? SHIP_TALENT_TIERS.foundation;
 }
 
+export function requiredLevelForTalent(talent) {
+  if (!talent) return SHIP_LEVEL_MAX;
+  const tier = SHIP_TALENT_TIERS[talent.tier];
+  const authored = shipTalentProgressionMeta(talent.id)?.minLevel;
+  return clampShipLevel(authored ?? tier?.minLevel ?? SHIP_LEVEL_MAX);
+}
+
 export function canAccessTalent(level, talent) {
   const tier = SHIP_TALENT_TIERS[talent?.tier];
-  return Boolean(tier && clampShipLevel(level) >= tier.minLevel);
+  return Boolean(tier && clampShipLevel(level) >= requiredLevelForTalent(talent));
+}
+
+function talentName(id) {
+  return SHIP_TALENTS[id]?.name ?? String(id ?? "Unknown Talent");
+}
+
+function upgradePathIds(talent) {
+  const path = [];
+  const visited = new Set();
+  let id = talent?.id ?? null;
+  while (id && !visited.has(id)) {
+    visited.add(id);
+    path.unshift(id);
+    id = shipTalentProgressionMeta(id)?.upgradeOf ?? null;
+  }
+  return path;
+}
+
+/**
+ * Eligibility is deliberately separate from affordability. A talent can be
+ * mechanically unlocked but still require more TP; the UI reports both facts.
+ */
+export function talentEligibility(ship, talent) {
+  if (!talent) return Object.freeze({ ok: false, reasons: Object.freeze([{ code: "unknown", label: "UNKNOWN TALENT" }]) });
+  const level = clampShipLevel(ship?.progression?.level ?? 1);
+  const owned = new Set(ship?.progression?.talentIds ?? []);
+  const metadata = shipTalentProgressionMeta(talent.id) ?? {};
+  const requiredLevel = requiredLevelForTalent(talent);
+  const reasons = [];
+
+  if (level < requiredLevel) reasons.push({ code: "level", label: `LEVEL ${requiredLevel}`, requiredLevel });
+
+  const missing = (metadata.prerequisites ?? []).filter((id) => !owned.has(id));
+  if (missing.length) {
+    reasons.push({
+      code: "prerequisite",
+      label: `REQUIRES ${missing.map(talentName).join(" + ")}`,
+      talentIds: Object.freeze([...missing])
+    });
+  }
+
+  const anyOf = metadata.prerequisiteAnyOf ?? [];
+  if (anyOf.length && !anyOf.some((id) => owned.has(id))) {
+    reasons.push({
+      code: "prerequisite-any",
+      label: `REQUIRES ONE OF: ${anyOf.map(talentName).join(" / ")}`,
+      talentIds: Object.freeze([...anyOf])
+    });
+  }
+
+  const callingRequirement = metadata.callingRequirement;
+  if (callingRequirement && ship?.progression?.callingId !== callingRequirement) {
+    reasons.push({ code: "calling", label: `REQUIRES ${String(callingRequirement).replaceAll("-", " ").toUpperCase()} CALLING` });
+  }
+
+  return Object.freeze({
+    ok: reasons.length === 0,
+    reasons: Object.freeze(reasons.map((reason) => Object.freeze(reason))),
+    requiredLevel,
+    metadata
+  });
 }
 
 export function selectedTalents(ship) {
@@ -71,7 +140,14 @@ export function validateProgression(ship) {
     // which effectively refunds the point until the ship is resaved/refit.
     if (!talent && RETIRED_TALENT_IDS.has(id)) continue;
     if (!talent) { errors.push(`Unknown ship talent: ${id}`); continue; }
-    if (!canAccessTalent(level, talent)) errors.push(`${talent.name} is not available until ${SHIP_TALENT_TIERS[talent.tier].label} tier (level ${SHIP_TALENT_TIERS[talent.tier].minLevel}).`);
+
+    const eligibility = talentEligibility(ship, talent);
+    for (const reason of eligibility.reasons) {
+      if (reason.code === "level") errors.push(`${talent.name} is not available until level ${eligibility.requiredLevel}.`);
+      else if (reason.code === "prerequisite") errors.push(`${talent.name} requires ${reason.talentIds.map(talentName).join(" and ")}.`);
+      else if (reason.code === "prerequisite-any") errors.push(`${talent.name} requires at least one of: ${reason.talentIds.map(talentName).join(", ")}.`);
+      else if (reason.code === "calling") errors.push(`${talent.name} ${reason.label.toLowerCase()}.`);
+    }
     spent += Number(talent.cost || 0);
   }
   const budget = talentPointsForLevel(level);
@@ -148,14 +224,55 @@ export function applyTalentProgression(stats, baseStats, ship, stationCapabiliti
   return stats;
 }
 
+function nextMilestoneForLevel(level) {
+  const value = clampShipLevel(level);
+  if (value < 5) return Object.freeze({ level: 5, label: "Ship Calling" });
+  if (value < 10) return Object.freeze({ level: 10, label: "Signature Calling" });
+  if (value < 15) return Object.freeze({ level: 15, label: "Legendary Calling" });
+  if (value < 20) return Object.freeze({ level: 20, label: "Mythic Calling" });
+  return Object.freeze({ level: 20, label: "Mythic Capstone Reached", complete: true });
+}
+
 export function progressionView(ship) {
   const validation = validateProgression(ship);
   const owned = new Set(ship?.progression?.talentIds ?? []);
-  const talents = Object.values(SHIP_TALENTS).map((talent) => ({
-    ...talent,
-    owned: owned.has(talent.id),
-    locked: !canAccessTalent(validation.level, talent),
-    tierLabel: SHIP_TALENT_TIERS[talent.tier]?.label ?? talent.tier
-  }));
-  return Object.freeze({ ...validation, talents: Object.freeze(talents) });
+  const talents = Object.values(SHIP_TALENTS).map((talent) => {
+    const eligibility = talentEligibility(ship, talent);
+    const metadata = shipTalentProgressionMeta(talent.id) ?? {};
+    const prerequisites = [...(metadata.prerequisites ?? [])];
+    const prerequisiteAnyOf = [...(metadata.prerequisiteAnyOf ?? [])];
+    const upgradePath = upgradePathIds(talent);
+    const affordable = validation.available >= Number(talent.cost || 0);
+    const tpReason = !owned.has(talent.id) && !affordable
+      ? Object.freeze({ code: "tp", label: `REQUIRES ${Number(talent.cost || 0)} TP — ${validation.available} AVAILABLE` })
+      : null;
+    const lockReasons = [...eligibility.reasons, ...(tpReason ? [tpReason] : [])];
+    const requiredLevel = eligibility.requiredLevel;
+    return Object.freeze({
+      ...talent,
+      minLevel: requiredLevel,
+      requiredLevel,
+      owned: owned.has(talent.id),
+      locked: !eligibility.ok,
+      affordable,
+      canPurchase: !owned.has(talent.id) && eligibility.ok && affordable,
+      tierLabel: SHIP_TALENT_TIERS[talent.tier]?.label ?? talent.tier,
+      prerequisites: Object.freeze(prerequisites),
+      prerequisiteNames: Object.freeze(prerequisites.map(talentName)),
+      prerequisiteAnyOf: Object.freeze(prerequisiteAnyOf),
+      prerequisiteAnyOfNames: Object.freeze(prerequisiteAnyOf.map(talentName)),
+      upgradeOf: metadata.upgradeOf ?? null,
+      upgradeOfName: metadata.upgradeOf ? talentName(metadata.upgradeOf) : null,
+      upgradePath: Object.freeze(upgradePath),
+      upgradePathNames: Object.freeze(upgradePath.map(talentName)),
+      lockReasons: Object.freeze(lockReasons)
+    });
+  });
+  return Object.freeze({
+    ...validation,
+    nextMilestone: nextMilestoneForLevel(validation.level),
+    talents: Object.freeze(talents)
+  });
 }
+
+export { SHIP_TALENT_PROGRESSION };
