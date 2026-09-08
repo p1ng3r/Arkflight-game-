@@ -1,5 +1,5 @@
 import { AREA_STATES } from "./ship-schema.js";
-import { applyTalentProgression, progressionView } from "./progression.js";
+import { applyTalentProgression, clampShipLevel, progressionView, shipDefenseProgressionBonus } from "./progression.js";
 import { CORE_COMBAT_ACTIONS_BY_STATION } from "../content/combat-actions.js";
 import {
   assertCanonicalEffectTarget,
@@ -87,6 +87,13 @@ export function deriveShip(ship, catalogs = {}) {
   }
 
   applyTalentProgression(derived, baseStats, ship, stationCapabilities, capabilities);
+
+  const shipLevel = clampShipLevel(ship?.progression?.level ?? 1);
+  derived.armorClass = Number(derived.armorClass ?? 0) + shipLevel + shipDefenseProgressionBonus(shipLevel);
+
+  // Hull physical resistance values are retained as legacy metadata only.
+  // Universal structural reduction is now Hardness; explicit component
+  // resistances remain active through deriveResistanceProfile.
   derived.resistances = deriveResistanceProfile(baseStats.physicalResistances, components);
   const normalizedStats = normalizeDerivedStats(derived);
 
