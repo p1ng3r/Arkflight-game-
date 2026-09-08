@@ -2,6 +2,8 @@ import { component, COMPONENT_TYPES } from "../ship/component-rules.js";
 import { defaultRefitCosts, refitSpec } from "../ship/refit-rules.js";
 import { shipModRarityRule } from "../ship/ship-mod-rarity.js";
 
+// Alpha combat values: this core catalog is intentionally compact. Ammunition
+// and special load types are a separate future layer rather than duplicate guns.
 const D = Object.freeze({
   "deck-ballista": Object.freeze({
     name: "Deck Ballista",
@@ -19,6 +21,38 @@ const D = Object.freeze({
     cargo: 1,
     combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 4, max: 6 } }
   }),
+  "repeating-bolt-rack": Object.freeze({
+    name: "Repeating Bolt Rack",
+    description: "A compact indexed rack of lighter bolts built for rapid close-defense fire against fast craft and exposed fittings.",
+    tier: 1,
+    tags: ["weapon", "ballista", "repeating", "small", "mechanical", "bolt", "close-defense", "crew-served"],
+    size: "small",
+    family: "ballista",
+    category: "repeating-bolt-thrower",
+    crewRequired: 1,
+    allowedMounts: ["fore", "port", "starboard", "aft"],
+    damageProfile: { dice: "2d6", type: "piercing" },
+    mountType: "small",
+    systemThreat: "hull",
+    cargo: 1,
+    combat: { fireAP: 1, reloadRounds: 0, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 4 } }
+  }),
+  "heavy-scorpion": Object.freeze({
+    name: "Heavy Scorpion",
+    description: "A long-armed precision bolt thrower that trades speed for reach and enough force to punch vulnerable ship fittings at range.",
+    tier: 1,
+    tags: ["weapon", "ballista", "scorpion", "medium", "mechanical", "precision", "long-range", "crew-served"],
+    size: "medium",
+    family: "ballista",
+    category: "heavy-bolt-thrower",
+    crewRequired: 2,
+    allowedMounts: ["fore", "port", "starboard", "aft"],
+    damageProfile: { dice: "3d10", type: "piercing" },
+    mountType: "medium",
+    systemThreat: "rigging",
+    cargo: 2,
+    combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
+  }),
   "swivel-cannon": Object.freeze({
     name: "Swivel Cannon",
     description: "A compact ship cannon on a reinforced swivel mount, useful as a middle-weight starter weapon profile.",
@@ -34,6 +68,54 @@ const D = Object.freeze({
     systemThreat: "hull",
     cargo: 2,
     combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
+  }),
+  "deck-culverin": Object.freeze({
+    name: "Deck Culverin",
+    description: "A long-barreled chase gun tuned for accurate fire down pursuit lines before heavier batteries can answer.",
+    tier: 1,
+    tags: ["weapon", "cannon", "culverin", "medium", "mechanical", "black-powder", "long-range", "crew-served"],
+    size: "medium",
+    family: "cannon",
+    category: "chase-gun",
+    crewRequired: 2,
+    allowedMounts: ["fore", "aft"],
+    damageProfile: { dice: "3d10", type: "bludgeoning" },
+    mountType: "medium",
+    systemThreat: "hull",
+    cargo: 2,
+    combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
+  }),
+  "broadside-cannon-battery": Object.freeze({
+    name: "Broadside Cannon Battery",
+    description: "A linked battery of naval guns designed to turn a ship's port or starboard battery into one punishing broadside.",
+    tier: 1,
+    tags: ["weapon", "cannon", "battery", "medium", "mechanical", "black-powder", "broadside", "crew-served"],
+    size: "medium",
+    family: "cannon",
+    category: "broadside-battery",
+    crewRequired: 3,
+    allowedMounts: ["port", "starboard"],
+    damageProfile: { dice: "4d10", type: "bludgeoning" },
+    mountType: "medium",
+    systemThreat: "hull",
+    cargo: 3,
+    combat: { fireAP: 2, reloadRounds: 2, arcTemplate: "broadside", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 5, max: 7 } }
+  }),
+  "heavy-bombard": Object.freeze({
+    name: "Heavy Bombard",
+    description: "A massive siege gun whose crushing shot rewards deliberate positioning, patient loading, and room to fire.",
+    tier: 2,
+    tags: ["weapon", "cannon", "bombard", "large", "mechanical", "black-powder", "siege", "heavy", "crew-served"],
+    size: "large",
+    family: "cannon",
+    category: "siege-bombard",
+    crewRequired: 4,
+    allowedMounts: ["fore", "port", "starboard"],
+    damageProfile: { dice: "5d12", type: "bludgeoning" },
+    mountType: "large",
+    systemThreat: "hull",
+    cargo: 5,
+    combat: { fireAP: 3, reloadRounds: 3, arcTemplate: "wide", rangeHexes: { min: 3, optimalMin: 5, optimalMax: 8, max: 11 } }
   }),
   "stormglass-lance": Object.freeze({
     name: "Stormglass Lance",
@@ -66,12 +148,62 @@ const D = Object.freeze({
     systemThreat: "rigging",
     cargo: 1,
     combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 2, max: 4 } }
+  }),
+  "hullspike-harpoon": Object.freeze({
+    name: "Hullspike Harpoon",
+    description: "A heavier winch-driven harpoon built to bury a broad spike in large hulls and hold a boarding or towing line under violent strain.",
+    tier: 1,
+    tags: ["weapon", "harpoon", "medium", "mechanical", "tether", "boarding", "control", "crew-served"],
+    size: "medium",
+    family: "harpoon",
+    category: "heavy-harpoon",
+    crewRequired: 2,
+    allowedMounts: ["fore", "port", "starboard"],
+    damageProfile: { dice: "3d8", type: "piercing" },
+    mountType: "medium",
+    systemThreat: "hull",
+    cargo: 2,
+    combat: { fireAP: 2, reloadRounds: 2, arcTemplate: "line", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
+  }),
+  "deck-scattergun": Object.freeze({
+    name: "Deck Scattergun",
+    description: "A brutal short-range deck gun that throws a spreading storm of heavy shot into nearby attackers and boarding approaches.",
+    tier: 1,
+    tags: ["weapon", "cannon", "scattergun", "medium", "mechanical", "black-powder", "close-defense", "crew-served"],
+    size: "medium",
+    family: "cannon",
+    category: "scattergun",
+    crewRequired: 2,
+    allowedMounts: ["fore", "port", "starboard", "aft"],
+    damageProfile: { dice: "4d6", type: "bludgeoning" },
+    mountType: "medium",
+    systemThreat: "hull",
+    cargo: 2,
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 2, max: 4 } }
+  }),
+  "aether-arc-projector": Object.freeze({
+    name: "Aether Arc Projector",
+    description: "A reinforced projector cage that hurls a short-lived electrical arc into nearby ships to punish exposed Arkengine systems.",
+    tier: 2,
+    tags: ["weapon", "projector", "medium", "arcane", "electricity", "system-disruption", "experimental", "crew-served"],
+    size: "medium",
+    family: "projector",
+    category: "aether-arc",
+    crewRequired: 2,
+    allowedMounts: ["fore", "port", "starboard", "aft"],
+    damageProfile: { dice: "3d10", type: "electricity" },
+    mountType: "medium",
+    systemThreat: "arkengine",
+    cargo: 3,
+    combat: { fireAP: 2, reloadRounds: 2, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 4, max: 6 } }
   })
 });
 
 const CAP = Object.freeze({
   "stormglass-lance": ["stormglass-weapon"],
-  "grapnel-harpoon": ["ship-grappling"]
+  "grapnel-harpoon": ["ship-grappling"],
+  "hullspike-harpoon": ["ship-grappling", "heavy-tether"],
+  "aether-arc-projector": ["arkengine-disruption"]
 });
 
 const RARITY_BY_REFIT_TIER = Object.freeze({ 1: "standard", 2: "rare", 3: "epic", 4: "legendary", 5: "mythic" });
