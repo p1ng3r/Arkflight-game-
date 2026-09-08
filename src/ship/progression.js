@@ -8,6 +8,19 @@ export function clampShipLevel(level) {
 }
 
 /**
+ * Arkflight ship AC uses the hull's authored AC as a chassis value, then adds
+ * ship level plus a PF2e-style defense proficiency step. The step is kept
+ * separate from level so hull identity remains meaningful across all levels.
+ */
+export function shipDefenseProgressionBonus(level) {
+  const value = clampShipLevel(level);
+  if (value >= 19) return 6;
+  if (value >= 13) return 4;
+  if (value >= 7) return 2;
+  return 0;
+}
+
+/**
  * Ship Talent Point cadence:
  * - Level 1 begins with 2 TP.
  * - Every later odd level grants 2 TP.
