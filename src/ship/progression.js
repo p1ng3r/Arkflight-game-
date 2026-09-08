@@ -1,7 +1,8 @@
-import { SHIP_TALENTS, SHIP_TALENT_TIERS } from "../content/ship-talents.js";
+import { RETIRED_SHIP_TALENT_IDS, SHIP_TALENTS, SHIP_TALENT_TIERS } from "../content/ship-talents.js";
 
 export const SHIP_LEVEL_MIN = 1;
 export const SHIP_LEVEL_MAX = 20;
+const RETIRED_TALENT_IDS = new Set(RETIRED_SHIP_TALENT_IDS);
 
 export function clampShipLevel(level) {
   return Math.max(SHIP_LEVEL_MIN, Math.min(SHIP_LEVEL_MAX, Math.trunc(Number(level) || SHIP_LEVEL_MIN)));
@@ -64,6 +65,11 @@ export function validateProgression(ship) {
   let spent = 0;
   for (const id of ids) {
     const talent = SHIP_TALENTS[id];
+    // The five original station-specific Foundation talents were retired in
+    // favor of whole-ship Voyage/Battle training. Existing vessels keep their
+    // saved IDs for compatibility, but those IDs grant no effect and cost no TP,
+    // which effectively refunds the point until the ship is resaved/refit.
+    if (!talent && RETIRED_TALENT_IDS.has(id)) continue;
     if (!talent) { errors.push(`Unknown ship talent: ${id}`); continue; }
     if (!canAccessTalent(level, talent)) errors.push(`${talent.name} is not available until ${SHIP_TALENT_TIERS[talent.tier].label} tier (level ${SHIP_TALENT_TIERS[talent.tier].minLevel}).`);
     spent += Number(talent.cost || 0);
