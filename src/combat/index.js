@@ -1,5 +1,6 @@
 export * from "./combat-schema.js";
 export * from "./combatant-state.js";
+export * from "./weapon-combat.js";
 export {
   COMBAT_ACTIONS,
   COMBAT_ACTION_CATEGORIES,
