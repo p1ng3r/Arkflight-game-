@@ -1,15 +1,57 @@
-.arkflight-ship-progression [data-talent-card][data-purchase-eligible="false"]{display:none!important}
-.arkflight-ship-progression .arkflight-talent-tier:not(:has([data-talent-card][data-purchase-eligible="true"])){display:none!important}
+.arkflight-ship-progression .arkflight-talent-tier.is-locked{opacity:1!important}
+.arkflight-ship-progression .arkflight-talent-card.is-locked,.arkflight-ship-progression .arkflight-talent-card.is-progression-locked{opacity:.78!important}
+.arkflight-ship-progression .arkflight-talent-card.is-progression-locked{border-color:#4b4032;background:linear-gradient(180deg,#0d171b,#091115)}
+.arkflight-ship-progression .arkflight-talent-card.is-progression-locked .arkflight-talent-icon{filter:saturate(.55)}
+
+.arkflight-talent-level-group{grid-column:1/-1;display:block;min-width:0}
+.arkflight-talent-level-group[hidden]{display:none!important}
+.arkflight-talent-level-heading{display:flex;align-items:center;justify-content:space-between;min-height:28px;margin:3px 0 7px;padding:4px 8px;border-top:1px solid rgba(201,163,93,.22);border-bottom:1px solid rgba(201,163,93,.14);background:linear-gradient(90deg,rgba(201,163,93,.08),rgba(81,200,243,.025),transparent)}
+.arkflight-talent-level-heading span{color:#e4c57d;font-size:10px;font-weight:700;letter-spacing:.13em}
+.arkflight-talent-level-heading small{color:#827969;font-size:8px;letter-spacing:.06em;text-transform:uppercase}
+.arkflight-talent-level-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+
+.arkflight-talent-progression-meta{display:flex;flex-wrap:wrap;gap:3px;margin:5px 0 1px}
+.arkflight-talent-requirement-chip{display:inline-flex;align-items:center;min-height:17px;padding:2px 5px;border:1px solid rgba(201,163,93,.27);border-radius:2px;background:rgba(5,12,15,.6);color:#aa9f8c;font-size:7px;line-height:1.1;letter-spacing:.045em;text-transform:uppercase}
+.arkflight-talent-requirement-chip.is-level{border-color:rgba(81,200,243,.38);color:#94ddf7;background:rgba(18,65,83,.18)}
+.arkflight-talent-requirement-chip.is-tier{color:#d4bd8a}
+.arkflight-talent-requirement-chip.is-cost{border-color:rgba(122,169,92,.35);color:#bddd9f}
+.arkflight-talent-requirement-chip.is-upgrade{border-color:rgba(183,128,217,.35);color:#d5aee8;background:rgba(73,35,91,.14)}
+.arkflight-talent-requirement-chip.is-prerequisite{border-color:rgba(205,154,83,.35);color:#d8b77d}
+.arkflight-talent-lock-reasons{display:flex;flex-wrap:wrap;gap:3px;margin-top:6px}
+.arkflight-talent-lock-reasons span{display:inline-flex;align-items:center;gap:4px;padding:3px 5px;border:1px solid rgba(162,87,67,.4);border-radius:2px;background:rgba(67,26,20,.23);color:#d7a18d;font-size:7px;line-height:1.2;text-transform:uppercase;letter-spacing:.035em}
+.arkflight-talent-lock-reasons i{font-size:6px;color:#b7705d}
+
+.arkflight-talent-point-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;width:100%;margin-top:5px}
+.arkflight-talent-point-breakdown>span{display:flex;flex-direction:column;align-items:center;padding:3px 2px;border:1px solid rgba(201,163,93,.16);background:rgba(5,12,15,.38)}
+.arkflight-talent-point-breakdown small{font-size:6px;color:#857a68;letter-spacing:.07em}
+.arkflight-talent-point-breakdown strong{font-size:11px;color:#e4d3ae;font-weight:700}
+.arkflight-next-progression-milestone{display:flex;align-items:center;gap:8px;margin-top:8px;padding:6px 8px;border:1px solid rgba(201,163,93,.27);background:linear-gradient(90deg,rgba(98,72,31,.18),rgba(13,31,39,.32));width:max-content;max-width:100%}
+.arkflight-next-progression-milestone>i{color:#d4aa59;font-size:12px}
+.arkflight-next-progression-milestone>span{display:flex;flex-direction:column;min-width:0}
+.arkflight-next-progression-milestone small{font-size:6px;color:#8c816f;letter-spacing:.12em}
+.arkflight-next-progression-milestone strong{font-size:9px;color:#ddc692;letter-spacing:.04em;white-space:normal}
+
 .arkflight-owned-talents{background:linear-gradient(180deg,rgba(20,18,12,.72),rgba(7,12,14,.88))!important;border-color:rgba(214,174,91,.42)!important;box-shadow:inset 0 0 18px rgba(177,126,43,.05)}
 .arkflight-owned-talents-note{margin:0 0 7px;color:#9f927d;font-size:9px;font-style:italic;line-height:1.35}
 .arkflight-owned-talents-list{display:flex;flex-direction:column;gap:4px;max-height:205px;overflow:auto;padding-right:2px}
-.arkflight-owned-talent{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto;gap:7px;align-items:center;width:100%;min-height:30px!important;margin:0!important;padding:5px 7px!important;border:1px solid rgba(198,155,78,.22)!important;border-radius:2px!important;background:linear-gradient(90deg,rgba(77,53,23,.17),rgba(8,15,18,.55))!important;color:#d9ccb3!important;font-family:Georgia,"Times New Roman",serif!important;text-align:left!important;box-shadow:none!important}
+.arkflight-owned-talent{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto auto;gap:6px;align-items:center;width:100%;min-height:30px!important;margin:0!important;padding:5px 7px!important;border:1px solid rgba(198,155,78,.22)!important;border-radius:2px!important;background:linear-gradient(90deg,rgba(77,53,23,.17),rgba(8,15,18,.55))!important;color:#d9ccb3!important;font-family:Georgia,"Times New Roman",serif!important;text-align:left!important;box-shadow:none!important}
 .arkflight-owned-talent:hover{border-color:#a98346!important;background:linear-gradient(90deg,rgba(115,75,26,.25),rgba(10,24,29,.65))!important;color:#f1d69b!important}
 .arkflight-owned-talent-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:700}
+.arkflight-owned-talent-level{font-size:8px;color:#8ed9f2;border:1px solid rgba(81,200,243,.25);padding:1px 3px}
 .arkflight-owned-talent-tier{font-size:8px;color:#8f846f;text-transform:uppercase;letter-spacing:.06em}
 .arkflight-owned-talent strong{font-size:9px;color:#d7b66f;font-weight:700}
 .arkflight-owned-empty{padding:10px 7px;border:1px dashed rgba(201,163,93,.2);color:#877c6c;font-size:9px;font-style:italic;text-align:center}
-.arkflight-reset-to-one{height:22px!important;min-height:22px!important;margin:0 0 0 5px!important;padding:2px 7px!important;border:1px solid #7e5638!important;border-radius:3px!important;background:linear-gradient(180deg,#351b13,#1e0f0c)!important;color:#e9c697!important;font:700 8px Georgia,"Times New Roman",serif!important;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;box-shadow:none!important}
+
+.arkflight-selected-talent-progression{margin-top:6px}
+.arkflight-selected-talent-progression .arkflight-talent-progression-meta{margin:0 0 5px}
+.arkflight-selected-talent-progression .arkflight-talent-lock-reasons{margin:0 0 5px}
+
+.arkflight-reset-to-one{height:22px!important;min-height:22px!important;margin:5px 0 0!important;padding:2px 7px!important;border:1px solid #7e5638!important;border-radius:3px!important;background:linear-gradient(180deg,#351b13,#1e0f0c)!important;color:#e9c697!important;font:700 8px Georgia,"Times New Roman",serif!important;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;box-shadow:none!important}
 .arkflight-reset-to-one:hover{border-color:#ca8752!important;color:#ffe0b8!important;background:linear-gradient(180deg,#4a2416,#28110c)!important}
-.arkflight-ship-progression .arkflight-library-heading::after{content:"Only choices this vessel can afford and unlock right now are shown below.";display:block;position:absolute;margin-top:42px;color:#837a6b;font-size:8px;font-style:italic;letter-spacing:.02em}
+.arkflight-ship-progression .arkflight-library-heading::after{content:"All talents are shown by required ship level. Locked choices explain exactly what this vessel still needs.";display:block;position:absolute;margin-top:42px;color:#837a6b;font-size:8px;font-style:italic;letter-spacing:.02em}
 .arkflight-ship-progression .arkflight-library-heading{position:relative;margin-bottom:24px}
+
+@media(max-width:1180px){
+  .arkflight-talent-level-cards{grid-template-columns:1fr}
+  .arkflight-talent-requirement-chip{font-size:6.5px}
+}
