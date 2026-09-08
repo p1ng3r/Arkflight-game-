@@ -8,7 +8,22 @@ const CORE_MASTERY=Object.freeze({
  veilwarden:["veilwarden-stand-between","veilwarden-seal-the-impossible","veilwarden-sanctuary"]
 });
 const coreUnlocks=()=>({stations:Object.fromEntries(Object.entries(CORE_MASTERY).map(([station,masteries])=>[station,{masteries:[...masteries]}]))});
-const h=(id,name,description,tier,tags,baseStats,preferredArkengine,allowedArkengines,districtScale=false)=>component({id,name,type:COMPONENT_TYPES.HULL,description,tags:["core-hull",...tags],traits:["core-hull",...tags],data:{tier,baseStats,coreRooms:C,districtScale,preferredArkengine,allowedArkengines},unlocks:coreUnlocks()});
+
+export const HULL_BASE_HARDNESS=Object.freeze({
+ "void-skiff":2,
+ sloop:3,
+ cutter:4,
+ brigantine:4,
+ frigate:5,
+ galleon:6,
+ hammerhead:7,
+ arkcruiser:7,
+ "dread-caravel":8,
+ "cathedral-ship":7,
+ "leviathan-class-platform":10
+});
+
+const h=(id,name,description,tier,tags,baseStats,preferredArkengine,allowedArkengines,districtScale=false)=>component({id,name,type:COMPONENT_TYPES.HULL,description,tags:["core-hull",...tags],traits:["core-hull",...tags],data:{tier,baseStats:{...baseStats,hardness:HULL_BASE_HARDNESS[id]??0},coreRooms:C,districtScale,preferredArkengine,allowedArkengines},unlocks:coreUnlocks()});
 const m=(fore=[0,"small"],port=[0,"small"],starboard=[0,"small"],aft=[0,"small"])=>({fore:{count:fore[0],maxSize:fore[1]},port:{count:port[0],maxSize:port[1]},starboard:{count:starboard[0],maxSize:starboard[1]},aft:{count:aft[0],maxSize:aft[1]}});
 const s=(armorClass,hullIntegrity,lifeveilCapacity,strainCapacity,cargoCapacity,detection,combatSpeed,maneuverability,roomCapacity,crew,weaponMounts,physicalResistances)=>({armorClass,hullIntegrity,lifeveilCapacity,strainCapacity,cargoCapacity,supplyCapacity:cargoCapacity*10,moraleCapacity:5,detection,combatSpeed,maneuverability,roomCapacity,shipModCapacity:roomCapacity,arkengineModCapacity:0,crew,weaponMounts,physicalResistances});
 export const HULLS=Object.freeze(Object.fromEntries([
