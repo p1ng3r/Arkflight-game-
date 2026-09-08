@@ -1,5 +1,6 @@
 import { AREA_STATES } from "./ship-schema.js";
 import { applyTalentProgression, clampShipLevel, progressionView, shipDefenseProgressionBonus } from "./progression.js";
+import { resolveInstalledModTalentSynergies } from "./mod-talent-synergy.js";
 import { CORE_COMBAT_ACTIONS_BY_STATION } from "../content/combat-actions.js";
 import {
   assertCanonicalEffectTarget,
@@ -19,6 +20,7 @@ function applyEffect(stats, effect) {
 }
 function lookup(catalog, id) { return id ? catalog?.[id] ?? null : null; }
 function areaOperational(ship, area) { return (ship.areas?.[area]?.state ?? AREA_STATES.STABLE) !== AREA_STATES.DISABLED; }
+function freezeModifier(modifier, source = {}) { return Object.freeze({ ...modifier, ...source }); }
 
 function installedComponents(ship, catalogs) {
   const components = [];
@@ -78,15 +80,27 @@ export function deriveShip(ship, catalogs = {}) {
   const tags = new Set(ship.traits ?? []);
   const capabilities = new Set();
   const stationCapabilities = emptyStationCapabilities();
+  const ruleModifiers = [];
 
   for (const item of components) {
     for (const effect of item.effects ?? []) applyEffect(derived, effect);
     for (const tag of [...(item.tags ?? []), ...(item.traits ?? [])]) tags.add(tag);
     for (const capability of item.capabilities ?? []) capabilities.add(capability);
+    for (const modifier of item.data?.ruleModifiers ?? []) ruleModifiers.push(freezeModifier(modifier, { sourceType: "component", sourceId: item.id }));
     addStationUnlocks(stationCapabilities, item);
   }
 
   applyTalentProgression(derived, baseStats, ship, stationCapabilities, capabilities);
+
+  const talentIds = [...(ship?.progression?.talentIds ?? [])];
+  const modTalentSynergies = resolveInstalledModTalentSynergies(components, talentIds);
+  for (const synergy of modTalentSynergies) {
+    for (const effect of synergy.effects ?? []) applyEffect(derived, effect);
+    for (const capability of synergy.capabilities ?? []) capabilities.add(capability);
+    for (const modifier of synergy.ruleModifiers ?? []) {
+      ruleModifiers.push(freezeModifier(modifier, { sourceType: "mod-talent-synergy", sourceId: synergy.id, modId: synergy.modId }));
+    }
+  }
 
   const shipLevel = clampShipLevel(ship?.progression?.level ?? 1);
   derived.armorClass = Number(derived.armorClass ?? 0) + shipLevel + shipDefenseProgressionBonus(shipLevel);
@@ -101,6 +115,8 @@ export function deriveShip(ship, catalogs = {}) {
   const progression = progressionView(ship);
   return Object.freeze({
     stats: Object.freeze(normalizedStats), tags: Object.freeze([...tags]), capabilities: Object.freeze([...capabilities]), progression,
+    ruleModifiers: Object.freeze(ruleModifiers),
+    modTalentSynergies,
     stationCapabilities: Object.freeze(frozenStationCapabilities),
     unlocks: Object.freeze({ masteries: Object.freeze(Object.values(frozenStationCapabilities).flatMap((row) => row.masteries)), actions: Object.freeze(Object.values(frozenStationCapabilities).flatMap((row) => row.combatActions)) }),
     usage: Object.freeze({ rooms: (ship.rooms ?? []).reduce((sum, id) => sum + (catalogs.rooms?.[id]?.capacityCost ?? 0), 0), shipMods: (ship.shipMods ?? []).reduce((sum, id) => sum + (catalogs.shipMods?.[id]?.capacityCost ?? 0), 0), arkengineMods: (ship.arkengine.modIds ?? []).reduce((sum, id) => sum + (catalogs.arkengineMods?.[id]?.capacityCost ?? 0), 0) })
