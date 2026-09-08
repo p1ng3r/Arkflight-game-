@@ -93,12 +93,14 @@ export function derivedStatsByPresentation(presentation) {
   return Object.freeze(Object.values(DERIVED_STAT_REGISTRY).filter((definition) => definition.presentation === presentation));
 }
 
-export function deriveResistanceProfile(basePhysical = {}, components = []) {
+/**
+ * Legacy hull bludgeoning/piercing/slashing values are preserved on
+ * physicalResistances for migration and inspection, but no longer become
+ * active resistances. Hull-wide structural reduction is represented by
+ * Hardness. Only explicitly-authored component resistances are active here.
+ */
+export function deriveResistanceProfile(_basePhysical = {}, components = []) {
   const values = {};
-  for (const [type, rawValue] of Object.entries(basePhysical ?? {})) {
-    const value = Math.max(0, Math.trunc(Number(rawValue) || 0));
-    if (value > 0) values[type] = Math.max(values[type] ?? 0, value);
-  }
   const conditional = [];
   for (const component of components ?? []) {
     for (const resistance of component?.data?.resistances ?? []) {
