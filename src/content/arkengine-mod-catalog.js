@@ -4,6 +4,7 @@ import { EPIC_ARKENGINE_MODS } from "./arkengine-mods-epic.js";
 import { LEGENDARY_ARKENGINE_MODS } from "./arkengine-mods-legendary.js";
 import { MYTHIC_ARKENGINE_MODS } from "./arkengine-mods-mythic.js";
 import { withModArt } from "./mod-art.js";
+import { decorateModTalentSynergies } from "../ship/mod-talent-synergy.js";
 
 const merged = {
   ...STANDARD_ARKENGINE_MODS,
@@ -14,5 +15,5 @@ const merged = {
 };
 
 export const ARKENGINE_MODS = Object.freeze(Object.fromEntries(
-  Object.entries(merged).map(([id, mod]) => [id, withModArt(mod, "arkengineMod")])
+  Object.entries(merged).map(([id, mod]) => [id, withModArt(decorateModTalentSynergies(mod), "arkengineMod")])
 ));
