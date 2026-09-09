@@ -117,6 +117,7 @@
     "src/ui/gm-operations-voyage-ui.js",
     "src/ui/gm-operations-combat-ui.js",
     "src/ui/weapon-combat-station-ui.js",
+    "src/ui/token-weapon-arcs-ui.js",
     "src/ui/ship-weapons-tab-ui.js",
     "src/ui/gm-operations-time-work-ui.js",
     "src/ui/player-refit-work-start-ui.js",
