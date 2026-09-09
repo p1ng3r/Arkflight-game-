@@ -175,10 +175,19 @@ function attackEffectPlan(attackerState, target, solution, attackerLevel) {
   });
 }
 
-function defenseEffectPlan(targetState, targetLevel, solution, targetActor) {
+function attackDefensePlan(targetState, targetLevel) {
   const effects = activeStationEffects(targetState);
   const evasive = effects.filter((effect) => effect.actionId === "navigator-evasive-maneuver");
   const spoil = effects.filter((effect) => effect.actionId === "battlewatch-spoil-their-aim");
+  return Object.freeze({
+    acBonus: highestMagnitude(evasive, targetLevel),
+    attackPenalty: highestMagnitude(spoil, targetLevel),
+    consumed: Object.freeze([...evasive, ...spoil].map((effect) => effect.id))
+  });
+}
+
+function damageDefensePlan(targetState, targetLevel, solution, targetActor) {
+  const effects = activeStationEffects(targetState);
   const brace = effects.filter((effect) => effect.actionId === "captain-brace-for-impact");
   const emergencyWard = effects.filter((effect) => effect.actionId === "veilwarden-emergency-ward");
   const reinforce = effects.filter((effect) => effect.actionId === "veilwarden-reinforce-lifeveil");
@@ -200,12 +209,9 @@ function defenseEffectPlan(targetState, targetLevel, solution, targetActor) {
   const bracePlan = bestEffect(brace, (effect) => stationMitigationValue("brace", effect.shipLevel ?? targetLevel, effect.boost));
 
   return Object.freeze({
-    acBonus: highestMagnitude(evasive, targetLevel),
-    attackPenalty: highestMagnitude(spoil, targetLevel),
     wardable,
     wardMitigation: baseWard.value + emergency.value,
     braceMitigation: bracePlan.value,
-    attackConsumed: Object.freeze([...evasive, ...spoil].map((effect) => effect.id)),
     wardConsumed: Object.freeze(baseWard.effect ? [baseWard.effect.id] : []),
     emergencyWardConsumed: Object.freeze(emergency.effect ? [emergency.effect.id] : []),
     braceConsumed: Object.freeze(bracePlan.effect ? [bracePlan.effect.id] : [])
@@ -221,7 +227,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   const attackerLevel = shipLevel(attacker.actor);
   const targetLevel = shipLevel(target.actor);
   const attackerBefore = base.state(attacker);
-  const targetBefore = base.state(target);
+  const targetAttackState = base.state(target);
   const rawSolution = base.targetingSolution(weaponKey, target, attacker);
   const solution = attackVectorSolution(attackerBefore, rawSolution, attackerLevel);
   if (!solution.range.legal) throw new Error(`${solution.weapon.name}: target is ${solution.range.label.toLowerCase()} (${solution.distanceHexes.toFixed(1)} hex).`);
@@ -229,9 +235,8 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
 
   const round = game.combat?.round ?? 1;
   let attackerAfter = fireWeapon(attackerBefore, weaponKey, round);
-  let targetAfter = targetBefore;
   const offense = attackEffectPlan(attackerBefore, target, solution, attackerLevel);
-  const defense = defenseEffectPlan(targetBefore, targetLevel, solution, target.actor);
+  const attackDefense = attackDefensePlan(targetAttackState, targetLevel);
 
   const battlewatch = battlewatchActor(attacker.actor);
   const perception = perceptionModifier(battlewatch);
@@ -243,33 +248,47 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     shipWeaponAttackBonus: attackerDerived.stats.weaponAttackBonus,
     install: { upgrades: solution.weaponState.upgrades }
   });
-  const stationModifier = offense.circumstanceBonus - defense.attackPenalty;
+  const stationModifier = offense.circumstanceBonus - attackDefense.attackPenalty;
   const attackBonus = baseAttackBonus + stationModifier;
   const baseAC = Math.max(0, Number(targetDerived.stats.armorClass) || 0);
-  const ac = baseAC + defense.acBonus;
+  const ac = baseAC + attackDefense.acBonus;
   const attack = await new Roll("1d20 + @attackBonus", { attackBonus }).evaluate();
   const die = Number(attack.dice?.[0]?.total ?? attack.terms?.find?.((term) => term?.faces === 20)?.total ?? 0);
   const degree = degreeOfSuccess(Number(attack.total), die, ac);
 
   attackerAfter = consumeStationEffects(attackerAfter, offense.consumed);
-  targetAfter = consumeStationEffects(targetAfter, defense.attackConsumed);
-
   if (offense.broadside.some((effect) => stationEffectProfile(effect.shipLevel ?? attackerLevel).master)) {
     attackerAfter = reduceReadyRound(attackerAfter, weaponKey, 1, round);
   }
 
+  let targetAfter = consumeStationEffects(targetAttackState, attackDefense.consumed);
+  let damageDefense = Object.freeze({ wardable: false, wardMitigation: 0, braceMitigation: 0, wardConsumed: [], emergencyWardConsumed: [], braceConsumed: [] });
   let damage = null;
+
   if (degree >= 1) {
     const profile = weaponDamageProfile(solution.weapon, { upgrades: solution.weaponState.upgrades });
     const damageRoll = await new Roll(degree === 2 ? `2 * (${profile.dice})` : profile.dice).evaluate();
     const rolled = Math.max(0, Number(damageRoll.total) || 0);
     const poweredIncoming = rolled + offense.damageBonus;
-    const wardAbsorbed = Math.min(poweredIncoming, defense.wardMitigation);
-    const afterWard = Math.max(0, poweredIncoming - wardAbsorbed);
     const hardnessBase = Math.max(0, Number(targetDerived.stats.hardness) || 0);
     const hardnessEffective = Math.max(0, hardnessBase - offense.hardnessReduction);
+
+    await game.arkflight?.shipCombatReactions?.promptDamage?.({
+      attacker,
+      target,
+      solution,
+      incoming: poweredIncoming,
+      hardness: hardnessEffective
+    });
+
+    const targetLatest = base.state(target) ?? targetAttackState;
+    targetAfter = consumeStationEffects(targetLatest, attackDefense.consumed);
+    damageDefense = damageDefensePlan(targetAfter, targetLevel, solution, target.actor);
+
+    const wardAbsorbed = Math.min(poweredIncoming, damageDefense.wardMitigation);
+    const afterWard = Math.max(0, poweredIncoming - wardAbsorbed);
     const hardened = applyHardnessToDamage(afterWard, hardnessEffective);
-    const braceAbsorbed = Math.min(hardened.hullDamage, defense.braceMitigation);
+    const braceAbsorbed = Math.min(hardened.hullDamage, damageDefense.braceMitigation);
     const hullDamage = Math.max(0, hardened.hullDamage - braceAbsorbed);
     const targetShip = shipPayload(target.actor);
     const before = Math.max(0, Number(targetShip.resources?.hull?.value) || 0);
@@ -291,20 +310,21 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       type: profile.type ?? "damage"
     });
     if (wardAbsorbed > 0) {
-      targetAfter = consumeStationEffects(targetAfter, [...defense.wardConsumed, ...defense.emergencyWardConsumed]);
+      targetAfter = consumeStationEffects(targetAfter, [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed]);
     }
-    if (braceAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, defense.braceConsumed);
+    if (braceAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, damageDefense.braceConsumed);
   }
 
   await attacker.update({ [STATE_PATH]: attackerAfter });
-  if (targetAfter !== targetBefore) await target.update({ [STATE_PATH]: targetAfter });
+  if (targetAfter !== targetAttackState) await target.update({ [STATE_PATH]: targetAfter });
   if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
 
+  const defense = Object.freeze({ ...attackDefense, ...damageDefense });
   const esc = foundry.utils.escapeHTML;
   const modifiers = [];
   if (offense.circumstanceBonus) modifiers.push(`+${offense.circumstanceBonus} attack`);
-  if (defense.attackPenalty) modifiers.push(`−${defense.attackPenalty} enemy aim`);
-  if (defense.acBonus) modifiers.push(`+${defense.acBonus} target AC`);
+  if (attackDefense.attackPenalty) modifiers.push(`−${attackDefense.attackPenalty} enemy aim`);
+  if (attackDefense.acBonus) modifiers.push(`+${attackDefense.acBonus} target AC`);
   if (offense.hardnessReduction) modifiers.push(`−${offense.hardnessReduction} target Hardness`);
   if (solution.arc.vectorTolerance) modifiers.push(`+${solution.arc.vectorTolerance}° arc tolerance`);
   const stationLine = modifiers.length ? `<br><strong>Station effects:</strong> ${modifiers.join(" · ")}` : "";
