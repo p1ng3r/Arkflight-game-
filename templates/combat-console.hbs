@@ -1,59 +1,96 @@
-<section class="afcc-shell">
-  <header class="afcc-header">
-    <div class="afcc-title"><span class="afcc-kicker">ARKFLIGHT TACTICAL CONTROL</span><h2><i class="fa-solid fa-crosshairs"></i> Combat Console — {{shipName}}</h2></div>
-    <div class="afcc-turn-state {{#if activeTurn}}is-active{{/if}}"><span>Round {{resources.round}}</span><strong>{{#if activeTurn}}ACTIVE SHIP TURN{{else}}TACTICAL STANDBY{{/if}}</strong></div>
-  </header>
+<section class="afcs-shell {{#if openStations}}show-stations{{/if}} {{#if openWeapons}}show-weapons{{/if}} {{#if openLog}}show-log{{/if}}">
   {{#if offline}}
-    <div class="afcc-offline"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Combat Console Offline</strong><span>{{offlineReason}}</span></div></div>
-  {{else}}
-    <div class="afcc-grid">
-      <section class="afcc-stations">
-        <nav class="afcc-station-tabs" aria-label="Arkflight combat stations">
-          {{#each stationRows}}
-            <button type="button" data-station="{{id}}" class="{{#if active}}is-active{{/if}}"><i class="{{icon}}"></i><span>{{label}}</span><small>{{crew}}</small></button>
-          {{/each}}
-        </nav>
-        <div class="afcc-action-heading"><div><span>STATION ACTIONS</span><strong>4 Actions + 1 Reaction</strong></div><small>All stations spend the vessel's shared AP / RP.</small></div>
-        <div class="afcc-action-grid">
-          {{#each actions}}
-            <article class="afcc-action-card {{#if reaction}}is-reaction{{/if}}" data-action-card>
-              <header><span class="afcc-timing">{{#if reaction}}REACTION{{else}}ACTION{{/if}}</span><span class="afcc-cost">{{cost}}</span></header>
-              <strong class="afcc-action-name">{{name}}</strong><p>{{description}}</p>
-              {{#if hasChoices}}<select data-action-choice aria-label="{{name}} choice">{{#each choices}}<option value="{{value}}">{{label}}</option>{{/each}}</select>{{/if}}
-              <button type="button" data-station-action="{{id}}" {{#unless usable}}disabled{{/unless}}>{{#if reaction}}<i class="fa-solid fa-bolt"></i>{{else}}<i class="fa-solid fa-play"></i>{{/if}} {{buttonLabel}}</button>
-            </article>
-          {{/each}}
-        </div>
-      </section>
-      <aside class="afcc-targeting">
-        <div class="afcc-panel-title"><span>TARGETING</span><i class="fa-solid fa-bullseye"></i></div>
-        <div class="afcc-target-picker">
-          <select data-target-select {{#unless hasTargets}}disabled{{/unless}} aria-label="Target ship">{{#if hasTargets}}{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}{{else}}<option value="">No enemy ships</option>{{/if}}</select>
-          <button type="button" data-use-canvas-target {{#unless hasTargets}}disabled{{/unless}} title="Use the ship currently targeted on the canvas"><i class="fa-solid fa-crosshairs"></i></button>
-        </div>
-        {{#if target}}
-          <div class="afcc-target-card">
-            <div class="afcc-target-identity"><img src="{{target.img}}" alt="{{target.name}}"><div><span>HOSTILE VESSEL</span><strong>{{target.name}}</strong><small>Heading {{target.heading}}° · Hardness {{target.hardness}}</small></div></div>
-            <div class="afcc-target-stats"><div><span>RANGE</span><strong>{{target.rangeLabel}}</strong><small>{{target.distance}}</small></div><div><span>ARMOR CLASS</span><strong>{{target.armorClass}}</strong><small>{{#if target.legal}}LEGAL SHOT{{else}}CHECK ARC{{/if}}</small></div></div>
-            <div class="afcc-meter"><div><span><i class="fa-solid fa-shield-halved"></i> Hull</span><strong>{{target.hullValue}} / {{target.hullMax}}</strong></div><div class="afcc-meter-track"><i class="is-hull" style="--afcc-pct: {{target.hullPct}}%;"></i></div></div>
-            <div class="afcc-meter"><div><span><i class="fa-solid fa-droplet"></i> Lifeveil</span><strong>{{target.lifeveilValue}} / {{target.lifeveilMax}}</strong></div><div class="afcc-meter-track"><i class="is-lifeveil" style="--afcc-pct: {{target.lifeveilPct}}%;"></i></div></div>
-            <div class="afcc-solution {{#if target.legal}}is-legal{{else}}is-illegal{{/if}}"><i class="fa-solid {{#if target.legal}}fa-circle-check{{else}}fa-circle-xmark{{/if}}"></i> {{target.solutionText}}</div>
-            <div class="afcc-target-buttons"><button type="button" data-lock-target><i class="fa-solid fa-bullseye"></i> Target</button><button type="button" class="is-fire" data-fire-selected {{#unless canFireSelected}}disabled{{/unless}}><i class="fa-solid fa-crosshairs"></i> Fire &amp; Apply</button></div>
-          </div>
-        {{else}}
-          <div class="afcc-target-empty"><i class="fa-solid fa-crosshairs"></i><strong>No Target Locked</strong><span>Target another Arkflight vessel on the canvas or choose one above.</span></div>
-        {{/if}}
-        <div class="afcc-fire-control">
-          <div class="afcc-panel-title compact"><span>WEAPON</span><i class="fa-solid fa-burst"></i></div>
-          <select data-weapon-select {{#unless hasWeapons}}disabled{{/unless}} aria-label="Selected ship weapon">{{#if hasWeapons}}{{#each weapons}}<option value="{{key}}" {{#if selected}}selected{{/if}}>{{name}} — {{mountLabel}} {{mountIndex}}</option>{{/each}}{{else}}<option value="">No installed weapons</option>{{/if}}</select>
-          {{#each weapons}}{{#if selected}}<div class="afcc-selected-weapon"><strong>{{name}}</strong><span>{{damage}} · {{fireAP}} AP · {{mountLabel}} {{mountIndex}} · {{arc}} arc</span><small class="{{#if legal}}is-legal{{else}}is-illegal{{/if}}">{{solution}}</small>{{#unless ready}}<em><i class="fa-solid fa-hourglass-half"></i> Reloading: {{remaining}} round(s)</em>{{/unless}}</div>{{/if}}{{/each}}
-        </div>
-        <div class="afcc-arcs"><button type="button" class="afcc-all-arcs {{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs><i class="fa-solid fa-eye"></i> {{arcButtonLabel}}</button><div class="afcc-facing-buttons">{{#each facings}}<button type="button" data-toggle-facing="{{id}}" class="facing-{{id}} {{#if active}}is-active{{/if}}">{{label}}</button>{{/each}}</div></div>
-        {{#if lastShot}}
-          <div class="afcc-last-shot {{#if lastShot.hit}}is-hit{{else}}is-miss{{/if}}"><div class="afcc-panel-title compact"><span>LAST SHOT</span><i class="fa-solid fa-dice-d20"></i></div><strong>{{lastShot.weapon}} → {{lastShot.target}}</strong><span>Attack {{lastShot.attack}} · {{lastShot.degree}}</span>{{#if lastShot.hit}}<span>Damage {{lastShot.damage}} − {{lastShot.hardness}} Hardness = <b>{{lastShot.hullDamage}} Hull</b></span><small>Hull {{lastShot.hullBefore}} → {{lastShot.hullAfter}}</small>{{else}}<small>No Hull damage applied.</small>{{/if}}</div>
-        {{/if}}
-      </aside>
+    <div class="afcs-offline">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <div>
+        <strong>Combat Strip Offline</strong>
+        <span>{{offlineReason}}</span>
+      </div>
     </div>
-    <footer class="afcc-resource-strip"><div><span>ROUND</span><strong>{{resources.round}}</strong></div><div class="is-ap"><span>AP</span><strong>{{resources.ap}} / {{resources.apMax}}</strong></div><div class="is-rp"><span>RP</span><strong>{{resources.rp}} / {{resources.rpMax}}</strong></div><div class="is-strain"><span>STRAIN</span><strong>{{resources.strain}} / {{resources.strainMax}}</strong></div><div class="is-heading"><span>HEADING</span><strong>{{resources.heading}}°</strong></div></footer>
+  {{else}}
+    <section class="afcs-drawer afcs-drawer-stations {{#if openStations}}is-open{{/if}}">
+      <header>
+        <div><span>STATIONS</span><strong>{{currentStationLabel}} — {{shipName}}</strong></div>
+        <button type="button" data-toggle-panel="stations"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+      <nav class="afcs-station-tabs" aria-label="Arkflight combat stations">
+        {{#each stationRows}}
+          <button type="button" data-station="{{id}}" class="{{#if active}}is-active{{/if}}">
+            <i class="{{icon}}"></i><span>{{label}}</span><small>{{crew}}</small>
+          </button>
+        {{/each}}
+      </nav>
+      <div class="afcs-action-list">
+        {{#each actions}}
+          <article class="afcs-action-row {{#if reaction}}is-reaction{{/if}}" data-action-card title="{{description}}">
+            <div class="afcs-action-text"><strong>{{name}}</strong><span>{{summary}}</span></div>
+            <div class="afcs-action-meta">
+              <em>{{cost}}</em>
+              {{#if hasChoices}}<select data-action-choice aria-label="{{name}} choice">{{#each choices}}<option value="{{value}}">{{label}}</option>{{/each}}</select>{{/if}}
+              <button type="button" data-station-action="{{id}}" {{#unless usable}}disabled{{/unless}}>{{buttonLabel}}</button>
+            </div>
+          </article>
+        {{/each}}
+      </div>
+    </section>
+
+    <section class="afcs-drawer afcs-drawer-weapons {{#if openWeapons}}is-open{{/if}}">
+      <header>
+        <div><span>WEAPONS</span><strong>{{shipName}} vs {{targetName}}</strong></div>
+        <button type="button" data-toggle-panel="weapons"><i class="fa-solid fa-xmark"></i></button>
+      </header>
+      <div class="afcs-weapon-toolbar">
+        <select data-target-select {{#unless hasTargets}}disabled{{/unless}} aria-label="Target ship">
+          {{#if hasTargets}}{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}{{else}}<option value="">No enemy ships</option>{{/if}}
+        </select>
+        <button type="button" data-use-canvas-target {{#unless hasTargets}}disabled{{/unless}} title="Use canvas target"><i class="fa-solid fa-crosshairs"></i></button>
+        <button type="button" data-lock-target {{#unless target}}disabled{{/unless}} title="Target on canvas"><i class="fa-solid fa-bullseye"></i></button>
+        <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>
+      </div>
+      {{#if target}}
+      <div class="afcs-target-summary {{#if target.legal}}is-legal{{else}}is-illegal{{/if}}">
+        <img src="{{target.img}}" alt="{{target.name}}">
+        <div><strong>{{target.name}}</strong><span>AC {{target.armorClass}} · Hardness {{target.hardness}} · Hull {{target.hullValue}}/{{target.hullMax}}</span><small>{{target.solutionText}}</small></div>
+      </div>
+      {{/if}}
+      <div class="afcs-weapon-groups">
+        {{#if hasWeapons}}
+          {{#each weaponGroups}}
+            <section class="afcs-weapon-group {{colorClass}}"><h4>{{label}}</h4>
+              {{#each weapons}}
+                <article class="afcs-weapon-row {{#unless ready}}is-reloading{{/unless}} {{#unless legal}}is-illegal{{/unless}}">
+                  <div class="afcs-weapon-text"><strong>{{name}}</strong><span>{{mountLabel}} {{mountIndex}} · {{damage}} · {{fireAP}} AP</span><small>{{solution}}</small></div>
+                  <div class="afcs-weapon-meta"><em>{{statusLabel}}</em>{{#if ready}}<button type="button" data-fire-weapon="{{key}}" {{#unless legal}}disabled{{/unless}}>Fire</button>{{else}}<button type="button" data-work-weapon="{{key}}">Work Guns</button>{{/if}}</div>
+                </article>
+              {{/each}}
+            </section>
+          {{/each}}
+        {{else}}<div class="afcs-empty-state">No installed weapons are available.</div>{{/if}}
+      </div>
+    </section>
+
+    <section class="afcs-drawer afcs-drawer-log {{#if openLog}}is-open{{/if}}">
+      <header><div><span>COMBAT LOG</span><strong>{{shipName}}</strong></div><button type="button" data-toggle-panel="log"><i class="fa-solid fa-xmark"></i></button></header>
+      <div class="afcs-log-list">
+        {{#if logEntries.length}}{{#each logEntries}}<article class="afcs-log-entry {{tone}}"><i class="{{icon}}"></i><div><strong>{{title}}</strong><span>{{detail}}</span></div></article>{{/each}}{{else}}<div class="afcs-empty-state">No ship-combat entries yet.</div>{{/if}}
+      </div>
+    </section>
+
+    <footer class="afcs-strip {{#if activeTurn}}is-active-turn{{/if}}">
+      <div class="afcs-ship">{{#if shipImg}}<img src="{{shipImg}}" alt="{{shipName}}">{{/if}}<div><strong>{{shipName}}</strong><span>{{#if activeTurn}}Active Turn{{else}}Standby{{/if}}</span></div></div>
+      <div class="afcs-stat"><label>Round</label><strong>{{resources.round}}</strong></div>
+      <div class="afcs-stat is-pips"><label>AP {{resources.ap}} / {{resources.apMax}}</label><div class="afcs-pips is-ap">{{#each resources.apPips}}<i class="{{#if filled}}is-filled{{/if}}"></i>{{/each}}</div><small>Spent {{resources.apSpent}}</small></div>
+      <div class="afcs-stat is-pips"><label>RP {{resources.rp}} / {{resources.rpMax}}</label><div class="afcs-pips is-rp">{{#each resources.rpPips}}<i class="{{#if filled}}is-filled{{/if}}"></i>{{/each}}</div><small>Spent {{resources.rpSpent}}</small></div>
+      <div class="afcs-stat is-pips is-strain"><label>Strain {{resources.strain}} / {{resources.strainMax}}</label><div class="afcs-pips is-strain">{{#each resources.strainPips}}<i class="{{#if filled}}is-filled{{/if}}"></i>{{/each}}</div></div>
+      <div class="afcs-stat"><label>Heading</label><strong>{{resources.heading}}°</strong></div>
+      <div class="afcs-stat is-target"><label>Target</label><strong>{{targetName}}</strong></div>
+      <div class="afcs-controls">
+        <button type="button" class="{{#if openStations}}is-active{{/if}}" data-toggle-panel="stations"><i class="fa-solid fa-users"></i> Stations</button>
+        <button type="button" class="{{#if openWeapons}}is-active{{/if}}" data-toggle-panel="weapons"><i class="fa-solid fa-sword"></i> Weapons</button>
+        <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>
+        <button type="button" class="{{#if openLog}}is-active{{/if}}" data-toggle-panel="log"><i class="fa-solid fa-scroll"></i> Log</button>
+        <button type="button" class="is-end" data-end-turn {{#unless gm}}disabled{{/unless}}><i class="fa-solid fa-forward-step"></i> End Turn</button>
+      </div>
+    </footer>
   {{/if}}
 </section>
