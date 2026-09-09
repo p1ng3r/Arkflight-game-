@@ -8,5 +8,6 @@ export {
   COMBAT_ACTION_TIMING,
   CORE_COMBAT_ACTIONS_BY_STATION,
   getCombatAction,
-  getCoreCombatActionsForStation
+  getCoreCombatActionsForStation,
+  getCoreCombatActionDefinitionsForStation
 } from "../content/combat-actions.js";
