@@ -50,8 +50,8 @@ test("Rare Arkflight ship weapons map to PF2e rare Item rarity without moving Ar
   assert.equal(source.system.bonus.value, 0);
 });
 
-test("all twelve current ship weapons have PF2e-compatible base damage dice", () => {
-  assert.equal(Object.keys(WEAPONS).length, 12);
+test("all thirteen current ship weapons have PF2e-compatible base damage dice", () => {
+  assert.equal(Object.keys(WEAPONS).length, 13);
   for (const weapon of Object.values(WEAPONS)) {
     const damage = parsePf2eWeaponDamage(weapon.data.damageProfile);
     assert.ok(Number.isInteger(damage.dice) && damage.dice > 0, weapon.name);

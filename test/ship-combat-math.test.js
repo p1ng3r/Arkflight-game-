@@ -33,7 +33,7 @@ test("ship defense progression uses PF2e-style proficiency steps", () => {
   assert.equal(shipDefenseProgressionBonus(20), 6);
 });
 
-test("Rum Runner galleon chassis derives level-scaled AC while Hardness stays chassis-based", () => {
+test("Galleon chassis derives level-scaled AC while Hardness stays chassis-based", () => {
   const level1 = deriveShip(vessel("galleon", "furnaceheart-drive", 1), SHIP_CATALOGS);
   const level6 = deriveShip(vessel("galleon", "furnaceheart-drive", 6), SHIP_CATALOGS);
   assert.equal(level1.stats.armorClass, 16);
@@ -118,8 +118,8 @@ test("Hardness reduces structural damage once", () => {
   assert.equal(applyHardnessToDamage(4, 8).hullDamage, 0);
 });
 
-test("core weapon catalog contains twelve distinct combat-ready weapons", () => {
-  assert.equal(Object.keys(SHIP_CATALOGS.weapons).length, 12);
+test("core weapon catalog contains thirteen distinct combat-ready weapons", () => {
+  assert.equal(Object.keys(SHIP_CATALOGS.weapons).length, 13);
   for (const weapon of Object.values(SHIP_CATALOGS.weapons)) {
     const combat = weapon.data.combat;
     assert.ok(["small", "medium", "large"].includes(weapon.data.size), `${weapon.name} size`);

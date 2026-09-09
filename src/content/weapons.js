@@ -85,6 +85,22 @@ const D = Object.freeze({
     cargo: 2,
     combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
   }),
+  "light-broadside-cannon": Object.freeze({
+    name: "Light Broadside Cannon",
+    description: "A compact naval cannon built for the small port and starboard hardpoints carried by sloops, cutters, and brigantines.",
+    tier: 1,
+    tags: ["weapon", "cannon", "small", "mechanical", "black-powder", "broadside", "crew-served"],
+    size: "small",
+    family: "cannon",
+    category: "light-broadside-cannon",
+    crewRequired: 2,
+    allowedMounts: ["port", "starboard"],
+    damageProfile: { dice: "3d8", type: "bludgeoning" },
+    mountType: "small",
+    systemThreat: "hull",
+    cargo: 2,
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "broadside", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 4, max: 5 } }
+  }),
   "broadside-cannon-battery": Object.freeze({
     name: "Broadside Cannon Battery",
     description: "A linked battery of naval guns designed to turn a ship's port or starboard battery into one punishing broadside.",

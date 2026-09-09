@@ -81,18 +81,17 @@ The vessel has been rebuilt to stand in a ship-to-ship fight and carry heavier a
 
 ### Heavy Battery Conversion
 
-Choose **one existing weapon mount** whose `maxSize` is `small` or `medium`.
-
-Increase that mount's maximum weapon size by one step:
+Increase the maximum weapon size of **every existing weapon mount** by one step:
 
 ```text
 small -> medium
 medium -> large
+large -> large
 ```
 
-If the ship has no mount below `large`, choose one existing large mount instead. That mount gains **Heavy Integration**: one installed `large` weapon in that mount treats its `capacityCost` as 1 lower for installation/integration purposes, minimum 1. This does not reduce its crew, reload, Action, or damage requirements.
+Existing `large` mounts remain `large`; Warship Conversion does not create a size category above `large`.
 
-The conversion does not create a new arc or mount location.
+The conversion does not create a new arc or mount location. It refits the vessel's complete existing battery rather than adding hardpoints.
 
 ### Battle-Hardened
 
@@ -112,7 +111,7 @@ This benefit cannot reduce a 1-Action activity to 0 Actions.
 
 Battle Ship means:
 
-> heavier armament, better battle survival, and deliberate combat action economy.
+> a ship-wide heavy-battery refit, better battle survival, and deliberate combat action economy.
 
 ---
 

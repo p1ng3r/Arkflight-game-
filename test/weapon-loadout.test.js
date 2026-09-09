@@ -49,6 +49,19 @@ test("repeated quick-loads choose the next legal free mount", () => {
   assert.equal(weaponMountSlots(third.ship, SHIP_CATALOGS).filter((slot) => slot.occupied).length, 3);
 });
 
+test("Brigantines accept light broadside cannons but require an upgraded mount for a medium battery", () => {
+  const ship = vessel("brigantine", "tidewake-arkengine", 1);
+  const light = findAvailableWeaponMount(ship, SHIP_CATALOGS, "light-broadside-cannon");
+  const battery = findAvailableWeaponMount(ship, SHIP_CATALOGS, "broadside-cannon-battery");
+
+  assert.equal(light.ok, true);
+  assert.equal(light.slot.facing, "port");
+  assert.equal(light.slot.maxSize, "small");
+  assert.equal(battery.ok, false);
+  assert.equal(battery.reason, "no-compatible-mount");
+  assert.equal(battery.weaponSize, "medium");
+});
+
 test("Heavy Bombard cannot fit a Sloop's small-only mounts", () => {
   const ship = vessel("sloop", "lanterncoil-arkengine", 3);
   const result = findAvailableWeaponMount(ship, SHIP_CATALOGS, "heavy-bombard");
