@@ -1,0 +1,97 @@
+/* Final canvas-HUD polish: remove the large clear Foundry body and add compact
+   vessel vitals without turning the strip back into a full window. */
+.arkflight-combat-console{
+  overflow:visible!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.arkflight-combat-console .window-content{
+  overflow:visible!important;
+  background:transparent!important;
+  padding:0!important;
+  flex:0 0 auto!important;
+}
+.arkflight-combat-console:not(.afcs-has-drawer) .window-content{
+  min-height:0!important;
+  height:auto!important;
+}
+.arkflight-combat-console .afcs-shell{
+  width:100%!important;
+  min-height:0!important;
+  height:auto!important;
+  overflow:visible!important;
+}
+.arkflight-combat-console .afcs-strip{
+  width:100%!important;
+  min-height:112px!important;
+  height:112px!important;
+  grid-template-columns:165px 245px 50px 92px 82px 104px 72px minmax(90px,1fr)!important;
+  grid-template-rows:46px 40px!important;
+  grid-template-areas:
+    "ship vitals round ap rp strain heading target"
+    "ship controls controls controls controls controls controls controls"!important;
+  gap:6px 8px!important;
+}
+.arkflight-combat-console .afcs-vitals{
+  grid-area:vitals!important;
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  min-width:0!important;
+}
+.arkflight-combat-console .afcs-vital{
+  min-width:0!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:4px!important;
+}
+.arkflight-combat-console .afcs-vital-head{
+  display:grid!important;
+  grid-template-columns:13px minmax(0,1fr) auto!important;
+  gap:4px!important;
+  align-items:center!important;
+  min-width:0!important;
+  font-size:9px!important;
+  color:#9fc5d5!important;
+  text-transform:uppercase!important;
+  letter-spacing:.04em!important;
+}
+.arkflight-combat-console .afcs-vital-head i{font-size:9px!important}
+.arkflight-combat-console .afcs-vital-head span{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.arkflight-combat-console .afcs-vital-head strong{font-size:10px!important;color:#e8f7ff!important;white-space:nowrap!important}
+.arkflight-combat-console .afcs-vital-track{
+  height:5px!important;
+  overflow:hidden!important;
+  border-radius:999px!important;
+  border:1px solid rgba(98,148,169,.34)!important;
+  background:rgba(2,10,16,.85)!important;
+}
+.arkflight-combat-console .afcs-vital-track i{
+  display:block!important;
+  width:var(--afcs-vital-pct)!important;
+  height:100%!important;
+  border-radius:inherit!important;
+}
+.arkflight-combat-console .afcs-vital.is-hull .afcs-vital-track i{background:linear-gradient(90deg,#4fbf7c,#77e29b)!important}
+.arkflight-combat-console .afcs-vital.is-lifeveil .afcs-vital-track i{background:linear-gradient(90deg,#4aaede,#76d8ff)!important}
+.arkflight-combat-console .afcs-vital.is-morale .afcs-vital-track i{background:linear-gradient(90deg,#d2a24d,#ffd473)!important}
+.arkflight-combat-console .afcs-vital.is-hull .afcs-vital-head i{color:#6fe098!important}
+.arkflight-combat-console .afcs-vital.is-lifeveil .afcs-vital-head i{color:#72d7ff!important}
+.arkflight-combat-console .afcs-vital.is-morale .afcs-vital-head i{color:#ffd270!important}
+.arkflight-combat-console .afcs-ship{grid-area:ship!important}
+.arkflight-combat-console .afcs-vitals + .afcs-stat{grid-area:round!important}
+.arkflight-combat-console .afcs-vitals + .afcs-stat + .afcs-stat{grid-area:ap!important}
+.arkflight-combat-console .afcs-vitals + .afcs-stat + .afcs-stat + .afcs-stat{grid-area:rp!important}
+.arkflight-combat-console .afcs-vitals + .afcs-stat + .afcs-stat + .afcs-stat + .afcs-stat{grid-area:strain!important}
+.arkflight-combat-console .afcs-vitals + .afcs-stat + .afcs-stat + .afcs-stat + .afcs-stat + .afcs-stat{grid-area:heading!important}
+.arkflight-combat-console .afcs-vitals + .afcs-stat + .afcs-stat + .afcs-stat + .afcs-stat + .afcs-stat + .afcs-stat{grid-area:target!important}
+.arkflight-combat-console .afcs-controls{grid-area:controls!important}
+.arkflight-combat-console .afcs-drawer{bottom:118px!important}
+@media(max-width:1100px){
+  .arkflight-combat-console .afcs-strip{
+    grid-template-columns:150px 220px 46px 84px 76px 92px 66px minmax(82px,1fr)!important;
+    gap:5px 6px!important;
+    padding:8px!important;
+  }
+  .arkflight-combat-console .afcs-vital-head span{display:none!important}
+}
