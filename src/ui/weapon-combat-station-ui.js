@@ -5,6 +5,9 @@ const MODULE_ID = "arkflight-game";
 const DEG_TO_RAD = Math.PI / 180;
 const ARC_VISIBLE = new Set();
 const ARC_GRAPHICS = new Map();
+const ARC_FILL_ALPHA = 0.16;
+const ARC_STROKE_ALPHA = 0.92;
+const ARC_STROKE_WIDTH = 3;
 const MOUNT_COLORS = Object.freeze({
   fore: 0x8bd5e2,
   starboard: 0xd7b16b,
@@ -89,13 +92,13 @@ function drawSector(graphics, { x, y, radius, center, halfWidth, color }) {
       graphics.lineTo(x, y);
       graphics.closePath?.();
     }
-    graphics.fill({ color, alpha: 0.055 });
-    graphics.stroke({ color, width: 2, alpha: 0.72 });
+    graphics.fill({ color, alpha: ARC_FILL_ALPHA });
+    graphics.stroke({ color, width: ARC_STROKE_WIDTH, alpha: ARC_STROKE_ALPHA });
     return;
   }
 
-  graphics.lineStyle?.(2, color, 0.72);
-  graphics.beginFill?.(color, 0.055);
+  graphics.lineStyle?.(ARC_STROKE_WIDTH, color, ARC_STROKE_ALPHA);
+  graphics.beginFill?.(color, ARC_FILL_ALPHA);
   if (halfWidth >= 179.5 && typeof graphics.drawCircle === "function") graphics.drawCircle(x, y, radius);
   else {
     graphics.moveTo?.(x, y);
