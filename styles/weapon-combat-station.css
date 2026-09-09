@@ -1,0 +1,123 @@
+.arkflight-weapon-station {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 2px;
+  padding: 12px;
+  border: 1px solid rgba(111, 215, 231, 0.26);
+  border-radius: 5px;
+  background: linear-gradient(180deg, rgba(19, 33, 41, 0.88), rgba(10, 18, 24, 0.92));
+}
+
+.arkflight-weapon-station-head,
+.arkflight-weapon-toolbar,
+.arkflight-weapon-target-lock,
+.arkflight-weapon-gm-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.arkflight-weapon-station-head > div { min-width: 0; }
+.arkflight-weapon-station-head span {
+  color: #8bd5e2;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .13em;
+}
+.arkflight-weapon-station-head h3 { margin: 2px 0 0; color: #efe3cc; }
+.arkflight-weapon-station-head small { max-width: 34rem; color: #95a3ad; text-align: right; }
+
+.arkflight-weapon-toolbar,
+.arkflight-weapon-target-lock {
+  padding: 8px 9px;
+  border: 1px solid rgba(190, 143, 66, 0.18);
+  background: rgba(7, 13, 18, 0.34);
+}
+
+.arkflight-weapon-combat-state { display: flex; flex-wrap: wrap; gap: 6px; }
+.arkflight-weapon-combat-state span {
+  padding: 4px 7px;
+  border: 1px solid rgba(111, 215, 231, 0.18);
+  border-radius: 999px;
+  color: #aeb8c1;
+  font-size: 11px;
+}
+.arkflight-weapon-combat-state strong { color: #edf4f7; }
+.arkflight-weapon-toolbar-actions,
+.arkflight-weapon-row-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.arkflight-weapon-toolbar button,
+.arkflight-weapon-target-lock button,
+.arkflight-weapon-row-actions button,
+.arkflight-weapon-gm-head-actions button { width: auto; }
+
+.arkflight-weapon-target-lock label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  margin: 0;
+}
+.arkflight-weapon-target-lock label > span {
+  color: #d7b16b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.arkflight-weapon-target-lock select { flex: 1; min-width: 180px; }
+
+.arkflight-weapon-list { display: grid; gap: 8px; }
+.arkflight-weapon-control-row {
+  display: grid;
+  grid-template-columns: minmax(180px, .9fr) minmax(260px, 1.4fr);
+  gap: 7px 12px;
+  padding: 10px;
+  border: 1px solid rgba(190, 143, 66, 0.22);
+  background: rgba(7, 12, 17, 0.42);
+}
+.arkflight-weapon-identity { display: grid; gap: 2px; }
+.arkflight-weapon-identity strong { color: #f0e3ca; }
+.arkflight-weapon-identity span,
+.arkflight-weapon-stats { color: #8e9ba5; font-size: 11px; }
+.arkflight-weapon-stats { align-self: center; }
+.arkflight-weapon-solution {
+  padding: 6px 8px;
+  border-left: 3px solid #8b6b45;
+  background: rgba(0, 0, 0, .18);
+  color: #c4cdd4;
+}
+.arkflight-weapon-solution.is-legal { border-color: #67ad7b; color: #d9f3e1; }
+.arkflight-weapon-solution.is-illegal { border-color: #b95e57; color: #f2d1ce; }
+.arkflight-weapon-row-actions { justify-content: flex-end; align-items: center; }
+.arkflight-weapon-fire:not(:disabled) {
+  border-color: rgba(111, 215, 231, .58);
+  background: linear-gradient(180deg, rgba(42, 111, 126, .72), rgba(27, 72, 84, .8));
+  color: #edfafd;
+}
+.arkflight-weapon-offline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-left: 3px solid #8b6b45;
+  background: rgba(86, 61, 26, .2);
+}
+.arkflight-weapon-offline > i { color: #d7b16b; }
+.arkflight-weapon-offline > div { display: grid; gap: 2px; }
+.arkflight-weapon-offline span,
+.arkflight-weapon-empty,
+.arkflight-weapon-authority { color: #8e9ba5; font-size: 11px; }
+.arkflight-weapon-authority { margin: 0; padding-top: 2px; }
+.arkflight-weapon-gm-head-actions { justify-content: flex-end; flex-wrap: wrap; }
+
+@media (max-width: 760px) {
+  .arkflight-weapon-station-head,
+  .arkflight-weapon-toolbar,
+  .arkflight-weapon-target-lock { align-items: stretch; flex-direction: column; }
+  .arkflight-weapon-station-head small { text-align: left; }
+  .arkflight-weapon-target-lock label { align-items: stretch; flex-direction: column; }
+  .arkflight-weapon-control-row { grid-template-columns: 1fr; }
+  .arkflight-weapon-row-actions { justify-content: flex-start; }
+}
