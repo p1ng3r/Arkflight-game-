@@ -1,5 +1,9 @@
+import { firingArcsVisible, toggleFiringArcs } from "./weapon-combat-station-ui.js";
+
 const MODULE_ID = "arkflight-game";
 const HUD_ID = "arkflight-combat-console";
+const initialized = new WeakSet();
+const userMoved = new WeakSet();
 let lastApp = null;
 
 function isCombatStrip(app) {
@@ -18,21 +22,40 @@ function pct(value, max) {
   return ceiling > 0 ? Math.max(0, Math.min(100, current / ceiling * 100)) : 0;
 }
 
-function usableCanvasWidth() {
+function canvasRightEdge() {
   const sidebar = document.querySelector("#sidebar") ?? document.querySelector("#ui-right");
   const left = Number(sidebar?.getBoundingClientRect?.().left);
-  const rightEdge = Number.isFinite(left) && left > 700 ? left : window.innerWidth;
-  return Math.max(960, rightEdge - 44);
+  return Number.isFinite(left) && left > 700 ? left : window.innerWidth;
 }
 
-function fitWindow(app) {
+function desiredGeometry() {
+  const rightEdge = canvasRightEdge();
+  const leftPad = 72;
+  const rightPad = 20;
+  const available = Math.max(1040, rightEdge - leftPad - rightPad);
+  const width = Math.min(1500, available);
+  const height = 132;
+  const left = Math.max(18, Math.round(leftPad + (available - width) / 2));
+  const top = Math.max(18, Math.round(window.innerHeight - height - 28));
+  return { width, height, left, top };
+}
+
+function fitWindow(app, { forcePosition = false } = {}) {
   if (!isCombatStrip(app)) return;
-  const width = Math.min(1280, usableCanvasWidth());
-  const height = 126;
-  const left = Math.max(18, Math.round((usableCanvasWidth() - width) / 2 + 22));
-  const top = Math.max(18, window.innerHeight - height - 26);
-  try { app.setPosition?.({ width, height, left, top }); }
-  catch (error) { console.warn("Arkflight | combat strip final fit failed", error); }
+  const geometry = desiredGeometry();
+  if (userMoved.has(app) && !forcePosition) {
+    const rect = app.element?.getBoundingClientRect?.();
+    if (!rect) return;
+    const maxLeft = Math.max(8, canvasRightEdge() - rect.width - 8);
+    const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+    const left = Math.max(8, Math.min(maxLeft, rect.left));
+    const top = Math.max(8, Math.min(maxTop, rect.top));
+    try { app.setPosition?.({ width: geometry.width, height: geometry.height, left, top }); }
+    catch (error) { console.warn("Arkflight | combat HUD clamp failed", error); }
+    return;
+  }
+  try { app.setPosition?.(geometry); }
+  catch (error) { console.warn("Arkflight | combat HUD fit failed", error); }
 }
 
 function ensureCloseButton(app, strip) {
@@ -41,10 +64,14 @@ function ensureCloseButton(app, strip) {
   button.type = "button";
   button.className = "afcs-final-close";
   button.dataset.afcsFinalClose = "true";
-  button.title = "Close Combat Strip";
-  button.setAttribute("aria-label", "Close Combat Strip");
+  button.title = "Close Combat HUD";
+  button.setAttribute("aria-label", "Close Combat HUD");
   button.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-  button.addEventListener("click", () => app.close?.());
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    app.close?.();
+  });
   strip.append(button);
 }
 
@@ -57,18 +84,11 @@ function buildVital(label, cssClass, value, max) {
   return wrapper;
 }
 
-function restructureStrip(app) {
-  if (!isCombatStrip(app)) return;
-  const root = app?.element;
-  const shell = root?.querySelector?.(".afcs-shell");
-  const strip = shell?.querySelector?.(".afcs-strip");
-  if (!shell || !strip) return;
-  lastApp = app;
-
+function restructureStrip(app, strip) {
   const ship = strip.querySelector(":scope > .afcs-ship");
   const controls = strip.querySelector(":scope > .afcs-controls");
   const stats = [...strip.querySelectorAll(":scope > .afcs-stat")];
-  if (!ship || !controls || stats.length < 6) return;
+  if (!ship || !controls) return;
 
   let center = strip.querySelector(":scope > .afcs-center");
   if (!center) {
@@ -84,25 +104,124 @@ function restructureStrip(app) {
   }
 
   const vitalsRow = center.querySelector(".afcs-vitals-row");
-  if (vitalsRow) {
-    vitalsRow.replaceChildren();
-    const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
-    const resources = shipPayload(actor)?.resources ?? {};
-    vitalsRow.append(
-      buildVital("Hull", "hull", resources.hull?.value, resources.hull?.max),
-      buildVital("Lifeveil", "lifeveil", resources.lifeveil?.value, resources.lifeveil?.max),
-      buildVital("Morale", "morale", resources.morale?.value, resources.morale?.max)
-    );
-  }
-
-  ensureCloseButton(app, strip);
-  shell.dataset.afcsFinal = "true";
-
-  requestAnimationFrame(() => requestAnimationFrame(() => fitWindow(app)));
+  if (!vitalsRow) return;
+  const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
+  const resources = shipPayload(actor)?.resources ?? {};
+  vitalsRow.replaceChildren(
+    buildVital("Hull", "hull", resources.hull?.value, resources.hull?.max),
+    buildVital("Lifeveil", "lifeveil", resources.lifeveil?.value, resources.lifeveil?.max),
+    buildVital("Morale", "morale", resources.morale?.value, resources.morale?.max)
+  );
 }
 
-Hooks.on("renderApplicationV2", restructureStrip);
-Hooks.on("renderApplication", restructureStrip);
+function combatantForApp(app) {
+  const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
+  if (!actor || !game.combat) return null;
+  return game.arkflight?.combat?.findCombatant?.(actor)
+    ?? [...(game.combat?.combatants ?? [])].find((entry) => entry.actorId === actor.id)
+    ?? null;
+}
+
+function syncArcButtons(root, combatant) {
+  const visible = firingArcsVisible(combatant);
+  for (const button of root.querySelectorAll("[data-toggle-all-arcs]")) {
+    button.classList.toggle("is-active", visible);
+    button.setAttribute("aria-pressed", String(visible));
+    button.innerHTML = `<i class="fa-solid fa-wave-square"></i> ${visible ? "Hide Arcs" : "Show Arcs"}`;
+  }
+}
+
+function bindArcButtons(app, root) {
+  const combatant = combatantForApp(app);
+  syncArcButtons(root, combatant);
+
+  for (const button of root.querySelectorAll("[data-toggle-all-arcs]")) {
+    if (button.dataset.afcsUnifiedArcs === "true") continue;
+    button.dataset.afcsUnifiedArcs = "true";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const current = combatantForApp(app);
+      const state = current ? game.arkflight?.combat?.state?.(current) : null;
+      if (!current || !state) {
+        ui.notifications?.warn("This Arkflight ship must be in active Foundry combat to show weapon arcs.");
+        return;
+      }
+      if (!Object.keys(state.weapons ?? {}).length) {
+        ui.notifications?.warn(`${current.name} has no installed combat weapons to display.`);
+        return;
+      }
+      toggleFiringArcs(current);
+      syncArcButtons(root, current);
+    }, { capture: true });
+  }
+}
+
+function enableDrag(app, strip) {
+  const handle = strip.querySelector(":scope > .afcs-ship");
+  if (!handle || handle.dataset.afcsDragReady === "true") return;
+  handle.dataset.afcsDragReady = "true";
+  handle.classList.add("afcs-drag-handle");
+  handle.title = "Drag Arkflight combat HUD";
+
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || event.target.closest("button, input, select, textarea, a")) return;
+    const rect = app.element?.getBoundingClientRect?.();
+    if (!rect) return;
+    event.preventDefault();
+    event.stopPropagation();
+    userMoved.add(app);
+    handle.classList.add("is-dragging");
+
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = rect.left;
+    const startTop = rect.top;
+    const pointerId = event.pointerId;
+    try { handle.setPointerCapture?.(pointerId); } catch (_error) { /* optional */ }
+
+    const move = (moveEvent) => {
+      const maxLeft = Math.max(8, canvasRightEdge() - rect.width - 8);
+      const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+      const left = Math.max(8, Math.min(maxLeft, startLeft + moveEvent.clientX - startX));
+      const top = Math.max(8, Math.min(maxTop, startTop + moveEvent.clientY - startY));
+      try { app.setPosition?.({ left, top }); } catch (_error) { /* drag convenience only */ }
+    };
+    const stop = () => {
+      handle.classList.remove("is-dragging");
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", stop);
+      handle.removeEventListener("pointercancel", stop);
+      try { handle.releasePointerCapture?.(pointerId); } catch (_error) { /* optional */ }
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", stop);
+    handle.addEventListener("pointercancel", stop);
+  });
+}
+
+function enhanceStrip(app) {
+  if (!isCombatStrip(app)) return;
+  const root = app?.element;
+  const shell = root?.querySelector?.(".afcs-shell");
+  const strip = shell?.querySelector?.(".afcs-strip");
+  if (!root || !shell || !strip) return;
+
+  lastApp = app;
+  shell.dataset.afcsFinal = "true";
+  restructureStrip(app, strip);
+  ensureCloseButton(app, strip);
+  enableDrag(app, strip);
+  bindArcButtons(app, root);
+
+  if (!initialized.has(app)) {
+    initialized.add(app);
+    requestAnimationFrame(() => requestAnimationFrame(() => fitWindow(app, { forcePosition: true })));
+  }
+}
+
+Hooks.on("renderApplicationV2", enhanceStrip);
+Hooks.on("renderApplication", enhanceStrip);
 Hooks.on("updateActor", () => {
   if (lastApp?.rendered) requestAnimationFrame(() => lastApp.render?.({ force: true }));
 });
