@@ -78,6 +78,7 @@
     "src/foundry/repair-api-extension.js",
     "src/foundry/refit-time.js",
     "src/foundry/refit-diagnostics.js",
+    "src/foundry/ship-facing-snap.js",
     "src/foundry/combat-api.js",
     "src/foundry/combat-loadout-sync.js",
     "src/foundry/combat-station-actions-api.js",
