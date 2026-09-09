@@ -47,7 +47,7 @@ test("the five core station menus remain distinct and complete", () => {
   const expected = {
     captain: ["Issue Order", "Rally Crew", "Drive the Crew", "Coordinate Assault", "Brace for Impact"],
     engineer: ["Vent Strain", "Overcharge Arkengine", "Emergency Repair", "Redistribute Power", "Emergency Bypass"],
-    navigator: ["Move", "Maneuver", "Hard Turn", "Set Attack Vector", "Evasive Maneuver"],
+    navigator: ["Push Ahead", "Extra Maneuver", "Hard Turn", "Set Attack Vector", "Evasive Maneuver"],
     battlewatch: ["Acquire Target", "Fire Weapon", "Work the Guns", "Ready Broadside", "Spoil Their Aim"],
     veilwarden: ["Reinforce Lifeveil", "Mend Lifeveil", "Focus Ward", "Purge Interference", "Emergency Ward"]
   };
@@ -59,4 +59,12 @@ test("the five core station menus remain distinct and complete", () => {
       `${station} core menu`
     );
   }
+});
+
+test("station roles use different tactical levers instead of five copies of attack bonus", () => {
+  assert.equal(COMBAT_ACTIONS["captain-coordinate-assault"].rules.effect, "hardness-reduction");
+  assert.equal(COMBAT_ACTIONS["navigator-set-attack-vector"].rules.effect, "arc-tolerance");
+  assert.equal(COMBAT_ACTIONS["battlewatch-acquire-target"].rules.effect, "attack-bonus");
+  assert.equal(COMBAT_ACTIONS["engineer-redistribute-power"].rules.effect, "power-routing");
+  assert.equal(COMBAT_ACTIONS["veilwarden-focus-ward"].rules.effect, "focused-ward-mitigation");
 });
