@@ -73,8 +73,25 @@ function highestMagnitude(effects, level) {
   return effects.reduce((best, effect) => Math.max(best, stationEffectMagnitude(effect, level)), 0);
 }
 
+function bestEffect(effects, valueFor) {
+  let best = null;
+  let value = 0;
+  for (const effect of effects) {
+    const candidate = Math.max(0, Number(valueFor(effect)) || 0);
+    if (candidate > value) {
+      best = effect;
+      value = candidate;
+    }
+  }
+  return Object.freeze({ effect: best, value });
+}
+
 function wardableDamage(type, systemThreat) {
   return ENERGY_TYPES.has(String(type ?? "").toLowerCase()) || systemThreat === "lifeveil";
+}
+
+function lifeveilOnline(actor) {
+  return Math.max(0, Number(shipPayload(actor)?.resources?.lifeveil?.value) || 0) > 0;
 }
 
 function focusWardMatches(effect, type, systemThreat) {
@@ -96,35 +113,44 @@ function reduceReadyRound(state, weaponKey, amount, round) {
   });
 }
 
+function attackVectorSolution(attackerState, solution, attackerLevel) {
+  if (!solution?.arc || !attackerState) return solution;
+  const vector = activeStationEffects(attackerState).filter((effect) =>
+    effect.actionId === "navigator-set-attack-vector"
+    && effect.selection === solution.weaponState?.mount
+    && isHeadingCurrent(effect, attackerState)
+  );
+  if (!vector.length) return solution;
+  const tolerance = 15 * highestMagnitude(vector, attackerLevel);
+  const difference = Math.max(0, Number(solution.arc.difference) || 0);
+  const halfWidth = Math.max(0, Number(solution.arc.halfWidth) || 0);
+  const arcLegal = Boolean(solution.arc.legal || difference <= halfWidth + tolerance);
+  return Object.freeze({
+    ...solution,
+    legal: Boolean(solution.range?.legal && arcLegal),
+    arc: Object.freeze({ ...solution.arc, legal: arcLegal, vectorTolerance: tolerance })
+  });
+}
+
 function attackEffectPlan(attackerState, target, solution, attackerLevel) {
   const effects = activeStationEffects(attackerState);
-  const positive = [];
+  const accuracy = [];
   const consumed = [];
 
   const issueOrder = effects.filter((effect) => effect.actionId === "captain-issue-order" && effect.selection === "battlewatch");
   if (issueOrder.length) {
-    positive.push(...issueOrder);
+    accuracy.push(...issueOrder);
     consumed.push(...issueOrder.map((effect) => effect.id));
-  }
-
-  const coordinate = effects.filter((effect) => effect.actionId === "captain-coordinate-assault" && effectMatchesTarget(effect, target));
-  if (coordinate.length) {
-    positive.push(...coordinate);
-    consumed.push(...coordinate.map((effect) => effect.id));
   }
 
   const acquire = effects.filter((effect) => effect.actionId === "battlewatch-acquire-target" && effectMatchesTarget(effect, target));
   if (acquire.length) {
-    positive.push(...acquire);
+    accuracy.push(...acquire);
     consumed.push(...acquire.map((effect) => effect.id));
   }
 
-  const vector = effects.filter((effect) =>
-    effect.actionId === "navigator-set-attack-vector"
-    && effect.selection === solution.weaponState.mount
-    && isHeadingCurrent(effect, attackerState)
-  );
-  positive.push(...vector);
+  const coordinate = effects.filter((effect) => effect.actionId === "captain-coordinate-assault" && effectMatchesTarget(effect, target));
+  if (coordinate.length) consumed.push(...coordinate.map((effect) => effect.id));
 
   const broadside = effects.filter((effect) =>
     effect.actionId === "battlewatch-ready-broadside"
@@ -133,19 +159,23 @@ function attackEffectPlan(attackerState, target, solution, attackerLevel) {
   if (broadside.length) consumed.push(...broadside.map((effect) => effect.id));
 
   const weaponsPower = effects.filter((effect) => effect.actionId === "engineer-redistribute-power" && effect.selection === "weapons");
-  const circumstanceBonus = highestMagnitude(positive, attackerLevel);
+  if (weaponsPower.length) consumed.push(...weaponsPower.map((effect) => effect.id));
+
+  const circumstanceBonus = highestMagnitude(accuracy, attackerLevel);
+  const hardnessReduction = highestMagnitude(coordinate, attackerLevel);
   const broadsideDamage = broadside.reduce((best, effect) => Math.max(best, 2 * stationEffectMagnitude(effect, attackerLevel)), 0);
   const powerDamage = weaponsPower.reduce((best, effect) => Math.max(best, stationEffectMagnitude(effect, attackerLevel)), 0);
 
   return Object.freeze({
     circumstanceBonus,
+    hardnessReduction,
     damageBonus: broadsideDamage + powerDamage,
     broadside,
     consumed: Object.freeze([...new Set(consumed)])
   });
 }
 
-function defenseEffectPlan(targetState, targetLevel, solution) {
+function defenseEffectPlan(targetState, targetLevel, solution, targetActor) {
   const effects = activeStationEffects(targetState);
   const evasive = effects.filter((effect) => effect.actionId === "navigator-evasive-maneuver");
   const spoil = effects.filter((effect) => effect.actionId === "battlewatch-spoil-their-aim");
@@ -157,31 +187,28 @@ function defenseEffectPlan(targetState, targetLevel, solution) {
 
   const type = solution.weapon.data?.damageProfile?.type ?? solution.weapon.data?.damageProfile?.damageType ?? "damage";
   const systemThreat = solution.weapon.data?.systemThreat ?? "hull";
-  const wardable = wardableDamage(type, systemThreat);
+  const wardable = lifeveilOnline(targetActor) && wardableDamage(type, systemThreat);
   const matchingFocus = focus.filter((effect) => focusWardMatches(effect, type, systemThreat));
 
-  const persistentWard = wardable
-    ? Math.max(
-      ...reinforce.map((effect) => stationMitigationValue("ward", effect.shipLevel ?? targetLevel, effect.boost)),
-      ...lifeveilPower.map((effect) => stationMitigationValue("ward", effect.shipLevel ?? targetLevel, effect.boost)),
-      0
-    )
-    : 0;
-  const focusedWard = matchingFocus.reduce((best, effect) => Math.max(best, stationMitigationValue("ward", effect.shipLevel ?? targetLevel, effect.boost)), 0);
-  const emergencyWardMitigation = wardable
-    ? emergencyWard.reduce((best, effect) => Math.max(best, stationMitigationValue("emergency-ward", effect.shipLevel ?? targetLevel, effect.boost)), 0)
-    : 0;
-  const braceMitigation = brace.reduce((best, effect) => Math.max(best, stationMitigationValue("brace", effect.shipLevel ?? targetLevel, effect.boost)), 0);
+  const broadCandidates = wardable ? [...reinforce, ...lifeveilPower] : [];
+  const broad = bestEffect(broadCandidates, (effect) => stationMitigationValue("ward", effect.shipLevel ?? targetLevel, effect.boost));
+  const focused = bestEffect(matchingFocus, (effect) => stationMitigationValue("focus-ward", effect.shipLevel ?? targetLevel, effect.boost));
+  const baseWard = focused.value > broad.value ? focused : broad;
+  const emergency = wardable
+    ? bestEffect(emergencyWard, (effect) => stationMitigationValue("emergency-ward", effect.shipLevel ?? targetLevel, effect.boost))
+    : Object.freeze({ effect: null, value: 0 });
+  const bracePlan = bestEffect(brace, (effect) => stationMitigationValue("brace", effect.shipLevel ?? targetLevel, effect.boost));
 
   return Object.freeze({
     acBonus: highestMagnitude(evasive, targetLevel),
     attackPenalty: highestMagnitude(spoil, targetLevel),
     wardable,
-    wardMitigation: Math.max(persistentWard, focusedWard) + emergencyWardMitigation,
-    braceMitigation,
+    wardMitigation: baseWard.value + emergency.value,
+    braceMitigation: bracePlan.value,
     attackConsumed: Object.freeze([...evasive, ...spoil].map((effect) => effect.id)),
-    emergencyWardConsumed: Object.freeze(wardable ? emergencyWard.map((effect) => effect.id) : []),
-    braceConsumed: Object.freeze(brace.map((effect) => effect.id))
+    wardConsumed: Object.freeze(baseWard.effect ? [baseWard.effect.id] : []),
+    emergencyWardConsumed: Object.freeze(emergency.effect ? [emergency.effect.id] : []),
+    braceConsumed: Object.freeze(bracePlan.effect ? [bracePlan.effect.id] : [])
   });
 }
 
@@ -190,20 +217,21 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   const attacker = attackerReference ? resolveCombatant(base, attackerReference) : game.combat?.combatant ?? null;
   const target = resolveCombatant(base, targetReference);
   if (!attacker || !target) throw new Error("Choose attacker and target Arkflight ship combatants.");
-  const solution = base.targetingSolution(weaponKey, target, attacker);
+
+  const attackerLevel = shipLevel(attacker.actor);
+  const targetLevel = shipLevel(target.actor);
+  const attackerBefore = base.state(attacker);
+  const targetBefore = base.state(target);
+  const rawSolution = base.targetingSolution(weaponKey, target, attacker);
+  const solution = attackVectorSolution(attackerBefore, rawSolution, attackerLevel);
   if (!solution.range.legal) throw new Error(`${solution.weapon.name}: target is ${solution.range.label.toLowerCase()} (${solution.distanceHexes.toFixed(1)} hex).`);
   if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
 
   const round = game.combat?.round ?? 1;
-  const attackerBefore = base.state(attacker);
-  const targetBefore = base.state(target);
   let attackerAfter = fireWeapon(attackerBefore, weaponKey, round);
   let targetAfter = targetBefore;
-
-  const attackerLevel = shipLevel(attacker.actor);
-  const targetLevel = shipLevel(target.actor);
   const offense = attackEffectPlan(attackerBefore, target, solution, attackerLevel);
-  const defense = defenseEffectPlan(targetBefore, targetLevel, solution);
+  const defense = defenseEffectPlan(targetBefore, targetLevel, solution, target.actor);
 
   const battlewatch = battlewatchActor(attacker.actor);
   const perception = perceptionModifier(battlewatch);
@@ -238,7 +266,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     const poweredIncoming = rolled + offense.damageBonus;
     const wardAbsorbed = Math.min(poweredIncoming, defense.wardMitigation);
     const afterWard = Math.max(0, poweredIncoming - wardAbsorbed);
-    const hardened = applyHardnessToDamage(afterWard, targetDerived.stats.hardness);
+    const hardnessBase = Math.max(0, Number(targetDerived.stats.hardness) || 0);
+    const hardnessEffective = Math.max(0, hardnessBase - offense.hardnessReduction);
+    const hardened = applyHardnessToDamage(afterWard, hardnessEffective);
     const braceAbsorbed = Math.min(hardened.hullDamage, defense.braceMitigation);
     const hullDamage = Math.max(0, hardened.hullDamage - braceAbsorbed);
     const targetShip = shipPayload(target.actor);
@@ -250,7 +280,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       stationDamageBonus: offense.damageBonus,
       incoming: poweredIncoming,
       wardAbsorbed,
-      hardness: hardened.hardness,
+      hardnessBase,
+      hardnessEffective,
+      hardnessReduced: Math.min(hardnessBase, offense.hardnessReduction),
       absorbed: hardened.absorbed,
       braceAbsorbed,
       hullDamage,
@@ -258,7 +290,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       after,
       type: profile.type ?? "damage"
     });
-    if (wardAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, defense.emergencyWardConsumed);
+    if (wardAbsorbed > 0) {
+      targetAfter = consumeStationEffects(targetAfter, [...defense.wardConsumed, ...defense.emergencyWardConsumed]);
+    }
     if (braceAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, defense.braceConsumed);
   }
 
@@ -267,11 +301,15 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
 
   const esc = foundry.utils.escapeHTML;
-  const stationLine = (offense.circumstanceBonus || defense.attackPenalty || defense.acBonus)
-    ? `<br><strong>Station effects:</strong> +${offense.circumstanceBonus} attack · −${defense.attackPenalty} enemy aim · +${defense.acBonus} target AC`
-    : "";
+  const modifiers = [];
+  if (offense.circumstanceBonus) modifiers.push(`+${offense.circumstanceBonus} attack`);
+  if (defense.attackPenalty) modifiers.push(`−${defense.attackPenalty} enemy aim`);
+  if (defense.acBonus) modifiers.push(`+${defense.acBonus} target AC`);
+  if (offense.hardnessReduction) modifiers.push(`−${offense.hardnessReduction} target Hardness`);
+  if (solution.arc.vectorTolerance) modifiers.push(`+${solution.arc.vectorTolerance}° arc tolerance`);
+  const stationLine = modifiers.length ? `<br><strong>Station effects:</strong> ${modifiers.join(" · ")}` : "";
   const damageLine = damage
-    ? `<br><strong>Hull:</strong> ${damage.incoming} − ${damage.wardAbsorbed} Ward − ${damage.absorbed} Hardness − ${damage.braceAbsorbed} Brace = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})`
+    ? `<br><strong>Hull:</strong> ${damage.incoming} − ${damage.wardAbsorbed} Ward − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` (${damage.hardnessBase}→${damage.hardnessEffective})` : ""} − ${damage.braceAbsorbed} Brace = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})`
     : "";
   await attack.toMessage({
     speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
@@ -281,7 +319,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   if (damage) {
     await damage.roll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
-      flavor: `<strong>${esc(solution.weapon.name)} Damage — ${esc(target.name)}</strong><br>Rolled ${damage.rolled}${offense.damageBonus ? ` + ${offense.damageBonus} station damage` : ""}${damage.wardAbsorbed ? ` − ${damage.wardAbsorbed} Ward` : ""} − ${damage.absorbed} Hardness${damage.braceAbsorbed ? ` − ${damage.braceAbsorbed} Brace` : ""} = <strong>${damage.hullDamage} Hull</strong>`
+      flavor: `<strong>${esc(solution.weapon.name)} Damage — ${esc(target.name)}</strong><br>Rolled ${damage.rolled}${offense.damageBonus ? ` + ${offense.damageBonus} station damage` : ""}${damage.wardAbsorbed ? ` − ${damage.wardAbsorbed} Ward` : ""} − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` after ${damage.hardnessReduced} Hardness reduction` : ""}${damage.braceAbsorbed ? ` − ${damage.braceAbsorbed} Brace` : ""} = <strong>${damage.hullDamage} Hull</strong>`
     });
   }
 
@@ -308,6 +346,11 @@ Hooks.once("ready", () => {
   const originalStationAction = base.stationAction?.bind(base);
   game.arkflight.combat = Object.freeze({
     ...base,
+    targetingSolution(weaponKey, targetReference, attackerReference = null) {
+      const attacker = attackerReference ? resolveCombatant(base, attackerReference) : game.combat?.combatant ?? null;
+      const raw = base.targetingSolution(weaponKey, targetReference, attackerReference);
+      return attacker ? attackVectorSolution(base.state(attacker), raw, shipLevel(attacker.actor)) : raw;
+    },
     fireAtTarget(weaponKey, targetReference, attackerReference = null) {
       return enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference);
     },
