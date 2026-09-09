@@ -1,0 +1,286 @@
+.arkflight-combat-stations-shell {
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(9, 25, 33, 0.98), rgba(6, 17, 23, 0.99));
+  border: 1px solid rgba(108, 174, 190, 0.45);
+  min-height: 520px;
+  color: #d8e3e5;
+}
+
+.arkflight-combat-stations-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: end;
+  border-bottom: 1px solid rgba(190, 145, 71, 0.45);
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.arkflight-combat-stations-head span,
+.arkflight-combat-station-title > div > span {
+  color: #6fc6d7;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.arkflight-combat-stations-head h2 {
+  margin: 2px 0 0;
+  color: #ead29a;
+  font-family: serif;
+}
+
+.arkflight-combat-stations-head p {
+  margin: 0;
+  max-width: 520px;
+  color: #8ea6ad;
+  text-align: right;
+  font-size: 0.78rem;
+}
+
+.arkflight-combat-economy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 14px;
+}
+
+.arkflight-combat-economy > span {
+  border: 1px solid rgba(105, 166, 181, 0.35);
+  border-radius: 999px;
+  background: rgba(3, 13, 18, 0.72);
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  color: #9cb0b6;
+}
+
+.arkflight-combat-economy > span strong {
+  color: #edf4f4;
+}
+
+.arkflight-combat-economy > span.is-current {
+  border-color: rgba(97, 190, 139, 0.75);
+  color: #8fe0aa;
+  font-weight: 800;
+}
+
+.arkflight-combat-station-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.arkflight-combat-station-card {
+  border: 1px solid rgba(118, 157, 168, 0.28);
+  background: rgba(8, 19, 24, 0.9);
+  padding: 10px;
+  min-width: 0;
+}
+
+.arkflight-combat-station-card:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.arkflight-combat-station-card > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(190, 145, 71, 0.28);
+}
+
+.arkflight-combat-station-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.arkflight-combat-station-title > i {
+  color: #d8b66b;
+  font-size: 1.15rem;
+  width: 24px;
+  text-align: center;
+}
+
+.arkflight-combat-station-title strong {
+  display: block;
+  color: #f0e6c9;
+  font-size: 0.9rem;
+  margin-top: 1px;
+}
+
+.arkflight-combat-area-state {
+  color: #879da3;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.arkflight-combat-area-state strong {
+  color: #b9d9c1;
+}
+
+.arkflight-combat-station-action-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.arkflight-combat-action {
+  border: 1px solid rgba(93, 134, 145, 0.24);
+  background: rgba(2, 10, 14, 0.62);
+  padding: 8px;
+}
+
+.arkflight-combat-action.is-reaction {
+  border-color: rgba(157, 125, 194, 0.5);
+  box-shadow: inset 3px 0 0 rgba(157, 125, 194, 0.55);
+}
+
+.arkflight-combat-action-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.arkflight-combat-action-head > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.arkflight-combat-action-head strong {
+  color: #e8d9ad;
+  font-size: 0.82rem;
+}
+
+.arkflight-combat-timing {
+  border: 1px solid rgba(94, 172, 187, 0.45);
+  border-radius: 3px;
+  color: #72c2d0;
+  font-size: 0.55rem;
+  font-weight: 900;
+  padding: 2px 4px;
+  letter-spacing: 0.08em;
+}
+
+.is-reaction .arkflight-combat-timing {
+  border-color: rgba(157, 125, 194, 0.65);
+  color: #bca1df;
+}
+
+.arkflight-combat-cost {
+  color: #d4b66e;
+  font-size: 0.66rem;
+  white-space: nowrap;
+}
+
+.arkflight-combat-action p {
+  margin: 5px 0 7px;
+  color: #8da2a8;
+  font-size: 0.69rem;
+  line-height: 1.3;
+}
+
+.arkflight-combat-action-choice {
+  width: 100%;
+  margin-bottom: 6px;
+  min-height: 28px;
+  background: #09151a;
+  border: 1px solid rgba(104, 163, 176, 0.38);
+  color: #d8e4e6;
+}
+
+.arkflight-combat-action-use {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid rgba(183, 146, 75, 0.58);
+  background: linear-gradient(180deg, rgba(48, 39, 21, 0.85), rgba(25, 22, 14, 0.9));
+  color: #ead59e;
+  font-weight: 800;
+  font-size: 0.72rem;
+}
+
+.arkflight-combat-action-use:hover:not(:disabled) {
+  border-color: #d9b867;
+  box-shadow: 0 0 8px rgba(206, 163, 79, 0.18);
+}
+
+.arkflight-combat-action-use:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.is-reaction .arkflight-combat-action-use {
+  border-color: rgba(157, 125, 194, 0.7);
+  background: linear-gradient(180deg, rgba(39, 28, 52, 0.9), rgba(24, 18, 31, 0.92));
+  color: #d1b9ed;
+}
+
+.arkflight-combat-active-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 8px 0 3px;
+  align-items: center;
+}
+
+.arkflight-combat-active-effects > span {
+  color: #6fc6d7;
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.arkflight-combat-active-effects > strong {
+  border: 1px solid rgba(82, 169, 137, 0.38);
+  background: rgba(20, 54, 42, 0.35);
+  color: #9fd8bc;
+  font-size: 0.62rem;
+  padding: 2px 5px;
+  border-radius: 3px;
+}
+
+.arkflight-combat-stations-offline {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(179, 91, 75, 0.45);
+  background: rgba(61, 24, 20, 0.36);
+  color: #d3a197;
+  padding: 14px;
+  margin-top: 12px;
+}
+
+.arkflight-combat-stations-offline i {
+  font-size: 1.4rem;
+}
+
+.arkflight-combat-stations-offline strong,
+.arkflight-combat-stations-offline span {
+  display: block;
+}
+
+.arkflight-sheet-tabs .arkflight-combat-stations-tab-button.is-combat-stations-active {
+  border-color: rgba(111, 198, 215, 0.8);
+  color: #f0d69a;
+  background: linear-gradient(180deg, rgba(44, 54, 42, 0.92), rgba(25, 31, 27, 0.95));
+}
+
+@media (max-width: 1000px) {
+  .arkflight-combat-station-grid {
+    grid-template-columns: 1fr;
+  }
+  .arkflight-combat-station-card:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+  .arkflight-combat-stations-head {
+    align-items: start;
+    flex-direction: column;
+  }
+  .arkflight-combat-stations-head p {
+    text-align: left;
+  }
+}
