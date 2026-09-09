@@ -4,17 +4,20 @@ import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
+const SHIP_COMBATANT_PATH = `flags.${MODULE_ID}.shipCombatant`;
+const SHIP_ACTOR_UUID_PATH = `flags.${MODULE_ID}.shipActorUuid`;
 const syncing = new Set();
 
 function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
 }
 
-function isArkflightCombatant(combatant) {
-  return Boolean(
-    combatant?.flags?.[MODULE_ID]?.shipCombatant
-    && shipPayload(combatant.actor)
-  );
+// Do not require the Arkflight marker here. A perfectly valid Arkflight ship can
+// already be present in Foundry combat because it was added with Foundry's normal
+// combat controls. Those existing combatants are exactly the entries this bridge
+// must adopt and initialize.
+function hasArkflightShipActor(combatant) {
+  return Boolean(shipPayload(combatant?.actor));
 }
 
 function currentState(combatant) {
@@ -24,6 +27,11 @@ function currentState(combatant) {
 function stateChanged(before, after) {
   try { return JSON.stringify(before ?? null) !== JSON.stringify(after ?? null); }
   catch (_error) { return true; }
+}
+
+function markerMissing(combatant) {
+  return combatant?.flags?.[MODULE_ID]?.shipCombatant !== true
+    || combatant?.flags?.[MODULE_ID]?.shipActorUuid !== combatant?.actor?.uuid;
 }
 
 function buildReconciledState(combatant) {
@@ -37,15 +45,28 @@ function buildReconciledState(combatant) {
   });
 }
 
+/**
+ * Adopt any Foundry combatant backed by an Arkflight ship Actor, stamp the
+ * Arkflight combatant identity flags, and rebuild its transient combat weapon
+ * rows from the Actor's authoritative Shipwright-installed loadout.
+ */
 export async function syncCombatantLoadout(combatant) {
-  if (!game.user?.isGM || !isArkflightCombatant(combatant) || syncing.has(combatant.id)) return false;
+  if (!game.user?.isGM || !hasArkflightShipActor(combatant) || syncing.has(combatant.id)) return false;
+
   const next = buildReconciledState(combatant);
-  if (!next || !stateChanged(currentState(combatant), next)) return false;
+  if (!next) return false;
+  const needsState = stateChanged(currentState(combatant), next);
+  const needsMarker = markerMissing(combatant);
+  if (!needsState && !needsMarker) return false;
 
   syncing.add(combatant.id);
   try {
-    await combatant.update({ [STATE_PATH]: next });
-    console.info(`Arkflight | Synced combat loadout for ${combatant.name}: ${Object.keys(next.weapons ?? {}).length} weapon(s).`);
+    await combatant.update({
+      [STATE_PATH]: next,
+      [SHIP_COMBATANT_PATH]: true,
+      [SHIP_ACTOR_UUID_PATH]: combatant.actor.uuid
+    });
+    console.info(`Arkflight | Adopted/synced combat loadout for ${combatant.name}: ${Object.keys(next.weapons ?? {}).length} weapon(s).`);
     return true;
   } catch (error) {
     console.error(`Arkflight | Failed to sync combat loadout for ${combatant.name}`, error);
@@ -65,7 +86,9 @@ function combatantForActor(actor) {
 
 async function syncAllCombatants() {
   if (!game.user?.isGM || !game.combat) return;
-  for (const combatant of game.combat.combatants ?? []) await syncCombatantLoadout(combatant);
+  for (const combatant of game.combat.combatants ?? []) {
+    if (hasArkflightShipActor(combatant)) await syncCombatantLoadout(combatant);
+  }
 }
 
 function shipPayloadChanged(changes) {
@@ -77,11 +100,14 @@ function shipPayloadChanged(changes) {
 
 Hooks.once("ready", () => {
   if (!game.user?.isGM) return;
+  // Run after combat-api's ready hook has installed game.arkflight.combat.
   setTimeout(() => { void syncAllCombatants(); }, 0);
 });
 
 Hooks.on("createCombatant", (combatant) => {
-  if (!game.user?.isGM) return;
+  if (!game.user?.isGM || !hasArkflightShipActor(combatant)) return;
+  // This covers ships dragged/added through Foundry's normal combat tracker,
+  // not only combatants created through Arkflight's initiative workflow.
   setTimeout(() => { void syncCombatantLoadout(combatant); }, 0);
 });
 
@@ -91,12 +117,20 @@ Hooks.on("updateActor", (actor, changes) => {
   if (combatant) void syncCombatantLoadout(combatant);
 });
 
-// This also repairs worlds that already had an Arkflight combatant before the
-// current combat-state schema/loadout bridge existed. The resulting Combatant
-// update triggers the open Weapons tab's normal live refresh hook.
+// Repair existing worlds immediately when the ship sheet is opened. This is
+// important for combatants created before the Arkflight combat identity flags
+// or combat-state weapon bridge existed.
 Hooks.on("renderActorSheet", (app) => {
   if (!game.user?.isGM) return;
   const actor = app?.actor ?? app?.document ?? null;
+  const combatant = combatantForActor(actor);
+  if (combatant) void syncCombatantLoadout(combatant);
+});
+
+Hooks.on("renderApplicationV2", (app) => {
+  if (!game.user?.isGM) return;
+  const actor = app?.actor ?? app?.document ?? null;
+  if (actor?.documentName !== "Actor") return;
   const combatant = combatantForActor(actor);
   if (combatant) void syncCombatantLoadout(combatant);
 });
