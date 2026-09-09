@@ -41,29 +41,30 @@ function action({
   });
 }
 
-// Native Arkflight ship-combat actions. These never require a Voyage Event or an
-// authored objective. Temporary effects live on the ship Combatant and expire or
-// are consumed inside the Arkflight combat loop. "Station Bonus" is +1 at ship
-// levels 1-9, +2 at 10-19, and +3 at level 20. Level 5 and 15 unlock selected
-// secondary improvements without letting typed PF2e-style modifiers run away.
+// Arkflight combat deliberately keeps a small, fixed action vocabulary. Each
+// permanent station gets four Actions and one Reaction, but those options are
+// orthogonal: command changes tempo/coordination, engineering changes resources,
+// navigation changes geometry, battlewatch changes accuracy/gunnery, and the
+// Veilwarden changes magical defense. Station Bonus remains bounded at +1/+2/+3
+// so ship-level progression adds capability without breaking PF2e-style math.
 const CORE_ACTIONS = [
-  // CAPTAIN — command, morale, coordination.
+  // CAPTAIN — tempo, morale, coordination, broad defense.
   action({
     id: "captain-issue-order",
     station: "captain",
     name: "Issue Order",
-    description: "Choose another station. Its next qualifying combat action or check this round receives the ship's Station Bonus. If Battlewatch fires next, the bonus applies to that weapon attack.",
-    summary: "Choose a station; its next qualifying action/check gains Station Bonus.",
+    description: "Choose another station. The next qualifying check or attack made by that station before this ship's next turn gains the ship's Station Bonus as a circumstance bonus. Issue Order does not increase deterministic recovery or resource amounts.",
+    summary: "Choose a station; its next qualifying roll gains Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
     tags: ["core", "command", "coordination", "native-effect"],
-    rules: { resolver: "issueOrder", chooseStation: true, effect: "station-bonus", expires: "next-qualifying-action-or-turn" }
+    rules: { resolver: "issueOrder", chooseStation: true, effect: "station-bonus", expires: "next-qualifying-roll-or-turn" }
   }),
   action({
     id: "captain-rally-crew",
     station: "captain",
     name: "Rally Crew",
-    description: "Restore Morale equal to the Station Bonus, or improve a degraded Morale area by one step. At ship level 15+, a successful area recovery also restores Morale.",
+    description: "Restore Morale equal to the Station Bonus, or improve a degraded Morale area by one step. At ship level 15+, improving the Morale area also restores Morale equal to the Station Bonus.",
     summary: "Recover Morale or improve the Morale area one step.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
@@ -74,30 +75,30 @@ const CORE_ACTIONS = [
     id: "captain-drive-the-crew",
     station: "captain",
     name: "Drive the Crew",
-    description: "Gain 2 AP after paying this action's 1 AP cost, for a net +1 AP this turn, and gain 1 Strain. Once per round. At ship level 20, the Strain is ignored.",
-    summary: "Net +1 AP this turn; +1 Strain; once per round.",
+    description: "Pay 1 AP, then gain 2 AP for a net +1 AP this turn. Gain 2 Strain. At ship level 15+ gain only 1 Strain; at level 20 gain no Strain. Once per round.",
+    summary: "Net +1 AP now; 2 Strain (1 at 15+, 0 at 20); once/round.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
-    tags: ["core", "command", "strain", "action-economy"],
-    rules: { resolver: "driveCrew", gainAP: 2, strain: 1, strainArea: "morale", oncePerRound: true, legendaryNoStrain: true }
+    tags: ["core", "command", "strain", "action-economy", "risk-reward"],
+    rules: { resolver: "driveCrew", gainAP: 2, strain: 2, strainArea: "morale", oncePerRound: true, masterReducedStrain: true, legendaryNoStrain: true }
   }),
   action({
     id: "captain-coordinate-assault",
     station: "captain",
     name: "Coordinate Assault",
-    description: "Choose one hostile vessel. The next weapon attack against it gains the Station Bonus as a circumstance bonus. From ship level 5, the effect covers the next two qualifying attacks.",
-    summary: "Mark a target; next attack(s) gain Station Bonus.",
+    description: "Choose one hostile vessel. The next weapon attack against it treats that vessel's Hardness as lower by the Station Bonus for damage resolution. From ship level 5, this applies to the next two qualifying attacks.",
+    summary: "Mark a target; next attack(s) reduce its Hardness by Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
     tags: ["core", "command", "targeting", "offense", "native-effect"],
-    rules: { resolver: "coordinateAssault", chooseTarget: true, effect: "attack-bonus", appliesTo: "next-weapon-attack", expires: "next-turn" }
+    rules: { resolver: "coordinateAssault", chooseTarget: true, effect: "hardness-reduction", appliesTo: "next-weapon-attack", expires: "next-turn" }
   }),
   action({
     id: "captain-brace-for-impact",
     station: "captain",
     name: "Brace for Impact",
-    description: "Ready this reaction. The next hit that would deal Hull damage reduces that Hull damage by 3 × Station Bonus after Hardness, then consumes the reaction.",
-    summary: "Reaction: reduce next Hull hit by 3 × Station Bonus.",
+    description: "Reaction — Trigger: this ship is about to take Hull damage. Reduce that Hull damage by 3 × Station Bonus after Hardness.",
+    summary: "Reaction: reduce incoming Hull damage by 3 × Station Bonus.",
     rp: 1,
     timing: COMBAT_ACTION_TIMING.REACTION,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
@@ -105,28 +106,28 @@ const CORE_ACTIONS = [
     rules: { resolver: "braceForImpact", trigger: "incoming-hull-damage", effect: "hull-mitigation" }
   }),
 
-  // ENGINEER — Arkengine, power, Strain, damage control.
+  // ENGINEER — Strain, power routing, damage control, propulsion overdrive.
   action({
     id: "engineer-vent-strain",
     station: "engineer",
     name: "Vent Strain",
-    description: "Reduce ship Strain by the Station Bonus, to a minimum of 0.",
-    summary: "Reduce Strain by Station Bonus.",
+    description: "Reduce ship Strain by 1 + Station Bonus, to a minimum of 0.",
+    summary: "Reduce Strain by 1 + Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
     tags: ["core", "arkengine", "strain", "recovery"],
-    rules: { resolver: "ventStrain", scaledStrainReduction: true, minimumStrain: 0 }
+    rules: { resolver: "ventStrain", scaledStrainReduction: true, baseReduction: 1, minimumStrain: 0 }
   }),
   action({
     id: "engineer-overcharge-arkengine",
     station: "engineer",
     name: "Overcharge Arkengine",
-    description: "Add the Station Bonus to both movement and maneuver allowance this turn, then gain 1 Strain. Once per round.",
-    summary: "+Station Bonus movement & maneuver; +1 Strain.",
+    description: "Gain one additional full Helm block this turn: movement equal to Combat Speed and facing steps equal to Maneuverability. Gain 1 Strain. Once per round.",
+    summary: "+Combat Speed movement and +Maneuverability turns; +1 Strain.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
-    tags: ["core", "arkengine", "strain", "overcharge"],
-    rules: { resolver: "overchargeArkengine", strain: 1, strainArea: "arkengine", scaledAllowance: true, oncePerRound: true }
+    tags: ["core", "arkengine", "strain", "overcharge", "risk-reward"],
+    rules: { resolver: "overchargeArkengine", strain: 1, strainArea: "arkengine", fullHelmBlock: true, oncePerRound: true }
   }),
   action({
     id: "engineer-emergency-repair",
@@ -136,26 +137,26 @@ const CORE_ACTIONS = [
     summary: "Improve one damaged ship area; two steps at level 15+.",
     ap: 2,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
-    tags: ["core", "repair", "damage-control"],
+    tags: ["core", "repair", "damage-control", "high-impact"],
     rules: { resolver: "emergencyRepair", chooseSystem: true, combatRepair: true, masterExtraStep: true }
   }),
   action({
     id: "engineer-redistribute-power",
     station: "engineer",
     name: "Redistribute Power",
-    description: "Route power to Propulsion, Weapons, or Lifeveil until the ship's next turn. Propulsion improves movement/maneuver, Weapons adds damage, and Lifeveil adds damage mitigation using the Station Bonus.",
-    summary: "Route scaled power to Propulsion, Weapons, or Lifeveil.",
+    description: "Route power to Propulsion, Weapons, or Lifeveil. Propulsion immediately grants Station Bonus movement and 1 maneuver step. Weapons gives the next weapon attack(s) +Station Bonus damage. Lifeveil reduces the next wardable hit(s) by 2 × Station Bonus. From ship level 5, Weapons and Lifeveil each cover two qualifying uses.",
+    summary: "Choose a smaller no-Strain boost to Propulsion, Weapons, or Lifeveil.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
     tags: ["core", "arkengine", "power", "support", "native-effect"],
-    rules: { resolver: "redistributePower", choices: ["propulsion", "weapons", "lifeveil"], effect: "power-routing", expires: "next-turn" }
+    rules: { resolver: "redistributePower", choices: ["propulsion", "weapons", "lifeveil"], effect: "power-routing", expires: "charges-or-next-turn" }
   }),
   action({
     id: "engineer-emergency-bypass",
     station: "engineer",
     name: "Emergency Bypass",
-    description: "Ready this reaction. The next Engineer action that would add Strain reduces that Strain by the Station Bonus, then consumes the bypass.",
-    summary: "Reaction: reduce next Engineer Strain gain by Station Bonus.",
+    description: "Reaction — Trigger: an Engineer action would add Strain. Reduce that Strain gain by the Station Bonus, to a minimum of 0.",
+    summary: "Reaction: reduce Engineer Strain gain by Station Bonus.",
     rp: 1,
     timing: COMBAT_ACTION_TIMING.REACTION,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
@@ -163,57 +164,57 @@ const CORE_ACTIONS = [
     rules: { resolver: "emergencyBypass", trigger: "engineer-strain", effect: "strain-mitigation" }
   }),
 
-  // NAVIGATOR — movement, facing, rigging, position.
+  // NAVIGATOR — free Helm baseline plus paid exceptional geometry.
   action({
     id: "navigator-move",
     station: "navigator",
-    name: "Move",
-    description: "Gain forward movement equal to the vessel's effective Combat Speed. Movement can be interleaved with other legal ship actions.",
-    summary: "Gain movement equal to Combat Speed.",
+    name: "Push Ahead",
+    description: "After the vessel's free Helm movement is available, spend 1 AP to gain additional movement equal to effective Combat Speed. Movement can be interleaved with legal facing changes and weapon fire.",
+    summary: "Gain another Combat Speed of movement.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.MOVEMENT,
-    tags: ["core", "movement", "interleavable"],
+    tags: ["core", "movement", "interleavable", "extra-helm"],
     rules: { resolver: "buyMovement", movementStat: "combatSpeed", direction: "forward", interleavable: true }
   }),
   action({
     id: "navigator-maneuver",
     station: "navigator",
-    name: "Maneuver",
-    description: "Gain facing changes equal to effective Maneuverability. Facing changes can be interleaved with movement and fire.",
-    summary: "Gain facing steps equal to Maneuverability.",
+    name: "Extra Maneuver",
+    description: "Spend 1 AP to gain additional facing changes equal to effective Maneuverability. This exceptional maneuver allowance permits an in-place pivot.",
+    summary: "Gain another Maneuverability worth of facing steps; may pivot.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
-    tags: ["core", "maneuver", "facing", "interleavable"],
-    rules: { resolver: "buyManeuver", facingStat: "maneuverability", interleavable: true }
+    tags: ["core", "maneuver", "facing", "interleavable", "extra-helm"],
+    rules: { resolver: "buyManeuver", facingStat: "maneuverability", interleavable: true, permitsPivot: true }
   }),
   action({
     id: "navigator-hard-turn",
     station: "navigator",
     name: "Hard Turn",
-    description: "Gain 1 + Station Bonus additional maneuver steps this turn and gain 1 Strain against Rigging.",
-    summary: "+1 + Station Bonus maneuver steps; +1 Strain.",
+    description: "Gain additional facing steps equal to Maneuverability + Station Bonus this turn, and you may pivot in place. Gain 1 Strain against Rigging.",
+    summary: "+Maneuverability + Station Bonus turns; may pivot; +1 Strain.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
-    tags: ["core", "maneuver", "facing", "strain"],
-    rules: { resolver: "hardTurn", scaledFacingSteps: true, strain: 1, strainArea: "rigging" }
+    tags: ["core", "maneuver", "facing", "strain", "risk-reward"],
+    rules: { resolver: "hardTurn", scaledFacingSteps: true, includeManeuverability: true, strain: 1, strainArea: "rigging", permitsPivot: true }
   }),
   action({
     id: "navigator-set-attack-vector",
     station: "navigator",
     name: "Set Attack Vector",
-    description: "Choose Fore, Port, Starboard, or Aft. Weapon attacks from that facing gain the Station Bonus as a circumstance bonus until the heading changes or the ship's next turn.",
-    summary: "Chosen facing gains Station Bonus to weapon attacks.",
+    description: "Choose Fore, Port, Starboard, or Aft. Until the heading changes or the ship's next turn, weapons from that facing gain 15° × Station Bonus of extra firing-arc tolerance. This changes geometry rather than adding another attack bonus.",
+    summary: "Chosen facing gains +15° × Station Bonus firing-arc tolerance.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
     tags: ["core", "positioning", "weapon-support", "facing", "native-effect"],
-    rules: { resolver: "setAttackVector", chooseFacing: true, effect: "attack-bonus", expires: "heading-change-or-next-turn" }
+    rules: { resolver: "setAttackVector", chooseFacing: true, effect: "arc-tolerance", degreesPerBonus: 15, expires: "heading-change-or-next-turn" }
   }),
   action({
     id: "navigator-evasive-maneuver",
     station: "navigator",
     name: "Evasive Maneuver",
-    description: "Ready this reaction. The next incoming weapon attack treats this ship's AC as higher by the Station Bonus. Gain 1 Strain when the reaction is readied.",
-    summary: "Reaction: +Station Bonus AC vs next attack; +1 Strain.",
+    description: "Reaction — Trigger: this ship is targeted by a weapon attack. Increase this ship's AC against that attack by the Station Bonus, then gain 1 Strain against Rigging.",
+    summary: "Reaction: +Station Bonus AC vs this attack; +1 Strain.",
     rp: 1,
     timing: COMBAT_ACTION_TIMING.REACTION,
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
@@ -221,7 +222,7 @@ const CORE_ACTIONS = [
     rules: { resolver: "evasiveManeuver", trigger: "targeted-by-attack", effect: "ac-bonus", strain: 1, strainArea: "rigging" }
   }),
 
-  // BATTLEWATCH — threat picture, targets, weapons, reload coordination.
+  // BATTLEWATCH — accuracy, firing, reload tempo, broadside burst.
   action({
     id: "battlewatch-acquire-target",
     station: "battlewatch",
@@ -237,7 +238,7 @@ const CORE_ACTIONS = [
     id: "battlewatch-fire-weapon",
     station: "battlewatch",
     name: "Fire Weapon",
-    description: "Fire one ready installed weapon at a legal target. Arkflight resolves range, arc, station effects, attack, damage, Hardness, Hull damage, and reload.",
+    description: "Fire one ready installed weapon at a legal target. Arkflight resolves range, arc, station effects, attack, damage, mitigation, Hardness, Hull damage, and reload.",
     summary: "Resolve a legal installed weapon attack.",
     category: COMBAT_ACTION_CATEGORIES.WEAPON,
     tags: ["core", "weapon", "interleavable"],
@@ -247,19 +248,19 @@ const CORE_ACTIONS = [
     id: "battlewatch-reload-weapon",
     station: "battlewatch",
     name: "Work the Guns",
-    description: "Reduce one installed weapon's remaining reload time by 1 round, to a minimum of 0.",
-    summary: "Reduce selected weapon reload by 1 round.",
+    description: "Reduce one installed weapon's remaining reload time by the Station Bonus in rounds, to a minimum of 0.",
+    summary: "Reduce selected weapon reload by Station Bonus rounds.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.RELOAD,
     tags: ["core", "weapon", "reload", "interleavable"],
-    rules: { resolver: "workTheGuns", reloadReduction: 1, minimumReload: 0, chooseWeapon: true, interleavable: true }
+    rules: { resolver: "workTheGuns", scaledReloadReduction: true, minimumReload: 0, chooseWeapon: true, interleavable: true }
   }),
   action({
     id: "battlewatch-ready-broadside",
     station: "battlewatch",
     name: "Ready Broadside",
     description: "Choose Port or Starboard. The next shot from that facing gains +2 × Station Bonus damage. At ship level 15+, that shot also reduces its resulting reload by 1 round.",
-    summary: "Next Port/Starboard shot gains scaled damage.",
+    summary: "Next Port/Starboard shot gains +2 × Station Bonus damage.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.BATTLEWATCH,
     tags: ["core", "weapon", "broadside", "coordination", "native-effect"],
@@ -269,8 +270,8 @@ const CORE_ACTIONS = [
     id: "battlewatch-spoil-their-aim",
     station: "battlewatch",
     name: "Spoil Their Aim",
-    description: "Ready this reaction. The next enemy weapon attack against this ship takes a circumstance penalty equal to the Station Bonus.",
-    summary: "Reaction: next incoming attack takes −Station Bonus.",
+    description: "Reaction — Trigger: an enemy declares a weapon attack against this ship. That attack takes a circumstance penalty equal to the Station Bonus.",
+    summary: "Reaction: incoming attack takes −Station Bonus.",
     rp: 1,
     timing: COMBAT_ACTION_TIMING.REACTION,
     category: COMBAT_ACTION_CATEGORIES.BATTLEWATCH,
@@ -278,17 +279,17 @@ const CORE_ACTIONS = [
     rules: { resolver: "spoilTheirAim", trigger: "enemy-attack-declared", effect: "attack-penalty" }
   }),
 
-  // VEILWARDEN — Lifeveil recovery, wards, supernatural defense.
+  // VEILWARDEN — broad ward, focused ward, recovery, countermeasures.
   action({
     id: "veilwarden-reinforce-lifeveil",
     station: "veilwarden",
     name: "Reinforce Lifeveil",
-    description: "Until the ship's next turn, energy or Lifeveil-threatening weapon damage is reduced by 2 × Station Bonus before Hardness.",
-    summary: "Reduce energy/Lifeveil damage by 2 × Station Bonus.",
+    description: "The next wardable hit reduces incoming damage by 2 × Station Bonus before Hardness. From ship level 5, this protects against the next two qualifying hits before the ship's next turn.",
+    summary: "Next wardable hit(s): reduce damage by 2 × Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.LIFEVEIL,
     tags: ["core", "lifeveil", "defense", "native-effect"],
-    rules: { resolver: "reinforceLifeveil", effect: "ward-mitigation", expires: "next-turn" }
+    rules: { resolver: "reinforceLifeveil", effect: "ward-mitigation", expires: "charges-or-next-turn" }
   }),
   action({
     id: "veilwarden-mend-lifeveil",
@@ -305,12 +306,12 @@ const CORE_ACTIONS = [
     id: "veilwarden-focus-ward",
     station: "veilwarden",
     name: "Focus Ward",
-    description: "Choose a ship area or energy type. Matching weapon damage is reduced by 2 × Station Bonus before Hardness until the ship's next turn.",
-    summary: "Ward one area/energy type for scaled mitigation.",
+    description: "Choose a ship area or energy type. The next matching hit reduces incoming damage by 3 × Station Bonus before Hardness. From ship level 5, this protects against the next two matching hits before the ship's next turn.",
+    summary: "Choose a threat; matching hit(s) reduce damage by 3 × Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.LIFEVEIL,
     tags: ["core", "lifeveil", "ward", "support", "native-effect"],
-    rules: { resolver: "focusWard", chooseAreaOrEnergy: true, effect: "ward-mitigation", expires: "next-turn" }
+    rules: { resolver: "focusWard", chooseAreaOrEnergy: true, effect: "focused-ward-mitigation", expires: "charges-or-next-turn" }
   }),
   action({
     id: "veilwarden-purge-interference",
@@ -327,8 +328,8 @@ const CORE_ACTIONS = [
     id: "veilwarden-emergency-ward",
     station: "veilwarden",
     name: "Emergency Ward",
-    description: "Ready this reaction. The next energy or Lifeveil-threatening hit reduces incoming damage by 4 × Station Bonus before Hardness, then consumes the ward.",
-    summary: "Reaction: reduce next wardable hit by 4 × Station Bonus.",
+    description: "Reaction — Trigger: a wardable hit is about to deal damage. Reduce incoming damage by 4 × Station Bonus before Hardness.",
+    summary: "Reaction: reduce this wardable hit by 4 × Station Bonus.",
     rp: 1,
     timing: COMBAT_ACTION_TIMING.REACTION,
     category: COMBAT_ACTION_CATEGORIES.LIFEVEIL,
