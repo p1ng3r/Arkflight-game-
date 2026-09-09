@@ -1,7 +1,7 @@
 import { normalizeShip } from "./ship-schema.js";
 import { consumeComponent, grantComponent, spendSalvageParts, knowsBlueprint } from "./refit-state.js";
 import { createRefitJob, REFIT_JOB_STATES, REFIT_JOB_TYPES, REFIT_METHODS } from "./refit-rules.js";
-import { validateRefitSocketAssignment } from "./refit-sockets.js";
+import { validateRefitSocketAssignment, weaponMountSocketRows } from "./refit-sockets.js";
 
 function catalogFor(catalogs, family) {
   if (family === "shipMod") return catalogs?.shipMods ?? {};
@@ -17,11 +17,26 @@ function installArray(ship, family) {
   if (family === "weapon") return ship.weapons ?? [];
   return [];
 }
+function installedComponentId(value) { return typeof value === "string" ? value : value?.id; }
 function withInstallArray(ship, family, values) {
   if (family === "shipMod") return normalizeShip({ ...ship, shipMods: values });
   if (family === "arkengineMod") return normalizeShip({ ...ship, arkengine: { ...ship.arkengine, modIds: values } });
   if (family === "weapon") return normalizeShip({ ...ship, weapons: values });
   throw new Error(`Unknown Arkflight refit family: ${family}`);
+}
+function weaponInstallFromJob(job, ship, catalogs) {
+  const mount = weaponMountSocketRows(ship, catalogs).find((entry) => entry.index === job.socketIndices?.[0]);
+  const weapon = catalogs?.weapons?.[job.componentId];
+  if (!mount || !weapon) return null;
+  return Object.freeze({
+    id: job.componentId,
+    instanceId: `refit-${job.id}`,
+    mount: mount.facing,
+    arc: mount.facing,
+    mountIndex: mount.mountIndex,
+    firingArc: weapon.data?.combat?.arcTemplate ?? "wide",
+    upgrades: Object.freeze({ potency: 0, impact: 0, properties: Object.freeze([]) })
+  });
 }
 function addJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: [...(ship.refit?.workOrders ?? []), job] } }); }
 function replaceJob(ship, job) { return normalizeShip({ ...ship, refit: { ...ship.refit, workOrders: (ship.refit?.workOrders ?? []).map((entry) => entry.id === job.id ? job : entry) } }); }
@@ -169,7 +184,7 @@ export function queueRemoveJob(ship, family, componentId, catalogs, {
 } = {}) {
   const normalized = normalizeShip(ship); const item = catalogFor(catalogs, family)?.[componentId];
   if (!item) return { ok: false, reason: "unknown-component", ship: normalized };
-  const installed = installArray(normalized, family).filter((id) => id === componentId).length;
+  const installed = installArray(normalized, family).filter((entry) => installedComponentId(entry) === componentId).length;
   const pending = (normalized.refit?.workOrders ?? []).filter((j) => j.type === REFIT_JOB_TYPES.REMOVE && j.componentFamily === family && j.componentId === componentId && ![REFIT_JOB_STATES.COMPLETE, REFIT_JOB_STATES.COMPLICATION].includes(j.status)).length;
   if (pending >= installed) return { ok: false, reason: "component-not-installed", ship: normalized };
   const spec = item.data.refit; const duration = Math.max(1, Math.ceil(spec.install.timeHours / 2));
@@ -231,10 +246,20 @@ export function completeRefitJob(ship, jobId, catalogs, { completedAt = null, re
       sourceJobId: found.id
     });
     if (!socketValidation.ok) return { ...socketValidation, ship: next };
-    next = withInstallArray(next, found.componentFamily, [...installArray(next, found.componentFamily), found.componentId]);
+    const installed = found.componentFamily === "weapon" ? weaponInstallFromJob(found, next, catalogs) : found.componentId;
+    if (!installed) return { ok: false, reason: "invalid-weapon-mount", ship: next };
+    next = withInstallArray(next, found.componentFamily, [...installArray(next, found.componentFamily), installed]);
   }
   if (found.type === REFIT_JOB_TYPES.REMOVE) {
-    const arr = [...installArray(next, found.componentFamily)]; const index = arr.indexOf(found.componentId); if (index < 0) return { ok: false, reason: "component-not-installed", ship: next };
+    const arr = [...installArray(next, found.componentFamily)];
+    let index = -1;
+    if (found.componentFamily === "weapon") {
+      const mount = weaponMountSocketRows(next, catalogs).find((entry) => entry.index === found.socketIndices?.[0]);
+      if (found.result?.sourceInstallJobId) index = arr.findIndex((entry) => entry?.instanceId === `refit-${found.result.sourceInstallJobId}`);
+      if (index < 0 && mount) index = arr.findIndex((entry) => installedComponentId(entry) === found.componentId && (entry?.mount ?? entry?.arc) === mount.facing && Number(entry?.mountIndex) === mount.mountIndex);
+    }
+    if (index < 0) index = arr.findIndex((entry) => installedComponentId(entry) === found.componentId);
+    if (index < 0) return { ok: false, reason: "component-not-installed", ship: next };
     arr.splice(index, 1); next = grantComponent(withInstallArray(next, found.componentFamily, arr), found.componentFamily, found.componentId, 1);
   }
   const repairEffect = applyRepairEffect(next, found);

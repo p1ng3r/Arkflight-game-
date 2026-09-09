@@ -210,7 +210,9 @@ const RARITY_BY_REFIT_TIER = Object.freeze({ 1: "standard", 2: "rare", 3: "epic"
 
 function refitFor(entry) {
   const tier = Math.max(1, Math.trunc(Number(entry.tier) || 1));
-  const slotCost = tier;
+  // A ship weapon occupies one physical hull mount. Rarity affects its price,
+  // work time, and level gate; it must not consume several unrelated mounts.
+  const slotCost = 1;
   const costs = defaultRefitCosts(tier, slotCost);
   return refitSpec({ family: "weapon", slotClass: "weapon", tier, slotCost, ...costs });
 }

@@ -49,11 +49,12 @@
 
     <main class="arkflight-workspace-board-layout">
       <section class="arkflight-workspace-board-panel">
+        <div class="arkflight-workspace-socket-legend"><strong>SOCKET KEY</strong><span class="is-free">Free</span><span class="is-installed">Installed</span><span class="is-reserved">Reserved / Working</span>{{#if isWeapon}}<em>Weapon sockets show facing and maximum weapon size.</em>{{else}}<em>These are flexible family sockets; fitting type is shown in inventory.</em>{{/if}}</div>
         <div class="arkflight-workspace-board-stage">
           <img class="arkflight-workspace-board-art" src="{{boardArt}}" alt="Fitting board">
           <div class="arkflight-workspace-socket-layer">
             {{#each sockets as |socket|}}
-              <button type="button" class="arkflight-workspace-socket {{#if socket.occupied}}is-occupied{{/if}} {{#if socket.reserved}}is-reserved{{/if}} {{#if socket.working}}is-working{{/if}} {{#if socket.selected}}is-selected{{/if}}" style="left:{{socket.left}}%;top:{{socket.top}}%" data-workspace-socket data-socket-index="{{socket.index}}" data-occupied="{{socket.occupied}}" data-reserved="{{socket.reserved}}" title="Socket {{socket.index}} {{socket.componentName}}">
+              <button type="button" class="arkflight-workspace-socket {{#if socket.mount}}is-{{socket.mount.facing}}{{/if}} {{#if socket.labelAbove}}is-label-above{{/if}} {{#if socket.available}}is-available{{/if}} {{#if socket.occupied}}is-occupied{{/if}} {{#if socket.reserved}}is-reserved{{/if}} {{#if socket.working}}is-working{{/if}} {{#if socket.selected}}is-selected{{/if}}" style="left:{{socket.left}}%;top:{{socket.top}}%" data-workspace-socket data-socket-index="{{socket.index}}" data-occupied="{{socket.occupied}}" data-reserved="{{socket.reserved}}" data-available="{{socket.available}}" title="{{socket.typeLabel}} · {{socket.capacityLabel}} · {{socket.stateLabel}}{{#if socket.componentName}} · {{socket.componentName}}{{/if}}">
                 <img class="arkflight-workspace-socket-base" src="{{socket.art}}" alt="">
                 {{#if socket.occupied}}
                   <img class="arkflight-workspace-socket-state" src="{{../assets.completed}}" alt="Installed">
@@ -64,8 +65,9 @@
                 {{else}}
                   <img class="arkflight-workspace-socket-state" src="{{../assets.compatible}}" alt="Available">
                 {{/if}}
-                {{#if socket.occupied}}<span>{{socket.index}}</span>{{/if}}
+                <span class="arkflight-socket-number">{{socket.number}}</span>
                 {{#if socket.reserved}}<span class="arkflight-socket-job-mark"><i class="fa-solid fa-hourglass-half"></i></span>{{/if}}
+                <span class="arkflight-socket-label"><strong>{{socket.typeLabel}}</strong><small>{{socket.capacityLabel}} · {{socket.stateLabel}}</small>{{#if socket.componentName}}<em>{{socket.componentName}}</em>{{/if}}</span>
               </button>
             {{/each}}
           </div>
@@ -73,16 +75,31 @@
       </section>
 
       <aside class="arkflight-workspace-sidecol">
+        {{#if selectedMount}}
+          <section class="arkflight-workspace-mount-inspector {{#if selectedMount.available}}is-available{{else}}is-unavailable{{/if}}">
+            <header><div><span>SELECTED SOCKET {{selectedMount.number}}</span><h2>{{selectedMount.heading}}</h2></div><strong>{{selectedMount.stateLabel}}</strong></header>
+            <dl><div><dt>Accepts</dt><dd>{{selectedMount.capacityLabel}}</dd></div><div><dt>Contents</dt><dd>{{selectedMount.contents}}</dd></div>{{#if selectedMount.mountLabel}}<div><dt>Mount Rule</dt><dd>{{selectedMount.mountLabel}}</dd></div>{{/if}}</dl>
+            {{#if isWeapon}}
+              {{#if selectedMount.available}}
+                <h3>Weapons That Fit</h3>
+                <div class="arkflight-compatible-weapon-list">
+                  {{#each compatibleWeapons as |weapon|}}<article class="{{#if weapon.ready}}is-ready{{else if weapon.blueprintKnown}}is-blueprint{{else}}is-unknown{{/if}}"><div><strong>{{weapon.name}}</strong><small>{{weapon.size}} · {{weapon.status}}</small></div>{{#if weapon.ready}}<span>READY</span>{{else if weapon.blueprintKnown}}<span>BUILD</span>{{else}}<span>LOCKED</span>{{/if}}</article>{{/each}}
+                  {{#unless hasCompatibleWeapons}}<p>No catalog weapon meets this mount's facing, size, and ship-level rules.</p>{{/unless}}
+                </div>
+              {{/if}}
+            {{/if}}
+          </section>
+        {{/if}}
         <section class="arkflight-workspace-tray" data-inventory-tray style="--tray-art:url('{{assets.inventoryTray}}')">
           <header>
             <h2>Owned Fittings</h2>
-            {{#if hasSelectedSocket}}<small class="arkflight-selected-socket-note">Socket {{selectedSocket}} selected — choose a fitting below or drag it onto the socket.</small>{{else}}<small>Click an empty socket to choose from compatible inventory, or drag a fitting directly onto a socket.</small>{{/if}}
+            {{#if hasSelectedSocket}}{{#if selectedSocketAvailable}}<small class="arkflight-selected-socket-note">Socket {{selectedSocket}} is free. Compatible physical fittings are marked READY.</small>{{else}}<small>Socket {{selectedSocket}} is not free. Its contents and state are shown above.</small>{{/if}}{{else}}<small>Select any socket to see its type, state, contents, and compatibility.</small>{{/if}}
           </header>
           <div class="arkflight-workspace-inventory-list">
             {{#each inventory as |item|}}
-              <article draggable="true" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}" class="{{#if ../hasSelectedSocket}}is-compatible{{/if}}">
-                <div><strong>{{item.name}}</strong><small>Physical fitting aboard</small></div><span>x{{item.quantity}}</span>
-                {{#if ../hasSelectedSocket}}<button type="button" data-install-selected><i class="fa-solid fa-hammer"></i> Install in Selected Socket</button>{{/if}}
+              <article draggable="{{item.compatible}}" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}" class="{{#if ../hasSelectedSocket}}{{#if item.compatible}}is-compatible{{else}}is-incompatible{{/if}}{{/if}}">
+                <div><strong>{{item.name}}</strong><small>{{item.slotClass}} · Physical fitting aboard</small></div><span>x{{item.quantity}}</span>
+                {{#if ../selectedSocketAvailable}}{{#if item.compatible}}<button type="button" data-install-selected><i class="fa-solid fa-hammer"></i> Install in Selected Socket</button>{{else}}<em>Does not fit selected socket</em>{{/if}}{{/if}}
               </article>
             {{/each}}
             {{#unless inventory.length}}<p>No physical fittings of this type are currently aboard.</p>{{/unless}}

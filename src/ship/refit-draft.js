@@ -4,18 +4,21 @@ import { validateRefitSocketAssignment } from "./refit-sockets.js";
 
 export const REFIT_DRAFT_FAMILIES = Object.freeze({
   SHIP_MOD: "shipMod",
-  ARKENGINE_MOD: "arkengineMod"
+  ARKENGINE_MOD: "arkengineMod",
+  WEAPON: "weapon"
 });
 
 function catalogForFamily(catalogs, family) {
   if (family === REFIT_DRAFT_FAMILIES.SHIP_MOD) return catalogs?.shipMods ?? {};
   if (family === REFIT_DRAFT_FAMILIES.ARKENGINE_MOD) return catalogs?.arkengineMods ?? {};
+  if (family === REFIT_DRAFT_FAMILIES.WEAPON) return catalogs?.weapons ?? {};
   throw new Error(`Unknown Arkflight refit draft family: ${family}`);
 }
 
 function inventoryForFamily(ship, family) {
   if (family === REFIT_DRAFT_FAMILIES.SHIP_MOD) return ship?.inventory?.shipMods ?? {};
   if (family === REFIT_DRAFT_FAMILIES.ARKENGINE_MOD) return ship?.inventory?.arkengineMods ?? {};
+  if (family === REFIT_DRAFT_FAMILIES.WEAPON) return ship?.inventory?.weapons ?? {};
   throw new Error(`Unknown Arkflight refit draft family: ${family}`);
 }
 
@@ -103,9 +106,13 @@ export function proposedShipFromDraft(ship, draft) {
   const engineModAdditions = (draft?.assignments ?? [])
     .filter((entry) => entry.family === REFIT_DRAFT_FAMILIES.ARKENGINE_MOD)
     .map((entry) => entry.componentId);
+  const weaponAdditions = (draft?.assignments ?? [])
+    .filter((entry) => entry.family === REFIT_DRAFT_FAMILIES.WEAPON)
+    .map((entry) => entry.componentId);
 
   return normalizeShip({
     ...normalized,
+    weapons: [...(normalized.weapons ?? []), ...weaponAdditions],
     shipMods: [...(normalized.shipMods ?? []), ...shipModAdditions],
     arkengine: {
       ...normalized.arkengine,

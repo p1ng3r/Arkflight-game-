@@ -1,7 +1,7 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { componentEconomyQuote } from "../ship/refit-value.js";
 import { resolveEngineeringInstallOutcome } from "../ship/refit-engineering.js";
-import { installedSocketLayout, pendingSocketReservations } from "../ship/refit-sockets.js";
+import { installedSocketLayout, pendingSocketReservations, validateRefitSocketAssignment } from "../ship/refit-sockets.js";
 import { shipAllowsRefitMode, shipOperationalStatus } from "../ship/operational-status.js";
 
 const MODULE_ID = "arkflight-game";
@@ -39,8 +39,17 @@ const ASSETS = Object.freeze({
 const SOCKET_ART = Object.freeze({
   ship: `${ROOT}/sockets/socket_ship_flexible.webp`,
   arkengine: `${ROOT}/sockets/socket_engine_flexible.webp`,
-  weapon: `${ROOT}/sockets/socket_weapon_flexible.webp`
+  weapon: Object.freeze({
+    fore: `${ROOT}/sockets/socket_weapon_prow.webp`,
+    port: `${ROOT}/sockets/socket_weapon_broadside.webp`,
+    starboard: `${ROOT}/sockets/socket_weapon_broadside.webp`,
+    aft: `${ROOT}/sockets/socket_weapon_stern.webp`,
+    deck: `${ROOT}/sockets/socket_weapon_deck.webp`,
+    flexible: `${ROOT}/sockets/socket_weapon_flexible.webp`
+  })
 });
+
+const WEAPON_SIZE_RANK = Object.freeze({ small: 1, medium: 2, large: 3 });
 
 const POSITIONS = Object.freeze({
   ship: [[24,55],[43,30],[53,60],[76,54],[34,48],[64,43],[46,72],[70,66],[30,36],[58,35],[82,48],[18,62]],
@@ -61,18 +70,35 @@ function partyTreasury() { return game.actors?.party ?? null; }
 function gpToCp(gp) { return Math.max(0, Math.ceil(Number(gp || 0) * 100)); }
 function partyCopper() { return Math.max(0, Number(partyTreasury()?.inventory?.coins?.copperValue ?? 0)); }
 function partyGoldDisplay() { return partyCopper() / 100; }
+function titleCase(value) { return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
-function inventoryRows(actor, group) {
+function weaponFitsMount(weapon, mount, ship) {
+  if (!weapon || !mount) return false;
+  const weaponSize = weapon.data?.size ?? weapon.data?.mountType ?? "small";
+  const shipLevel = Math.max(1, Math.trunc(Number(ship?.progression?.level) || 1));
+  const minShipLevel = Math.max(1, Math.trunc(Number(weapon.data?.minShipLevel) || 1));
+  return (weapon.data?.allowedMounts ?? []).includes(mount.facing)
+    && (WEAPON_SIZE_RANK[weaponSize] ?? 99) <= (WEAPON_SIZE_RANK[mount.maxSize] ?? 0)
+    && shipLevel >= minShipLevel;
+}
+
+function inventoryRows(actor, group, selectedSocket = null) {
   const ship = shipFlag(actor);
   const catalog = catalogFor(group) ?? {};
   const counts = group === "ship" ? ship?.inventory?.shipMods ?? {} : group === "arkengine" ? ship?.inventory?.arkengineMods ?? {} : ship?.inventory?.weapons ?? {};
-  return Object.entries(counts).filter(([, qty]) => Number(qty) > 0).map(([id, qty]) => ({
-    id,
-    name: catalog[id]?.name ?? id,
-    quantity: Number(qty),
-    family: familyFor(group),
-    draggable: true
-  }));
+  return Object.entries(counts).filter(([, qty]) => Number(qty) > 0).map(([id, qty]) => {
+    const item = catalog[id];
+    const assignment = selectedSocket == null ? null : anchoredAssignment(actor, group, id, selectedSocket);
+    return {
+      id,
+      name: item?.name ?? id,
+      quantity: Number(qty),
+      family: familyFor(group),
+      slotClass: titleCase(item?.data?.refit?.slotClass ?? (group === "weapon" ? item?.data?.size : "flexible")),
+      compatible: selectedSocket == null || Boolean(assignment),
+      draggable: true
+    };
+  });
 }
 
 function socketRows(actor, group) {
@@ -87,16 +113,46 @@ function socketRows(actor, group) {
     const [left, top] = POSITIONS[group][index % POSITIONS[group].length];
     const placement = placements.find((row) => row.socketIndices?.includes(index));
     const pending = activeJobs.find((job) => job.type === "install" && job.componentFamily === family && ["PLANNED","WORKING","planned","working"].includes(job.status) && job.socketIndices?.includes(index));
+    const mount = family === "weapon" ? layout.mounts?.find((entry) => entry.index === index) : null;
     return {
-      index, left, top,
+      index, number: index + 1, left, top, labelAbove: top >= 82,
       occupied: occupied.has(index),
       reserved: reserved.has(index),
       working: pending?.status === "WORKING" || pending?.status === "working",
+      available: !occupied.has(index) && !reserved.has(index),
       componentId: placement?.componentId ?? pending?.componentId ?? "",
       componentName: (catalogFor(group)?.[placement?.componentId ?? pending?.componentId]?.name) ?? "",
-      art: SOCKET_ART[group]
+      mount,
+      mountLabel: mount ? `${mount.facing} ${mount.mountIndex + 1} · max ${mount.maxSize}` : "",
+      typeLabel: mount ? `${titleCase(mount.facing)} Mount ${mount.mountIndex + 1}` : group === "ship" ? `Flexible Ship Mod Socket ${index + 1}` : `Flexible Arkengine Socket ${index + 1}`,
+      capacityLabel: mount ? `${titleCase(mount.maxSize)} or smaller` : "Any fitting in this family",
+      stateLabel: pending ? (String(pending.status).toUpperCase() === "WORKING" ? "Work in Progress" : "Reserved") : placement ? "Installed" : "Free",
+      art: group === "weapon" ? (SOCKET_ART.weapon[mount?.facing] ?? SOCKET_ART.weapon.flexible) : SOCKET_ART[group]
     };
   });
+}
+
+function compatibleWeaponRows(actor, selectedRow) {
+  if (!selectedRow?.mount || !selectedRow.available) return [];
+  const ship = shipFlag(actor);
+  const known = new Set(ship?.blueprints?.weaponIds ?? []);
+  const counts = ship?.inventory?.weapons ?? {};
+  return Object.values(SHIP_CATALOGS.weapons ?? {})
+    .filter((weapon) => weaponFitsMount(weapon, selectedRow.mount, ship))
+    .map((weapon) => {
+      const quantity = Math.max(0, Math.trunc(Number(counts[weapon.id]) || 0));
+      const blueprintKnown = known.has(weapon.id);
+      return {
+        id: weapon.id,
+        name: weapon.name,
+        size: titleCase(weapon.data?.size ?? "small"),
+        quantity,
+        blueprintKnown,
+        ready: quantity > 0,
+        status: quantity > 0 ? `${quantity} physical aboard` : blueprintKnown ? "Blueprint known — fabricate first" : "Blueprint not known"
+      };
+    })
+    .sort((a, b) => Number(b.ready) - Number(a.ready) || Number(b.blueprintKnown) - Number(a.blueprintKnown) || a.name.localeCompare(b.name));
 }
 
 function workOrders(actor) {
@@ -136,7 +192,9 @@ function anchoredAssignment(actor, group, componentId, socketIndex) {
   if (occupied.has(socketIndex)) return null;
   const picks = [socketIndex];
   for (let index = 0; index < layout.capacity && picks.length < cost; index += 1) if (index !== socketIndex && !occupied.has(index)) picks.push(index);
-  return picks.length === cost ? { family, componentId, socketIndices: picks } : null;
+  if (picks.length !== cost) return null;
+  const assignment = { family, componentId, socketIndices: picks };
+  return validateRefitSocketAssignment(shipFlag(actor), SHIP_CATALOGS, assignment).ok ? assignment : null;
 }
 
 async function startQueued(actor, queued, noun) {
@@ -255,7 +313,15 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
     const mode = service(this.actor);
     const operational = shipOperationalStatus(shipFlag(this.actor));
     const selected = Number.isInteger(this.selectedSocket) ? this.selectedSocket : null;
-    const sockets = group ? socketRows(this.actor, group).map((row) => ({ ...row, selected: row.index === selected })) : [];
+    const rawSockets = group ? socketRows(this.actor, group) : [];
+    const sockets = rawSockets.map((row) => ({ ...row, selected: row.index === selected }));
+    const selectedRow = selected == null ? null : rawSockets.find((row) => row.index === selected) ?? null;
+    const selectedMount = selectedRow ? {
+      ...selectedRow,
+      heading: selectedRow.typeLabel,
+      contents: selectedRow.componentName || (selectedRow.available ? "Empty — ready for fitting" : selectedRow.stateLabel)
+    } : null;
+    const compatibleWeapons = group === "weapon" ? compatibleWeaponRows(this.actor, selectedRow) : [];
     return {
       actorName: this.actor.name,
       actorUuid: this.actor.uuid,
@@ -267,7 +333,11 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
       sockets,
       selectedSocket: selected == null ? "" : selected + 1,
       hasSelectedSocket: selected != null,
-      inventory: group ? inventoryRows(this.actor, group) : [],
+      selectedMount,
+      selectedSocketAvailable: Boolean(selectedRow?.available),
+      compatibleWeapons,
+      hasCompatibleWeapons: compatibleWeapons.length > 0,
+      inventory: group ? inventoryRows(this.actor, group, selectedRow?.available ? selected : null) : [],
       workOrders: workOrders(this.actor),
       hasWorkOrders: workOrders(this.actor).length > 0,
       serviceMode: mode,
@@ -288,7 +358,6 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
     for (const socket of root.querySelectorAll("[data-workspace-socket]")) {
       socket.addEventListener("click", () => {
         const index = Number(socket.dataset.socketIndex);
-        if (socket.dataset.occupied === "true" || socket.dataset.reserved === "true") return ui.notifications?.warn?.("That socket is already occupied or reserved by active work.");
         this.selectedSocket = this.selectedSocket === index ? null : index;
         this.render({ force: true });
       });

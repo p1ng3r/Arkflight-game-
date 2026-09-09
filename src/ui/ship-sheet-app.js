@@ -2,7 +2,7 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { createShip } from "../ship/ship-schema.js";
 import { validateShip } from "../ship/validate-ship.js";
-import { installedSocketLayout } from "../ship/refit-sockets.js";
+import { findAvailableRefitSocketAssignment, installedSocketLayout } from "../ship/refit-sockets.js";
 import { buildShipSheetView, SHIP_SHEET_TABS } from "./ship-sheet-view-model.js";
 
 const MODULE_ID = "arkflight-game";
@@ -20,16 +20,10 @@ function validationPresentation(ship, validation) {
   const commissioned = Boolean(ship.hull?.chassisId && ship.arkengine?.chassisId);
   return { statusClass: "is-incomplete", label: commissioned ? `REFIT ATTENTION · ${validation.errors.length}` : `COMMISSIONING REQUIRED · ${validation.errors.length}` };
 }
-function catalogForFamily(family) { return family === "arkengineMod" ? SHIP_CATALOGS.arkengineMods : SHIP_CATALOGS.shipMods; }
+function catalogForFamily(family) { return family === "arkengineMod" ? SHIP_CATALOGS.arkengineMods : family === "weapon" ? SHIP_CATALOGS.weapons : SHIP_CATALOGS.shipMods; }
 function firstFreeAssignment(ship, family, componentId) {
-  const layout = installedSocketLayout(ship, SHIP_CATALOGS, family);
-  const item = catalogForFamily(family)?.[componentId];
-  const cost = Math.max(1, Math.trunc(Number(item?.data?.refit?.slotCost ?? item?.capacityCost ?? 1)));
-  if (layout.overBy > 0) return null;
-  const occupied = new Set(layout.occupied);
-  const sockets = [];
-  for (let index = 0; index < layout.capacity && sockets.length < cost; index += 1) if (!occupied.has(index)) sockets.push(index);
-  return sockets.length === cost ? { family, componentId, socketIndices: sockets } : null;
+  const result = findAvailableRefitSocketAssignment(ship, SHIP_CATALOGS, { family, componentId });
+  return result.ok ? { family, componentId, socketIndices: [...result.socketIndices] } : null;
 }
 async function startQueued(actor, queued, noun) {
   if (!queued?.ok || !queued.job) { ui.notifications?.warn(`${noun} could not be queued: ${queued?.reason ?? "unknown error"}.`); return false; }

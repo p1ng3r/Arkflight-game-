@@ -1,6 +1,8 @@
 import { deriveShip } from "./derive-ship.js";
 
 const UNCOMMISSIONED_CAPACITY = Number.MAX_SAFE_INTEGER;
+const WEAPON_SIZE_RANK = Object.freeze({ small: 1, medium: 2, large: 3 });
+const WEAPON_MOUNT_ORDER = Object.freeze(["fore", "port", "starboard", "aft"]);
 
 function catalogFor(catalogs, family) {
   if (family === "shipMod") return catalogs?.shipMods ?? {};
@@ -16,6 +18,34 @@ function installedIds(ship, family) {
   return [];
 }
 
+function installedComponentId(value) {
+  return typeof value === "string" ? value : value?.id;
+}
+
+export function weaponMountSocketRows(ship, catalogs) {
+  const hull = catalogs?.hulls?.[ship?.hull?.chassisId] ?? null;
+  const mounts = hull?.data?.baseStats?.weaponMounts
+    ?? hull?.data?.weaponMounts
+    ?? hull?.weaponMounts
+    ?? {};
+  const rows = [];
+  for (const facing of WEAPON_MOUNT_ORDER) {
+    const mount = mounts?.[facing] ?? {};
+    const count = Math.max(0, Math.trunc(Number(mount.count ?? mount.max ?? mount) || 0));
+    for (let mountIndex = 0; mountIndex < count; mountIndex += 1) {
+      rows.push(Object.freeze({ index: rows.length, facing, mountIndex, maxSize: mount.maxSize ?? "small" }));
+    }
+  }
+  return Object.freeze(rows);
+}
+
+function weaponFitsMount(weapon, mount) {
+  if (!weapon || !mount) return false;
+  const size = weapon.data?.size ?? weapon.data?.mountType ?? "small";
+  return (weapon.data?.allowedMounts ?? []).includes(mount.facing)
+    && (WEAPON_SIZE_RANK[size] ?? 99) <= (WEAPON_SIZE_RANK[mount.maxSize] ?? 0);
+}
+
 function slotCost(catalogs, family, componentId) {
   const item = catalogFor(catalogs, family)?.[componentId];
   const value = Number(item?.data?.refit?.slotCost ?? item?.capacityCost ?? 1);
@@ -24,7 +54,8 @@ function slotCost(catalogs, family, componentId) {
 
 function weaponMountCapacity(ship, catalogs, derived) {
   const hull = catalogs?.hulls?.[ship?.hull?.chassisId] ?? null;
-  const mounts = hull?.data?.weaponMounts
+  const mounts = hull?.data?.baseStats?.weaponMounts
+    ?? hull?.data?.weaponMounts
     ?? hull?.data?.weaponSockets
     ?? hull?.weaponMounts
     ?? hull?.weaponSockets
@@ -36,6 +67,49 @@ function weaponMountCapacity(ship, catalogs, derived) {
     return Object.values(mounts).reduce((sum, row) => sum + Math.max(0, Math.trunc(Number(row?.count ?? row?.max ?? row) || 0)), 0);
   }
   return Math.max(0, Math.trunc(Number(mounts) || 0));
+}
+
+function installedWeaponSocketLayout(ship, catalogs) {
+  const mounts = weaponMountSocketRows(ship, catalogs);
+  const jobs = completedInstallJobs(ship, "weapon");
+  const usedJobs = new Set();
+  const occupied = new Set();
+  const placements = [];
+
+  for (const install of ship?.weapons ?? []) {
+    const componentId = installedComponentId(install);
+    const weapon = catalogs?.weapons?.[componentId] ?? null;
+    let socketIndex = -1;
+    let sourceJobId = "";
+    if (install && typeof install === "object") {
+      const facing = install.mount ?? install.arc;
+      const mountIndex = Number(install.mountIndex);
+      socketIndex = mounts.findIndex((row) => row.facing === facing && row.mountIndex === mountIndex);
+    }
+    if (socketIndex < 0) {
+      const jobIndex = jobs.findIndex((job, index) => !usedJobs.has(index) && job.componentId === componentId && job.socketIndices?.length === 1 && !occupied.has(job.socketIndices[0]));
+      if (jobIndex >= 0) {
+        usedJobs.add(jobIndex);
+        socketIndex = jobs[jobIndex].socketIndices[0];
+        sourceJobId = jobs[jobIndex].id;
+      }
+    }
+    if (socketIndex < 0) socketIndex = mounts.findIndex((mount) => !occupied.has(mount.index) && weaponFitsMount(weapon, mount));
+    const overCapacity = socketIndex < 0 || socketIndex >= mounts.length || occupied.has(socketIndex) || !weaponFitsMount(weapon, mounts[socketIndex]);
+    if (!overCapacity) occupied.add(socketIndex);
+    placements.push(Object.freeze({ componentId, slotCost: 1, socketIndices: Object.freeze(overCapacity ? [] : [socketIndex]), overCapacity, sourceJobId, install }));
+  }
+
+  return Object.freeze({
+    family: "weapon",
+    capacity: mounts.length,
+    usedSlots: (ship?.weapons ?? []).length,
+    overBy: placements.filter((entry) => entry.overCapacity).length,
+    occupied: Object.freeze([...occupied].sort((a, b) => a - b)),
+    placements: Object.freeze(placements),
+    overCapacityPlacements: Object.freeze(placements.filter((entry) => entry.overCapacity)),
+    mounts
+  });
 }
 
 export function refitSocketCapacity(ship, catalogs, family) {
@@ -107,6 +181,7 @@ function firstFreeSockets(occupied, capacity, cost) {
 }
 
 export function installedSocketLayout(ship, catalogs, family) {
+  if (family === "weapon") return installedWeaponSocketLayout(ship, catalogs);
   const capacity = refitSocketCapacity(ship, catalogs, family);
   const ids = installedIds(ship, family);
   const jobs = completedInstallJobs(ship, family);
@@ -115,7 +190,8 @@ export function installedSocketLayout(ship, catalogs, family) {
   const placements = [];
   let usedSlots = 0;
 
-  for (const componentId of ids) {
+  for (const installed of ids) {
+    const componentId = installedComponentId(installed);
     const cost = slotCost(catalogs, family, componentId);
     usedSlots += cost;
 
@@ -176,7 +252,9 @@ export function findAvailableRefitSocketAssignment(ship, catalogs, { family, com
   if (layout.usedSlots + reserved.size + cost > layout.capacity) {
     return Object.freeze({ ok: false, reason: "capacity-exceeded", capacity: layout.capacity, used: layout.usedSlots + reserved.size, required: cost, socketIndices: Object.freeze([]) });
   }
-  const socketIndices = firstFreeSockets(unavailable, layout.capacity, cost);
+  const socketIndices = family === "weapon"
+    ? (layout.mounts ?? weaponMountSocketRows(ship, catalogs)).filter((mount) => !unavailable.has(mount.index) && weaponFitsMount(item, mount)).slice(0, 1).map((mount) => mount.index)
+    : firstFreeSockets(unavailable, layout.capacity, cost);
   if (socketIndices.length !== cost) {
     return Object.freeze({ ok: false, reason: "no-legal-socket", capacity: layout.capacity, used: layout.usedSlots + reserved.size, required: cost, socketIndices: Object.freeze([]) });
   }
@@ -195,6 +273,16 @@ export function validateRefitSocketAssignment(ship, catalogs, { family, componen
   }
   if (indices.some((index) => index >= layout.capacity)) {
     return Object.freeze({ ok: false, reason: "socket-out-of-range", capacity: layout.capacity });
+  }
+  if (family === "weapon") {
+    const weapon = catalogFor(catalogs, family)?.[componentId];
+    const mount = (layout.mounts ?? weaponMountSocketRows(ship, catalogs)).find((entry) => entry.index === indices[0]);
+    if (!weaponFitsMount(weapon, mount)) {
+      return Object.freeze({ ok: false, reason: "incompatible-weapon-mount", socketIndex: indices[0], facing: mount?.facing ?? null, maxSize: mount?.maxSize ?? null });
+    }
+    const shipLevel = Math.max(1, Math.trunc(Number(ship?.progression?.level) || 1));
+    const minShipLevel = Math.max(1, Math.trunc(Number(weapon?.data?.minShipLevel) || 1));
+    if (shipLevel < minShipLevel) return Object.freeze({ ok: false, reason: "ship-level-too-low", shipLevel, minShipLevel });
   }
   const reserved = reservedSocketSet(ship, family, sourceJobId);
   const occupied = new Set([...layout.occupied, ...reserved]);

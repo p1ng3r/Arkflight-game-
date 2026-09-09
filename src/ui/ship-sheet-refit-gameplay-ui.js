@@ -1,7 +1,7 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { componentEconomyQuote } from "../ship/refit-value.js";
 import { resolveEngineeringInstallOutcome } from "../ship/refit-engineering.js";
-import { installedSocketLayout } from "../ship/refit-sockets.js";
+import { findAvailableRefitSocketAssignment } from "../ship/refit-sockets.js";
 
 const MODULE_ID = "arkflight-game";
 const SERVICE_FLAG = "refitServiceMode";
@@ -20,7 +20,7 @@ function actorFrom(app) { const actor = app?.actor ?? app?.document ?? null; ret
 function ship(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 function canManage(actor) { return Boolean(game.user?.isGM || actor?.isOwner); }
 function service(actor) { const value = actor?.getFlag?.(MODULE_ID, SERVICE_FLAG); return SERVICES[value] ? value : "crew"; }
-function catalog(family) { return family === "arkengineMod" ? SHIP_CATALOGS.arkengineMods : SHIP_CATALOGS.shipMods; }
+function catalog(family) { return family === "arkengineMod" ? SHIP_CATALOGS.arkengineMods : family === "weapon" ? SHIP_CATALOGS.weapons : SHIP_CATALOGS.shipMods; }
 function itemFor(family, id) { return catalog(family)?.[id] ?? null; }
 function nameFor(family, id) { return itemFor(family, id)?.name ?? id; }
 function scrap(actor) { return Math.max(0, Math.trunc(Number(ship(actor)?.resources?.salvageParts?.value ?? 0))); }
@@ -28,15 +28,9 @@ function quote(family, id) { return componentEconomyQuote(itemFor(family, id)); 
 
 function assignmentFor(actor, family, id) {
   const current = ship(actor);
-  const item = itemFor(family, id);
-  if (!current || !item) return null;
-  const layout = installedSocketLayout(current, SHIP_CATALOGS, family);
-  if (layout.overBy > 0) return null;
-  const cost = Math.max(1, Math.trunc(Number(item?.data?.refit?.slotCost ?? item?.capacityCost ?? 1)));
-  const occupied = new Set(layout.occupied);
-  const sockets = [];
-  for (let index = 0; index < layout.capacity && sockets.length < cost; index += 1) if (!occupied.has(index)) sockets.push(index);
-  return sockets.length === cost ? { family, componentId: id, socketIndices: sockets } : null;
+  if (!current || !itemFor(family, id)) return null;
+  const result = findAvailableRefitSocketAssignment(current, SHIP_CATALOGS, { family, componentId: id });
+  return result.ok ? { family, componentId: id, socketIndices: [...result.socketIndices] } : null;
 }
 
 async function resolveActorReference(reference) {

@@ -3,11 +3,6 @@ import { SHIP_CATALOGS } from "../content/index.js";
 const MODULE_ID = "arkflight-game";
 const SIZE_RANK = Object.freeze({ small: 1, medium: 2, large: 3 });
 const ARC_LABELS = Object.freeze({ fore: "Fore", port: "Port", starboard: "Starboard", aft: "Aft" });
-const drafts = new Map();
-
-function clone(value) {
-  return foundry.utils?.deepClone ? foundry.utils.deepClone(value) : structuredClone(value);
-}
 
 function shipFlag(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
@@ -57,14 +52,10 @@ function normalizeWeapons(ship, hull) {
   return normalized;
 }
 
-function ensureDraft(actor) {
+function currentLoadout(actor) {
   const ship = shipFlag(actor);
   const hull = SHIP_CATALOGS.hulls?.[ship?.hull?.chassisId] ?? null;
-  const existing = drafts.get(actor.uuid);
-  if (existing) return existing;
-  const draft = { weapons: normalizeWeapons(ship, hull), selected: null, dirty: false };
-  drafts.set(actor.uuid, draft);
-  return draft;
+  return { weapons: normalizeWeapons(ship, hull), selected: null };
 }
 
 function weaponCard(weapon) {
@@ -76,7 +67,7 @@ function weaponCard(weapon) {
   const combat = weapon.data?.combat ?? {};
   const range = combat.rangeHexes ?? {};
   button.innerHTML = `
-    <span class="arkflight-armory-install">INSTALL</span>
+    <span class="arkflight-armory-install">BLUEPRINT</span>
     <strong>${weapon.name}</strong>
     <small>${String(weapon.data?.size ?? "small").toUpperCase()} · ${weapon.data?.family ?? "weapon"}</small>
     <p>${weapon.description ?? ""}</p>
@@ -98,7 +89,7 @@ function renderArmory(root, actor) {
     ui.notifications?.warn("Commission a Hull before opening the Armory.");
     return;
   }
-  const draft = ensureDraft(actor);
+  const draft = currentLoadout(actor);
   const mounts = hull.data?.baseStats?.weaponMounts ?? {};
   root.querySelectorAll(".arkflight-resource-strip,.arkflight-stat-strip,.arkflight-command-grid,.arkflight-commissioning-shell").forEach((el) => el.hidden = true);
   root.querySelector(".arkflight-armory-shell")?.remove();
@@ -107,17 +98,16 @@ function renderArmory(root, actor) {
   shell.className = "arkflight-armory-shell";
   shell.innerHTML = `
     <section class="arkflight-armory-main">
-      <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">ARMORY</span><h2>Weapon Mounts</h2></div><small>Choose a mount, then install a compatible weapon.</small></div>
+      <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">ARMORY</span><h2>Weapon Mounts</h2></div><small>Inspect the fitted armament and legal mount sizes. Use the Shipwright for material, payment, and timed refit work.</small></div>
       <div class="arkflight-mount-layout"></div>
     </section>
     <aside class="arkflight-armory-catalog">
       <span class="arkflight-ship-kicker">SELECTED MOUNT</span>
       <h2 class="arkflight-armory-selected-title">Choose a mount</h2>
-      <div class="arkflight-armory-selected-meta">Compatible weapons appear here.</div>
+      <div class="arkflight-armory-selected-meta">Known compatible blueprints appear here.</div>
       <div class="arkflight-armory-weapon-list"></div>
       <div class="arkflight-armory-actions">
-        <button type="button" data-armory-reset>RESET DRAFT</button>
-        <button type="button" class="arkflight-armory-apply" data-armory-apply ${draft.dirty ? "" : "disabled"}>APPLY ARMORY REFIT</button>
+        <button type="button" class="arkflight-armory-apply" data-armory-shipwright>OPEN SHIPWRIGHT</button>
       </div>
     </aside>`;
   root.querySelector(".arkflight-ship-footer")?.before(shell);
@@ -132,20 +122,16 @@ function renderArmory(root, actor) {
     selectedTitle.textContent = `${ARC_LABELS[arc] ?? arc} Mount ${index + 1}`;
     selectedMeta.textContent = `Maximum size: ${String(maxSize).toUpperCase()}`;
     weaponList.innerHTML = "";
-    const compatible = Object.values(SHIP_CATALOGS.weapons ?? {}).filter((weapon) => weaponFits(weapon, arc, maxSize));
+    const known = new Set(ship.blueprints?.weaponIds ?? []);
+    const compatible = Object.values(SHIP_CATALOGS.weapons ?? {}).filter((weapon) => known.has(weapon.id) && weaponFits(weapon, arc, maxSize));
     if (!compatible.length) {
-      weaponList.innerHTML = '<p class="arkflight-armory-empty">No compatible weapons in the catalog.</p>';
+      weaponList.innerHTML = '<p class="arkflight-armory-empty">No compatible known blueprints. Browse the Ship Weapons compendium and have a GM add a blueprint.</p>';
       return;
     }
     for (const weapon of compatible) {
       const card = weaponCard(weapon);
-      card.addEventListener("click", () => {
-        const existing = draft.weapons.findIndex((entry) => entry.arc === arc && entry.mountIndex === index);
-        const install = { id: weapon.id, arc, mountIndex: index };
-        if (existing >= 0) draft.weapons.splice(existing, 1, install); else draft.weapons.push(install);
-        draft.dirty = true;
-        renderArmory(root, actor);
-      });
+      card.title = "Open the Shipwright to fabricate or install this weapon";
+      card.addEventListener("click", () => game.arkflight?.openShipwrightWorkspace?.(actor));
       weaponList.append(card);
     }
   };
@@ -165,37 +151,15 @@ function renderArmory(root, actor) {
       button.type = "button";
       button.className = `arkflight-mount-slot ${weapon ? "is-occupied" : "is-empty"}`;
       button.innerHTML = weapon
-        ? `<strong>${weapon.name}</strong><span>${String(weapon.data?.size ?? "small").toUpperCase()} · ${weapon.data?.damageProfile?.dice ?? "—"} ${weapon.data?.damageProfile?.type ?? ""}</span><em>CHANGE</em>`
-        : `<strong>EMPTY MOUNT</strong><span>${String(mount.maxSize).toUpperCase()} maximum</span><em>FIT WEAPON</em>`;
+        ? `<strong>${weapon.name}</strong><span>${String(weapon.data?.size ?? "small").toUpperCase()} · ${weapon.data?.damageProfile?.dice ?? "—"} ${weapon.data?.damageProfile?.type ?? ""}</span><em>FITTED</em>`
+        : `<strong>EMPTY MOUNT</strong><span>${String(mount.maxSize).toUpperCase()} maximum</span><em>AVAILABLE</em>`;
       button.addEventListener("click", () => selectMount(arc, index, mount.maxSize));
       slots.append(button);
-      if (weapon) {
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "arkflight-mount-remove";
-        remove.textContent = "REMOVE";
-        remove.addEventListener("click", () => {
-          draft.weapons = draft.weapons.filter((entry) => !(entry.arc === arc && entry.mountIndex === index));
-          draft.dirty = true;
-          renderArmory(root, actor);
-        });
-        slots.append(remove);
-      }
     }
     layout.append(group);
   }
 
-  shell.querySelector("[data-armory-reset]")?.addEventListener("click", () => {
-    drafts.delete(actor.uuid);
-    renderArmory(root, actor);
-  });
-  shell.querySelector("[data-armory-apply]")?.addEventListener("click", async () => {
-    if (!game.user.isGM || !draft.dirty) return;
-    await actor.update({ [`flags.${MODULE_ID}.ship.weapons`]: clone(draft.weapons) });
-    draft.dirty = false;
-    ui.notifications?.info(`${actor.name} armory refit applied.`);
-    renderArmory(root, actor);
-  });
+  shell.querySelector("[data-armory-shipwright]")?.addEventListener("click", () => game.arkflight?.openShipwrightWorkspace?.(actor));
 }
 
 function restoreSheet(root) {

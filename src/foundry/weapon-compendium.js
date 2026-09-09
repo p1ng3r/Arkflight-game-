@@ -1,5 +1,4 @@
 import { SHIP_CATALOGS, WEAPONS } from "../content/index.js";
-import { quickInstallWeapon } from "../ship/weapon-loadout.js";
 import { PF2E_SHIP_WEAPON_SCHEMA_VERSION, pf2eShipWeaponDocumentBase } from "./pf2e-ship-weapon-source.js";
 
 const MODULE_ID = "arkflight-game";
@@ -57,13 +56,13 @@ function weaponArticle(weapon) {
   ].filter(([, value]) => value !== undefined && value !== null && value !== "");
 
   return `<article class="arkflight-compendium-entry">
-    <p><strong>ARKFLIGHT SHIP WEAPON · PF2E WEAPON ITEM</strong></p>
+    <p><strong>ARKFLIGHT SHIP WEAPON BLUEPRINT · PF2E WEAPON ITEM</strong></p>
     <h1>${escapeHtml(weapon.name)}</h1>
     <p>${escapeHtml(weapon.description ?? "")}</p>
     <dl>${rows.map(([label, value]) => `<dt><strong>${escapeHtml(label)}</strong></dt><dd>${escapeHtml(value)}</dd>`).join("")}</dl>
     <hr>
     <p><small>PF2e provides the Weapon Item document shell. Arkflight remains authoritative for ship AP, attack math, mounts, firing arcs, range bands, reload rounds, system threat, and ship-weapon upgrades.</small></p>
-    <p><small>Drag this weapon onto an Arkflight vessel sheet to install it in the first legal free mount.</small></p>
+    <p><small>A GM can drag this blueprint onto an Arkflight vessel sheet to teach it to that ship. Fabricate a physical weapon, then install it through Refit or the Shipwright; materials, Engineering work, elapsed time, level, and mount restrictions all apply.</small></p>
     <p><small>Arkflight Source ID: <code>${escapeHtml(weapon.id)}</code></small></p>
   </article>`;
 }
@@ -222,13 +221,6 @@ function isWeaponPackDrag(data) {
   return typeof data?.uuid === "string" && data.uuid.includes(`world.${PACK_NAME}`);
 }
 
-function loadFailureMessage(result) {
-  if (result?.reason === "ship-level-too-low") return `Requires ship level ${result.minShipLevel}; this vessel is level ${result.shipLevel}.`;
-  if (result?.reason === "hull-required") return "Commission a hull before loading ship weapons.";
-  if (result?.reason === "no-compatible-mount") return `No legal free ${result.weaponSize ?? ""} mount is available for ${result.weapon?.name ?? "that weapon"}.`;
-  return `Weapon could not be loaded: ${result?.reason ?? "unknown error"}.`;
-}
-
 async function handleWeaponDrop(event, actor) {
   const data = parseDragData(event);
   if (!isWeaponPackDrag(data)) return;
@@ -239,8 +231,8 @@ async function handleWeaponDrop(event, actor) {
   event.stopPropagation();
   event.stopImmediatePropagation?.();
 
-  if (!(game.user?.isGM || actor?.isOwner)) {
-    ui.notifications?.warn?.("You do not have permission to load weapons onto this vessel.");
+  if (!game.user?.isGM) {
+    ui.notifications?.warn?.("A GM must add ship-weapon blueprints. Ask the GM to drag this blueprint onto the vessel.");
     return;
   }
 
@@ -253,19 +245,19 @@ async function handleWeaponDrop(event, actor) {
 
     const ship = actor?.flags?.[MODULE_ID]?.ship;
     if (!ship) throw new Error("This actor does not have Arkflight ship data.");
-    const result = quickInstallWeapon(ship, SHIP_CATALOGS, weaponId);
+    const result = await game.arkflight?.refit?.learnBlueprint?.(actor, "weapon", weaponId);
     if (!result.ok) {
-      ui.notifications?.warn?.(loadFailureMessage(result));
+      const message = result.reason === "blueprint-already-known"
+        ? `${item.name}'s blueprint is already known. Fabricate a physical copy before installation.`
+        : `Weapon blueprint could not be learned: ${result.reason ?? "unknown error"}.`;
+      ui.notifications?.warn?.(message);
       return;
     }
-
-    await actor.update({ [`flags.${MODULE_ID}.ship`]: result.ship });
-    const facing = labelize(result.slot.facing);
-    ui.notifications?.info?.(`${result.weapon.name} loaded into ${facing} mount ${result.slot.mountIndex + 1}.`);
+    ui.notifications?.info?.(`${item.name} blueprint learned. Fabricate it with Aether Scrap, then schedule installation in a legal mount.`);
     actor.sheet?.render?.(false);
   } catch (error) {
-    console.error("Arkflight | Weapon quick-load failed", error);
-    ui.notifications?.error?.(`Arkflight weapon load failed: ${error.message}`);
+    console.error("Arkflight | Weapon blueprint drop failed", error);
+    ui.notifications?.error?.(`Arkflight weapon blueprint failed: ${error.message}`);
   }
 }
 
@@ -293,8 +285,7 @@ Hooks.once("ready", async () => {
     packId: PACK_ID,
     sync: (options = {}) => syncWeaponCompendium(options),
     rebuild: () => syncWeaponCompendium({ force: true, notify: true }),
-    open: openWeaponCompendium,
-    quickInstall: (ship, weaponId, options = {}) => quickInstallWeapon(ship, SHIP_CATALOGS, weaponId, options)
+    open: openWeaponCompendium
   };
   if (!game.user?.isGM) return;
   try {

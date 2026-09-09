@@ -52,7 +52,7 @@ function groupedFittings(ids, catalog, family) {
   return Object.freeze([...counts.entries()].map(([id, quantity]) => fitting(catalog, id, family, { quantity })));
 }
 function workOrderView(entry, catalogs) {
-  const catalog = entry?.componentFamily === "arkengineMod" ? catalogs.arkengineMods : catalogs.shipMods;
+  const catalog = entry?.componentFamily === "arkengineMod" ? catalogs.arkengineMods : entry?.componentFamily === "weapon" ? catalogs.weapons : catalogs.shipMods;
   return Object.freeze({ ...entry, componentName: catalog?.[entry?.componentId]?.name ?? entry?.componentId ?? "Ship work", statusLabel: titleCase(entry?.status), typeLabel: titleCase(entry?.type), methodLabel: titleCase(entry?.method), canStart: entry?.status === "planned", active: ["planned", "working", "complication"].includes(entry?.status) });
 }
 
@@ -92,13 +92,15 @@ export function buildInstalledFittings(ship = {}, catalogs = {}) {
 export function buildRefitInventory(ship = {}, catalogs = {}) {
   const physicalShipMods = Object.entries(ship.inventory?.shipMods ?? {}).flatMap(([id, quantity]) => { const count = Math.max(0, Math.trunc(Number(quantity) || 0)); return count > 0 ? [Object.freeze({ ...fitting(catalogs.shipMods, id, "shipMod"), quantity: count })] : []; });
   const physicalArkengineMods = Object.entries(ship.inventory?.arkengineMods ?? {}).flatMap(([id, quantity]) => { const count = Math.max(0, Math.trunc(Number(quantity) || 0)); return count > 0 ? [Object.freeze({ ...fitting(catalogs.arkengineMods, id, "arkengineMod"), quantity: count })] : []; });
+  const physicalWeapons = Object.entries(ship.inventory?.weapons ?? {}).flatMap(([id, quantity]) => { const count = Math.max(0, Math.trunc(Number(quantity) || 0)); return count > 0 ? [Object.freeze({ ...fitting(catalogs.weapons, id, "weapon"), quantity: count })] : []; });
   const allOrders = (ship.refit?.workOrders ?? []).map((entry) => workOrderView(entry, catalogs));
   return Object.freeze({
     shipMods: Object.freeze(physicalShipMods),
     arkengineMods: Object.freeze(physicalArkengineMods),
+    weapons: Object.freeze(physicalWeapons),
     workOrders: Object.freeze(allOrders.filter((entry) => entry.active)),
     history: Object.freeze(allOrders.filter((entry) => !entry.active)),
-    blueprints: Object.freeze({ shipMods: Object.freeze((ship.blueprints?.shipModIds ?? []).map((id) => fitting(catalogs.shipMods, id, "shipMod"))), arkengineMods: Object.freeze((ship.blueprints?.arkengineModIds ?? []).map((id) => fitting(catalogs.arkengineMods, id, "arkengineMod"))) })
+    blueprints: Object.freeze({ shipMods: Object.freeze((ship.blueprints?.shipModIds ?? []).map((id) => fitting(catalogs.shipMods, id, "shipMod"))), arkengineMods: Object.freeze((ship.blueprints?.arkengineModIds ?? []).map((id) => fitting(catalogs.arkengineMods, id, "arkengineMod"))), weapons: Object.freeze((ship.blueprints?.weaponIds ?? []).map((id) => fitting(catalogs.weapons, id, "weapon"))) })
   });
 }
 

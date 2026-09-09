@@ -10,8 +10,13 @@ import {
   purchaseMovement,
   recordFacingChange,
   recordMovement,
+  applyHardnessToDamage,
+  shipWeaponAttackBonus,
   spendPoints,
+  targetBearing,
+  weaponDamageProfile,
   weaponReloadRemaining,
+  weaponTargetingSolution,
   workTheGuns
 } from "../combat/index.js";
 import { SHIP_CATALOGS } from "../content/index.js";
@@ -81,6 +86,93 @@ function perceptionModifier(actor) {
     if (Number.isFinite(value)) return value;
   }
   return null;
+}
+
+function tokenCenter(combatant) {
+  const objectCenter = combatant?.token?.object?.center;
+  if (objectCenter) return { x: Number(objectCenter.x), y: Number(objectCenter.y) };
+  const token = combatant?.token;
+  const size = Number(canvas?.grid?.size ?? canvas?.scene?.grid?.size ?? 100) || 100;
+  return { x: Number(token?.x ?? 0) + Number(token?.width ?? 1) * size / 2, y: Number(token?.y ?? 0) + Number(token?.height ?? 1) * size / 2 };
+}
+
+function tokenDistanceHexes(source, target) {
+  const from = tokenCenter(source);
+  const to = tokenCenter(target);
+  try {
+    const measured = canvas?.grid?.measurePath?.([from, to])?.distance;
+    const unitsPerHex = Number(canvas?.scene?.grid?.distance ?? 1) || 1;
+    if (Number.isFinite(Number(measured))) return Math.max(0, Number(measured) / unitsPerHex);
+  } catch (_error) { /* pixel fallback below */ }
+  const pixelsPerHex = Number(canvas?.grid?.size ?? canvas?.scene?.grid?.size ?? 100) || 100;
+  return Math.hypot(to.x - from.x, to.y - from.y) / pixelsPerHex;
+}
+
+function targetSolution(attacker, target, weaponKey) {
+  if (!isArkflightCombatant(attacker) || !isArkflightCombatant(target)) throw new Error("Choose two Arkflight ship combatants.");
+  if (attacker.id === target.id) throw new Error("A ship cannot target itself.");
+  const state = combatantState(attacker);
+  const weaponState = state?.weapons?.[weaponKey];
+  const weapon = SHIP_CATALOGS.weapons?.[weaponState?.id];
+  if (!weaponState || !weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
+  const from = tokenCenter(attacker);
+  const to = tokenCenter(target);
+  const distanceHexes = tokenDistanceHexes(attacker, target);
+  const bearing = targetBearing(from, to);
+  const solution = weaponTargetingSolution({ weapon, weaponState, heading: state.mobility.heading, distanceHexes, bearing });
+  return Object.freeze({ ...solution, attacker, target, weapon, weaponState });
+}
+
+function degreeOfSuccess(total, die, dc) {
+  let degree = total >= dc + 10 ? 2 : total >= dc ? 1 : total <= dc - 10 ? -1 : 0;
+  if (die === 20) degree += 1;
+  if (die === 1) degree -= 1;
+  return Math.max(-1, Math.min(2, degree));
+}
+
+const DEGREE_LABEL = Object.freeze({ "-1": "Critical Failure", 0: "Failure", 1: "Success", 2: "Critical Success" });
+
+async function fireAtTarget(weaponKey, targetReference, attackerReference = null) {
+  requireGM();
+  const attacker = await requireCombatant(attackerReference);
+  const target = findCombatant(targetReference);
+  if (!target) throw new Error("Choose a target ship in the current combat.");
+  const solution = targetSolution(attacker, target, weaponKey);
+  if (!solution.range.legal) throw new Error(`${solution.weapon.name}: target is ${solution.range.label.toLowerCase()} (${solution.distanceHexes.toFixed(1)} hex).`);
+  if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
+  // Preflight AP and reload before any roll or target mutation. The resulting
+  // state is persisted only once the attack and any damage roll resolve.
+  const next = fireWeapon(combatantState(attacker), weaponKey, game.combat?.round ?? 1);
+
+  const battlewatch = battlewatchActor(attacker.actor);
+  const perception = perceptionModifier(battlewatch);
+  if (perception == null) throw new Error(`${attacker.name} needs an assigned Battlewatch officer with PF2e Perception.`);
+  const attackerDerived = deriveShip(shipPayload(attacker.actor), SHIP_CATALOGS);
+  const targetDerived = deriveShip(shipPayload(target.actor), SHIP_CATALOGS);
+  const attackBonus = shipWeaponAttackBonus({ battlewatchPerception: perception, shipWeaponAttackBonus: attackerDerived.stats.weaponAttackBonus, install: { upgrades: solution.weaponState.upgrades } });
+  const attack = await new Roll("1d20 + @attackBonus", { attackBonus }).evaluate();
+  const die = Number(attack.dice?.[0]?.total ?? attack.terms?.find?.((term) => term?.faces === 20)?.total ?? 0);
+  const ac = Math.max(0, Number(targetDerived.stats.armorClass) || 0);
+  const degree = degreeOfSuccess(Number(attack.total), die, ac);
+  let damage = null;
+  if (degree >= 1) {
+    const profile = weaponDamageProfile(solution.weapon, { upgrades: solution.weaponState.upgrades });
+    const damageRoll = await new Roll(degree === 2 ? `2 * (${profile.dice})` : profile.dice).evaluate();
+    const reduced = applyHardnessToDamage(damageRoll.total, targetDerived.stats.hardness);
+    const targetShip = shipPayload(target.actor);
+    const before = Math.max(0, Number(targetShip.resources?.hull?.value) || 0);
+    const after = Math.max(0, before - reduced.hullDamage);
+    damage = Object.freeze({ ...reduced, roll: damageRoll, before, after, type: profile.type ?? "damage" });
+  }
+  await updateCombatantState(attacker, next);
+  if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
+  const esc = foundry.utils.escapeHTML;
+  const damageLine = damage ? `<br><strong>Damage:</strong> ${damage.incoming} ${esc(damage.type)} − ${damage.absorbed} Hardness = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})` : "";
+  await attack.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
+    flavor: `<strong>${esc(attacker.name)} fires ${esc(solution.weapon.name)} at ${esc(target.name)}</strong><br>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)} · ${esc(solution.weaponState.mount ?? "fore")} ${esc(solution.arc.arcTemplate)} arc<br>Attack ${attack.total} vs AC ${ac}: <strong>${DEGREE_LABEL[degree]}</strong>${damageLine}`
+  });
+  return Object.freeze({ state: next, attack, attackBonus, ac, degree, solution, damage });
 }
 
 function initiativeProfile(reference) {
@@ -173,7 +265,7 @@ async function rollShipInitiative(reference, { combat = null, combatant = null }
   return Object.freeze({ ...profile, combat: activeCombat, combatant: entry, roll, total: roll.total });
 }
 
-function launchBlockers(actor) {
+function launchBlockers(actor, { allowNPC = false } = {}) {
   const blockers = [];
   const ship = shipPayload(actor);
   if (!ship) return [`${actor?.name ?? "Selected Actor"} is not an Arkflight ship.`];
@@ -183,11 +275,11 @@ function launchBlockers(actor) {
   if (!validation.ok) blockers.push(...validation.errors);
 
   const serviceEntry = game.arkflight?.ships?.get?.(actor.id) ?? null;
-  if (serviceEntry && !serviceEntry.player) blockers.push("Only a player-classified Arkflight ship may be launched from GM Operations.");
+  if (serviceEntry && !serviceEntry.player && !allowNPC) blockers.push("Only a player-classified Arkflight ship may be launched as the Current Ship.");
   if (serviceEntry && !serviceEntry.crew?.ready) blockers.push(`${serviceEntry.crew?.assigned ?? 0}/${serviceEntry.crew?.total ?? 0} permanent stations assigned.`);
   if (game.arkflight?.controller?.state?.eventId) blockers.push("A Voyage Event is already active.");
   if (!shipToken(actor)) blockers.push("Place the ship's linked token on the active scene.");
-  if (!battlewatchActor(actor)) blockers.push("Assign a Battlewatch officer before rolling ship initiative.");
+  if (!battlewatchActor(actor) && !allowNPC) blockers.push("Assign a Battlewatch officer before rolling ship initiative.");
   return [...new Set(blockers)];
 }
 
@@ -219,19 +311,23 @@ Hooks.once("ready", () => {
     ensureCombat,
     ensureShipCombatant,
     rollShipInitiative,
-    launchBlockers(reference) {
+    launchBlockers(reference, options = {}) {
       const actor = resolveShipActor(reference);
-      return actor ? launchBlockers(actor) : ["Choose an Arkflight ship Actor for combat."];
+      return actor ? launchBlockers(actor, options) : ["Choose an Arkflight ship Actor for combat."];
     },
     state(reference = null) {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
       return combatantState(combatant);
     },
+    targets(reference = null) {
+      const attacker = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return Object.freeze([...(game.combat?.combatants ?? [])].filter((entry) => isArkflightCombatant(entry) && entry.id !== attacker?.id));
+    },
     async start(reference, options = {}) {
       requireGM();
       const actor = resolveShipActor(reference);
       if (!actor) throw new Error("Choose an Arkflight ship Actor for combat.");
-      const blockers = launchBlockers(actor);
+      const blockers = launchBlockers(actor, options);
       if (blockers.length) throw new Error(`Cannot add Arkflight ship to combat: ${blockers.join(" ")}`);
       const combat = await ensureCombat();
       const combatant = await ensureShipCombatant(actor, { combat });
@@ -276,6 +372,16 @@ Hooks.once("ready", () => {
       const next = fireWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
     },
+    targets(reference = null) {
+      const attacker = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return Object.freeze([...game.combat?.combatants ?? []].filter((entry) => isArkflightCombatant(entry) && entry.id !== attacker?.id));
+    },
+    targetingSolution(weaponKey, targetReference, attackerReference = null) {
+      const attacker = attackerReference ? findCombatant(attackerReference) : game.combat?.combatant ?? null;
+      const target = findCombatant(targetReference);
+      return targetSolution(attacker, target, weaponKey);
+    },
+    fireAtTarget,
     async workTheGuns(weaponKey, reference = null) {
       requireGM();
       const combatant = await requireCombatant(reference);

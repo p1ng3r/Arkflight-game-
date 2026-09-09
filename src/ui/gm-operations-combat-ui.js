@@ -1,3 +1,5 @@
+import { SHIP_CATALOGS } from "../content/index.js";
+
 const GM_OPERATIONS_ID = "arkflight-gm-operations";
 
 function currentShip() {
@@ -48,6 +50,75 @@ function reloadSummary(state, round) {
   }).join(" · ");
 }
 
+function titleCase(value) {
+  return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function weaponFireControl(app, combatant, state, round) {
+  const section = document.createElement("section");
+  section.className = "arkflight-gm-weapon-console";
+  section.innerHTML = `<div class="arkflight-gm-weapon-console-head"><div><div class="arkflight-gm-kicker">BATTLEWATCH</div><h3>Weapon Fire Control</h3></div><small>Token distance, range band, facing arc, AP, reload, attack, damage, and Hardness are resolved here.</small></div>`;
+  const targets = game.arkflight?.combat?.targets?.(combatant) ?? [];
+  const weapons = Object.values(state?.weapons ?? {});
+  if (!weapons.length) {
+    section.insertAdjacentHTML("beforeend", '<p class="arkflight-gm-weapon-empty">No weapons are installed on this ship.</p>');
+    return section;
+  }
+  if (!targets.length) {
+    section.insertAdjacentHTML("beforeend", '<p class="arkflight-gm-weapon-empty">Add another Arkflight ship to this Foundry combat to select a target.</p>');
+  }
+  for (const weaponState of weapons) {
+    const weapon = SHIP_CATALOGS.weapons?.[weaponState.id] ?? null;
+    const combat = weapon?.data?.combat ?? {};
+    const range = combat.rangeHexes ?? {};
+    const damage = weapon?.data?.damageProfile ?? {};
+    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(weaponState.fireAP ?? 1);
+    const row = document.createElement("article");
+    row.className = "arkflight-gm-weapon-row";
+    row.innerHTML = `
+      <div class="arkflight-gm-weapon-identity"><strong>${foundry.utils.escapeHTML(weaponState.name)}</strong><span>${titleCase(weaponState.mount ?? "fore")} mount ${Number(weaponState.mountIndex ?? 0) + 1} · ${titleCase(combat.arcTemplate ?? "wide")} arc</span></div>
+      <div class="arkflight-gm-weapon-stats"><span>${damage.dice ?? "—"} ${titleCase(damage.type)}</span><span>Threat ${titleCase(weapon?.data?.systemThreat ?? "hull")}</span><span>${weaponState.fireAP} AP</span><span>Reload ${weaponState.reloadRounds}</span><span>Range ${range.min ?? "—"} / ${range.optimalMin ?? "—"}–${range.optimalMax ?? "—"} / ${range.max ?? "—"}</span></div>
+      <label>Target<select data-weapon-target>${targets.map((target) => `<option value="${target.id}">${foundry.utils.escapeHTML(target.name)}</option>`).join("")}</select></label>
+      <div class="arkflight-gm-weapon-solution" data-weapon-solution>${targets.length ? "Calculating target solution…" : "No target"}</div>
+      <div class="arkflight-gm-command-actions"><button type="button" class="arkflight-gm-primary" data-fire-weapon ${targets.length && remaining === 0 && enoughAP ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i> ${remaining ? `Reloading · ${remaining} round${remaining === 1 ? "" : "s"}` : enoughAP ? "Fire Weapon" : `Need ${weaponState.fireAP} AP`}</button>${remaining ? `<button type="button" data-work-guns ${Number(state?.economy?.ap?.value ?? 0) >= 1 ? "" : "disabled"}><i class="fa-solid fa-rotate"></i> Work the Guns · 1 AP</button>` : ""}</div>`;
+    const select = row.querySelector("[data-weapon-target]");
+    const solutionNode = row.querySelector("[data-weapon-solution]");
+    const fireButton = row.querySelector("[data-fire-weapon]");
+    const updateSolution = () => {
+      if (!select?.value) return;
+      try {
+        const solution = game.arkflight.combat.targetingSolution(weaponState.key, select.value, combatant);
+        solutionNode.textContent = `${solution.distanceHexes.toFixed(1)} hex · ${solution.range.label} · ${solution.arc.legal ? "Inside arc" : `Outside arc by ${Math.max(0, solution.arc.difference - solution.arc.halfWidth).toFixed(0)}°`}`;
+        solutionNode.classList.toggle("is-legal", solution.legal);
+        solutionNode.classList.toggle("is-illegal", !solution.legal);
+        if (remaining === 0) fireButton.disabled = !solution.legal || !enoughAP;
+      } catch (error) {
+        solutionNode.textContent = error.message;
+        solutionNode.classList.add("is-illegal");
+        fireButton.disabled = true;
+      }
+    };
+    select?.addEventListener("change", updateSolution);
+    fireButton?.addEventListener("click", async () => {
+      try {
+        await game.arkflight.combat.fireAtTarget(weaponState.key, select.value, combatant);
+        app.render({ force: true });
+      } catch (error) {
+        console.error("Arkflight weapon fire failed", error);
+        ui.notifications?.error(error?.message ?? "Weapon fire failed.");
+      }
+    });
+    row.querySelector("[data-work-guns]")?.addEventListener("click", async () => {
+      try { await game.arkflight.combat.workTheGuns(weaponState.key, combatant); app.render({ force: true }); }
+      catch (error) { ui.notifications?.error(error?.message ?? "Work the Guns failed."); }
+    });
+    section.append(row);
+    updateSolution();
+  }
+  return section;
+}
+
 async function addCurrentShip(app) {
   const ship = currentShip();
   const blockers = combatBlockers(ship);
@@ -72,6 +143,23 @@ async function endCombat(app) {
   } catch (error) {
     console.error("Arkflight ship combat stop failed", error);
     ui.notifications?.error(error?.message ?? "Unable to end Arkflight combat.");
+  }
+}
+
+function targetCandidates() {
+  const activeActorIds = new Set(arkflightCombatants().map((entry) => entry.actorId));
+  return [...(game.actors?.contents ?? [])].filter((actor) => actor?.flags?.["arkflight-game"]?.ship && !activeActorIds.has(actor.id));
+}
+
+async function addTargetShip(app, actorId) {
+  const actor = game.actors?.get?.(actorId);
+  if (!actor) return;
+  try {
+    await game.arkflight.combat.start(actor, { allowNPC: true, rollInitiative: false });
+    app.render({ force: true });
+  } catch (error) {
+    console.error("Arkflight target ship combat entry failed", error);
+    ui.notifications?.error(error?.message ?? "Unable to add target ship.");
   }
 }
 
@@ -140,8 +228,21 @@ function buildActiveCombatPanel(app, combatant) {
     metric("Weapons", reloadSummary(state, round))
   );
 
+  panel.append(weaponFireControl(app, combatant, state, round));
+
   const actions = document.createElement("div");
   actions.className = "arkflight-gm-command-actions";
+  const candidates = targetCandidates();
+  if (candidates.length) {
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", "Target ship to add");
+    select.innerHTML = candidates.map((actor) => `<option value="${actor.id}">${foundry.utils.escapeHTML(actor.name)}</option>`).join("");
+    const addTarget = document.createElement("button");
+    addTarget.type = "button";
+    addTarget.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Add Target Ship';
+    addTarget.addEventListener("click", () => addTargetShip(app, select.value));
+    actions.append(select, addTarget);
+  }
   const stop = document.createElement("button");
   stop.type = "button";
   stop.innerHTML = '<i class="fa-solid fa-flag-checkered"></i> End Foundry Combat';
