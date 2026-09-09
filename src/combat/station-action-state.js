@@ -1,5 +1,10 @@
 import { COMBAT_ACTION_TIMING } from "../content/combat-actions.js";
 import { purchaseManeuver, purchaseMovement, spendPoints } from "./combatant-state.js";
+import {
+  stationEffectCharges,
+  stationEffectMagnitude,
+  stationEffectProfile
+} from "./station-effect-rules.js";
 
 function safeRound(round) {
   return Math.max(1, Math.trunc(Number(round) || 1));
@@ -58,7 +63,25 @@ function addAllowance(state, key, amount) {
   });
 }
 
-function markEffect(state, action, selection, round) {
+function effectBearingAction(action) {
+  return new Set([
+    "issueOrder",
+    "coordinateAssault",
+    "redistributePower",
+    "setAttackVector",
+    "acquireTarget",
+    "readyBroadside",
+    "reinforceLifeveil",
+    "focusWard",
+    "braceForImpact",
+    "emergencyBypass",
+    "evasiveManeuver",
+    "spoilTheirAim",
+    "emergencyWard"
+  ]).has(action?.rules?.resolver);
+}
+
+function markEffect(state, action, selection, round, { shipLevel = 1, boost = 0 } = {}) {
   const nextRuntime = runtime(state);
   const effect = {
     id: `${action.id}:${round}:${nextRuntime.effects.length + 1}`,
@@ -67,7 +90,11 @@ function markEffect(state, action, selection, round) {
     name: action.name,
     timing: action.timing,
     selection: selection == null ? null : String(selection),
-    createdRound: round
+    createdRound: round,
+    shipLevel: stationEffectProfile(shipLevel).level,
+    boost: Math.max(0, Math.trunc(Number(boost) || 0)),
+    charges: stationEffectCharges(action.id, shipLevel),
+    heading: Number(state?.mobility?.heading ?? 0)
   };
   nextRuntime.effects.push(effect);
   return withRuntime(state, nextRuntime);
@@ -99,22 +126,20 @@ function addTemporaryAP(state, amount) {
   }), nextRuntime);
 }
 
-function effectBearingAction(action) {
-  return new Set([
-    "issueOrder",
-    "coordinateAssault",
-    "redistributePower",
-    "setAttackVector",
-    "acquireTarget",
-    "readyBroadside",
-    "reinforceLifeveil",
-    "focusWard",
-    "braceForImpact",
-    "emergencyBypass",
-    "evasiveManeuver",
-    "spoilTheirAim",
-    "emergencyWard"
-  ]).has(action?.rules?.resolver);
+function matchingIssueOrder(state, station) {
+  if (!station || station === "captain") return null;
+  return runtime(state).effects.find((entry) =>
+    entry.actionId === "captain-issue-order"
+    && entry.selection === station
+    && (entry.charges == null || Number(entry.charges) > 0)
+  ) ?? null;
+}
+
+function matchingEmergencyBypass(state) {
+  return runtime(state).effects.find((entry) =>
+    entry.actionId === "engineer-emergency-bypass"
+    && (entry.charges == null || Number(entry.charges) > 0)
+  ) ?? null;
 }
 
 export function stationRuntimeState(state) {
@@ -123,9 +148,33 @@ export function stationRuntimeState(state) {
 
 export function activeStationEffects(state, { station = null, timing = null } = {}) {
   return Object.freeze(runtime(state).effects.filter((entry) =>
-    (!station || entry.station === station)
+    (entry.charges == null || Number(entry.charges) > 0)
+    && (!station || entry.station === station)
     && (!timing || entry.timing === timing)
   ));
+}
+
+export function stationCommandBoost(state, station, shipLevel = 1) {
+  const effect = matchingIssueOrder(state, station);
+  return effect ? stationEffectMagnitude(effect, shipLevel) : 0;
+}
+
+/**
+ * Consume one charge from each named transient effect. Effects without a charge
+ * counter are removed when explicitly consumed. This keeps reactions and
+ * "next attack" benefits inside the combatant state instead of an authored event.
+ */
+export function consumeStationEffects(state, effectIds = []) {
+  const ids = new Set(effectIds.filter(Boolean));
+  if (!ids.size) return state;
+  const rt = runtime(state);
+  rt.effects = rt.effects.flatMap((entry) => {
+    if (!ids.has(entry.id)) return [entry];
+    if (entry.charges == null) return [];
+    const charges = Math.max(0, Math.trunc(Number(entry.charges) || 0) - 1);
+    return charges > 0 ? [{ ...entry, charges }] : [];
+  });
+  return withRuntime(state, rt);
 }
 
 export function stationActionAvailability(state, action, { round = 1 } = {}) {
@@ -148,10 +197,13 @@ export function stationActionAvailability(state, action, { round = 1 } = {}) {
 
 /**
  * Resolve the shared AP/RP and transient combat-state portion of a core station
- * action. Actor resource/area mutations are intentionally handled by the
- * Foundry adapter because they belong to the persistent ship Actor.
+ * action. Actor resource/area mutations are handled by the Foundry adapter.
  */
-export function executeStationStateAction(state, action, { round = 1, selection = null } = {}) {
+export function executeStationStateAction(state, action, {
+  round = 1,
+  selection = null,
+  shipLevel = 1
+} = {}) {
   const combatRound = safeRound(round);
   const availability = stationActionAvailability(state, action, { round: combatRound });
   if (!availability.ok) throw new Error(`${action?.name ?? "Station action"} is unavailable: ${availability.reason}.`);
@@ -161,10 +213,22 @@ export function executeStationStateAction(state, action, { round = 1, selection 
     throw new Error(`${action.name} uses the dedicated weapon fire-control resolver.`);
   }
 
+  const profile = stationEffectProfile(shipLevel);
+  const issueOrder = matchingIssueOrder(state, action.station);
+  const commandBoost = issueOrder ? stationEffectMagnitude(issueOrder, shipLevel) : 0;
+  const scaledBonus = Math.max(1, profile.bonus + commandBoost);
+  const emergencyBypass = action.station === "engineer" && action.timing === COMBAT_ACTION_TIMING.ACTION
+    ? matchingEmergencyBypass(state)
+    : null;
+
   let next;
-  if (resolver === "buyMovement") next = purchaseMovement(state);
-  else if (resolver === "buyManeuver") next = purchaseManeuver(state);
-  else {
+  if (resolver === "buyMovement") {
+    next = purchaseMovement(state);
+    if (commandBoost > 0) next = addAllowance(next, "movement", commandBoost);
+  } else if (resolver === "buyManeuver") {
+    next = purchaseManeuver(state);
+    if (commandBoost > 0) next = addAllowance(next, "maneuver", commandBoost);
+  } else {
     next = state;
     const ap = Math.max(0, Math.trunc(Number(action.cost?.ap) || 0));
     const rp = Math.max(0, Math.trunc(Number(action.cost?.rp) || 0));
@@ -172,21 +236,30 @@ export function executeStationStateAction(state, action, { round = 1, selection 
     if (rp) next = spendPoints(next, "rp", rp);
   }
 
-  if (resolver === "ventStrain") next = withStrain(next, -Math.max(1, Number(action.rules?.strainReduction) || 1));
+  if (resolver === "ventStrain") next = withStrain(next, -scaledBonus);
   if (resolver === "driveCrew") next = addTemporaryAP(next, Math.max(1, Number(action.rules?.gainAP) || 1));
-  if (resolver === "hardTurn") next = addAllowance(next, "maneuver", Math.max(1, Number(action.rules?.facingSteps) || 1));
+  if (resolver === "hardTurn") next = addAllowance(next, "maneuver", 1 + scaledBonus);
   if (resolver === "overchargeArkengine") {
-    next = addAllowance(next, "movement", 1);
-    next = addAllowance(next, "maneuver", 1);
+    next = addAllowance(next, "movement", scaledBonus);
+    next = addAllowance(next, "maneuver", scaledBonus);
   }
   if (resolver === "redistributePower" && selection === "propulsion") {
-    next = addAllowance(next, "movement", 1);
-    next = addAllowance(next, "maneuver", 1);
+    next = addAllowance(next, "movement", scaledBonus);
+    next = addAllowance(next, "maneuver", scaledBonus);
   }
-  if (Number(action.rules?.strain) > 0) next = withStrain(next, Number(action.rules.strain));
 
-  if (effectBearingAction(action)) next = markEffect(next, action, selection, combatRound);
+  const baseStrain = Number(action.rules?.strain) || 0;
+  const strainToAdd = resolver === "driveCrew" && profile.legendary ? 0 : baseStrain;
+  if (strainToAdd > 0) next = withStrain(next, strainToAdd);
+
+  if (emergencyBypass && strainToAdd > 0) {
+    next = withStrain(next, -Math.min(strainToAdd, stationEffectMagnitude(emergencyBypass, shipLevel)));
+    next = consumeStationEffects(next, [emergencyBypass.id]);
+  }
+
+  if (effectBearingAction(action)) next = markEffect(next, action, selection, combatRound, { shipLevel, boost: commandBoost });
   if (action.rules?.oncePerRound) next = markUsed(next, action, combatRound);
+  if (issueOrder) next = consumeStationEffects(next, [issueOrder.id]);
 
   return withLog(next, {
     round: combatRound,
@@ -195,7 +268,10 @@ export function executeStationStateAction(state, action, { round = 1, selection 
     station: action.station,
     selection: selection == null ? null : String(selection),
     ap: Math.max(0, Math.trunc(Number(action.cost?.ap) || 0)),
-    rp: Math.max(0, Math.trunc(Number(action.cost?.rp) || 0))
+    rp: Math.max(0, Math.trunc(Number(action.cost?.rp) || 0)),
+    shipLevel: profile.level,
+    stationBonus: profile.bonus,
+    commandBoost
   });
 }
 

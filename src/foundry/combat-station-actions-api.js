@@ -8,7 +8,9 @@ import {
   beginStationActionTurn,
   executeStationStateAction,
   getCoreCombatActionDefinitionsForStation,
-  stationActionAvailability
+  stationActionAvailability,
+  stationCommandBoost,
+  stationEffectProfile
 } from "../combat/index.js";
 
 const MODULE_ID = "arkflight-game";
@@ -29,6 +31,10 @@ function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
 }
 
+function shipLevel(actor) {
+  return Math.max(1, Math.min(20, Math.trunc(Number(shipPayload(actor)?.progression?.level) || 1)));
+}
+
 function assignedStationReference(actor, station) {
   return shipPayload(actor)?.crew?.stations?.[station] ?? null;
 }
@@ -45,10 +51,11 @@ function stationActor(shipActor, station) {
   return resolveCrewActor(assignedStationReference(shipActor, station));
 }
 
-function improveAreaState(value) {
-  const index = AREA_ORDER.indexOf(value);
-  if (index <= 0) return AREA_STATES.STABLE;
-  return AREA_ORDER[index - 1];
+function improveAreaState(value, steps = 1) {
+  let index = AREA_ORDER.indexOf(value);
+  if (index < 0) index = 0;
+  index = Math.max(0, index - Math.max(1, Math.trunc(Number(steps) || 1)));
+  return AREA_ORDER[index] ?? AREA_STATES.STABLE;
 }
 
 function actionSelection(action, options = {}) {
@@ -62,6 +69,9 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   const notes = [];
   const resolver = action.rules?.resolver;
   const selection = actionSelection(action, options);
+  const level = shipLevel(actor);
+  const profile = stationEffectProfile(level);
+  const commandBoost = stationCommandBoost(beforeState, action.station, level);
 
   if (Number(beforeState?.strain?.value ?? 0) !== Number(afterState?.strain?.value ?? 0)) {
     patches[`flags.${MODULE_ID}.ship.resources.strain.value`] = Number(afterState.strain.value);
@@ -71,13 +81,20 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   if (resolver === "rallyCrew") {
     const currentArea = ship.areas?.morale?.state ?? AREA_STATES.STABLE;
     if (currentArea !== AREA_STATES.STABLE) {
-      const nextArea = improveAreaState(currentArea);
+      const nextArea = improveAreaState(currentArea, 1);
       patches[`flags.${MODULE_ID}.ship.areas.morale.state`] = nextArea;
       notes.push(`Morale area ${currentArea} → ${nextArea}`);
+      if (profile.master) {
+        const current = Math.max(0, Number(ship.resources?.morale?.value) || 0);
+        const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
+        const next = Math.min(max, current + profile.bonus);
+        patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
+        notes.push(`Morale ${current} → ${next}`);
+      }
     } else {
       const current = Math.max(0, Number(ship.resources?.morale?.value) || 0);
       const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
-      const next = Math.min(max, current + 1);
+      const next = Math.min(max, current + profile.bonus + commandBoost);
       patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
       notes.push(`Morale ${current} → ${next}`);
     }
@@ -87,7 +104,8 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
     const system = SHIP_AREA_KEYS.includes(selection) && selection !== "morale" ? selection : null;
     if (!system) throw new Error("Emergency Repair requires a Hull, Arkengine, Rigging, or Lifeveil area.");
     const current = ship.areas?.[system]?.state ?? AREA_STATES.STABLE;
-    const next = improveAreaState(current);
+    const steps = (profile.master ? 2 : 1) + (commandBoost > 0 ? 1 : 0);
+    const next = improveAreaState(current, steps);
     patches[`flags.${MODULE_ID}.ship.areas.${system}.state`] = next;
     notes.push(`${system} area ${current} → ${next}`);
   }
@@ -95,7 +113,8 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   if (resolver === "mendLifeveil") {
     const current = Math.max(0, Number(ship.resources?.lifeveil?.value) || 0);
     const max = Math.max(current, Number(ship.resources?.lifeveil?.max) || 0);
-    const next = Math.min(max, current + 5);
+    const restore = 5 * profile.bonus + (commandBoost > 0 ? 2 * commandBoost : 0);
+    const next = Math.min(max, current + restore);
     patches[`flags.${MODULE_ID}.ship.resources.lifeveil.value`] = next;
     notes.push(`Lifeveil ${current} → ${next}`);
   }
@@ -110,7 +129,7 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
     } else if (conditions.length) {
       throw new Error("Choose a ship condition to purge.");
     } else {
-      notes.push("No tracked ship interference was present; the purge is held as a combat countermeasure.");
+      notes.push("No tracked ship interference is present.");
     }
   }
 
@@ -133,9 +152,10 @@ async function postActionChat({ actor, crewActor, action, selection, notes = [] 
     ? ""
     : `<br><strong>Choice:</strong> ${esc(String(selection).replaceAll("-", " "))}`;
   const notesLine = notes.length ? `<br><strong>Effect:</strong> ${notes.map((entry) => esc(entry)).join(" · ")}` : "";
+  const profile = stationEffectProfile(shipLevel(actor));
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: crewActor ?? actor }),
-    content: `<div class="arkflight-chat-card arkflight-station-action-chat"><strong>${esc(actor.name)} — ${esc(action.name)}</strong><br><em>${esc(action.station)} ${action.timing}</em> · ${esc(actionCostLabel(action))}${selectionLine}${notesLine}<hr><p>${esc(action.description)}</p></div>`
+    content: `<div class="arkflight-chat-card arkflight-station-action-chat"><strong>${esc(actor.name)} — ${esc(action.name)}</strong><br><em>${esc(action.station)} ${action.timing}</em> · ${esc(actionCostLabel(action))} · Station Bonus +${profile.bonus}${selectionLine}${notesLine}<hr><p>${esc(action.description)}</p></div>`
   });
 }
 
@@ -165,28 +185,37 @@ async function execute(base, actionId, options = {}, reference = null) {
 
   const resolver = action.rules?.resolver;
   if (resolver === "fireAtTarget") {
-    if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target; use the Weapons tab fire-control panel.");
-    return base.fireAtTarget(options.weaponKey, options.targetId, combatant);
+    if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
+    const fire = game.arkflight?.combat?.fireAtTarget ?? base.fireAtTarget;
+    return fire(options.weaponKey, options.targetId, combatant);
   }
   if (resolver === "workTheGuns") {
-    if (!options.weaponKey) throw new Error("Work the Guns requires an installed weapon; use the Weapons tab fire-control panel.");
+    if (!options.weaponKey) throw new Error("Work the Guns requires an installed weapon.");
     return base.workTheGuns(options.weaponKey, combatant);
   }
 
   const before = base.state(combatant);
   const selection = actionSelection(action, options);
+  const level = shipLevel(combatant.actor);
+  const profile = stationEffectProfile(level);
+  const commandBoost = stationCommandBoost(before, action.station, level);
   const after = executeStationStateAction(before, action, {
     round: game.combat?.round ?? 1,
-    selection
+    selection,
+    shipLevel: level
   });
   await combatant.update({ [STATE_PATH]: after });
   const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, after);
 
-  if (resolver === "driveCrew") notes.push("The ship gains one net additional AP this turn.");
-  if (resolver === "hardTurn") notes.push(`+${Number(action.rules?.facingSteps ?? 2)} maneuver allowance this turn.`);
-  if (resolver === "overchargeArkengine") notes.push("+1 movement and +1 maneuver allowance this turn.");
-  if (resolver === "redistributePower" && selection === "propulsion") notes.push("+1 movement and +1 maneuver allowance this turn.");
-  if (action.timing === COMBAT_ACTION_TIMING.REACTION) notes.push("Reaction readied until this ship's next turn or until consumed by its trigger.");
+  if (resolver === "driveCrew") notes.push(profile.legendary ? "Net +1 AP; legendary command avoids the Strain." : "The ship gains one net additional AP this turn.");
+  if (resolver === "hardTurn") notes.push(`+${1 + profile.bonus + commandBoost} maneuver allowance this turn.`);
+  if (resolver === "overchargeArkengine") notes.push(`+${profile.bonus + commandBoost} movement and maneuver allowance this turn.`);
+  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus + commandBoost} movement and maneuver allowance this turn.`);
+  if (resolver === "redistributePower" && selection === "weapons") notes.push(`Weapons gain +${profile.bonus} native power damage until the ship's next turn.`);
+  if (resolver === "redistributePower" && selection === "lifeveil") notes.push(`Lifeveil gains ${2 * profile.bonus} native mitigation until the ship's next turn.`);
+  if (resolver === "readyBroadside") notes.push(`The selected battery's next shot gains +${2 * profile.bonus} damage.`);
+  if (action.timing === COMBAT_ACTION_TIMING.REACTION) notes.push("Reaction readied in ship combat and will be consumed by its matching trigger.");
+  if (commandBoost > 0) notes.push(`Issue Order contributes +${commandBoost} to this station's effect.`);
 
   await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes });
   Hooks.callAll("arkflightStationActionResolved", {

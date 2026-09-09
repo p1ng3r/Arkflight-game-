@@ -1,0 +1,58 @@
+/* Compact tactical HUD pass: keep the full rules available in chat/tooltips,
+   but reserve canvas space for the battle itself. */
+.arkflight-combat-console{min-width:700px!important}
+.arkflight-combat-console .afcc-header{min-height:46px;padding:6px 10px}
+.arkflight-combat-console .afcc-title h2{font-size:17px}
+.arkflight-combat-console .afcc-turn-state{min-width:118px;padding:4px 7px}
+.arkflight-combat-console .afcc-grid{grid-template-columns:minmax(0,1fr) 270px;gap:7px;padding:7px}
+.arkflight-combat-console .afcc-station-tabs button{min-height:39px;grid-template-columns:15px minmax(0,1fr);grid-template-rows:16px 12px;padding:3px 5px}
+.arkflight-combat-console .afcc-station-tabs button i{font-size:13px}
+.arkflight-combat-console .afcc-station-tabs button span{font-size:10px}
+.arkflight-combat-console .afcc-station-tabs button small{font-size:8px}
+.arkflight-combat-console .afcc-action-heading{min-height:32px;padding:4px 8px}
+.arkflight-combat-console .afcc-action-heading>div>strong{font-size:11px}
+.arkflight-combat-console .afcc-action-heading>small{font-size:8px}
+.arkflight-combat-console .afcc-action-grid{
+  grid-template-columns:1fr;
+  grid-auto-rows:minmax(46px,auto);
+  gap:4px;
+  padding:0 6px 6px;
+  overflow:auto;
+}
+.arkflight-combat-console .afcc-action-card{
+  min-height:0;
+  padding:5px 6px;
+  display:grid;
+  grid-template-columns:72px minmax(150px,1fr) minmax(100px,135px) 96px;
+  grid-template-rows:auto auto;
+  column-gap:7px;
+  row-gap:1px;
+  align-items:center;
+}
+.arkflight-combat-console .afcc-action-card header{grid-column:1;grid-row:1/3;display:grid;align-content:center;gap:3px}
+.arkflight-combat-console .afcc-action-name{grid-column:2;grid-row:1;margin:0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arkflight-combat-console .afcc-action-card p{grid-column:2;grid-row:2;margin:0;min-width:0;font-size:8.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arkflight-combat-console .afcc-action-card select{grid-column:3;grid-row:1/3;margin:0;height:25px;min-height:25px}
+.arkflight-combat-console .afcc-action-card button{grid-column:4;grid-row:1/3;margin:0;min-height:27px;padding:2px 5px}
+.arkflight-combat-console .afcc-action-card:not(:has(select)) .afcc-action-name{grid-column:2/4}
+.arkflight-combat-console .afcc-action-card:not(:has(select)) p{grid-column:2/4}
+.arkflight-combat-console .afcc-action-card:hover p{white-space:normal;overflow:visible}
+.arkflight-combat-console .afcc-targeting{padding:6px}
+.arkflight-combat-console .afcc-target-identity{grid-template-columns:44px minmax(0,1fr);gap:6px}
+.arkflight-combat-console .afcc-target-identity img{width:44px;height:44px}
+.arkflight-combat-console .afcc-target-identity strong{font-size:14px}
+.arkflight-combat-console .afcc-target-stats{margin:5px 0}
+.arkflight-combat-console .afcc-target-stats strong{font-size:13px}
+.arkflight-combat-console .afcc-meter{margin-top:4px}
+.arkflight-combat-console .afcc-solution{margin-top:5px;padding:3px 5px}
+.arkflight-combat-console .afcc-target-buttons{margin-top:5px}
+.arkflight-combat-console .afcc-target-buttons button,.arkflight-combat-console .afcc-all-arcs,.arkflight-combat-console .afcc-facing-buttons button{min-height:25px}
+.arkflight-combat-console .afcc-fire-control,.arkflight-combat-console .afcc-arcs,.arkflight-combat-console .afcc-last-shot{margin-top:5px;padding-top:5px}
+.arkflight-combat-console .afcc-selected-weapon{margin-top:3px;padding:4px 5px}
+.arkflight-combat-console .afcc-resource-strip{padding:4px 7px 6px}
+.arkflight-combat-console .afcc-resource-strip>div{padding:3px 6px}
+.arkflight-combat-console .afcc-resource-strip strong{font-size:11px}
+@media(max-width:900px){
+  .arkflight-combat-console .afcc-grid{grid-template-columns:1fr 245px}
+  .arkflight-combat-console .afcc-action-card{grid-template-columns:62px minmax(120px,1fr) 105px 82px}
+}
