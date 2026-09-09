@@ -20,6 +20,9 @@ export function stationBonus(level = 1) {
 export function stationEffectCharges(actionId, level = 1) {
   const profile = stationEffectProfile(level);
   if (actionId === "captain-coordinate-assault") return profile.advanced ? 2 : 1;
+  if (actionId === "engineer-redistribute-power") return profile.advanced ? 2 : 1;
+  if (actionId === "veilwarden-reinforce-lifeveil") return profile.advanced ? 2 : 1;
+  if (actionId === "veilwarden-focus-ward") return profile.advanced ? 2 : 1;
   if ([
     "captain-issue-order",
     "battlewatch-acquire-target",
@@ -44,6 +47,7 @@ export function stationMitigationValue(kind, level = 1, boost = 0) {
   const magnitude = Math.max(1, Math.min(3, stationBonus(level) + Math.max(0, Math.trunc(Number(boost) || 0))));
   if (kind === "brace") return 3 * magnitude;
   if (kind === "emergency-ward") return 4 * magnitude;
+  if (kind === "focus-ward") return 3 * magnitude;
   if (kind === "ward") return 2 * magnitude;
   return magnitude;
 }
