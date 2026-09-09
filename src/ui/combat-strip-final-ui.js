@@ -1,3 +1,5 @@
+import "../foundry/combat-flow-usability.js";
+import "./combat-flow-hud-ui.js";
 import { firingArcsVisible, toggleFiringArcs } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
@@ -5,6 +7,17 @@ const HUD_ID = "arkflight-combat-console";
 const initialized = new WeakSet();
 const userMoved = new WeakSet();
 let lastApp = null;
+
+function ensureCombatFlowStylesheet() {
+  const href = "modules/arkflight-game/styles/combat-flow-hud.css";
+  if (document.querySelector('link[data-arkflight-combat-flow]')) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = href;
+  link.dataset.arkflightCombatFlow = "true";
+  document.head.append(link);
+}
+ensureCombatFlowStylesheet();
 
 function isCombatStrip(app) {
   const id = app?.id ?? app?.options?.id ?? "";
@@ -134,7 +147,6 @@ function syncArcButtons(root, combatant) {
 function bindArcButtons(app, root) {
   const combatant = combatantForApp(app);
   syncArcButtons(root, combatant);
-
   for (const button of root.querySelectorAll("[data-toggle-all-arcs]")) {
     if (button.dataset.afcsUnifiedArcs === "true") continue;
     button.dataset.afcsUnifiedArcs = "true";
@@ -143,14 +155,8 @@ function bindArcButtons(app, root) {
       event.stopImmediatePropagation();
       const current = combatantForApp(app);
       const state = current ? game.arkflight?.combat?.state?.(current) : null;
-      if (!current || !state) {
-        ui.notifications?.warn("This Arkflight ship must be in active Foundry combat to show weapon arcs.");
-        return;
-      }
-      if (!Object.keys(state.weapons ?? {}).length) {
-        ui.notifications?.warn(`${current.name} has no installed combat weapons to display.`);
-        return;
-      }
+      if (!current || !state) return ui.notifications?.warn("This Arkflight ship must be in active Foundry combat to show weapon arcs.");
+      if (!Object.keys(state.weapons ?? {}).length) return ui.notifications?.warn(`${current.name} has no installed combat weapons to display.`);
       toggleFiringArcs(current);
       syncArcButtons(root, current);
     }, { capture: true });
@@ -163,57 +169,42 @@ function enableDrag(app, strip) {
   handle.dataset.afcsDragReady = "true";
   handle.classList.add("afcs-drag-handle");
   handle.title = "Drag Arkflight combat HUD";
-
   handle.addEventListener("pointerdown", (event) => {
     if (event.button !== 0 || event.target.closest("button, input, select, textarea, a")) return;
     const rect = app.element?.getBoundingClientRect?.();
     if (!rect) return;
-    event.preventDefault();
-    event.stopPropagation();
-    userMoved.add(app);
-    handle.classList.add("is-dragging");
-
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const startLeft = rect.left;
-    const startTop = rect.top;
-    const pointerId = event.pointerId;
+    event.preventDefault(); event.stopPropagation(); userMoved.add(app); handle.classList.add("is-dragging");
+    const startX = event.clientX, startY = event.clientY, startLeft = rect.left, startTop = rect.top, pointerId = event.pointerId;
     try { handle.setPointerCapture?.(pointerId); } catch (_error) { /* optional */ }
-
     const move = (moveEvent) => {
       const maxLeft = Math.max(8, canvasRightEdge() - rect.width - 8);
       const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
       const left = Math.max(8, Math.min(maxLeft, startLeft + moveEvent.clientX - startX));
       const top = Math.max(8, Math.min(maxTop, startTop + moveEvent.clientY - startY));
-      try { app.setPosition?.({ left, top }); } catch (_error) { /* drag convenience only */ }
+      try { app.setPosition?.({ left, top }); } catch (_error) { /* convenience */ }
     };
     const stop = () => {
       handle.classList.remove("is-dragging");
-      handle.removeEventListener("pointermove", move);
-      handle.removeEventListener("pointerup", stop);
-      handle.removeEventListener("pointercancel", stop);
+      handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", stop); handle.removeEventListener("pointercancel", stop);
       try { handle.releasePointerCapture?.(pointerId); } catch (_error) { /* optional */ }
     };
-    handle.addEventListener("pointermove", move);
-    handle.addEventListener("pointerup", stop);
-    handle.addEventListener("pointercancel", stop);
+    handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", stop); handle.addEventListener("pointercancel", stop);
   });
 }
 
 function enhanceStrip(app) {
   if (!isCombatStrip(app)) return;
+  ensureCombatFlowStylesheet();
   const root = app?.element;
   const shell = root?.querySelector?.(".afcs-shell");
   const strip = shell?.querySelector?.(".afcs-strip");
   if (!root || !shell || !strip) return;
-
   lastApp = app;
   shell.dataset.afcsFinal = "true";
   restructureStrip(app, strip);
   ensureCloseButton(app, strip);
   enableDrag(app, strip);
   bindArcButtons(app, root);
-
   if (!initialized.has(app)) {
     initialized.add(app);
     requestAnimationFrame(() => requestAnimationFrame(() => fitWindow(app, { forcePosition: true })));
@@ -222,9 +213,5 @@ function enhanceStrip(app) {
 
 Hooks.on("renderApplicationV2", enhanceStrip);
 Hooks.on("renderApplication", enhanceStrip);
-Hooks.on("updateActor", () => {
-  if (lastApp?.rendered) requestAnimationFrame(() => lastApp.render?.({ force: true }));
-});
-window.addEventListener("resize", () => {
-  if (lastApp?.rendered) requestAnimationFrame(() => fitWindow(lastApp));
-});
+Hooks.on("updateActor", () => { if (lastApp?.rendered) requestAnimationFrame(() => lastApp.render?.({ force: true })); });
+window.addEventListener("resize", () => { if (lastApp?.rendered) requestAnimationFrame(() => fitWindow(lastApp)); });
