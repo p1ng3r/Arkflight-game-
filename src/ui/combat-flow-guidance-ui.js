@@ -10,7 +10,9 @@ function activeShip() {
 
 function damageChips(actor) {
   const areas = actor?.flags?.[MODULE_ID]?.ship?.areas ?? {};
-  return Object.entries(areas).filter(([, row]) => BAD_STATES.has(String(row?.state ?? "stable"))).map(([key, row]) => ({ key, state: String(row.state) }));
+  return Object.entries(areas)
+    .filter(([, row]) => BAD_STATES.has(String(row?.state ?? "stable")))
+    .map(([key, row]) => ({ key, state: String(row.state) }));
 }
 
 function enhanceGuidance(app) {
@@ -35,8 +37,12 @@ function enhanceGuidance(app) {
   }
 }
 
-Hooks.on("renderApplicationV2", enhanceGuidance);
-Hooks.on("renderApplication", enhanceGuidance);
+function deferGuidance(app) {
+  requestAnimationFrame(() => enhanceGuidance(app));
+}
+
+Hooks.on("renderApplicationV2", deferGuidance);
+Hooks.on("renderApplication", deferGuidance);
 
 Hooks.on("controlToken", (token, controlled) => {
   if (!controlled || !token?.actor || !isShip(token.actor)) return;
@@ -45,7 +51,6 @@ Hooks.on("controlToken", (token, controlled) => {
   if (!active || !hud?.rendered || token.actor.id === active.actorId) return;
   const target = game.arkflight?.combat?.findCombatant?.(token.actor);
   if (!target || target.id === active.id) return;
-
   try { token.setTarget?.(true, { releaseOthers: true }); } catch (_error) { /* targeting convenience */ }
   hud.setReference?.(active.actor);
   hud.selectedTargetId = target.id;
@@ -54,6 +59,7 @@ Hooks.on("controlToken", (token, controlled) => {
 });
 
 Hooks.on("arkflightShipDamageStateChanged", ({ actor, notes }) => {
-  if (hudApp()?.rendered) hudApp().render({ force: true });
+  const hud = hudApp();
+  if (hud?.rendered) requestAnimationFrame(() => hud.render({ force: true }));
   if (actor && notes?.length) console.info(`Arkflight | ${actor.name} damage state: ${notes.join(" · ")}`);
 });
