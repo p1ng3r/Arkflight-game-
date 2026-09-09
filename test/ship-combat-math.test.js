@@ -118,8 +118,8 @@ test("Hardness reduces structural damage once", () => {
   assert.equal(applyHardnessToDamage(4, 8).hullDamage, 0);
 });
 
-test("core weapon catalog contains thirteen distinct combat-ready weapons", () => {
-  assert.equal(Object.keys(SHIP_CATALOGS.weapons).length, 13);
+test("core weapon catalog contains sixteen distinct combat-ready weapons", () => {
+  assert.equal(Object.keys(SHIP_CATALOGS.weapons).length, 16);
   for (const weapon of Object.values(SHIP_CATALOGS.weapons)) {
     const combat = weapon.data.combat;
     assert.ok(["small", "medium", "large"].includes(weapon.data.size), `${weapon.name} size`);

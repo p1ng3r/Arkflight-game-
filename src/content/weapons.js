@@ -4,6 +4,8 @@ import { shipModRarityRule } from "../ship/ship-mod-rarity.js";
 
 // Alpha combat values: this core catalog is intentionally compact. Ammunition
 // and special load types are a separate future layer rather than duplicate guns.
+// Common mechanical weapon families may offer smaller mount variants, but their
+// firing locations and arc templates remain inherited from the parent role.
 const D = Object.freeze({
   "deck-ballista": Object.freeze({
     name: "Deck Ballista",
@@ -53,6 +55,22 @@ const D = Object.freeze({
     cargo: 2,
     combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
   }),
+  "light-swivel-cannon": Object.freeze({
+    name: "Light Swivel Cannon",
+    description: "A cut-down swivel gun for small hardpoints, trading striking power and reach for a lighter crew and mounting footprint.",
+    tier: 1,
+    tags: ["weapon", "cannon", "small", "mechanical", "black-powder", "crew-served"],
+    size: "small",
+    family: "cannon",
+    category: "light-cannon",
+    crewRequired: 1,
+    allowedMounts: ["fore", "port", "starboard"],
+    damageProfile: { dice: "2d8", type: "bludgeoning" },
+    mountType: "small",
+    systemThreat: "hull",
+    cargo: 1,
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 2, max: 4 } }
+  }),
   "swivel-cannon": Object.freeze({
     name: "Swivel Cannon",
     description: "A compact ship cannon on a reinforced swivel mount, useful as a middle-weight starter weapon profile.",
@@ -68,6 +86,22 @@ const D = Object.freeze({
     systemThreat: "hull",
     cargo: 2,
     combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
+  }),
+  "light-deck-culverin": Object.freeze({
+    name: "Light Deck Culverin",
+    description: "A shortened chase gun sized for small fore or aft mounts, preserving the culverin's pursuit role at reduced damage and range.",
+    tier: 1,
+    tags: ["weapon", "cannon", "culverin", "small", "mechanical", "black-powder", "long-range", "crew-served"],
+    size: "small",
+    family: "cannon",
+    category: "light-chase-gun",
+    crewRequired: 1,
+    allowedMounts: ["fore", "aft"],
+    damageProfile: { dice: "2d10", type: "bludgeoning" },
+    mountType: "small",
+    systemThreat: "hull",
+    cargo: 1,
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 3, optimalMax: 5, max: 7 } }
   }),
   "deck-culverin": Object.freeze({
     name: "Deck Culverin",
@@ -180,6 +214,22 @@ const D = Object.freeze({
     systemThreat: "hull",
     cargo: 2,
     combat: { fireAP: 2, reloadRounds: 2, arcTemplate: "line", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
+  }),
+  "light-deck-scattergun": Object.freeze({
+    name: "Light Deck Scattergun",
+    description: "A small-mount scattergun for close defense, throwing a lighter shot cloud across the same firing lanes as the full deck gun.",
+    tier: 1,
+    tags: ["weapon", "cannon", "scattergun", "small", "mechanical", "black-powder", "close-defense", "crew-served"],
+    size: "small",
+    family: "cannon",
+    category: "light-scattergun",
+    crewRequired: 1,
+    allowedMounts: ["fore", "port", "starboard", "aft"],
+    damageProfile: { dice: "3d6", type: "bludgeoning" },
+    mountType: "small",
+    systemThreat: "hull",
+    cargo: 1,
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 2, max: 3 } }
   }),
   "deck-scattergun": Object.freeze({
     name: "Deck Scattergun",
