@@ -1,0 +1,206 @@
+.arkflight-combat-console,
+.arkflight-combat-console.window-app,
+.arkflight-combat-console.application {
+  min-width: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+.arkflight-combat-console .window-header {
+  display: none !important;
+}
+
+.arkflight-combat-console .window-content,
+.arkflight-combat-console .window-content > section,
+.arkflight-combat-console .window-content form {
+  min-height: 126px !important;
+  height: 126px !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.arkflight-combat-console .afcs-shell {
+  position: relative !important;
+  width: 100% !important;
+  height: 126px !important;
+  min-height: 126px !important;
+  overflow: visible !important;
+}
+
+.arkflight-combat-console .afcs-strip {
+  position: relative !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 126px !important;
+  min-height: 126px !important;
+  display: grid !important;
+  grid-template-columns: 220px minmax(520px, 1fr) 350px !important;
+  grid-template-rows: 1fr !important;
+  grid-template-areas: none !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 12px 16px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+  border-radius: 18px !important;
+}
+
+.arkflight-combat-console .afcs-ship {
+  grid-area: auto !important;
+  min-width: 0 !important;
+}
+
+.arkflight-combat-console .afcs-center {
+  min-width: 0 !important;
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.arkflight-combat-console .afcs-resource-row {
+  display: grid !important;
+  grid-template-columns: 58px 116px 106px 150px 82px minmax(120px, 1fr) !important;
+  gap: 10px !important;
+  align-items: start !important;
+}
+
+.arkflight-combat-console .afcs-resource-row > .afcs-stat {
+  grid-area: auto !important;
+  min-width: 0 !important;
+}
+
+.arkflight-combat-console .afcs-vitals-row {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: center !important;
+}
+
+.arkflight-combat-console .afcs-vital {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(60px, 1fr) auto !important;
+  gap: 7px !important;
+  align-items: center !important;
+}
+
+.arkflight-combat-console .afcs-vital label {
+  font-size: 9px !important;
+  text-transform: uppercase !important;
+  letter-spacing: .08em !important;
+  color: #86b6c8 !important;
+}
+
+.arkflight-combat-console .afcs-vital strong {
+  font-size: 10px !important;
+  color: #eaf6ff !important;
+  white-space: nowrap !important;
+}
+
+.arkflight-combat-console .afcs-bar {
+  position: relative !important;
+  height: 8px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(93, 133, 151, .48) !important;
+  border-radius: 999px !important;
+  background: rgba(8, 22, 32, .96) !important;
+}
+
+.arkflight-combat-console .afcs-bar > span {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  display: block !important;
+  min-width: 0 !important;
+  border-radius: 999px !important;
+}
+
+.arkflight-combat-console .afcs-vital.hull .afcs-bar > span {
+  background: linear-gradient(90deg, #3eac68, #8ee3af) !important;
+}
+
+.arkflight-combat-console .afcs-vital.lifeveil .afcs-bar > span {
+  background: linear-gradient(90deg, #438fdd, #95d3ff) !important;
+}
+
+.arkflight-combat-console .afcs-vital.morale .afcs-bar > span {
+  background: linear-gradient(90deg, #c58a2a, #f0c968) !important;
+}
+
+.arkflight-combat-console .afcs-controls {
+  grid-area: auto !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  grid-auto-rows: 34px !important;
+  justify-content: stretch !important;
+  align-content: center !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.arkflight-combat-console .afcs-controls button {
+  width: 100% !important;
+  min-height: 34px !important;
+  height: 34px !important;
+  padding: 0 9px !important;
+  font-size: 10px !important;
+  white-space: nowrap !important;
+}
+
+.arkflight-combat-console .afcs-final-close {
+  position: absolute !important;
+  top: 7px !important;
+  right: 7px !important;
+  z-index: 40 !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(109, 156, 175, .45) !important;
+  background: rgba(4, 15, 24, .92) !important;
+  color: #cce8f4 !important;
+}
+
+.arkflight-combat-console .afcs-drawer {
+  bottom: calc(100% + 10px) !important;
+  z-index: 50 !important;
+  overflow: hidden !important;
+}
+
+.arkflight-combat-console .afcs-drawer-stations {
+  left: 0 !important;
+  width: min(500px, 48%) !important;
+}
+
+.arkflight-combat-console .afcs-drawer-weapons {
+  left: auto !important;
+  right: 0 !important;
+  width: min(460px, 46%) !important;
+}
+
+.arkflight-combat-console .afcs-drawer-log {
+  left: auto !important;
+  right: 0 !important;
+  width: min(380px, 40%) !important;
+  max-height: 300px !important;
+}
+
+@media (max-width: 1220px) {
+  .arkflight-combat-console .afcs-strip {
+    grid-template-columns: 190px minmax(460px, 1fr) 310px !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+  }
+  .arkflight-combat-console .afcs-resource-row {
+    grid-template-columns: 52px 106px 98px 136px 74px minmax(100px, 1fr) !important;
+    gap: 7px !important;
+  }
+}
