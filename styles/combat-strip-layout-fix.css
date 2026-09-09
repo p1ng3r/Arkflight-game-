@@ -1,0 +1,81 @@
+/* Foundry v14 geometry correction for the Arkflight combat strip. The strip is
+   always the bottom row of its Application; drawers use the extra height only
+   while open. */
+.arkflight-combat-console{
+  min-width:760px!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.arkflight-combat-console .window-header{
+  min-height:30px!important;
+}
+.arkflight-combat-console .window-content{
+  position:relative!important;
+  overflow:hidden!important;
+  padding:0!important;
+  background:transparent!important;
+}
+.arkflight-combat-console .afcs-shell{
+  position:relative!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:100%!important;
+  box-sizing:border-box!important;
+}
+.arkflight-combat-console .afcs-strip{
+  position:absolute!important;
+  left:0!important;
+  right:0!important;
+  bottom:0!important;
+  width:auto!important;
+  min-height:100px!important;
+  height:auto!important;
+  box-sizing:border-box!important;
+  padding:9px 12px!important;
+  display:grid!important;
+  grid-template-columns:190px 58px 112px 104px 126px 86px minmax(120px,1fr)!important;
+  grid-template-rows:40px 38px!important;
+  grid-template-areas:
+    "ship round ap rp strain heading target"
+    "ship controls controls controls controls controls controls"!important;
+  align-items:center!important;
+  gap:6px 10px!important;
+}
+.arkflight-combat-console .afcs-ship{grid-area:ship!important;min-width:0!important}
+.arkflight-combat-console .afcs-stat:nth-of-type(2){grid-area:round!important}
+.arkflight-combat-console .afcs-stat:nth-of-type(3){grid-area:ap!important}
+.arkflight-combat-console .afcs-stat:nth-of-type(4){grid-area:rp!important}
+.arkflight-combat-console .afcs-stat:nth-of-type(5){grid-area:strain!important}
+.arkflight-combat-console .afcs-stat:nth-of-type(6){grid-area:heading!important}
+.arkflight-combat-console .afcs-stat:nth-of-type(7){grid-area:target!important}
+.arkflight-combat-console .afcs-controls{
+  grid-area:controls!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  flex-wrap:nowrap!important;
+  gap:6px!important;
+  min-width:0!important;
+}
+.arkflight-combat-console .afcs-controls button{
+  min-height:32px!important;
+  height:32px!important;
+  padding:0 10px!important;
+  font-size:10px!important;
+  white-space:nowrap!important;
+}
+.arkflight-combat-console .afcs-drawer{
+  bottom:108px!important;
+  max-height:410px!important;
+}
+.arkflight-combat-console .afcs-drawer-stations{left:0!important;width:min(470px,48%)!important}
+.arkflight-combat-console .afcs-drawer-weapons{right:0!important;width:min(430px,46%)!important}
+.arkflight-combat-console .afcs-drawer-log{right:0!important;width:min(390px,42%)!important;max-height:300px!important}
+@media(max-width:1000px){
+  .arkflight-combat-console .afcs-strip{
+    grid-template-columns:165px 52px 96px 92px 110px 80px minmax(100px,1fr)!important;
+    gap:5px 7px!important;
+    padding:8px 9px!important;
+  }
+  .arkflight-combat-console .afcs-controls button{padding:0 7px!important;font-size:9px!important}
+}
