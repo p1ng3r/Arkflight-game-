@@ -352,6 +352,11 @@ Hooks.once("ready", () => {
       return enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference);
     },
     stationAction(actionId, options = {}, reference = null) {
+      if (actionId === "battlewatch-reload-weapon") {
+        // Reload is a Battlewatch station action too. Always preserve the
+        // player-authorized socket relay instead of resolving it on the client.
+        return originalStationAction(actionId, options, reference);
+      }
       if (actionId === "battlewatch-fire-weapon") {
         if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
         // Players must go through the station-action socket relay so the active GM
