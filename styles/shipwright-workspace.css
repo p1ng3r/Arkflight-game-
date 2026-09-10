@@ -553,7 +553,7 @@
   z-index: 50;
 }
 .arkflight-workspace-socket:hover .arkflight-workspace-socket-component {
-  transform: scale(2);
+  transform: scale(3);
   z-index: 20;
   filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
 }
@@ -561,4 +561,88 @@
 
 .arkflight-workspace-board-stage:has(.arkflight-workspace-socket:hover) {
   overflow: visible;
+}
+
+
+.arkflight-workspace-socket-effect {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 34px);
+  z-index: 60;
+  display: none;
+  width: 250px;
+  transform: translateX(-50%);
+  padding: 8px 10px;
+  border: 1px solid rgba(116, 190, 205, .72);
+  border-radius: 6px;
+  background: rgba(4, 12, 16, .97);
+  box-shadow: 0 8px 22px rgba(0,0,0,.62);
+  pointer-events: none;
+  text-align: left;
+}
+.arkflight-workspace-socket:hover .arkflight-workspace-socket-effect {
+  display: block;
+}
+.arkflight-workspace-socket-effect strong,
+.arkflight-workspace-socket-effect small,
+.arkflight-workspace-socket-effect em {
+  display: block;
+}
+.arkflight-workspace-socket-effect strong {
+  color: #efd899;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.arkflight-workspace-socket-effect small {
+  margin-top: 4px;
+  color: #c4d8dc;
+  font-size: 9px;
+  line-height: 1.35;
+  white-space: normal;
+}
+.arkflight-workspace-socket-effect em {
+  margin-top: 5px;
+  color: #78969d;
+  font-size: 8px;
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.arkflight-fitting-bonuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 5px;
+  margin-top: 5px;
+}
+.arkflight-fitting-bonuses span {
+  display: inline-block;
+  padding: 2px 5px;
+  border: 1px solid rgba(92, 154, 168, .35);
+  border-radius: 999px;
+  background: rgba(13, 34, 40, .7);
+  color: #a9d9e1;
+  font-size: 8px;
+  line-height: 1.2;
+}
+
+.arkflight-uninstall-confirm {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+.arkflight-uninstall-confirm > img {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  border: 0;
+  background: transparent;
+}
+.arkflight-uninstall-confirm h2 {
+  margin: 0 0 5px;
+}
+.arkflight-uninstall-confirm p {
+  margin: 0 0 5px;
+  line-height: 1.35;
 }
