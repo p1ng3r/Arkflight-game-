@@ -7,6 +7,7 @@ const journalSource = readFileSync(new URL("../src/foundry/combat-reference-comp
 const linkSource = readFileSync(new URL("../src/ui/arkflight-command-hud-journal-links.js", import.meta.url), "utf8");
 const economySource = readFileSync(new URL("../src/combat/station-action-economy.js", import.meta.url), "utf8");
 const hudSource = readFileSync(new URL("../src/ui/arkflight-command-hud-ui.js", import.meta.url), "utf8");
+const journalCss = readFileSync(new URL("../styles/arkflight-command-hud-journal.css", import.meta.url), "utf8");
 
 test("Arkflight registers managed combat reference journals and HUD journal links", () => {
   assert.ok(moduleJson.esmodules.includes("src/foundry/combat-reference-compendium.js"));
@@ -42,6 +43,18 @@ test("HUD exposes Supplies Lifeveil Morale and Strain costs clearly", () => {
   assert.match(hudSource, /is-strain/);
   assert.match(economySource, /"engineer-emergency-repair": Object\.freeze\(\{ supplies: 2 \}\)/);
   assert.match(economySource, /"veilwarden-focus-ward": Object\.freeze\(\{ lifeveil: 10 \}\)/);
+});
+
+test("Combat Reference uses the Arkflight parchment codex layout and scroll frame", () => {
+  assert.match(journalSource, /afcr-codex/);
+  assert.match(journalSource, /afcr-masthead/);
+  assert.match(journalSource, /Quick Effect/);
+  assert.match(journalSource, /At a Glance/);
+  assert.match(journalSource, /arkflight-codex-v2/);
+  assert.match(journalCss, /steampunk_winged_gear_parchment_frame\.webp/);
+  assert.match(journalCss, /afcr-art-frame/);
+  assert.match(journalCss, /afcr-meta-grid/);
+  assert.match(journalCss, /afcr-resource-grid/);
 });
 
 test("each combat action can open its exact JournalEntryPage without replacing economy chips", () => {
