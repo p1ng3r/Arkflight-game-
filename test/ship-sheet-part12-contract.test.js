@@ -9,6 +9,18 @@ import { SHIP_CATALOGS } from "../src/content/index.js";
 const template = readFileSync(new URL("../templates/ship/ship-sheet.hbs", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/ui/ship-sheet-app.js", import.meta.url), "utf8");
 
+test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated ApplicationV1", () => {
+  assert.match(appSource, /HandlebarsApplicationMixin\(ActorSheetV2\)/);
+  assert.match(appSource, /static DEFAULT_OPTIONS/);
+  assert.match(appSource, /static PARTS/);
+  assert.match(appSource, /_prepareContext/);
+  assert.match(appSource, /_onRender/);
+  assert.match(appSource, /DocumentSheetConfig\.registerSheet/);
+  assert.doesNotMatch(appSource, /foundry\.appv1/);
+  assert.doesNotMatch(appSource, /activateListeners\(/);
+  assert.doesNotMatch(appSource, /static get defaultOptions/);
+});
+
 test("live ship sheet exposes only Overview Fittings and Refit primary tabs", () => {
   assert.match(template, /data-tab="overview"/); assert.match(template, /data-tab="fittings"/); assert.match(template, /data-tab="refit"/);
   assert.doesNotMatch(template, /data-tab="command"/); assert.doesNotMatch(template, /data-tab="shipwright"/); assert.doesNotMatch(template, /SHIPWRIGHT MODE/);
