@@ -87,3 +87,22 @@ test("Owned Fittings tray shows the catalog artwork beside each physical fitting
   assert.match(workspaceCss, /arkflight-workspace-inventory-list article\.has-fitting-art/);
   assert.match(workspaceCss, /arkflight-owned-fitting-art/);
 });
+
+
+test("Shipwright exposes the complete blueprint to physical fitting lifecycle", () => {
+  assert.match(workspace, /function blueprintRows/);
+  assert.match(workspace, /blueprintCount/);
+  assert.match(template, /Known Blueprints/);
+  assert.match(template, /Fabricate a physical fitting from Repairs &amp; Fabrication/);
+  assert.match(template, /Drag a managed compendium entry onto the vessel and choose Blueprint/);
+  assert.match(template, /Physical fitting aboard/);
+  assert.match(template, /Install in Selected Socket/);
+  assert.match(template, /Right-click to uninstall/);
+});
+
+test("Shipwright selected sockets and hover cards stay visually readable near board edges", () => {
+  assert.match(workspaceCss, /arkflight-workspace-socket\.is-selected/);
+  assert.match(workspaceCss, /arkflight-workspace-socket\.is-label-above \.arkflight-workspace-socket-effect/);
+  assert.match(workspaceCss, /bottom:\s*calc\(100% \+ 34px\)/);
+  assert.match(workspaceCss, /arkflight-workspace-blueprint-list/);
+});
