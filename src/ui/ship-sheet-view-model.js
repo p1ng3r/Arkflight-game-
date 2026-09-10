@@ -4,7 +4,7 @@ import {
   derivedStatsByPresentation
 } from "../ship/derived-stat-registry.js";
 
-export const SHIP_SHEET_TABS = Object.freeze(["overview", "hold", "fittings", "refit"]);
+export const SHIP_SHEET_TABS = Object.freeze(["overview", "hold", "combat"]);
 
 export const AREA_PRESENTATION = Object.freeze({
   hull: Object.freeze({ label: "Hull", station: "battlewatch", icon: "fa-shield-halved" }),
