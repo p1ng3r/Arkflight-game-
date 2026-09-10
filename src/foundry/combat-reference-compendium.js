@@ -1,4 +1,11 @@
 import { COMBAT_ACTIONS } from "../content/combat-actions.js";
+import {
+  STATION_BONUS_DEFINITION,
+  STRAIN_THRESHOLD_DEFINITION,
+  stationActionEconomy,
+  stationActionRulesText,
+  stationResourceIdentity
+} from "../combat/station-action-economy.js";
 
 const PACK_NAME = "arkflight-combat-reference";
 const PACK_LABEL = "Arkflight — Combat Reference";
@@ -7,6 +14,7 @@ const FOLDER_NAME = "Arkflight";
 const FLAG_SCOPE = "arkflight";
 const FLAG_KEY = "combatReference";
 const STATIONS = Object.freeze(["captain", "battlewatch", "navigator", "engineer", "veilwarden"]);
+const FUNDAMENTALS_KEY = "fundamentals";
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -38,10 +46,18 @@ function stableHash(value) {
 }
 
 function costLabel(action) {
+  if (action.rules?.costSource === "weapon.fireAP") return "Installed weapon Fire AP";
+  const cost = stationActionEconomy(action, 1);
   const parts = [];
-  if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
-  if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
-  if (action.rules?.costSource === "weapon.fireAP") parts.push("Installed weapon Fire AP");
+  if (action.id === "captain-drive-the-crew") parts.push("Gain +1 AP");
+  else {
+    if (cost.ap > 0) parts.push(`${cost.ap} AP`);
+    if (cost.rp > 0) parts.push(`${cost.rp} RP`);
+  }
+  if (cost.morale > 0) parts.push(`${cost.morale} Morale`);
+  if (cost.supplies > 0) parts.push(`${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`);
+  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil} Lifeveil`);
+  if (cost.strain > 0) parts.push(`+${cost.strain} Strain`);
   return parts.length ? parts.join(" + ") : "No fixed cost";
 }
 
@@ -53,36 +69,67 @@ function actionPageHtml(action) {
   return `<article class="arkflight-combat-reference">
     <p><strong>${escapeHtml(labelize(action.station))} Station Action</strong></p>
     <h1>${escapeHtml(action.name)}</h1>
-    <p><strong>Quick Effect:</strong> ${escapeHtml(action.summary)}</p>
+    <p><strong>Cost / Pressure:</strong> ${escapeHtml(costLabel(action))}</p>
     <dl>
-      <dt><strong>Cost</strong></dt><dd>${escapeHtml(costLabel(action))}</dd>
       <dt><strong>Timing</strong></dt><dd>${escapeHtml(labelize(action.timing))}</dd>
       <dt><strong>Category</strong></dt><dd>${escapeHtml(labelize(action.category))}</dd>
       <dt><strong>Trigger</strong></dt><dd>${escapeHtml(trigger)}</dd>
       <dt><strong>Duration / Expiry</strong></dt><dd>${escapeHtml(expires)}</dd>
     </dl>
     <h2>Full Rules</h2>
-    <p>${escapeHtml(action.description)}</p>
+    <p>${escapeHtml(stationActionRulesText(action))}</p>
     ${tags ? `<h3>Rules Tags</h3><p>${escapeHtml(tags)}</p>` : ""}
     <hr>
     <p><small>Arkflight Action ID: <code>${escapeHtml(action.id)}</code></small></p>
   </article>`;
 }
 
+function fundamentalsJournal() {
+  const identities = stationResourceIdentity();
+  const format = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
+  const source = { stationBonus: STATION_BONUS_DEFINITION, strain: STRAIN_THRESHOLD_DEFINITION, resources: identities };
+  return {
+    name: "Arkflight Combat — Fundamentals",
+    pages: [
+      {
+        name: "Station Bonus",
+        type: "text",
+        text: { format, content: `<article class="arkflight-combat-reference"><p><strong>ARKFLIGHT COMBAT FUNDAMENTALS</strong></p><h1>Station Bonus</h1><p>${escapeHtml(STATION_BONUS_DEFINITION)}</p><h2>Progression</h2><ul><li><strong>Ship levels 1–9:</strong> +1</li><li><strong>Ship levels 10–19:</strong> +2</li><li><strong>Ship level 20:</strong> +3</li></ul><p>When an action says “Station Bonus,” substitute the current ship's value. If an action does not mention Station Bonus, do not add it.</p></article>` },
+        flags: { [FLAG_SCOPE]: { combatFundamental: "station-bonus" } }
+      },
+      {
+        name: "Combat Resources",
+        type: "text",
+        text: { format, content: `<article class="arkflight-combat-reference"><p><strong>ARKFLIGHT COMBAT FUNDAMENTALS</strong></p><h1>Combat Resources</h1><dl>${Object.entries(identities).map(([key, text]) => `<dt><strong>${escapeHtml(key.toUpperCase())}</strong></dt><dd>${escapeHtml(text)}</dd>`).join("")}</dl><h2>Design Rule</h2><p>Routine actions usually cost AP or RP only. Extraordinary speed, repairs, rushed gunnery, crew-pushing, and stronger wards can also spend Morale, Supplies, Lifeveil, or add Strain.</p></article>` },
+        flags: { [FLAG_SCOPE]: { combatFundamental: "resources" } }
+      },
+      {
+        name: "Strain Limit",
+        type: "text",
+        text: { format, content: `<article class="arkflight-combat-reference"><p><strong>ARKFLIGHT COMBAT FUNDAMENTALS</strong></p><h1>Strain Limit</h1><p>${escapeHtml(STRAIN_THRESHOLD_DEFINITION)}</p><h2>Threatened Areas</h2><ul><li><strong>Drive the Crew:</strong> Morale</li><li><strong>Overcharge Arkengine:</strong> Arkengine</li><li><strong>Redistribute Power:</strong> Arkengine</li><li><strong>Hard Turn:</strong> Rigging</li><li><strong>Evasive Maneuver:</strong> Rigging</li></ul><p>If the threatened area is already Disabled, it cannot degrade further, but the Strain threshold is still consumed and overflow remains.</p></article>` },
+        flags: { [FLAG_SCOPE]: { combatFundamental: "strain-limit" } }
+      }
+    ],
+    flags: { [FLAG_SCOPE]: { [FLAG_KEY]: { managed: true, station: FUNDAMENTALS_KEY, sourceHash: stableHash(source) } } }
+  };
+}
+
 function stationOverviewHtml(station, actions) {
   return `<article class="arkflight-combat-reference">
     <p><strong>ARKFLIGHT COMBAT REFERENCE</strong></p>
     <h1>${escapeHtml(labelize(station))} Station</h1>
-    <p>This journal is the full rules reference for the ${escapeHtml(labelize(station))} station. During combat, the Command HUD resolves level-scaled values for the current ship; these pages preserve the complete authored rules.</p>
+    <p>This journal is the full rules reference for the ${escapeHtml(labelize(station))} station. During combat, the Command HUD resolves level-scaled values for the current ship.</p>
+    <h2>Station Bonus</h2>
+    <p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>
     <h2>Station Actions</h2>
-    <ul>${actions.map((action) => `<li><strong>${escapeHtml(action.name)}</strong> — ${escapeHtml(action.summary)}</li>`).join("")}</ul>
+    <ul>${actions.map((action) => `<li><strong>${escapeHtml(action.name)}</strong> — ${escapeHtml(costLabel(action))}. ${escapeHtml(stationActionRulesText(action))}</li>`).join("")}</ul>
   </article>`;
 }
 
 function stationJournal(station) {
   const actions = Object.values(COMBAT_ACTIONS).filter((action) => action.station === station);
   const format = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
-  const source = { station, actions: clone(actions) };
+  const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText) };
   const sourceHash = stableHash(source);
   return {
     name: `Arkflight Combat — ${labelize(station)}`,
@@ -155,25 +202,25 @@ async function syncCombatReference({ force = false } = {}) {
     throw new Error("Foundry JournalEntry document API is unavailable.");
   }
 
+  const desired = new Map([[FUNDAMENTALS_KEY, fundamentalsJournal()], ...STATIONS.map((station) => [station, stationJournal(station)])]);
   const created = [];
   const rebuilt = [];
-  for (const station of STATIONS) {
-    const desired = stationJournal(station);
-    const old = byStation.get(station);
+  for (const [key, documentData] of desired) {
+    const old = byStation.get(key);
     const oldHash = managedReference(old)?.sourceHash;
-    const newHash = desired.flags[FLAG_SCOPE][FLAG_KEY].sourceHash;
+    const newHash = documentData.flags[FLAG_SCOPE][FLAG_KEY].sourceHash;
     if (old && !force && oldHash === newHash) continue;
     if (old) {
       await JournalEntryClass.deleteDocuments([old.id], { pack: collection });
-      rebuilt.push(station);
+      rebuilt.push(key);
     }
-    await JournalEntryClass.createDocuments([desired], { pack: collection });
-    created.push(station);
+    await JournalEntryClass.createDocuments([documentData], { pack: collection });
+    created.push(key);
   }
 
   for (const document of existing) {
     const flag = managedReference(document);
-    if (flag?.managed && flag.station && !STATIONS.includes(flag.station)) {
+    if (flag?.managed && flag.station && !desired.has(flag.station)) {
       await JournalEntryClass.deleteDocuments([document.id], { pack: collection });
     }
   }
