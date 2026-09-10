@@ -50,3 +50,20 @@ test("player reload UI exposes authoritative availability and refreshes after GM
   assert.match(stationApi, /emitStationActionResult/);
   assert.match(stationApi, /Hooks\.callAll\("arkflightStationActionRemoteResult"/);
 });
+
+
+test("combat balance runtime never bypasses the Battlewatch reload station relay", () => {
+  const balanceRuntime = readFileSync(new URL("../src/foundry/combat-balance-runtime.js", import.meta.url), "utf8");
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  assert.doesNotMatch(
+    balanceRuntime,
+    /actionId === "battlewatch-reload-weapon"[\s\S]*?scaledWorkTheGuns\(options\.weaponKey/
+  );
+  assert.match(
+    balanceRuntime,
+    /stationAction\(actionId, options = \{\}, reference = null\)[\s\S]*?return originalStationAction\(actionId, options, reference\)/
+  );
+  assert.match(stationApi, /reduceWeaponReload/);
+  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?profile\.bonus - 1/);
+  assert.match(stationApi, /updatePersistentShipForAction/);
+});
