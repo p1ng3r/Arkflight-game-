@@ -208,7 +208,7 @@
   z-index: 50;
 }
 .arkflight-visual-socket:hover .arkflight-visual-socket-component {
-  transform: scale(2);
+  transform: scale(3);
   z-index: 20;
   filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
 }
