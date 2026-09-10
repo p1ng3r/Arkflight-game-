@@ -29,7 +29,13 @@ export const AREA_CONSEQUENCES = Object.freeze({
   lifeveil: Object.freeze({ stable: "Lifeveil systems are fully operational.", stressed: "Veilwarden operates at -1 from Lifeveil stress.", damaged: "Veilwarden operates at -3 and Lifeveil integrity is reduced.", critical: "Veilwarden operates at -5 and Lifeveil integrity is critically reduced.", disabled: "Normal Lifeveil-area function is unavailable; environmental protection may be offline." }),
   morale: Object.freeze({ stable: "Command cohesion is fully operational.", stressed: "Captain operates at -1 from Morale-area stress.", damaged: "Captain operates at -3 as command cohesion deteriorates.", critical: "Captain operates at -5 as command cohesion nears collapse.", disabled: "Normal Morale-area command functions are unavailable." })
 });
-export const SHIP_COMPENDIUM_PACKS = Object.freeze({ hulls: "arkflight-game.hulls-and-patterns", arkengines: "arkflight-game.arkengines", shipMods: "arkflight-game.ship-mods", arkengineMods: "arkflight-game.arkengine-mods", rooms: "arkflight-game.rooms", weapons: "arkflight-game.ship-weapons", talents: "arkflight-game.ship-talents" });
+export const REFIT_BLUEPRINT_ICONS = Object.freeze({
+  shipMod: "modules/arkflight-game/assets/icons/ship-mods/blueprint_ship_mods.webp",
+  arkengineMod: "modules/arkflight-game/assets/icons/arkengine-mods/blueprint_engine_mods.webp",
+  weapon: "modules/arkflight-game/assets/icons/weapons/blueprint_weapons.webp"
+});
+
+const SHIP_COMPENDIUM_PACKS = Object.freeze({ hulls: "arkflight-game.hulls-and-patterns", arkengines: "arkflight-game.arkengines", shipMods: "arkflight-game.ship-mods", arkengineMods: "arkflight-game.arkengine-mods", rooms: "arkflight-game.rooms", weapons: "arkflight-game.ship-weapons", talents: "arkflight-game.ship-talents" });
 
 function titleCase(value) { const text = String(value ?? ""); return text ? `${text.charAt(0).toUpperCase()}${text.slice(1)}` : "Unknown"; }
 function numeric(value) { const number = Number(value); return Number.isFinite(number) ? number : 0; }
@@ -44,7 +50,17 @@ function displayValue(key, value) {
 function resolveCatalog(catalog, id) { return id ? catalog?.[id] ?? null : null; }
 function fitting(catalog, id, family, extra = {}) {
   const item = resolveCatalog(catalog, id);
-  return Object.freeze({ id, family, name: item?.name ?? id ?? "Unknown fitting", description: item?.description ?? "", rarity: item?.data?.rarity ?? item?.rarity ?? "standard", capacityCost: numeric(item?.data?.refit?.slotCost ?? item?.capacityCost), ...extra });
+  return Object.freeze({
+    id,
+    family,
+    name: item?.name ?? id ?? "Unknown fitting",
+    description: item?.description ?? "",
+    rarity: item?.data?.rarity ?? item?.rarity ?? "standard",
+    capacityCost: numeric(item?.data?.refit?.slotCost ?? item?.capacityCost),
+    img: item?.img ?? item?.data?.art?.img ?? "",
+    blueprintImg: REFIT_BLUEPRINT_ICONS[family] ?? "",
+    ...extra
+  });
 }
 function groupedFittings(ids, catalog, family) {
   const counts = new Map();
