@@ -21,9 +21,15 @@ test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated Ap
   assert.doesNotMatch(appSource, /static get defaultOptions/);
 });
 
-test("live ship sheet exposes only Overview Fittings and Refit primary tabs", () => {
-  assert.match(template, /data-tab="overview"/); assert.match(template, /data-tab="fittings"/); assert.match(template, /data-tab="refit"/);
-  assert.doesNotMatch(template, /data-tab="command"/); assert.doesNotMatch(template, /data-tab="shipwright"/); assert.doesNotMatch(template, /SHIPWRIGHT MODE/);
+test("live ship sheet restores operational Overview Hold Combat and Shipwright navigation", () => {
+  assert.match(template, /data-tab="overview"/);
+  assert.match(template, /data-hold-tab/);
+  assert.match(template, /data-open-combat/);
+  assert.match(template, /data-open-shipwright/);
+  assert.doesNotMatch(template, /data-tab="fittings"/);
+  assert.doesNotMatch(template, /data-tab="refit"/);
+  assert.match(appSource, /openCombatConsole/);
+  assert.match(appSource, /openShipwrightWorkspace/);
 });
 
 test("live ship sheet never presents Watchmaster to players", () => {
@@ -77,4 +83,11 @@ test("Refit summary counts only active work orders while retaining completed his
 test("new Refit tab exposes build install remove and start controls", () => {
   assert.match(template, /data-refit-build/); assert.match(template, /data-refit-install/); assert.match(template, /data-refit-remove/); assert.match(template, /data-refit-start/);
   assert.match(appSource, /arkflightRefitInstallRequested/);
+});
+
+
+test("Refit blueprint cards use dedicated category blueprint artwork", () => {
+  assert.match(template, /arkflight-blueprint-card/);
+  assert.match(template, /item\.blueprintImg/);
+  assert.match(appSource, /Arkflight Vessel/);
 });
