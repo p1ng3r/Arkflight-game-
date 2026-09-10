@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
+import { stationEffectProfile } from "../combat/station-effect-rules.js";
 
 const MODULE_ID = "arkflight-game";
 const HUD_ID = "arkflight-combat-console";
@@ -72,6 +73,141 @@ function updateVitals(app, root) {
     const text = vital.querySelector("strong");
     if (fill) fill.style.width = `${percent}%`;
     if (text) text.textContent = `${value} / ${max}`;
+  }
+}
+
+function shipLevel(actor) {
+  return Math.max(1, Math.min(20, Math.trunc(numeric(shipPayload(actor)?.progression?.level, 1))));
+}
+
+function resolvedStationEffect(action, actor, state) {
+  const level = shipLevel(actor);
+  const profile = stationEffectProfile(level);
+  const bonus = profile.bonus;
+  const speed = Math.max(0, numeric(state?.mobility?.speed, 0));
+  const maneuverability = Math.max(0, numeric(state?.mobility?.maneuverability, 0));
+  const charges = profile.advanced ? 2 : 1;
+  const strain = profile.legendary ? 0 : profile.master ? 1 : 2;
+
+  const effects = {
+    "captain-issue-order": `Chosen station's next qualifying check or attack: +${bonus} circumstance bonus. Expires after that roll or before this ship's next turn.`,
+    "captain-rally-crew": profile.master
+      ? `Restore ${bonus} Morale OR improve the Morale area 1 step; if you improve the area, also restore ${bonus} Morale.`
+      : `Restore ${bonus} Morale OR improve the Morale area 1 damage step.`,
+    "captain-drive-the-crew": `Spend 1 AP and immediately gain 2 AP: net +1 AP this turn. Gain ${strain} Strain. Once per round.`,
+    "captain-coordinate-assault": `Mark one hostile vessel. Its Hardness is reduced by ${bonus} against the next ${charges} qualifying weapon attack${charges === 1 ? "" : "s"} before this ship's next turn.`,
+    "captain-brace-for-impact": `Reaction: reduce incoming Hull damage by ${3 * bonus} after Hardness.`,
+
+    "engineer-vent-strain": `Reduce ship Strain by ${1 + bonus}, to a minimum of 0.`,
+    "engineer-overcharge-arkengine": `Gain another full Helm block this turn: +${speed} movement and +${maneuverability} facing step${maneuverability === 1 ? "" : "s"}. Gain 1 Strain. Once per round.`,
+    "engineer-emergency-repair": profile.master
+      ? `Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by 2 steps.`
+      : `Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by 1 step.`,
+    "engineer-redistribute-power": `Choose: Propulsion = +${bonus} movement and +1 maneuver step now; Weapons = +${bonus} damage on next ${charges} attack${charges === 1 ? "" : "s"}; Lifeveil = reduce next ${charges} wardable hit${charges === 1 ? "" : "s"} by ${2 * bonus}.`,
+    "engineer-emergency-bypass": `Reaction: reduce Strain from an Engineer action by ${bonus}, to a minimum of 0.`,
+
+    "navigator-move": `Gain +${speed} movement this turn (one additional Combat Speed block). May interleave movement, legal turns, and weapon fire.`,
+    "navigator-maneuver": `Gain +${maneuverability} facing step${maneuverability === 1 ? "" : "s"} this turn and may pivot in place.`,
+    "navigator-hard-turn": `Gain +${maneuverability + bonus} facing steps this turn (${maneuverability} Maneuverability + ${bonus} Station Bonus), may pivot in place, and gain 1 Rigging Strain.`,
+    "navigator-set-attack-vector": `Choose one facing. Its weapons gain +${15 * bonus}° firing-arc tolerance until the heading changes or this ship's next turn.`,
+    "navigator-evasive-maneuver": `Reaction: when targeted, gain +${bonus} AC against that attack, then gain 1 Rigging Strain.`,
+
+    "battlewatch-acquire-target": `Choose an enemy vessel. The next weapon attack against it gains +${bonus} circumstance bonus to the attack roll.`,
+    "battlewatch-fire-weapon": `Fire one ready installed weapon at a legal target. Cost is that weapon's Fire AP; range, arc, attack, damage, Hardness and reload resolve automatically.`,
+    "battlewatch-reload-weapon": `Reduce one installed weapon's remaining reload by ${bonus} round${bonus === 1 ? "" : "s"}, to a minimum of 0.`,
+    "battlewatch-ready-broadside": profile.master
+      ? `Choose Port or Starboard. Next shot from that facing gains +${2 * bonus} damage and reduces its resulting reload by 1 round.`
+      : `Choose Port or Starboard. Next shot from that facing gains +${2 * bonus} damage.`,
+    "battlewatch-spoil-their-aim": `Reaction: when an enemy declares a weapon attack against this ship, that attack takes −${bonus} circumstance penalty.`,
+
+    "veilwarden-reinforce-lifeveil": `Reduce damage from the next ${charges} wardable hit${charges === 1 ? "" : "s"} by ${2 * bonus} before Hardness. Expires before this ship's next turn.`,
+    "veilwarden-mend-lifeveil": `Restore ${5 * bonus} Lifeveil, up to the vessel's current maximum.`,
+    "veilwarden-focus-ward": `Choose an area or energy type. Reduce damage from the next ${charges} matching hit${charges === 1 ? "" : "s"} by ${3 * bonus} before Hardness.`,
+    "veilwarden-purge-interference": `Remove 1 tracked supernatural, aetheric, or environmental ship condition interfering with the vessel or Lifeveil.`,
+    "veilwarden-emergency-ward": `Reaction: reduce this incoming wardable hit by ${4 * bonus} before Hardness.`
+  };
+
+  return effects[action.id] ?? action.description ?? action.summary ?? "Use this station action.";
+}
+
+function actionRuleChips(action, actor) {
+  const level = shipLevel(actor);
+  const profile = stationEffectProfile(level);
+  const rules = action.rules ?? {};
+  const chips = [];
+
+  if (rules.costSource === "weapon.fireAP") chips.push({ label: "Weapon AP", tone: "cost" });
+  else {
+    if (numeric(action.cost?.ap) > 0) chips.push({ label: `${action.cost.ap} AP`, tone: "cost" });
+    if (numeric(action.cost?.rp) > 0) chips.push({ label: `${action.cost.rp} RP`, tone: "reaction" });
+    if (!numeric(action.cost?.ap) && !numeric(action.cost?.rp)) chips.push({ label: "No fixed cost", tone: "free" });
+  }
+
+  chips.push({ label: action.timing === "reaction" ? "Reaction" : "Action", tone: action.timing === "reaction" ? "reaction" : "timing" });
+  chips.push({ label: `Station +${profile.bonus}`, tone: "bonus" });
+
+  if (rules.oncePerRound) chips.push({ label: "Once / Round", tone: "limit" });
+  if (rules.strain) chips.push({ label: `+${rules.strain} Strain`, tone: "strain" });
+  if (rules.chooseStation) chips.push({ label: "Choose Station", tone: "choice" });
+  if (rules.chooseTarget) chips.push({ label: "Choose Target", tone: "choice" });
+  if (rules.chooseWeapon) chips.push({ label: "Choose Weapon", tone: "choice" });
+  if (rules.chooseSystem) chips.push({ label: "Choose System", tone: "choice" });
+  if (rules.chooseFacing) chips.push({ label: "Choose Facing", tone: "choice" });
+  if (rules.chooseAreaOrEnergy) chips.push({ label: "Choose Threat", tone: "choice" });
+  if (rules.expires === "next-turn") chips.push({ label: "Until Next Turn", tone: "duration" });
+  if (rules.expires === "heading-change-or-next-turn") chips.push({ label: "Until Turn / Heading", tone: "duration" });
+  if (rules.expires === "fired-or-next-turn") chips.push({ label: "Next Shot", tone: "duration" });
+  if (rules.expires === "charges-or-next-turn") chips.push({ label: profile.advanced ? "2 Uses" : "1 Use", tone: "duration" });
+  if (rules.trigger) chips.push({ label: "Triggered", tone: "reaction" });
+
+  return chips;
+}
+
+function decorateActionCards(app, root) {
+  const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
+  const combatant = activeCombatant(actor);
+  const state = combatant ? game.arkflight?.combat?.state?.(combatant) : null;
+  const actions = game.arkflight?.combat?.actions ?? {};
+
+  for (const card of root.querySelectorAll("[data-action-card]")) {
+    const actionId = card.querySelector("[data-station-action]")?.dataset.stationAction;
+    const action = actionId ? actions[actionId] : null;
+    if (!action) continue;
+
+    const text = card.querySelector(".afcs-action-text");
+    if (!text) continue;
+    const oldSummary = text.querySelector(":scope > span");
+    if (oldSummary) {
+      oldSummary.classList.add("afcs-action-effect");
+      oldSummary.textContent = resolvedStationEffect(action, actor, state);
+    }
+
+    let chips = text.querySelector(".afcs-rule-chips");
+    if (!chips) {
+      chips = document.createElement("div");
+      chips.className = "afcs-rule-chips";
+      text.append(chips);
+    }
+    chips.replaceChildren(...actionRuleChips(action, actor).map(({ label, tone }) => {
+      const chip = document.createElement("span");
+      chip.className = `afcs-rule-chip is-${tone}`;
+      chip.textContent = label;
+      return chip;
+    }));
+
+    let details = text.querySelector(".afcs-action-full-rules");
+    if (!details) {
+      details = document.createElement("details");
+      details.className = "afcs-action-full-rules";
+      const summary = document.createElement("summary");
+      summary.textContent = "Full Rules";
+      const paragraph = document.createElement("p");
+      details.append(summary, paragraph);
+      text.append(details);
+    }
+    const paragraph = details.querySelector("p");
+    if (paragraph) paragraph.textContent = action.description ?? action.summary ?? "";
+    card.title = "";
   }
 }
 
@@ -192,6 +328,7 @@ function enhance(app) {
   const root = hudRoot(app);
   if (!root) return;
   updateVitals(app, root);
+  decorateActionCards(app, root);
   bindCommandStations(app, root);
   bindClose(app, root);
   bindEndTurn(app, root);
