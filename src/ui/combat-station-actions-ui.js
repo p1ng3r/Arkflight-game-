@@ -211,11 +211,11 @@ function refreshOpenTabs() {
   requestAnimationFrame(() => {
     refreshQueued = false;
     for (const [uuid, entry] of [...OPEN_TABS.entries()]) {
-      if (!entry.root?.isConnected || !entry.app?._arkflightCombatStationsActive) {
+      if (!entry.root?.isConnected || entry.app?.activeTab !== "combat") {
         OPEN_TABS.delete(uuid);
         continue;
       }
-      renderCombatTab(entry.app, entry.root, entry.actor);
+      entry.app.render?.({ force: true });
     }
   });
 }
