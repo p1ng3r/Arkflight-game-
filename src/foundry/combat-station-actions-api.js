@@ -11,6 +11,8 @@ import {
   stationActionAvailability,
   stationActionEconomy,
   stationActionRulesText,
+  stationActionStrainArea,
+  stationEffectMagnitude,
   stationEffectProfile
 } from "../combat/index.js";
 
@@ -59,6 +61,12 @@ function improveAreaState(value, steps = 1) {
   return AREA_ORDER[index] ?? AREA_STATES.STABLE;
 }
 
+function degradeAreaState(value) {
+  let index = AREA_ORDER.indexOf(value);
+  if (index < 0) index = 0;
+  return AREA_ORDER[Math.min(AREA_ORDER.length - 1, index + 1)] ?? AREA_STATES.DISABLED;
+}
+
 function actionSelection(action, options = {}) {
   return options.selection ?? options.targetId ?? options.station ?? options.facing ?? options.system ?? options.choice ?? null;
 }
@@ -77,7 +85,42 @@ function persistentCostAvailability(actor, action) {
   return Object.freeze({ ok: true, reason: null });
 }
 
-async function updatePersistentShipForAction(actor, action, options, beforeState, afterState) {
+function effectiveStrainGain(beforeState, action, level) {
+  let gain = stationActionEconomy(action, level).strain;
+  if (gain <= 0) return 0;
+  if (action.station === "engineer" && action.timing === COMBAT_ACTION_TIMING.ACTION) {
+    const bypass = [...(beforeState?.stationRuntime?.effects ?? [])].find((effect) =>
+      effect.actionId === "engineer-emergency-bypass"
+      && (effect.charges == null || Number(effect.charges) > 0)
+    );
+    if (bypass) gain = Math.max(0, gain - Math.min(gain, stationEffectMagnitude(bypass, level)));
+  }
+  return gain;
+}
+
+function resolveStrainThreshold(actor, action, beforeState, afterState) {
+  const level = shipLevel(actor);
+  const gain = effectiveStrainGain(beforeState, action, level);
+  const max = Math.max(0, Number(beforeState?.strain?.max) || Number(afterState?.strain?.max) || 0);
+  const raw = Math.max(0, Number(beforeState?.strain?.value) || 0) + gain;
+  const area = stationActionStrainArea(action);
+  if (gain <= 0 || max <= 0 || raw < max || !area) return Object.freeze({ state: afterState, threshold: null });
+
+  const ship = shipPayload(actor);
+  const currentArea = ship?.areas?.[area]?.state ?? AREA_STATES.STABLE;
+  const nextArea = degradeAreaState(currentArea);
+  const overflow = Math.max(0, raw - max);
+  const state = Object.freeze({
+    ...afterState,
+    strain: Object.freeze({ ...afterState.strain, value: overflow, max })
+  });
+  return Object.freeze({
+    state,
+    threshold: Object.freeze({ area, currentArea, nextArea, overflow, max })
+  });
+}
+
+async function updatePersistentShipForAction(actor, action, options, beforeState, afterState, threshold = null) {
   const ship = shipPayload(actor);
   if (!ship) return [];
   const patches = {};
@@ -101,6 +144,11 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   if (Number(beforeState?.strain?.value ?? 0) !== Number(afterState?.strain?.value ?? 0)) {
     patches[`flags.${MODULE_ID}.ship.resources.strain.value`] = Number(afterState.strain.value);
     notes.push(`Strain ${Number(beforeState?.strain?.value ?? 0)} → ${Number(afterState.strain.value)}`);
+  }
+
+  if (threshold) {
+    patches[`flags.${MODULE_ID}.ship.areas.${threshold.area}.state`] = threshold.nextArea;
+    notes.push(`Strain Limit: ${threshold.area} ${threshold.currentArea} → ${threshold.nextArea}; ${threshold.overflow} Strain overflow remains.`);
   }
 
   if (resolver === "rallyCrew") {
@@ -236,13 +284,15 @@ async function execute(base, actionId, options = {}, reference = null) {
   const selection = actionSelection(action, options);
   const level = shipLevel(combatant.actor);
   const profile = stationEffectProfile(level);
-  const after = executeStationStateAction(before, action, {
+  const rawAfter = executeStationStateAction(before, action, {
     round: game.combat?.round ?? 1,
     selection,
     shipLevel: level
   });
+  const strainResolution = resolveStrainThreshold(combatant.actor, action, before, rawAfter);
+  const after = strainResolution.state;
   await combatant.update({ [STATE_PATH]: after });
-  const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, after);
+  const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, after, strainResolution.threshold);
 
   if (resolver === "issueOrder") notes.push("Applies only to the chosen station's next qualifying roll; fixed effects are not inflated.");
   if (resolver === "coordinateAssault") notes.push(`Target Hardness reduced by ${profile.bonus} for ${profile.advanced ? 2 : 1} qualifying attack${profile.advanced ? "s" : ""}.`);
@@ -258,6 +308,11 @@ async function execute(base, actionId, options = {}, reference = null) {
   if (resolver === "reinforceLifeveil") notes.push(`Spend 5 Lifeveil; next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} reduce damage by ${2 * profile.bonus}.`);
   if (resolver === "focusWard") notes.push(`Spend 10 Lifeveil; next ${profile.advanced ? 2 : 1} matching hit${profile.advanced ? "s" : ""} reduce damage by ${3 * profile.bonus}.`);
   if (action.timing === COMBAT_ACTION_TIMING.REACTION) notes.push("Reaction resolves against the current trigger and consumes shared RP.");
+
+  if (strainResolution.threshold) {
+    ui.notifications?.warn(`${combatant.name}: Strain Limit reached — ${strainResolution.threshold.area} ${strainResolution.threshold.currentArea} → ${strainResolution.threshold.nextArea}.`);
+    Hooks.callAll("arkflightShipDamageStateChanged", { actor: combatant.actor, combatant, action, strainThreshold: strainResolution.threshold, notes });
+  }
 
   await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes });
   Hooks.callAll("arkflightStationActionResolved", {
