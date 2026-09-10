@@ -35,6 +35,7 @@
     "styles/combat-station-actions.css",
     "styles/arkflight-command-hud.css",
     "styles/arkflight-command-hud-actions.css",
+    "styles/arkflight-command-hud-journal.css",
     "styles/shipwright-interaction.css",
     "styles/shipwright-bay.css",
     "styles/shipwright-arkengine-sockets.css",
@@ -71,6 +72,7 @@
   "esmodules": [
     "src/foundry/arkflight.js",
     "src/foundry/arkflight-compendiums.js",
+    "src/foundry/combat-reference-compendium.js",
     "src/foundry/weapon-compendium.js",
     "src/foundry/ship-token-authority.js",
     "src/foundry/refit-api.js",
@@ -133,6 +135,7 @@
     "src/ui/combat-station-actions-ui.js",
     "src/ui/combat-console-ui.js",
     "src/ui/arkflight-command-hud-ui.js",
+    "src/ui/arkflight-command-hud-journal-links.js",
     "src/ui/gm-operations-time-work-ui.js",
     "src/ui/player-refit-work-start-ui.js",
     "src/ui/ship-operational-status-ui.js",
