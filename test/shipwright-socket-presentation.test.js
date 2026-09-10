@@ -43,3 +43,10 @@ test("visual fitting boards and armory mounts use installed mod and weapon artwo
   assert.match(armory, /weapon\?\.img \?\? weapon\?\.data\?\.art\?\.img/);
   assert.match(armory, /arkflight-mount-weapon-art/);
 });
+
+
+test("installed fitting and weapon art doubles in size on hover", () => {
+  assert.match(workspaceCss, /arkflight-workspace-socket:hover[\s\S]*?arkflight-workspace-socket-component[\s\S]*?transform:\s*scale\(2\)/);
+  assert.match(visualBoardsCss, /arkflight-visual-socket:hover[\s\S]*?arkflight-visual-socket-component[\s\S]*?transform:\s*scale\(2\)/);
+  assert.match(armory, /arkflight-mount-weapon-art/);
+});
