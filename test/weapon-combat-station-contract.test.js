@@ -38,3 +38,15 @@ test("weapon fire control routes through player-authorized station relay and aut
   assert.match(combatApi, /ship\.resources\.hull\.value/);
   assert.match(combatApi, /target\.actor\.update/);
 });
+
+
+test("player reload UI exposes authoritative availability and refreshes after GM relay", () => {
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  assert.match(source, /stationActionAvailability\?\.\("battlewatch-reload-weapon"/);
+  assert.match(source, /Need 1 Supply/);
+  assert.match(source, /Not this ship's turn/);
+  assert.match(source, /arkflightStationActionRemoteResult/);
+  assert.match(stationApi, /STATION_ACTION_RESULT = "station-action-result"/);
+  assert.match(stationApi, /emitStationActionResult/);
+  assert.match(stationApi, /Hooks\.callAll\("arkflightStationActionRemoteResult"/);
+});
