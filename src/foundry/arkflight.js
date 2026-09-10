@@ -19,6 +19,8 @@ import { installShipwrightUX } from "../ui/shipwright-ux.js";
 import { isArkflightShip, markVehicleAsArkflightShip, registerArkflightShipSheet } from "../ui/ship-sheet-app.js";
 
 const MODULE_ID = "arkflight-game";
+const SOCKET = `module.${MODULE_ID}`;
+const OPEN_EVENT_BOARD = "open-event-board";
 const ACTIVE_SHIP_SETTING = "activeVoyageShipUuid";
 let controller = null;
 let board = null;
@@ -147,6 +149,21 @@ function decorateEventCompleteBoard() {
   if (game.user.isGM) { const actions = document.createElement("div"); actions.className = "arkflight-round-continue"; const button = document.createElement("button"); button.type = "button"; button.className = "arkflight-primary"; button.innerHTML = '<i class="fa-solid fa-trophy"></i> Open Rewards'; button.addEventListener("click", () => showRewardSummary()); actions.append(button); panel.append(actions); }
 }
 function renderBoard() { const app = ensureBoard(); if (!app) return null; const rendered = app.render({ force: true }); if (controller?.state?.phase === "event-complete") setTimeout(decorateEventCompleteBoard, 75); return rendered; }
+
+function broadcastEventBoardOpen(eventId = controller?.state?.eventId ?? null) {
+  if (!game.user?.isGM || !eventId) return false;
+  game.socket?.emit?.(SOCKET, { type: OPEN_EVENT_BOARD, eventId, sourceUserId: game.user.id });
+  return true;
+}
+
+function handleEventBoardSocket(payload = {}) {
+  if (payload?.type !== OPEN_EVENT_BOARD || game.user?.isGM) return;
+  // The controller snapshot is broadcast before this UI command. A short defer
+  // lets the player's controller accept that authoritative state first; if it
+  // arrives a moment later, the normal onStateChange hook will rerender the board.
+  setTimeout(() => renderBoard(), 50);
+}
+
 function showRewardSummary() { if (!controller) return; if (!rewardSummary) rewardSummary = new ArkflightRewardSummary(controller); rewardSummary.render({ force: true }); }
 
 function openGMOperations(options = {}) {
@@ -194,6 +211,7 @@ Hooks.once("init", () => {
       await controller.openEvent(eventId);
       await prefillCrewFromShip(shipActor);
       renderBoard();
+      broadcastEventBoardOpen(eventId);
       ui.notifications?.info(`${shipActor.name} bound to ${ARKFLIGHT_EVENTS[eventId]?.title ?? "Arkflight Event"}.`);
       return controller.state;
     },
@@ -217,6 +235,7 @@ Hooks.once("ready", async () => {
     applyShipEffects: (effects) => applyEventShipEffects(effects)
   });
   controller.activateSockets();
+  game.socket?.on?.(SOCKET, handleEventBoardSocket);
   if (controller.state?.eventId) {
     await bindExistingEventShipIfNeeded();
     game.arkflight.stationOptions = stationOptionsForShip(activeVoyageShip());
@@ -237,6 +256,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
         return;
       }
       if (game.user.isGM && !activeVoyageShip()) await bindExistingEventShipIfNeeded();
+      if (game.user.isGM) broadcastEventBoardOpen(controller.state.eventId);
       renderBoard();
     }
   };
