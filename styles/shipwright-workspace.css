@@ -259,6 +259,36 @@
 }
 
 .arkflight-workspace-socket-state { opacity: .62; }
+.arkflight-workspace-socket-component {
+  position: absolute;
+  inset: 10px;
+  z-index: 2;
+  width: calc(100% - 20px);
+  height: calc(100% - 20px);
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.7));
+}
+
+.arkflight-workspace-socket.has-component-art .arkflight-workspace-socket-base {
+  opacity: .42;
+  filter: saturate(.65) brightness(.7);
+}
+
+.arkflight-workspace-socket.has-component-art .arkflight-workspace-socket-state {
+  z-index: 3;
+}
+
+.arkflight-workspace-socket.has-component-art .arkflight-socket-number {
+  inset: auto -3px -3px auto;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(113,199,218,.7);
+  border-radius: 50%;
+  background: rgba(3,12,16,.92);
+  font-size: 9px;
+}
+
 
 .arkflight-workspace-socket:hover .arkflight-workspace-socket-state,
 .arkflight-workspace-socket.is-drop-ready .arkflight-workspace-socket-state,
