@@ -1,4 +1,4 @@
-import { openArkflightHold } from "./hold-log-ux.js";
+import { bindArkflightHoldControls, buildArkflightHoldHtml } from "./hold-log-ux.js";
 import { renderArkflightCombatStations } from "./combat-station-actions-ui.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
@@ -55,6 +55,7 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
         marked: isArkflightShip(this.actor), actorUuid: this.actor.uuid, actorImg: this.actor.img,
         isGM: game.user.isGM, canOperate: this.actor.isOwner, canManageRefit: Boolean(game.user.isGM || this.actor.isOwner),
         activeTab: this.activeTab, tab: tabState(this.activeTab), ship,
+        holdHtml: this.activeTab === "hold" ? buildArkflightHoldHtml(this.actor) : "",
         hullName: catalogName(SHIP_CATALOGS.hulls, ship.hull?.chassisId),
         hullPatternName: ship.hull?.chassisId ? catalogName(SHIP_CATALOGS.hullPatterns, ship.hull?.patternId, "Not selected") : "—",
         arkengineName: catalogName(SHIP_CATALOGS.arkengines, ship.arkengine?.chassisId),
@@ -92,7 +93,7 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       game.arkflight?.openShipwrightWorkspace?.(this.actor);
     });
 
-    if (this.activeTab === "hold") openArkflightHold(this.actor, html);
+    if (this.activeTab === "hold") bindArkflightHoldControls(this.actor, html);
     if (this.activeTab === "combat") renderArkflightCombatStations(this, html, this.actor);
   }
 }
