@@ -173,3 +173,18 @@ test("all players can view every station while only assigned station crew can us
   assert.match(template, /data-station="{{id}}"/);
   assert.doesNotMatch(template, /data-station="{{id}}"[^>]*disabled/);
 });
+
+
+test("combat console uses only the authoritative weapon arc renderer", () => {
+  assert.doesNotMatch(source, /weaponArcCheck/);
+  assert.doesNotMatch(source, /CONSOLE_ARCS_VISIBLE/);
+  assert.doesNotMatch(source, /CONSOLE_ARC_FACINGS/);
+  assert.doesNotMatch(source, /CONSOLE_ARC_GRAPHICS/);
+  assert.doesNotMatch(source, /function arcLayer/);
+  assert.doesNotMatch(source, /function tokenCenter/);
+  assert.doesNotMatch(source, /function drawSector/);
+  assert.doesNotMatch(source, /function selectedFacings/);
+  assert.doesNotMatch(source, /function removeConsoleArcGraphics/);
+  assert.match(source, /redrawFiringArcs/);
+  assert.match(source, /setFiringArcsVisible/);
+});
