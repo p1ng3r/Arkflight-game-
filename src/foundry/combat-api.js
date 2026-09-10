@@ -506,6 +506,8 @@ Hooks.once("ready", () => {
       ui.notifications?.info("Arkflight combat ended.");
     }
   });
+  const current = game.combat?.combatant ?? null;
+  if (isArkflightCombatant(current)) ensureTurnStartSnapshot(current, game.combat);
 });
 
 Hooks.on("updateCombat", async (combat, changes) => {
