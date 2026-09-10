@@ -58,6 +58,8 @@ test("Combat Reference uses the Arkflight parchment codex layout and scroll fram
   assert.match(journalCss, /aspect-ratio:\s*3 \/ 2/);
   assert.match(journalCss, /overflow-y:\s*auto/);
   assert.match(journalCss, /:has\(\.arkflight-combat-reference\.afcr-codex\)/);
+  assert.match(journalCss, /background:\s*#d8c294/);
+  assert.doesNotMatch(journalCss, /\.journal-entry-page:has\(\.arkflight-combat-reference\.afcr-codex\) \{\s*background:\s*transparent/);
   assert.match(journalCss, /font-size:\s*13\.5px/);
   assert.match(journalCss, /font-size:\s*15\.5px !important/);
   assert.match(journalCss, /font-size:\s*17px/);
