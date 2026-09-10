@@ -1,4 +1,4 @@
-import { COMBATANT_STATE_VERSION, createCombatantState } from "./combatant-state.js";
+import { createCombatantState } from "./combatant-state.js";
 
 function finiteNumber(value) {
   const number = Number(value);
@@ -105,18 +105,13 @@ export function reconcileCombatantState(ship, currentState, {
   });
   if (!currentState) return fresh;
 
-  const weapons = reconciledWeapons(fresh.weapons, currentState.weapons);
-  const schemaCurrent = Math.trunc(Number(currentState.version) || 0) === COMBATANT_STATE_VERSION;
-
   return Object.freeze({
     ...fresh,
     turnKey: typeof currentState.turnKey === "string" ? currentState.turnKey : fresh.turnKey,
     economy: reconcileEconomy(fresh.economy, currentState.economy),
     mobility: reconcileMobility(fresh.mobility, currentState.mobility),
-    weapons,
+    weapons: reconciledWeapons(fresh.weapons, currentState.weapons),
     strain: reconcileStrain(fresh.strain, currentState.strain),
-    log: Array.isArray(currentState.log) ? Object.freeze([...currentState.log]) : fresh.log,
-    version: COMBATANT_STATE_VERSION,
-    migratedFromVersion: schemaCurrent ? undefined : Math.trunc(Number(currentState.version) || 0)
+    log: Array.isArray(currentState.log) ? Object.freeze([...currentState.log]) : fresh.log
   });
 }
