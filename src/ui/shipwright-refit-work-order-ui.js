@@ -261,7 +261,7 @@ function clarifyRefitLanguage(root) {
   }
 }
 
-Hooks.on("renderActorSheet", (app, html) => {
+function attachRefitWorkOrders(app, html) {
   const actor = app?.actor ?? app?.document;
   const ship = shipPayload(actor);
   if (!ship) return;
@@ -283,4 +283,7 @@ Hooks.on("renderActorSheet", (app, html) => {
     const actions = right.querySelector(".arkflight-bay-actions");
     if (actions) actions.before(panel); else right.append(panel);
   }));
-});
+}
+
+Hooks.on("renderActorSheet", attachRefitWorkOrders);
+Hooks.on("renderApplicationV2", attachRefitWorkOrders);
