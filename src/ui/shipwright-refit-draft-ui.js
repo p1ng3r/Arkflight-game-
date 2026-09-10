@@ -147,6 +147,7 @@ function renderSocketAssignments(root, draft) {
     delete socket.dataset.refitStagedFamily;
     delete socket.dataset.refitStagedId;
     socket.querySelector(".arkflight-refit-staged-label")?.remove();
+    socket.querySelector(".arkflight-refit-staged-component")?.remove();
   }
 
   for (const assignment of draft.assignments) {
@@ -158,6 +159,17 @@ function renderSocketAssignments(root, draft) {
       if (offset > 0) socket.classList.add("is-refit-staged-linked");
       socket.dataset.refitStagedFamily = assignment.family;
       socket.dataset.refitStagedId = assignment.componentId;
+      const item = catalogForFamily(assignment.family)?.[assignment.componentId] ?? null;
+      const componentImg = item?.img ?? item?.data?.art?.img ?? "";
+      if (componentImg) {
+        const image = document.createElement("img");
+        image.className = "arkflight-refit-staged-component";
+        image.src = componentImg;
+        image.alt = stagedItemName(assignment);
+        image.draggable = false;
+        socket.append(image);
+        socket.classList.add("has-component-art");
+      }
       const label = document.createElement("span");
       label.className = "arkflight-refit-staged-label";
       label.innerHTML = offset > 0
