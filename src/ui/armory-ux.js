@@ -194,3 +194,4 @@ function attachArmory(app, html) {
 }
 
 Hooks.on("renderActorSheet", (app, html) => attachArmory(app, html));
+Hooks.on("renderApplicationV2", (app, html) => attachArmory(app, html));
