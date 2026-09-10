@@ -1,4 +1,5 @@
 import { normalizeShip } from "./ship-schema.js";
+import { deriveShip } from "./derive-ship.js";
 
 const SIZE_RANK = Object.freeze({ small: 1, medium: 2, large: 3 });
 const MOUNT_ORDER = Object.freeze(["fore", "port", "starboard", "aft"]);
@@ -24,8 +25,8 @@ function weaponFitsSlot(weapon, slot) {
 }
 
 function rawMountSlots(ship, catalogs = {}) {
-  const hull = catalogs.hulls?.[ship?.hull?.chassisId] ?? null;
-  const mounts = hull?.data?.baseStats?.weaponMounts ?? {};
+  const derived = deriveShip(ship, catalogs);
+  const mounts = derived?.stats?.weaponMounts ?? {};
   const rows = [];
   for (const facing of MOUNT_ORDER) {
     const mount = mounts?.[facing];
