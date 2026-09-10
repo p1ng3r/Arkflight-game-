@@ -126,3 +126,4 @@ function polishShipSheet(app, html) {
 }
 
 Hooks.on("renderActorSheet", polishShipSheet);
+Hooks.on("renderApplicationV2", polishShipSheet);
