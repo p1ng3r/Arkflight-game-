@@ -1,3 +1,4 @@
+/* Command HUD journal button */
 .arkflight-combat-console .afcs-action-journal-link {
   margin-top: 6px;
   min-height: 24px;
@@ -27,4 +28,393 @@
   border-color: rgba(94, 220, 151, 0.52);
   color: #91e8b9;
   background: rgba(20, 74, 49, 0.3);
+}
+
+/* Arkflight Combat Reference codex */
+.arkflight-combat-reference.afcr-codex {
+  --afcr-ink: #2d2114;
+  --afcr-soft-ink: #5b452c;
+  --afcr-brass: #9d7436;
+  --afcr-brass-light: #c3a062;
+  --afcr-paper: rgba(245, 229, 190, 0.89);
+  --afcr-paper-strong: rgba(248, 235, 202, 0.96);
+  --afcr-navy: #142737;
+  --afcr-line: rgba(89, 59, 25, 0.28);
+  position: relative;
+  box-sizing: border-box;
+  width: min(100%, 980px);
+  min-height: 720px;
+  margin: 0 auto 20px;
+  padding: 13.8% 10.5% 8.2%;
+  overflow: hidden;
+  color: var(--afcr-ink);
+  isolation: isolate;
+  background: #dcc69b;
+  border-radius: 10px;
+  font-family: var(--font-primary, Georgia, serif);
+}
+
+.arkflight-combat-reference .afcr-art-frame {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url("../assets/ui/scrolls/steampunk_winged_gear_parchment_frame.webp");
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: 100% 100%;
+  pointer-events: none;
+}
+
+.arkflight-combat-reference.afcr-codex::after {
+  content: "";
+  position: absolute;
+  inset: 13% 8.5% 6%;
+  z-index: -1;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(244, 225, 183, 0.13), rgba(239, 216, 168, 0.28));
+  pointer-events: none;
+}
+
+.arkflight-combat-reference .afcr-masthead {
+  position: absolute;
+  top: 6.4%;
+  left: 24%;
+  width: 52%;
+  min-height: 7.2%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #302216;
+  text-shadow: 0 1px 0 rgba(255,255,255,.42);
+}
+
+.arkflight-combat-reference .afcr-kicker {
+  margin: 0 0 2px;
+  font-size: clamp(8px, 1.05vw, 11px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: #6f522d;
+}
+
+.arkflight-combat-reference .afcr-masthead h1 {
+  margin: 1px 0 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--font-primary, Georgia, serif);
+  font-size: clamp(18px, 2.4vw, 29px);
+  line-height: 1.04;
+  font-weight: 800;
+  color: #2b1e12;
+}
+
+.arkflight-combat-reference .afcr-subtitle {
+  margin: 3px 0 0;
+  font-size: clamp(9px, 1.1vw, 12px);
+  line-height: 1.1;
+  font-style: italic;
+  color: #735431;
+}
+
+.arkflight-combat-reference .afcr-content {
+  position: relative;
+  z-index: 1;
+}
+
+.arkflight-combat-reference .afcr-chip-row,
+.arkflight-combat-reference .afcr-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.arkflight-combat-reference .afcr-chip-row.is-compact {
+  justify-content: flex-start;
+  margin: 8px 0 0;
+}
+
+.arkflight-combat-reference .afcr-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 23px;
+  padding: 3px 9px;
+  border: 1px solid rgba(89, 59, 25, .31);
+  border-radius: 999px;
+  background: rgba(250, 239, 211, .9);
+  box-shadow: inset 0 1px rgba(255,255,255,.52);
+  color: #4d341b;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.arkflight-combat-reference .afcr-chip.is-ap,
+.arkflight-combat-reference .afcr-chip.is-rp,
+.arkflight-combat-reference .afcr-chip.is-timing,
+.arkflight-combat-reference .afcr-chip.is-station {
+  border-color: rgba(37, 87, 105, .35);
+  background: rgba(222, 237, 237, .88);
+  color: #254d57;
+}
+
+.arkflight-combat-reference .afcr-chip.is-rp,
+.arkflight-combat-reference .afcr-chip.is-reaction {
+  border-color: rgba(91, 63, 133, .34);
+  background: rgba(229, 219, 240, .9);
+  color: #5a417d;
+}
+
+.arkflight-combat-reference .afcr-chip.is-strain,
+.arkflight-combat-reference .afcr-chip.is-danger {
+  border-color: rgba(139, 56, 43, .38);
+  background: rgba(241, 213, 197, .92);
+  color: #863b2d;
+}
+
+.arkflight-combat-reference .afcr-chip.is-morale {
+  border-color: rgba(112, 83, 36, .38);
+  background: rgba(237, 219, 171, .92);
+  color: #755326;
+}
+
+.arkflight-combat-reference .afcr-chip.is-supplies {
+  border-color: rgba(83, 79, 45, .38);
+  background: rgba(224, 220, 181, .92);
+  color: #5e592d;
+}
+
+.arkflight-combat-reference .afcr-chip.is-lifeveil {
+  border-color: rgba(48, 107, 128, .38);
+  background: rgba(206, 232, 237, .92);
+  color: #286779;
+}
+
+.arkflight-combat-reference .afcr-chip.is-gain,
+.arkflight-combat-reference .afcr-chip.is-safe {
+  border-color: rgba(57, 112, 70, .36);
+  background: rgba(207, 228, 193, .92);
+  color: #376b40;
+}
+
+.arkflight-combat-reference .afcr-chip.is-warning {
+  border-color: rgba(148, 104, 39, .38);
+  background: rgba(239, 218, 173, .92);
+  color: #865d23;
+}
+
+.arkflight-combat-reference .afcr-chip.is-tag {
+  min-height: 20px;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: .88;
+}
+
+.arkflight-combat-reference .afcr-section {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--afcr-line);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.09)),
+    var(--afcr-paper);
+  box-shadow:
+    0 2px 7px rgba(58, 35, 12, .10),
+    inset 0 1px rgba(255,255,255,.42);
+}
+
+.arkflight-combat-reference .afcr-section.is-callout {
+  border-color: rgba(139, 96, 39, .42);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.34), rgba(255,255,255,.09)),
+    var(--afcr-paper-strong);
+  box-shadow:
+    0 3px 9px rgba(58, 35, 12, .12),
+    inset 3px 0 rgba(156, 112, 49, .54);
+}
+
+.arkflight-combat-reference .afcr-section h2 {
+  margin: 0 0 8px;
+  padding: 0 0 5px;
+  border: 0;
+  border-bottom: 1px solid rgba(115, 77, 31, .23);
+  color: #493017;
+  font-size: 15px;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: .035em;
+}
+
+.arkflight-combat-reference .afcr-section p {
+  margin: 0;
+  color: #3c2b19;
+  font-size: 12px;
+  line-height: 1.48;
+}
+
+.arkflight-combat-reference .afcr-quick-text {
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  font-weight: 700;
+  color: #342311 !important;
+}
+
+.arkflight-combat-reference .afcr-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.arkflight-combat-reference .afcr-meta-grid > div,
+.arkflight-combat-reference .afcr-threat-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 9px;
+  border: 1px solid rgba(100, 69, 32, .15);
+  border-radius: 7px;
+  background: rgba(255,255,255,.22);
+}
+
+.arkflight-combat-reference .afcr-meta-grid strong,
+.arkflight-combat-reference .afcr-threat-list strong {
+  color: #735025;
+  font-size: 9px;
+  line-height: 1.1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.arkflight-combat-reference .afcr-meta-grid span,
+.arkflight-combat-reference .afcr-threat-list span {
+  color: #342516;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.arkflight-combat-reference .afcr-action-list,
+.arkflight-combat-reference .afcr-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.arkflight-combat-reference .afcr-action-card,
+.arkflight-combat-reference .afcr-resource-card {
+  padding: 10px;
+  border: 1px solid rgba(92, 62, 28, .18);
+  border-radius: 8px;
+  background: rgba(255,255,255,.20);
+}
+
+.arkflight-combat-reference .afcr-action-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.arkflight-combat-reference .afcr-action-card h3,
+.arkflight-combat-reference .afcr-resource-card > strong {
+  margin: 0;
+  color: #402a14;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.arkflight-combat-reference .afcr-action-card-head > span {
+  color: #775a36;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.arkflight-combat-reference .afcr-action-card p,
+.arkflight-combat-reference .afcr-resource-card p {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.arkflight-combat-reference .afcr-progression {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+
+.arkflight-combat-reference .afcr-progression > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  border: 1px solid rgba(100, 69, 32, .18);
+  border-radius: 8px;
+  background: rgba(255,255,255,.22);
+}
+
+.arkflight-combat-reference .afcr-progression strong {
+  font-size: 12px;
+  color: #705026;
+}
+
+.arkflight-combat-reference .afcr-progression span {
+  font-size: 23px;
+  font-weight: 900;
+  color: #2f5260;
+}
+
+.arkflight-combat-reference .afcr-threat-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.arkflight-combat-reference .afcr-source-id {
+  margin: 10px 0 0;
+  text-align: center;
+  color: #755d41;
+  font-size: 9px;
+  opacity: .82;
+}
+
+.arkflight-combat-reference .afcr-source-id code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(57, 39, 20, .08);
+  color: #584127;
+}
+
+/* Gentle station accents without changing the parchment identity. */
+.arkflight-combat-reference[data-station="captain"] .afcr-section.is-callout { box-shadow: 0 3px 9px rgba(58,35,12,.12), inset 3px 0 #9c7336; }
+.arkflight-combat-reference[data-station="battlewatch"] .afcr-section.is-callout { box-shadow: 0 3px 9px rgba(58,35,12,.12), inset 3px 0 #874a3c; }
+.arkflight-combat-reference[data-station="navigator"] .afcr-section.is-callout { box-shadow: 0 3px 9px rgba(58,35,12,.12), inset 3px 0 #486f7a; }
+.arkflight-combat-reference[data-station="engineer"] .afcr-section.is-callout { box-shadow: 0 3px 9px rgba(58,35,12,.12), inset 3px 0 #6a6b58; }
+.arkflight-combat-reference[data-station="veilwarden"] .afcr-section.is-callout { box-shadow: 0 3px 9px rgba(58,35,12,.12), inset 3px 0 #486f84; }
+
+@media (max-width: 760px) {
+  .arkflight-combat-reference.afcr-codex {
+    padding: 16% 8% 9%;
+    min-height: 640px;
+  }
+
+  .arkflight-combat-reference .afcr-masthead {
+    top: 6.7%;
+    left: 21%;
+    width: 58%;
+  }
+
+  .arkflight-combat-reference .afcr-meta-grid,
+  .arkflight-combat-reference .afcr-action-list,
+  .arkflight-combat-reference .afcr-resource-grid,
+  .arkflight-combat-reference .afcr-threat-list {
+    grid-template-columns: 1fr;
+  }
 }
