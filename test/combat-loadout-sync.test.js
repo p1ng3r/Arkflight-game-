@@ -119,3 +119,76 @@ test("stale combat states repair zero AP and remove weapons no longer installed"
   assert.equal(synced.economy.ap.max, 4);
   assert.deepEqual(Object.keys(synced.weapons), []);
 });
+
+test("combat state refuses to invent mobility when authoritative derived stats are missing", () => {
+  assert.throws(
+    () => createCombatantState(rumRunner(), { catalogs: SHIP_CATALOGS }),
+    /requires authoritative derived ship stats/
+  );
+});
+
+test("current-schema reconciliation refreshes build facts while preserving transient combat progress", () => {
+  const ship = rumRunner();
+  const baseDerived = deriveShip(ship, SHIP_CATALOGS);
+  const base = createCombatantState(ship, { derived: baseDerived, catalogs: SHIP_CATALOGS });
+  const current = {
+    ...base,
+    turnKey: "round:3",
+    economy: {
+      ap: { value: 2, max: 4 },
+      rp: { value: 0, max: 1 }
+    },
+    mobility: {
+      ...base.mobility,
+      heading: 60,
+      movement: { purchases: 1, allowance: base.mobility.speed, used: 1 },
+      maneuver: { purchases: 1, allowance: base.mobility.maneuverability, used: 1 }
+    },
+    strain: { value: 2, max: base.strain.max },
+    log: [{ round: 2, kind: "test-history" }]
+  };
+  const upgradedDerived = {
+    ...baseDerived,
+    stats: {
+      ...baseDerived.stats,
+      actionBonus: 2,
+      reactionBonus: 1,
+      combatSpeed: 7,
+      maneuverability: 5,
+      strainCapacity: 9
+    }
+  };
+
+  const synced = reconcileCombatantState(ship, current, {
+    derived: upgradedDerived,
+    catalogs: SHIP_CATALOGS,
+    rotation: 0
+  });
+
+  assert.deepEqual(synced.economy.ap, { value: 4, max: 6 });
+  assert.deepEqual(synced.economy.rp, { value: 1, max: 2 });
+  assert.equal(synced.mobility.speed, 7);
+  assert.equal(synced.mobility.maneuverability, 5);
+  assert.equal(synced.mobility.heading, 60);
+  assert.deepEqual(synced.mobility.movement, current.mobility.movement);
+  assert.deepEqual(synced.mobility.maneuver, current.mobility.maneuver);
+  assert.deepEqual(synced.strain, { value: 2, max: 9 });
+  assert.deepEqual(synced.log, current.log);
+});
+
+test("combat weapon hydration prefers explicit mount over legacy arc", () => {
+  const ship = rumRunner({
+    weapons: [{
+      id: "light-broadside-cannon",
+      instanceId: "mount-authority",
+      mount: "starboard",
+      arc: "port",
+      mountIndex: 0
+    }]
+  });
+  const state = createCombatantState(ship, {
+    derived: deriveShip(ship, SHIP_CATALOGS),
+    catalogs: SHIP_CATALOGS
+  });
+  assert.equal(state.weapons["mount-authority"].mount, "starboard");
+});
