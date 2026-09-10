@@ -175,16 +175,21 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
   return row;
 }
 
-function renderCombatTab(app, root, actor) {
-  restoreCombatState(root);
-  hideBaseSections(root);
+export function renderArkflightCombatStations(app, root, actor) {
+  const nativeHost = root.querySelector("[data-combat-stations-host]");
+  if (nativeHost) nativeHost.replaceChildren();
+  else {
+    restoreCombatState(root);
+    hideBaseSections(root);
+  }
+
   const nav = root.querySelector(".arkflight-sheet-tabs");
-  nav?.querySelectorAll("button").forEach((entry) => entry.classList.remove("is-active", "is-hold-active", "is-weapons-active", "is-combat-stations-active"));
-  nav?.querySelector("[data-arkflight-combat-stations-tab]")?.classList.add("is-active", "is-combat-stations-active");
+  nav?.querySelectorAll("button").forEach((entry) => entry.classList.remove("is-combat-stations-active"));
+  nav?.querySelector('[data-tab="combat"]')?.classList.add("is-active", "is-combat-stations-active");
 
   const shell = document.createElement("main");
   shell.className = "arkflight-combat-stations-shell";
-  root.append(shell);
+  (nativeHost ?? root).append(shell);
   OPEN_TABS.set(actor.uuid, { app, root, actor });
 
   const api = game.arkflight?.combat;
@@ -210,7 +215,7 @@ function renderCombatTab(app, root, actor) {
   const grid = document.createElement("section");
   grid.className = "arkflight-combat-station-grid";
   shell.append(grid);
-  const rerender = () => renderCombatTab(app, root, actor);
+  const rerender = () => renderArkflightCombatStations(app, root, actor);
 
   for (const [station, label, icon, area] of STATIONS) {
     const card = document.createElement("section");
@@ -232,41 +237,6 @@ function renderCombatTab(app, root, actor) {
   }
 }
 
-function attachCombatTab(app, html) {
-  const actor = actorFrom(app);
-  const root = rootFrom(app, html);
-  if (!actor || !shipFlag(actor) || !root) return;
-  const nav = root.querySelector(".arkflight-sheet-tabs");
-  if (!nav || root.dataset.arkflightCombatStationsAttached === "true") return;
-  root.dataset.arkflightCombatStationsAttached = "true";
-
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "arkflight-combat-stations-tab-button";
-  button.dataset.arkflightCombatStationsTab = "";
-  button.innerHTML = '<i class="fa-solid fa-users-gear"></i> Combat';
-  const hold = nav.querySelector("[data-hold-tab]") ?? nav.querySelector('[data-tab="hold"]');
-  if (hold) nav.insertBefore(button, hold);
-  else nav.prepend(button);
-
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    app._arkflightCombatStationsActive = true;
-    renderCombatTab(app, root, actor);
-  });
-
-  for (const other of [...nav.querySelectorAll("button")].filter((entry) => entry !== button)) {
-    other.addEventListener("click", () => {
-      app._arkflightCombatStationsActive = false;
-      OPEN_TABS.delete(actor.uuid);
-      restoreCombatState(root);
-    }, { capture: true });
-  }
-
-  if (app._arkflightCombatStationsActive) requestAnimationFrame(() => renderCombatTab(app, root, actor));
-}
-
 function refreshOpenTabs() {
   if (refreshQueued) return;
   refreshQueued = true;
@@ -282,8 +252,6 @@ function refreshOpenTabs() {
   });
 }
 
-Hooks.on("renderActorSheet", attachCombatTab);
-Hooks.on("renderApplicationV2", attachCombatTab);
 Hooks.on("updateCombatant", refreshOpenTabs);
 Hooks.on("updateCombat", refreshOpenTabs);
 Hooks.on("updateActor", refreshOpenTabs);
