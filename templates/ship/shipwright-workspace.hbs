@@ -98,7 +98,7 @@
           </header>
           <div class="arkflight-workspace-inventory-list">
             {{#each inventory as |item|}}
-              <article draggable="{{item.compatible}}" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}" class="{{#if ../hasSelectedSocket}}{{#if item.compatible}}is-compatible{{else}}is-incompatible{{/if}}{{/if}}">
+              <article draggable="{{item.compatible}}" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}" title="{{item.effectSummary}}" class="{{#if ../hasSelectedSocket}}{{#if item.compatible}}is-compatible{{else}}is-incompatible{{/if}}{{/if}}">
                 <div><strong>{{item.name}}</strong><small>{{item.slotClass}} · Physical fitting aboard</small><div class="arkflight-fitting-bonuses">{{#each item.bonusLines as |bonus|}}<span>{{bonus}}</span>{{/each}}</div></div><span>x{{item.quantity}}</span>
                 {{#if ../selectedSocketAvailable}}{{#if item.compatible}}<button type="button" data-install-selected><i class="fa-solid fa-hammer"></i> Install in Selected Socket</button>{{else}}<em>Does not fit selected socket</em>{{/if}}{{/if}}
               </article>
