@@ -22,13 +22,13 @@ test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated Ap
   assert.doesNotMatch(appSource, /static get defaultOptions/);
 });
 
-test("Hold navigation is wired directly through the ApplicationV2 vessel sheet", () => {
-  assert.match(appSource, /openArkflightHold/);
-  assert.match(appSource, /\[data-hold-tab\]/);
+test("Hold navigation is a native ApplicationV2 vessel-sheet tab", () => {
+  assert.match(template, /data-tab="hold"/);
+  assert.match(template, /data-hold-log-host/);
+  assert.match(appSource, /activeTab === "hold"/);
   assert.match(appSource, /openArkflightHold\(this\.actor, html\)/);
-  assert.match(holdSource, /export function openArkflightHold/);
-  assert.match(holdSource, /renderHoldLog\(root, actor\)/);
-  assert.match(holdSource, /open\(actor, rootOrApp = actor\?\.sheet\)/);
+  assert.match(holdSource, /nativeHost/);
+  assert.match(holdSource, /\(nativeHost \?\? root\)\.append\(shell\)/);
 });
 
 test("live ship sheet restores operational Overview Hold Combat and Shipwright navigation", () => {
