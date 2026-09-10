@@ -50,11 +50,14 @@ test("Combat Reference uses the Arkflight parchment codex layout and scroll fram
   assert.match(journalSource, /afcr-masthead/);
   assert.match(journalSource, /Quick Effect/);
   assert.match(journalSource, /At a Glance/);
-  assert.match(journalSource, /arkflight-codex-v2/);
+  assert.match(journalSource, /arkflight-codex-v3/);
   assert.match(journalCss, /steampunk_winged_gear_parchment_frame\.webp/);
   assert.match(journalCss, /afcr-art-frame/);
   assert.match(journalCss, /afcr-meta-grid/);
   assert.match(journalCss, /afcr-resource-grid/);
+  assert.match(journalCss, /aspect-ratio:\s*3 \/ 2/);
+  assert.match(journalCss, /overflow-y:\s*auto/);
+  assert.match(journalCss, /:has\(\.arkflight-combat-reference\.afcr-codex\)/);
 });
 
 test("each combat action can open its exact JournalEntryPage without replacing economy chips", () => {
