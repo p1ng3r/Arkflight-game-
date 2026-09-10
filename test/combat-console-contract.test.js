@@ -136,3 +136,20 @@ test("Command HUD End Turn advances Foundry initiative and follows the active Ar
   assert.match(commandHud, /arkflightCombatTurnChanged/);
   assert.match(commandHud, /followActiveShip/);
 });
+
+
+test("active ship owners can end their turn through the GM-validated combat relay", () => {
+  assert.match(combatApi, /const COMBAT_SOCKET = `module.${MODULE_ID}`/);
+  assert.match(combatApi, /END_TURN_REQUEST/);
+  assert.match(combatApi, /function canUserEndTurn/);
+  assert.match(combatApi, /testUserPermission?.(user, "OWNER")/);
+  assert.match(combatApi, /game.socket?.emit?.(COMBAT_SOCKET/);
+  assert.match(combatApi, /game.socket?.on?.(COMBAT_SOCKET, handleCombatSocket)/);
+  assert.match(combatApi, /async endTurn(reference = null)/);
+  assert.match(source, /canEndTurn: Boolean(combatant && api?.canEndTurn?.(combatant))/);
+  assert.match(source, /await api.endTurn(combatant)/);
+  assert.match(commandHud, /api?.canEndTurn?.(combatant)/);
+  assert.match(commandHud, /await api.endTurn(combatant)/);
+  assert.match(template, /{{#unless canEndTurn}}disabled{{/unless}}/);
+  assert.doesNotMatch(template, /{{#unless gm}}disabled{{/unless}}/);
+});
