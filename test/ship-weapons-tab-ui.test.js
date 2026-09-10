@@ -83,3 +83,15 @@ test("authoritative enhanced fire resolves Battlewatch assignment by id uuid or 
   assert.match(effects, /if \(!game\.user\?\.isGM\) return originalStationAction\(actionId, options, reference\)/);
   assert.match(effects, /return enhancedFireAtTarget\(base, options\.weaponKey, options\.targetId, reference\)/);
 });
+
+
+test("assigned Battlewatch player can reload through the GM-authoritative relay", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  const consoleUi = readFileSync(new URL("../src/ui/combat-console-ui.js", import.meta.url), "utf8");
+  assert.match(effects, /actionId === "battlewatch-reload-weapon"[\s\S]*?return originalStationAction\(actionId, options, reference\)/);
+  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?base\.workTheGuns\(options\.weaponKey, combatant\)/);
+  assert.match(stationApi, /STATION_ACTION_REQUEST/);
+  assert.match(consoleUi, /stationAction\("battlewatch-reload-weapon"/);
+  assert.match(consoleUi, /buttonLabel = "Reload"/);
+});
