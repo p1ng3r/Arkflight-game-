@@ -56,3 +56,14 @@ test("player weapon fire resolves Battlewatch assignments stored as id uuid or n
   assert.match(combatApi, /if \(!solution\.arc\.legal\) throw new Error/);
   assert.match(combatApi, /if \(!solution\.range\.legal\) throw new Error/);
 });
+
+
+test("legacy weapon controls do not force GM-only fire resolution", () => {
+  const legacy = readFileSync(new URL("../src/ui/weapon-combat-station-ui.js", import.meta.url), "utf8");
+  assert.match(legacy, /stationAction\("battlewatch-fire-weapon"/);
+  assert.match(legacy, /stationAction\("battlewatch-reload-weapon"/);
+  assert.match(legacy, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
+  assert.doesNotMatch(legacy, /GM Fire Control/);
+  assert.doesNotMatch(legacy, /combat resolution is currently GM-authoritative/);
+  assert.doesNotMatch(legacy, /api\.fireAtTarget\(weaponState\.key, target\.id, combatant\)/);
+});
