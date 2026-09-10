@@ -26,6 +26,8 @@ import { validateShip } from "../ship/validate-ship.js";
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const TURN_START_SNAPSHOTS = new Map();
+const COMBAT_SOCKET = `module.${MODULE_ID}`;
+const END_TURN_REQUEST = "end-turn-request";
 
 function requireGM() {
   if (!game.user?.isGM) throw new Error("Only the GM may change Arkflight ship combat state.");
@@ -33,6 +35,66 @@ function requireGM() {
 
 function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
+}
+
+function activePrimaryGM() {
+  return [...(game.users ?? [])]
+    .filter((user) => user?.active && user?.isGM)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))[0] ?? null;
+}
+
+function userOwnsCombatant(user, combatant) {
+  if (!user || !combatant?.actor) return false;
+  try { return combatant.actor.testUserPermission?.(user, "OWNER") === true; }
+  catch (_error) { return false; }
+}
+
+function canUserEndTurn(combatant, user = game.user, combat = game.combat) {
+  return Boolean(
+    combat
+    && combatant
+    && combat.combatant?.id === combatant.id
+    && (user?.isGM || userOwnsCombatant(user, combatant))
+  );
+}
+
+async function handleCombatSocket(payload = {}) {
+  if (!game.user?.isGM || payload?.type !== END_TURN_REQUEST) return;
+  const primary = activePrimaryGM();
+  if (!primary || primary.id !== game.user.id) return;
+
+  const combat = game.combats?.get?.(payload.combatId) ?? game.combat;
+  if (!combat || combat.id !== payload.combatId) return;
+  const combatant = combat.combatants?.get?.(payload.combatantId)
+    ?? combat.combatants?.find?.((entry) => entry.id === payload.combatantId)
+    ?? null;
+  const requester = game.users?.get?.(payload.userId) ?? null;
+  if (!requester || !requester.active || !canUserEndTurn(combatant, requester, combat)) return;
+
+  try { await combat.nextTurn(); }
+  catch (error) {
+    console.error("Arkflight | Player End Turn request failed", error);
+  }
+}
+
+async function endTurnForUser(reference = null) {
+  const combat = game.combat;
+  if (!combat) throw new Error("No active Foundry combat exists.");
+  const combatant = reference ? findCombatant(reference, combat) : combat.combatant;
+  if (!isArkflightCombatant(combatant)) throw new Error("Choose an Arkflight ship Combatant.");
+  if (!canUserEndTurn(combatant)) throw new Error("You may only end the active turn for a ship you own.");
+
+  if (game.user?.isGM) return combat.nextTurn();
+
+  const primary = activePrimaryGM();
+  if (!primary) throw new Error("An active GM is required to advance Foundry combat.");
+  game.socket?.emit?.(COMBAT_SOCKET, {
+    type: END_TURN_REQUEST,
+    combatId: combat.id,
+    combatantId: combatant.id,
+    userId: game.user.id
+  });
+  return true;
 }
 
 function resolveShipActor(reference) {
@@ -436,6 +498,13 @@ Hooks.once("ready", () => {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
       return combatantState(combatant);
     },
+    canEndTurn(reference = null) {
+      const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return canUserEndTurn(combatant);
+    },
+    async endTurn(reference = null) {
+      return endTurnForUser(reference);
+    },
     targets(reference = null) {
       const attacker = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
       return Object.freeze([...(game.combat?.combatants ?? [])].filter((entry) => isArkflightCombatant(entry) && entry.id !== attacker?.id));
@@ -539,6 +608,7 @@ Hooks.once("ready", () => {
       ui.notifications?.info("Arkflight combat ended.");
     }
   });
+  game.socket?.on?.(COMBAT_SOCKET, handleCombatSocket);
   const current = game.combat?.combatant ?? null;
   if (isArkflightCombatant(current)) ensureTurnStartSnapshot(current, game.combat);
 });
