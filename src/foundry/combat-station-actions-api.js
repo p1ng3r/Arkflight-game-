@@ -18,6 +18,8 @@ import {
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
+const COMBAT_SOCKET = `module.${MODULE_ID}`;
+const STATION_ACTION_REQUEST = "station-action-request";
 const AREA_ORDER = Object.freeze([
   AREA_STATES.STABLE,
   AREA_STATES.STRESSED,
@@ -52,6 +54,52 @@ function resolveCrewActor(reference) {
 
 function stationActor(shipActor, station) {
   return resolveCrewActor(assignedStationReference(shipActor, station));
+}
+
+function activePrimaryGM() {
+  return [...(game.users ?? [])]
+    .filter((user) => user?.active && user?.isGM)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))[0] ?? null;
+}
+
+function userOwnsActor(user, actor) {
+  if (!user || !actor) return false;
+  if (user.isGM) return true;
+  try { return actor.testUserPermission?.(user, "OWNER") === true; }
+  catch (_error) { return false; }
+}
+
+function stationControl(base, actionId, reference = null, user = game.user) {
+  const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
+  const action = base.actions?.[actionId] ?? null;
+  if (!combatant || !action) {
+    return Object.freeze({
+      ok: false,
+      reason: !combatant ? "combatant-required" : "unknown-action",
+      combatant,
+      action,
+      crewActor: null
+    });
+  }
+
+  const crewActor = stationActor(combatant.actor, action.station);
+  if (!crewActor) return Object.freeze({ ok: false, reason: "station-unassigned", combatant, action, crewActor: null });
+  if (!userOwnsActor(user, crewActor)) {
+    return Object.freeze({ ok: false, reason: "not-your-station", combatant, action, crewActor });
+  }
+  return Object.freeze({ ok: true, reason: null, combatant, action, crewActor });
+}
+
+function sanitizeStationOptions(options = {}) {
+  return Object.freeze({
+    selection: options.selection ?? null,
+    targetId: options.targetId ?? null,
+    station: options.station ?? null,
+    facing: options.facing ?? null,
+    system: options.system ?? null,
+    choice: options.choice ?? null,
+    weaponKey: options.weaponKey ?? null
+  });
 }
 
 function improveAreaState(value, steps = 1) {
@@ -251,7 +299,7 @@ function runtimeAvailability(base, actionId, reference = null) {
   return persistentCostAvailability(combatant.actor, action);
 }
 
-async function execute(base, actionId, options = {}, reference = null) {
+async function executeAuthoritative(base, actionId, options = {}, reference = null) {
   requireGM();
   const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
   if (!combatant) throw new Error("Choose an Arkflight ship Combatant.");
@@ -328,6 +376,60 @@ async function execute(base, actionId, options = {}, reference = null) {
   return Object.freeze({ combatant, actor: combatant.actor, crewActor, action, selection, state: after, notes: Object.freeze([...notes]) });
 }
 
+async function requestStationAction(base, actionId, options = {}, reference = null) {
+  const control = stationControl(base, actionId, reference);
+  if (!control.ok) {
+    if (control.reason === "not-your-station") throw new Error(`Only the player assigned to ${control.action?.station ?? "that"} station may use this action.`);
+    throw new Error(`Station action unavailable: ${control.reason}.`);
+  }
+
+  const availability = runtimeAvailability(base, actionId, control.combatant);
+  if (!availability.ok) throw new Error(`Station action unavailable: ${availability.reason}.`);
+
+  if (game.user?.isGM) return executeAuthoritative(base, actionId, options, control.combatant);
+
+  const primary = activePrimaryGM();
+  if (!primary) throw new Error("An active GM is required to resolve Arkflight combat actions.");
+
+  game.socket?.emit?.(COMBAT_SOCKET, {
+    type: STATION_ACTION_REQUEST,
+    userId: game.user.id,
+    combatId: game.combat?.id ?? null,
+    combatantId: control.combatant.id,
+    actionId,
+    options: sanitizeStationOptions(options)
+  });
+  return Object.freeze({ requested: true, combatant: control.combatant, action: control.action });
+}
+
+async function handleStationActionSocket(base, payload = {}) {
+  if (!game.user?.isGM || payload?.type !== STATION_ACTION_REQUEST) return;
+  const primary = activePrimaryGM();
+  if (!primary || primary.id !== game.user.id) return;
+
+  const requester = game.users?.get?.(payload.userId) ?? null;
+  const combat = game.combats?.get?.(payload.combatId) ?? game.combat;
+  const combatant = combat?.combatants?.get?.(payload.combatantId)
+    ?? combat?.combatants?.find?.((entry) => entry.id === payload.combatantId)
+    ?? null;
+  if (!requester || !requester.active || !combat || combat.id !== payload.combatId || !combatant) return;
+
+  const control = stationControl(base, payload.actionId, combatant, requester);
+  if (!control.ok) {
+    console.warn("Arkflight | Rejected station action request", { reason: control.reason, userId: requester.id, actionId: payload.actionId });
+    return;
+  }
+
+  const availability = runtimeAvailability(base, payload.actionId, combatant);
+  if (!availability.ok) return;
+
+  try {
+    await executeAuthoritative(base, payload.actionId, payload.options ?? {}, combatant);
+  } catch (error) {
+    console.error("Arkflight | Player station action request failed", error);
+  }
+}
+
 Hooks.once("ready", () => {
   const base = game.arkflight?.combat;
   if (!base) return;
@@ -347,10 +449,18 @@ Hooks.once("ready", () => {
     stationActionAvailability(actionId, reference = null) {
       return runtimeAvailability(base, actionId, reference);
     },
+    stationActionControl(actionId, reference = null) {
+      return stationControl(base, actionId, reference);
+    },
+    canUseStationAction(actionId, reference = null) {
+      const control = stationControl(base, actionId, reference);
+      return control.ok;
+    },
     stationAction(actionId, options = {}, reference = null) {
-      return execute(base, actionId, options, reference);
+      return requestStationAction(base, actionId, options, reference);
     }
   });
+  game.socket?.on?.(COMBAT_SOCKET, (payload) => handleStationActionSocket(base, payload));
 });
 
 Hooks.on("arkflightCombatTurnChanged", async ({ combatant, state, round }) => {
