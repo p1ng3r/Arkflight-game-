@@ -350,6 +350,10 @@ Hooks.once("ready", () => {
     stationAction(actionId, options = {}, reference = null) {
       if (actionId === "battlewatch-fire-weapon") {
         if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
+        // Players must go through the station-action socket relay so the active GM
+        // can resolve the authoritative attack on their behalf. Calling the enhanced
+        // resolver directly here would trip its GM guard on the player's client.
+        if (!game.user?.isGM) return originalStationAction(actionId, options, reference);
         return enhancedFireAtTarget(base, options.weaponKey, options.targetId, reference);
       }
       return originalStationAction(actionId, options, reference);
