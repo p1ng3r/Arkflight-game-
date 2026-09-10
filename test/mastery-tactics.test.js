@@ -56,6 +56,7 @@ test("crew tactic spends from the shared hand and applies a targeted effect", ()
   state = startPlanning(state, 1000);
   state = {
     ...state,
+    phase: "resolution",
     crewEdgeHand: ["clear-opening"],
     encounter: {
       momentum: 0,
