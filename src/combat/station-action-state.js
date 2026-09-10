@@ -1,5 +1,6 @@
 import { COMBAT_ACTION_TIMING } from "../content/combat-actions.js";
 import { purchaseManeuver, purchaseMovement, spendPoints } from "./combatant-state.js";
+import { stationActionEconomy } from "./station-action-economy.js";
 import {
   stationEffectCharges,
   stationEffectMagnitude,
@@ -114,10 +115,9 @@ function addTemporaryAP(state, amount) {
   if (!add) return state;
   const current = state?.economy?.ap;
   if (!current) return state;
-  const bonus = Math.max(0, add - 1);
   const nextRuntime = runtime(state);
-  nextRuntime.temporaryApMaxBonus += bonus;
-  const max = Math.max(0, Number(current.max) + bonus);
+  nextRuntime.temporaryApMaxBonus += add;
+  const max = Math.max(0, Number(current.max) + add);
   const value = Math.min(max, Math.max(0, Number(current.value) + add));
   return withRuntime(Object.freeze({
     ...state,
@@ -156,15 +156,11 @@ export function activeStationEffects(state, { station = null, timing = null } = 
   ));
 }
 
-// Issue Order is intentionally a roll modifier only. It does not inflate fixed
-// healing, movement, repair, mitigation, or resource values; that avoids a
-// dominant Captain-first script and keeps the +1/+2/+3 PF2e-style math bounded.
 export function stationCommandBoost(state, station, shipLevel = 1) {
   const effect = matchingIssueOrder(state, station);
   return effect ? stationEffectMagnitude(effect, shipLevel) : 0;
 }
 
-/** Consume one charge from each named transient effect. */
 export function consumeStationEffects(state, effectIds = []) {
   const ids = new Set(effectIds.filter(Boolean));
   if (!ids.size) return state;
@@ -178,7 +174,7 @@ export function consumeStationEffects(state, effectIds = []) {
   return withRuntime(state, rt);
 }
 
-export function stationActionAvailability(state, action, { round = 1 } = {}) {
+export function stationActionAvailability(state, action, { round = 1, shipLevel = 1 } = {}) {
   if (!state || !action) return Object.freeze({ ok: false, reason: "missing-state-or-action" });
   const combatRound = safeRound(round);
   const rt = runtime(state);
@@ -189,21 +185,19 @@ export function stationActionAvailability(state, action, { round = 1 } = {}) {
     return Object.freeze({ ok: false, reason: "reaction-readied" });
   }
   if (action.rules?.costSource) return Object.freeze({ ok: true, reason: null });
-  const apCost = Math.max(0, Math.trunc(Number(action.cost?.ap) || 0));
-  const rpCost = Math.max(0, Math.trunc(Number(action.cost?.rp) || 0));
-  if (apCost > Number(state?.economy?.ap?.value ?? 0)) return Object.freeze({ ok: false, reason: "insufficient-ap" });
-  if (rpCost > Number(state?.economy?.rp?.value ?? 0)) return Object.freeze({ ok: false, reason: "insufficient-rp" });
+  const cost = stationActionEconomy(action, shipLevel);
+  if (cost.ap > Number(state?.economy?.ap?.value ?? 0)) return Object.freeze({ ok: false, reason: "insufficient-ap" });
+  if (cost.rp > Number(state?.economy?.rp?.value ?? 0)) return Object.freeze({ ok: false, reason: "insufficient-rp" });
   return Object.freeze({ ok: true, reason: null });
 }
 
-/** Resolve the shared AP/RP and transient state for a core station action. */
 export function executeStationStateAction(state, action, {
   round = 1,
   selection = null,
   shipLevel = 1
 } = {}) {
   const combatRound = safeRound(round);
-  const availability = stationActionAvailability(state, action, { round: combatRound });
+  const availability = stationActionAvailability(state, action, { round: combatRound, shipLevel });
   if (!availability.ok) throw new Error(`${action?.name ?? "Station action"} is unavailable: ${availability.reason}.`);
 
   const resolver = action.rules?.resolver;
@@ -213,6 +207,7 @@ export function executeStationStateAction(state, action, {
 
   const profile = stationEffectProfile(shipLevel);
   const scaledBonus = profile.bonus;
+  const cost = stationActionEconomy(action, profile.level);
   const emergencyBypass = action.station === "engineer" && action.timing === COMBAT_ACTION_TIMING.ACTION
     ? matchingEmergencyBypass(state)
     : null;
@@ -224,17 +219,15 @@ export function executeStationStateAction(state, action, {
     next = purchaseManeuver(state);
   } else {
     next = state;
-    const ap = Math.max(0, Math.trunc(Number(action.cost?.ap) || 0));
-    const rp = Math.max(0, Math.trunc(Number(action.cost?.rp) || 0));
-    if (ap) next = spendPoints(next, "ap", ap);
-    if (rp) next = spendPoints(next, "rp", rp);
+    if (cost.ap) next = spendPoints(next, "ap", cost.ap);
+    if (cost.rp) next = spendPoints(next, "rp", cost.rp);
   }
 
   if (resolver === "ventStrain") {
     const baseReduction = Math.max(0, Number(action.rules?.baseReduction) || 0);
     next = withStrain(next, -(baseReduction + scaledBonus));
   }
-  if (resolver === "driveCrew") next = addTemporaryAP(next, Math.max(1, Number(action.rules?.gainAP) || 1));
+  if (resolver === "driveCrew") next = addTemporaryAP(next, 1);
   if (resolver === "hardTurn") {
     next = addAllowance(next, "maneuver", Math.max(1, Number(state?.mobility?.maneuverability) || 1) + scaledBonus);
   }
@@ -247,10 +240,7 @@ export function executeStationStateAction(state, action, {
     next = addAllowance(next, "maneuver", 1);
   }
 
-  const baseStrain = Math.max(0, Number(action.rules?.strain) || 0);
-  let strainToAdd = baseStrain;
-  if (resolver === "driveCrew" && profile.master) strainToAdd = Math.max(0, baseStrain - 1);
-  if (resolver === "driveCrew" && profile.legendary) strainToAdd = 0;
+  const strainToAdd = cost.strain;
   if (strainToAdd > 0) next = withStrain(next, strainToAdd);
 
   if (emergencyBypass && strainToAdd > 0) {
@@ -267,15 +257,15 @@ export function executeStationStateAction(state, action, {
     actionId: action.id,
     station: action.station,
     selection: selection == null ? null : String(selection),
-    ap: Math.max(0, Math.trunc(Number(action.cost?.ap) || 0)),
-    rp: Math.max(0, Math.trunc(Number(action.cost?.rp) || 0)),
+    ap: cost.ap,
+    rp: cost.rp,
+    strain: cost.strain,
     shipLevel: profile.level,
     stationBonus: profile.bonus,
     commandBoost: 0
   });
 }
 
-/** Clear effects that last until the ship's next turn and restore temporary AP cap. */
 export function beginStationActionTurn(state, round = 1) {
   if (!state) return state;
   const combatRound = safeRound(round);
