@@ -80,12 +80,13 @@ function unavailableLabel(reason) {
     "insufficient-rp": "Not Enough RP",
     "once-per-round": "Used This Round",
     "reaction-readied": "Reaction Readied",
-    "combatant-required": "Combat Offline"
+    "combatant-required": "Combat Offline",
+    "not-your-station": "Assigned Crew Only"
   })[reason] ?? "Unavailable";
 }
 
 function routeToWeapons(root) {
-  const button = root.querySelector("[data-arkflight-weapons-tab]");
+  const button = root.querySelector('[data-tab="weapons"]');
   if (!button) return ui.notifications?.warn("The ship Weapons tab is not available on this sheet.");
   button.click();
 }
@@ -95,6 +96,8 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
   row.className = `arkflight-combat-action ${action.timing === "reaction" ? "is-reaction" : "is-action"}`;
   const choices = choiceOptions(action, api, combatant, actor);
   const availability = api.stationActionAvailability?.(action.id, combatant) ?? { ok: false, reason: "combatant-required" };
+  const control = api.stationActionControl?.(action.id, combatant)
+    ?? { ok: Boolean(game.user?.isGM), reason: game.user?.isGM ? null : "not-your-station" };
   const weaponRoute = ["fireAtTarget", "workTheGuns"].includes(action.rules?.resolver);
 
   row.innerHTML = `<div class="arkflight-combat-action-head">
@@ -123,8 +126,8 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
     button.disabled = availability.reason === "station-unassigned";
   } else {
     const choiceRequired = Boolean(select && select.disabled);
-    button.disabled = !availability.ok || choiceRequired || !game.user?.isGM;
-    if (!game.user?.isGM) button.innerHTML = '<i class="fa-solid fa-lock"></i> GM Resolve';
+    button.disabled = !control.ok || !availability.ok || choiceRequired;
+    if (!control.ok) button.textContent = unavailableLabel(control.reason);
     else if (!availability.ok) button.textContent = unavailableLabel(availability.reason);
     else if (action.timing === "reaction") button.innerHTML = '<i class="fa-solid fa-bolt"></i> Ready Reaction';
     else button.innerHTML = '<i class="fa-solid fa-play"></i> Use Action';
