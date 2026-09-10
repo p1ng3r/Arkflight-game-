@@ -1,4 +1,5 @@
 export * from "./check-resolution.js";
+export * from "./combat-outcome.js";
 export * from "./combat-schema.js";
 export * from "./combatant-state.js";
 export * from "./helm-rules.js";
