@@ -56,7 +56,7 @@
             {{#each sockets as |socket|}}
               <button type="button" class="arkflight-workspace-socket {{#if socket.mount}}is-{{socket.mount.facing}}{{/if}} {{#if socket.labelAbove}}is-label-above{{/if}} {{#if socket.available}}is-available{{/if}} {{#if socket.occupied}}is-occupied{{/if}} {{#if socket.reserved}}is-reserved{{/if}} {{#if socket.working}}is-working{{/if}} {{#if socket.selected}}is-selected{{/if}} {{#if socket.hasComponentArt}}has-component-art{{/if}}" style="left:{{socket.left}}%;top:{{socket.top}}%" data-workspace-socket data-socket-index="{{socket.index}}" data-occupied="{{socket.occupied}}" data-reserved="{{socket.reserved}}" data-available="{{socket.available}}" title="{{socket.typeLabel}} · {{socket.capacityLabel}} · {{socket.stateLabel}}{{#if socket.componentName}} · {{socket.componentName}} · {{socket.componentEffect}}{{/if}}">
                 <img class="arkflight-workspace-socket-base" src="{{socket.art}}" alt="">
-                {{#if socket.componentImg}}<img class="arkflight-workspace-socket-component" src="{{socket.componentImg}}" alt="{{socket.componentName}}"><span class="arkflight-workspace-socket-effect"><strong>{{socket.componentName}}</strong><small>{{socket.componentEffect}}</small><em>Right-click to uninstall</em></span>{{/if}}
+                {{#if socket.componentImg}}<img class="arkflight-workspace-socket-component" src="{{socket.componentImg}}" alt="{{socket.componentName}}"><span class="arkflight-workspace-socket-effect"><strong>{{socket.componentName}}</strong><small class="arkflight-workspace-socket-effect-label">Effects / Bonuses</small>{{#each socket.componentBonusLines as |bonus|}}<small class="arkflight-workspace-socket-effect-line">{{bonus}}</small>{{/each}}<em>Right-click to uninstall</em></span>{{/if}}
                 {{#if socket.occupied}}
                   <img class="arkflight-workspace-socket-state" src="{{../assets.completed}}" alt="Installed">
                 {{else if socket.working}}
@@ -99,7 +99,7 @@
           <div class="arkflight-workspace-inventory-list">
             {{#each inventory as |item|}}
               <article draggable="{{item.compatible}}" data-fitting-drag data-family="{{item.family}}" data-component-id="{{item.id}}" title="{{item.effectSummary}}" class="{{#if ../hasSelectedSocket}}{{#if item.compatible}}is-compatible{{else}}is-incompatible{{/if}}{{/if}}">
-                <div><strong>{{item.name}}</strong><small>{{item.slotClass}} · Physical fitting aboard</small><div class="arkflight-fitting-bonuses">{{#each item.bonusLines as |bonus|}}<span>{{bonus}}</span>{{/each}}</div></div><span>x{{item.quantity}}</span>
+                <div><strong>{{item.name}}</strong><small>{{item.slotClass}} · Physical fitting aboard</small><small class="arkflight-fitting-bonus-label">Bonuses / Effects</small><div class="arkflight-fitting-bonuses">{{#each item.bonusLines as |bonus|}}<span>{{bonus}}</span>{{/each}}</div></div><span>x{{item.quantity}}</span>
                 {{#if ../selectedSocketAvailable}}{{#if item.compatible}}<button type="button" data-install-selected><i class="fa-solid fa-hammer"></i> Install in Selected Socket</button>{{else}}<em>Does not fit selected socket</em>{{/if}}{{/if}}
               </article>
             {{/each}}
