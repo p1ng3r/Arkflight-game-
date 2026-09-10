@@ -13,9 +13,9 @@ function validTrack(track, { positiveMax = false } = {}) {
   return value >= 0 && value <= max;
 }
 
-function validEconomy(state) {
-  return validTrack(state?.economy?.ap, { positiveMax: true })
-    && validTrack(state?.economy?.rp);
+function validEconomy(economy) {
+  return validTrack(economy?.ap, { positiveMax: true })
+    && validTrack(economy?.rp);
 }
 
 function validMobility(state) {
