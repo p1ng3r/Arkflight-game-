@@ -5,6 +5,7 @@ const MODULE_ID = "arkflight-game";
 const DEG_TO_RAD = Math.PI / 180;
 const ARC_VISIBLE = new Set();
 const ARC_GRAPHICS = new Map();
+const ARC_WEAPON_KEYS = new Map();
 const ARC_FILL_ALPHA = 0.16;
 const ARC_STROKE_ALPHA = 0.92;
 const ARC_STROKE_WIDTH = 3;
@@ -108,8 +109,19 @@ function drawSector(graphics, { x, y, radius, center, halfWidth, color }) {
   graphics.endFill?.();
 }
 
+function combatWeaponKeys(combatant) {
+  const state = game.arkflight?.combat?.state?.(combatant);
+  return Object.values(state?.weapons ?? {}).map((weaponState) => weaponState.key).filter(Boolean);
+}
+
 export function firingArcsVisible(combatant) {
   return Boolean(combatant?.id && ARC_VISIBLE.has(combatant.id));
+}
+
+export function firingArcWeaponVisible(combatant, weaponKey) {
+  if (!combatant?.id || !weaponKey || !ARC_VISIBLE.has(combatant.id)) return false;
+  const selected = ARC_WEAPON_KEYS.get(combatant.id);
+  return !selected || selected.has(weaponKey);
 }
 
 export function redrawFiringArcs(combatant) {
@@ -130,7 +142,9 @@ export function redrawFiringArcs(combatant) {
   graphics.label = `Arkflight firing arcs — ${combatant.name ?? combatant.id}`;
   graphics.zIndex = 5;
 
+  const selectedWeaponKeys = ARC_WEAPON_KEYS.get(combatant.id);
   for (const weaponState of Object.values(state.weapons ?? {})) {
+    if (selectedWeaponKeys && !selectedWeaponKeys.has(weaponState.key)) continue;
     const weapon = SHIP_CATALOGS.weapons?.[weaponState.id];
     const combat = weapon?.data?.combat;
     const maxRange = Math.max(0, Number(combat?.rangeHexes?.max) || 0);
@@ -157,9 +171,40 @@ export function redrawFiringArcs(combatant) {
 
 export function setFiringArcsVisible(combatant, visible) {
   if (!combatant?.id) return false;
-  if (visible) ARC_VISIBLE.add(combatant.id);
-  else ARC_VISIBLE.delete(combatant.id);
+  if (visible) {
+    ARC_VISIBLE.add(combatant.id);
+    ARC_WEAPON_KEYS.delete(combatant.id);
+  } else {
+    ARC_VISIBLE.delete(combatant.id);
+    ARC_WEAPON_KEYS.delete(combatant.id);
+  }
   return redrawFiringArcs(combatant);
+}
+
+export function setWeaponFiringArcVisible(combatant, weaponKey, visible) {
+  if (!combatant?.id || !weaponKey) return false;
+  const allKeys = combatWeaponKeys(combatant);
+  if (!allKeys.includes(weaponKey)) return false;
+
+  let selected = ARC_WEAPON_KEYS.get(combatant.id);
+  if (!selected) {
+    selected = ARC_VISIBLE.has(combatant.id) ? new Set(allKeys) : new Set();
+    ARC_WEAPON_KEYS.set(combatant.id, selected);
+  }
+
+  if (visible) selected.add(weaponKey);
+  else selected.delete(weaponKey);
+
+  if (selected.size > 0) ARC_VISIBLE.add(combatant.id);
+  else ARC_VISIBLE.delete(combatant.id);
+
+  return redrawFiringArcs(combatant);
+}
+
+export function toggleWeaponFiringArc(combatant, weaponKey) {
+  const next = !firingArcWeaponVisible(combatant, weaponKey);
+  setWeaponFiringArcVisible(combatant, weaponKey, next);
+  return next;
 }
 
 export function toggleFiringArcs(combatant) {
@@ -433,6 +478,7 @@ function refreshVisibleFiringArcs() {
     if (combatant) redrawFiringArcs(combatant);
     else {
       ARC_VISIBLE.delete(id);
+      ARC_WEAPON_KEYS.delete(id);
       removeArcGraphics(id);
     }
   }
