@@ -65,3 +65,4 @@ function attach(app, html) {
 }
 
 Hooks.on("renderActorSheet", (app, html) => attach(app, html));
+Hooks.on("renderApplicationV2", (app, html) => attach(app, html));
