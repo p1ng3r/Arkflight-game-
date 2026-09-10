@@ -144,6 +144,7 @@ function inventoryRows(actor, group, selectedSocket = null) {
     return {
       id,
       name: item?.name ?? id,
+      img: item?.img ?? item?.data?.art?.img ?? "",
       quantity: Number(qty),
       family: familyFor(group),
       slotClass: titleCase(item?.data?.refit?.slotClass ?? (group === "weapon" ? item?.data?.size : "flexible")),
