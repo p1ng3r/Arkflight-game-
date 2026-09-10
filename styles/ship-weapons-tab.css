@@ -1,8 +1,3 @@
-.arkflight-sheet-tabs:has([data-arkflight-weapons-tab]) {
-  display: grid !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-}
-
 .arkflight-sheet-weapons-shell {
   margin-top: 10px;
 }
@@ -12,11 +7,18 @@
   min-height: 420px;
 }
 
-.arkflight-weapons-tab-button.is-active,
-.arkflight-weapons-tab-button.is-weapons-active {
+.arkflight-sheet-tabs [data-tab="weapons"].is-active {
   border-color: #8c3b33 !important;
   box-shadow: inset 0 -2px 0 rgba(189, 63, 51, .78);
   color: #ead39c !important;
+}
+
+.arkflight-weapons-host {
+  min-height: 420px;
+}
+
+.arkflight-native-weapons {
+  margin-top: 10px;
 }
 
 .arkflight-weapon-arc-key {
@@ -138,4 +140,22 @@
   .arkflight-weapon-target-profile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .arkflight-weapon-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .arkflight-weapon-arc-key small { width: 100%; margin-left: 0; }
+}
+
+
+.arkflight-weapon-combat-state .is-authorized {
+  color: #9fd8ae;
+}
+
+.arkflight-weapon-combat-state .is-view-only {
+  color: #c9a66b;
+}
+
+.arkflight-native-weapons .arkflight-weapon-control-row {
+  transition: border-color 120ms ease, background 120ms ease;
+}
+
+.arkflight-native-weapons .arkflight-weapon-control-row:hover {
+  border-color: rgba(111, 215, 231, .38);
+  background: rgba(9, 24, 29, .76);
 }
