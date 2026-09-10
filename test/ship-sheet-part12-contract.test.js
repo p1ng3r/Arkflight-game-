@@ -8,6 +8,7 @@ import { SHIP_CATALOGS } from "../src/content/index.js";
 
 const template = readFileSync(new URL("../templates/ship/ship-sheet.hbs", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/ui/ship-sheet-app.js", import.meta.url), "utf8");
+const holdSource = readFileSync(new URL("../src/ui/hold-log-ux.js", import.meta.url), "utf8");
 
 test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated ApplicationV1", () => {
   assert.match(appSource, /HandlebarsApplicationMixin\(ActorSheetV2\)/);
@@ -19,6 +20,15 @@ test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated Ap
   assert.doesNotMatch(appSource, /foundry\.appv1/);
   assert.doesNotMatch(appSource, /activateListeners\(/);
   assert.doesNotMatch(appSource, /static get defaultOptions/);
+});
+
+test("Hold navigation is wired directly through the ApplicationV2 vessel sheet", () => {
+  assert.match(appSource, /openArkflightHold/);
+  assert.match(appSource, /\[data-hold-tab\]/);
+  assert.match(appSource, /openArkflightHold\(this\.actor, html\)/);
+  assert.match(holdSource, /export function openArkflightHold/);
+  assert.match(holdSource, /renderHoldLog\(root, actor\)/);
+  assert.match(holdSource, /open\(actor, rootOrApp = actor\?\.sheet\)/);
 });
 
 test("live ship sheet restores operational Overview Hold Combat and Shipwright navigation", () => {
