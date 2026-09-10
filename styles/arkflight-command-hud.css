@@ -436,6 +436,19 @@
 .afcs-weapon-row.is-illegal { opacity: .55; }
 .afcs-weapon-row.is-reloading { opacity: .72; }
 
+.afcs-weapon-row-arc {
+  min-width: 82px !important;
+  border-color: rgba(84, 155, 184, .48) !important;
+  color: #a9dbea !important;
+}
+
+.afcs-weapon-row-arc.is-active {
+  border-color: rgba(100, 205, 178, .72) !important;
+  background: rgba(16, 58, 54, .96) !important;
+  color: #9ce8cb !important;
+  box-shadow: inset 0 0 0 1px rgba(100, 205, 178, .12);
+}
+
 .afcs-empty-state { padding: 16px; text-align: center; color: #8faab5; font-size: 11px; line-height: 1.35; }
 
 .afcs-offline {
