@@ -198,3 +198,4 @@ function attachCrew(app, html) {
 }
 
 Hooks.on("renderActorSheet", (app, html) => attachCrew(app, html));
+Hooks.on("renderApplicationV2", (app, html) => attachCrew(app, html));
