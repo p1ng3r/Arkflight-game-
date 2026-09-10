@@ -12,8 +12,8 @@ import {
   buildShipSheetView
 } from "../src/ui/ship-sheet-view-model.js";
 
-test("Part 12 sheet uses Overview Fittings and Refit tabs", () => {
-  assert.deepEqual(SHIP_SHEET_TABS, ["overview", "fittings", "refit"]);
+test("vessel sheet uses native Overview Hold and Combat tabs", () => {
+  assert.deepEqual(SHIP_SHEET_TABS, ["overview", "hold", "combat"]);
 });
 
 test("five persistent Areas own the visible station penalty ladder", () => {
