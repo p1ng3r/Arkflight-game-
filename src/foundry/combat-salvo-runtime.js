@@ -3,7 +3,9 @@ import {
   applyHardnessToDamage,
   consumeStationEffects,
   coordinatedSalvoPlan,
+  degreeOfSuccess,
   fireCoordinatedSalvo,
+  reduceWeaponReload,
   shipWeaponAttackBonus,
   stationEffectMagnitude,
   stationEffectProfile,
@@ -45,12 +47,6 @@ function perceptionModifier(actor) {
     if (Number.isFinite(value)) return value;
   }
   return null;
-}
-function degreeOfSuccess(total, die, dc) {
-  let degree = total >= dc + 10 ? 2 : total >= dc ? 1 : total <= dc - 10 ? -1 : 0;
-  if (die === 20) degree += 1;
-  if (die === 1) degree -= 1;
-  return Math.max(-1, Math.min(2, degree));
 }
 function effectMatchesTarget(effect, target) {
   return effect?.selection === target?.id || effect?.selection === target?.actorId || effect?.selection === target?.actor?.id;
@@ -172,10 +168,7 @@ function compatibleSalvoSolutions(solutions) {
 function reduceOneReadyRound(state, keys, amount, round) {
   const candidates = keys.map((key) => state.weapons?.[key]).filter(Boolean).sort((a,b) => Number(b.readyRound ?? 0) - Number(a.readyRound ?? 0));
   const chosen = candidates[0];
-  if (!chosen) return state;
-  const key = chosen.key;
-  const readyRound = Math.max(Math.max(1, Number(round) || 1), Number(chosen.readyRound ?? round) - Math.max(0, Number(amount) || 0));
-  return Object.freeze({ ...state, weapons: Object.freeze({ ...state.weapons, [key]: Object.freeze({ ...chosen, readyRound }) }) });
+  return chosen ? reduceWeaponReload(state, chosen.key, round, amount) : state;
 }
 
 async function fireSalvoAtTarget(base, weaponKeys, targetReference, attackerReference = null) {
