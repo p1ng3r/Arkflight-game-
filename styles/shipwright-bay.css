@@ -296,6 +296,35 @@
 .arkflight-bay-socket i {
   font-size: 14px;
 }
+.arkflight-bay-installed-component,
+.arkflight-refit-staged-component {
+  position: absolute;
+  inset: 7px;
+  z-index: 3;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
+  object-fit: contain;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .78));
+}
+
+.arkflight-bay-socket.has-component-art > span:not(.arkflight-engine-socket-marker):not(.arkflight-refit-staged-label) {
+  z-index: 5;
+  right: -5px;
+  bottom: -5px;
+  left: auto;
+  top: auto;
+  width: 19px;
+  height: 19px;
+  display: grid !important;
+  place-items: center;
+  border: 1px solid rgba(205, 169, 88, .72);
+  border-radius: 50%;
+  background: rgba(5, 12, 15, .94);
+  color: #f0d58b;
+  font-size: 7px;
+}
+
 
 .arkflight-bay-socket span {
   position: absolute;
