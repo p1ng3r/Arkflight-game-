@@ -556,3 +556,22 @@
     transition: none;
   }
 }
+
+
+.arkflight-bay-socket {
+  overflow: visible;
+}
+.arkflight-bay-installed-component,
+.arkflight-refit-staged-component {
+  transition: transform 140ms ease, filter 140ms ease;
+  transform-origin: center;
+}
+.arkflight-bay-socket:hover {
+  z-index: 50;
+}
+.arkflight-bay-socket:hover .arkflight-bay-installed-component,
+.arkflight-bay-socket:hover .arkflight-refit-staged-component {
+  transform: scale(2);
+  z-index: 20;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
+}
