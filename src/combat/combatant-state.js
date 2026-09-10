@@ -232,13 +232,15 @@ export function beginCombatantTurn(state, round) {
 
 export function persistentStrainPatch(ship, combatState) {
   if (!ship?.resources?.strain) throw new Error("Ship does not have a persistent Strain resource.");
+  const max = Math.max(0, Number(combatState?.strain?.max) || Number(ship.resources.strain.max) || 0);
   return {
     ...ship,
     resources: {
       ...ship.resources,
       strain: {
         ...ship.resources.strain,
-        value: clamp(combatState?.strain?.value, 0, Number(ship.resources.strain.max) || 0)
+        value: clamp(combatState?.strain?.value, 0, max),
+        max
       }
     }
   };
