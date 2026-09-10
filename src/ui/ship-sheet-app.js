@@ -30,19 +30,32 @@ async function startQueued(actor, queued, noun) {
   const started = await game.arkflight?.refit?.startWork?.(actor, queued.job.id);
   if (!started?.ok) { ui.notifications?.warn(`${noun} was queued but could not start: ${started?.reason ?? "unknown error"}.`); return false; }
   ui.notifications?.info(`${noun} started — ${started.job.remainingHours}h remaining.`);
-  actor.sheet?.render?.(false);
+  actor.sheet?.render?.({ force: true });
   return true;
 }
 
 export function isArkflightShip(actor) { if (actor?.type !== "vehicle") return false; return actor?.flags?.[MODULE_ID]?.isArkflightShip === true || Boolean(shipFlag(actor)); }
 
-export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
-  constructor(...args) { super(...args); this.activeTab = "overview"; }
-  static get defaultOptions() { return foundry.utils.mergeObject(super.defaultOptions, { classes: ["arkflight", "arkflight-ship-sheet"], width: 1080, height: 820, resizable: true, template: `modules/${MODULE_ID}/templates/ship/ship-sheet.hbs` }); }
+const { ActorSheetV2 } = foundry.applications.sheets;
+const { HandlebarsApplicationMixin } = foundry.applications.api;
+
+export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2) {
+  constructor(options = {}) { super(options); this.activeTab = "overview"; }
+
+  static DEFAULT_OPTIONS = {
+    classes: ["arkflight", "arkflight-ship-sheet"],
+    position: { width: 1080, height: 820 },
+    window: { resizable: true }
+  };
+
+  static PARTS = {
+    main: { template: `modules/${MODULE_ID}/templates/ship/ship-sheet.hbs` }
+  };
+
   get title() { return `${this.actor.name} — Arkflight Vessel`; }
 
-  async getData(options = {}) {
-    const data = await super.getData(options);
+  async _prepareContext(options = {}) {
+    const data = await super._prepareContext(options);
     const ship = shipFlag(this.actor) ?? createShip({ identity: { name: this.actor.name || "Unnamed Vessel" } });
     const validation = validateShip(ship, SHIP_CATALOGS);
     const derived = validation.derived ?? deriveShip(ship, SHIP_CATALOGS);
@@ -81,10 +94,10 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
     };
   }
 
-  activateListeners($html) {
-    super.activateListeners($html);
-    const html = $html[0];
-    for (const button of html.querySelectorAll("[data-tab]")) button.addEventListener("click", (event) => { event.preventDefault(); const tab = event.currentTarget.dataset.tab; if (!SHIP_SHEET_TABS.includes(tab)) return; this.activeTab = tab; this.render(false); });
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const html = this.element;
+    for (const button of html.querySelectorAll("[data-tab]")) button.addEventListener("click", (event) => { event.preventDefault(); const tab = event.currentTarget.dataset.tab; if (!SHIP_SHEET_TABS.includes(tab)) return; this.activeTab = tab; this.render({ force: true }); });
     for (const input of html.querySelectorAll("[data-resource]")) input.addEventListener("change", async (event) => {
       if (!this.actor.isOwner) return;
       const key = event.currentTarget.dataset.resource; const ship = shipFlag(this.actor); if (!ship?.resources?.[key]) return;
@@ -117,14 +130,19 @@ export class ArkflightShipSheet extends foundry.appv1.sheets.ActorSheet {
     });
     for (const button of html.querySelectorAll("[data-refit-start]")) button.addEventListener("click", async (event) => {
       event.preventDefault(); if (!(game.user.isGM || this.actor.isOwner)) return;
-      try { const result = await game.arkflight?.refit?.startWork?.(this.actor, event.currentTarget.dataset.refitStart); if (!result?.ok) ui.notifications?.warn(`Could not start work: ${result?.reason ?? "unknown error"}.`); else { ui.notifications?.info(`Work started — ${result.job.remainingHours}h remaining.`); this.render(false); } } catch (error) { ui.notifications?.error(error.message); }
+      try { const result = await game.arkflight?.refit?.startWork?.(this.actor, event.currentTarget.dataset.refitStart); if (!result?.ok) ui.notifications?.warn(`Could not start work: ${result?.reason ?? "unknown error"}.`); else { ui.notifications?.info(`Work started — ${result.job.remainingHours}h remaining.`); this.render({ force: true }); } } catch (error) { ui.notifications?.error(error.message); }
     });
   }
 }
 
 export function registerArkflightShipSheet() {
   if (game.system.id !== "pf2e") { console.warn("Arkflight | Ship sheet registration skipped: PF2e system is not active."); return; }
-  foundry.documents.collections.Actors.registerSheet(MODULE_ID, ArkflightShipSheet, { types: ["vehicle"], label: "Arkflight Vessel Sheet", makeDefault: false });
+  foundry.applications.apps.DocumentSheetConfig.registerSheet(
+    foundry.documents.Actor,
+    MODULE_ID,
+    ArkflightShipSheet,
+    { types: ["vehicle"], label: "Arkflight Vessel Sheet", makeDefault: false }
+  );
 }
 
 export async function ensureArkflightShipSheet(actor) {
