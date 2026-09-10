@@ -84,10 +84,15 @@ test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and toke
   assert.match(source, /fireAtTarget/);
   assert.match(source, /workTheGuns/);
   assert.match(source, /toggleAllConsoleArcs/);
+  assert.match(source, /firingArcsVisible/);
+  assert.match(source, /redrawFiringArcs/);
+  assert.match(source, /setFiringArcsVisible/);
   for (const facing of ["fore", "port", "starboard", "aft"]) assert.match(source, new RegExp(`id: "${facing}"`));
   assert.match(template, /data-target-select/);
   assert.match(template, /data-fire-weapon/);
   assert.match(template, /data-toggle-all-arcs/);
+  assert.match(template, /Show Weapon Arcs/);
+  assert.match(template, /Weapon Arcs/);
   assert.match(template, /afcs-drawer-log/);
   assert.match(source, /Open Arkflight Combat Strip/);
 });
