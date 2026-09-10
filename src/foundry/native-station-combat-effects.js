@@ -2,7 +2,9 @@ import {
   activeStationEffects,
   applyHardnessToDamage,
   consumeStationEffects,
+  degreeOfSuccess,
   fireWeapon,
+  reduceWeaponReload,
   shipWeaponAttackBonus,
   stationEffectMagnitude,
   stationEffectProfile,
@@ -54,13 +56,6 @@ function perceptionModifier(actor) {
   return null;
 }
 
-function degreeOfSuccess(total, die, dc) {
-  let degree = total >= dc + 10 ? 2 : total >= dc ? 1 : total <= dc - 10 ? -1 : 0;
-  if (die === 20) degree += 1;
-  if (die === 1) degree -= 1;
-  return Math.max(-1, Math.min(2, degree));
-}
-
 function effectMatchesTarget(effect, target) {
   return effect?.selection === target?.id || effect?.selection === target?.actorId || effect?.selection === target?.actor?.id;
 }
@@ -97,20 +92,6 @@ function lifeveilOnline(actor) {
 function focusWardMatches(effect, type, systemThreat) {
   const selection = String(effect?.selection ?? "").toLowerCase();
   return selection && (selection === String(type ?? "").toLowerCase() || selection === String(systemThreat ?? "").toLowerCase());
-}
-
-function reduceReadyRound(state, weaponKey, amount, round) {
-  const reduction = Math.max(0, Math.trunc(Number(amount) || 0));
-  const weapon = state?.weapons?.[weaponKey];
-  if (!weapon || reduction <= 0) return state;
-  const readyRound = Math.max(Math.max(1, Math.trunc(Number(round) || 1)), Number(weapon.readyRound ?? round) - reduction);
-  return Object.freeze({
-    ...state,
-    weapons: Object.freeze({
-      ...state.weapons,
-      [weaponKey]: Object.freeze({ ...weapon, readyRound })
-    })
-  });
 }
 
 function attackVectorSolution(attackerState, solution, attackerLevel) {
@@ -258,7 +239,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
 
   attackerAfter = consumeStationEffects(attackerAfter, offense.consumed);
   if (offense.broadside.some((effect) => stationEffectProfile(effect.shipLevel ?? attackerLevel).master)) {
-    attackerAfter = reduceReadyRound(attackerAfter, weaponKey, 1, round);
+    attackerAfter = reduceWeaponReload(attackerAfter, weaponKey, round, 1);
   }
 
   let targetAfter = consumeStationEffects(targetAttackState, attackDefense.consumed);
@@ -273,13 +254,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     const hardnessBase = Math.max(0, Number(targetDerived.stats.hardness) || 0);
     const hardnessEffective = Math.max(0, hardnessBase - offense.hardnessReduction);
 
-    await game.arkflight?.shipCombatReactions?.promptDamage?.({
-      attacker,
-      target,
-      solution,
-      incoming: poweredIncoming,
-      hardness: hardnessEffective
-    });
+    await game.arkflight?.shipCombatReactions?.promptDamage?.({ attacker, target, solution, incoming: poweredIncoming, hardness: hardnessEffective });
 
     const targetLatest = base.state(target) ?? targetAttackState;
     targetAfter = consumeStationEffects(targetLatest, attackDefense.consumed);
@@ -309,9 +284,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       after,
       type: profile.type ?? "damage"
     });
-    if (wardAbsorbed > 0) {
-      targetAfter = consumeStationEffects(targetAfter, [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed]);
-    }
+    if (wardAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed]);
     if (braceAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, damageDefense.braceConsumed);
   }
 
