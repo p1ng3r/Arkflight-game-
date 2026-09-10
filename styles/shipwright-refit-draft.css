@@ -6,6 +6,33 @@
 .arkflight-bay-socket.is-refit-staged-linked {
   outline-style: dashed !important;
 }
+.arkflight-refit-staged-component {
+  position: absolute;
+  inset: 8px;
+  z-index: 4;
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  object-fit: contain;
+  pointer-events: none;
+  opacity: .88;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.76));
+}
+
+.arkflight-bay-socket.is-refit-staged .arkflight-refit-staged-label {
+  z-index: 6;
+}
+
+.arkflight-bay-socket.is-refit-staged.has-component-art .arkflight-refit-staged-label i {
+  display: none;
+}
+
+.arkflight-bay-socket.is-refit-staged.has-component-art .arkflight-refit-staged-label small {
+  margin-top: 62px;
+  padding: 2px 5px;
+  border: 1px solid rgba(213, 169, 76, .55);
+  background: rgba(5, 11, 14, .88);
+}
+
 
 .arkflight-refit-staged-label {
   position: absolute;
