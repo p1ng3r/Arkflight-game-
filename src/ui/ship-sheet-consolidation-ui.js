@@ -81,7 +81,6 @@ function consolidateNavigation(app, html) {
   const nav = root.querySelector(".arkflight-sheet-tabs");
   if (!nav) return;
 
-  for (const obsolete of nav.querySelectorAll('[data-tab="fittings"], [data-tab="refit"]')) obsolete.remove();
 
   if (!nav.querySelector("[data-open-shipwright]")) {
     const button = document.createElement("button");
