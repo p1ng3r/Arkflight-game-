@@ -1,7 +1,7 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { weaponArcCheck } from "../combat/weapon-targeting.js";
 import { deriveShip } from "../ship/derive-ship.js";
-import { setFiringArcsVisible } from "./weapon-combat-station-ui.js";
+import { firingArcsVisible, redrawFiringArcs, setFiringArcsVisible } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -372,71 +372,24 @@ function drawSector(graphics, { x, y, radius, center, halfWidth, color }) {
 
 function redrawConsoleArcs(combatant) {
   if (!combatant?.id) return false;
-  removeConsoleArcGraphics(combatant.id);
-  if (!CONSOLE_ARCS_VISIBLE.has(combatant.id)) return false;
-  const state = game.arkflight?.combat?.state?.(combatant);
-  const layer = arcLayer();
-  const GraphicsClass = globalThis.PIXI?.Graphics;
-  if (!state || !layer?.addChild || !GraphicsClass) return false;
-
-  setFiringArcsVisible(combatant, false);
-  const center = tokenCenter(combatant);
-  const pixelsPerHex = Number(canvas?.grid?.size ?? canvas?.scene?.grid?.size ?? 100) || 100;
-  const facings = selectedFacings(combatant);
-  const graphics = new GraphicsClass();
-  graphics.eventMode = "none";
-  graphics.label = `Arkflight combat console arcs — ${combatant.name ?? combatant.id}`;
-  graphics.zIndex = 6;
-
-  for (const weaponState of Object.values(state.weapons ?? {})) {
-    const mount = weaponState.mount ?? "fore";
-    if (!facings.has(mount)) continue;
-    const weapon = SHIP_CATALOGS.weapons?.[weaponState.id];
-    const combat = weapon?.data?.combat;
-    const maxRange = Math.max(0, Number(combat?.rangeHexes?.max) || 0);
-    if (!combat || maxRange <= 0) continue;
-    const arc = weaponArcCheck({
-      heading: state.mobility?.heading ?? 0,
-      mount,
-      arcTemplate: combat.arcTemplate ?? "wide",
-      bearing: 0
-    });
-    drawSector(graphics, {
-      ...center,
-      radius: maxRange * pixelsPerHex,
-      center: arc.center,
-      halfWidth: arc.halfWidth,
-      color: FACINGS.find((entry) => entry.id === mount)?.color ?? 0x8bd5e2
-    });
-  }
-  layer.addChild(graphics);
-  CONSOLE_ARC_GRAPHICS.set(combatant.id, graphics);
-  return true;
+  return redrawFiringArcs(combatant);
 }
 
 function toggleAllConsoleArcs(combatant) {
   if (!combatant?.id) return false;
-  const next = !CONSOLE_ARCS_VISIBLE.has(combatant.id);
-  if (next) {
-    CONSOLE_ARCS_VISIBLE.add(combatant.id);
-    CONSOLE_ARC_FACINGS.set(combatant.id, new Set(FACINGS.map((entry) => entry.id)));
-  } else {
-    CONSOLE_ARCS_VISIBLE.delete(combatant.id);
-  }
-  redrawConsoleArcs(combatant);
+  const next = !firingArcsVisible(combatant);
+  setFiringArcsVisible(combatant, next);
   return next;
 }
 
 function clearConsoleArcs(combatant = null) {
   if (combatant?.id) {
-    CONSOLE_ARCS_VISIBLE.delete(combatant.id);
-    CONSOLE_ARC_FACINGS.delete(combatant.id);
-    removeConsoleArcGraphics(combatant.id);
+    setFiringArcsVisible(combatant, false);
     return;
   }
-  for (const id of [...CONSOLE_ARC_GRAPHICS.keys()]) removeConsoleArcGraphics(id);
-  CONSOLE_ARCS_VISIBLE.clear();
-  CONSOLE_ARC_FACINGS.clear();
+  for (const entry of [...(game.combat?.combatants ?? [])]) {
+    if (entry?.id && firingArcsVisible(entry)) setFiringArcsVisible(entry, false);
+  }
 }
 
 export class ArkflightCombatConsole extends HandlebarsApplication {
@@ -513,7 +466,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     if (!targets.some((entry) => entry.id === this.selectedTargetId)) this.selectedTargetId = canvasTarget?.id ?? targets[0]?.id ?? null;
     const targetCombatant = targets.find((entry) => entry.id === this.selectedTargetId) ?? null;
     const target = targetSummary(targetCombatant, this.selectedWeaponKey, combatant);
-    const arcVisible = Boolean(combatant?.id && CONSOLE_ARCS_VISIBLE.has(combatant.id));
+    const arcVisible = Boolean(combatant && firingArcsVisible(combatant));
     const stationRows = STATIONS.map((entry) => ({
       ...entry,
       active: entry.id === this.selectedStation,
@@ -579,7 +532,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         && Number(state?.economy?.ap?.value ?? 0) >= Number(weapons.find((entry) => entry.key === this.selectedWeaponKey)?.fireAP ?? 99)
       ),
       arcVisible,
-      arcButtonLabel: arcVisible ? "Hide Arcs" : "Show Arcs",
+      arcButtonLabel: arcVisible ? "Hide Weapon Arcs" : "Show Weapon Arcs",
       resources: {
         round,
         ap,
@@ -810,7 +763,7 @@ for (const hook of REFRESH_HOOKS) Hooks.on(hook, queueRefresh);
 Hooks.on("updateToken", () => {
   if (!combatConsole?.rendered) return;
   const combatant = activeCombatant(combatConsole.actor);
-  if (combatant && CONSOLE_ARCS_VISIBLE.has(combatant.id)) setTimeout(() => redrawConsoleArcs(combatant), 0);
+  if (combatant && firingArcsVisible(combatant)) setTimeout(() => redrawConsoleArcs(combatant), 0);
 });
 Hooks.on("canvasReady", queueRefresh);
 Hooks.on("tearDownCanvas", () => clearConsoleArcs());
