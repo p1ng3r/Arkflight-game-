@@ -10,6 +10,8 @@ const template = readFileSync(new URL("../templates/ship/ship-sheet.hbs", import
 const appSource = readFileSync(new URL("../src/ui/ship-sheet-app.js", import.meta.url), "utf8");
 const holdSource = readFileSync(new URL("../src/ui/hold-log-ux.js", import.meta.url), "utf8");
 const combatSource = readFileSync(new URL("../src/ui/combat-station-actions-ui.js", import.meta.url), "utf8");
+const weaponsSource = readFileSync(new URL("../src/ui/ship-weapons-tab-ui.js", import.meta.url), "utf8");
+const consolidationSource = readFileSync(new URL("../src/ui/ship-sheet-consolidation-ui.js", import.meta.url), "utf8");
 
 test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated ApplicationV1", () => {
   assert.match(appSource, /HandlebarsApplicationMixin\(ActorSheetV2\)/);
@@ -48,16 +50,22 @@ test("Combat navigation is a native ApplicationV2 vessel-sheet tab", () => {
   assert.doesNotMatch(combatSource, /Hooks\.on\("renderActorSheet"/);
 });
 
-test("live ship sheet exposes native Overview Hold Combat plus Shipwright navigation", () => {
+test("live ship sheet exposes native Overview Hold Combat Weapons plus Shipwright navigation", () => {
   assert.match(template, /data-tab="overview"/);
   assert.match(template, /data-tab="hold"/);
   assert.match(template, /data-tab="combat"/);
+  assert.match(template, /data-tab="weapons"/);
+  assert.match(template, /data-weapons-host/);
   assert.match(template, /data-open-shipwright/);
   assert.doesNotMatch(template, /data-tab="fittings"/);
   assert.doesNotMatch(template, /data-tab="refit"/);
   assert.doesNotMatch(template, /data-open-combat/);
   assert.match(appSource, /renderArkflightCombatStations/);
+  assert.match(appSource, /renderArkflightWeaponsTab/);
+  assert.match(appSource, /activeTab === "weapons"/);
   assert.match(appSource, /openShipwrightWorkspace/);
+  assert.match(weaponsSource, /export function renderArkflightWeaponsTab/);
+  assert.doesNotMatch(weaponsSource, /attachWeaponsTab/);
 });
 
 test("live ship sheet never presents Watchmaster to players", () => {
@@ -104,3 +112,11 @@ test("Refit summary counts only active work orders while retaining completed his
 });
 
 
+
+
+test("legacy vessel navigation injection stays retired", () => {
+  assert.doesNotMatch(consolidationSource, /createElement\("button"\)/);
+  assert.doesNotMatch(consolidationSource, /data\.openShipwright/);
+  assert.doesNotMatch(consolidationSource, /append\(button\)/);
+  assert.match(consolidationSource, /polishNativeShipSheet/);
+});
