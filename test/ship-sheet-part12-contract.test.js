@@ -121,3 +121,12 @@ test("legacy vessel navigation injection stays retired", () => {
   assert.doesNotMatch(consolidationSource, /Hooks\.on\("renderActorSheet"/);
   assert.match(consolidationSource, /polishNativeShipSheet/);
 });
+
+
+test("native Combat tab routes weapon actions to the native Weapons tab and uses assigned crew permissions", () => {
+  assert.match(combatSource, /root\.querySelector\('\[data-tab="weapons"\]'\)/);
+  assert.match(combatSource, /stationActionControl\?\.\(action\.id, combatant\)/);
+  assert.match(combatSource, /"not-your-station": "Assigned Crew Only"/);
+  assert.doesNotMatch(combatSource, /GM Resolve/);
+  assert.doesNotMatch(combatSource, /data-arkflight-weapons-tab/);
+});
