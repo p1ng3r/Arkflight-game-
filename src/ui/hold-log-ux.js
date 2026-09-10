@@ -204,10 +204,14 @@ function renderHoldLog(root, actor) {
   const manifest = holdManifest(actor, ship);
   const cargoUsed = manifest.total;
   const cargoOver = cargoCapacity >= 0 && cargoUsed > cargoCapacity;
+  const nativeHost = root.querySelector("[data-hold-log-host]");
 
-  restoreSheet(root);
-  hideNormalSections(root);
-  root.querySelector(".arkflight-hold-log-shell")?.remove();
+  if (nativeHost) nativeHost.replaceChildren();
+  else {
+    restoreSheet(root);
+    hideNormalSections(root);
+    root.querySelector(".arkflight-hold-log-shell")?.remove();
+  }
 
   const identityFields = IDENTITY_FIELDS.map(([key, label]) => `
     <label class="arkflight-log-field"><span>${label}</span><input type="text" data-log-identity="${key}" value="${escapeHtml(draft.identity?.[key] ?? "")}"></label>`).join("");
@@ -266,7 +270,7 @@ function renderHoldLog(root, actor) {
       </div>
     </section>`;
 
-  root.append(shell);
+  (nativeHost ?? root).append(shell);
 
   for (const input of shell.querySelectorAll("[data-log-identity]")) {
     input.addEventListener("input", (event) => {
@@ -338,7 +342,7 @@ function attachHoldLog(app, html) {
     button.classList.add("arkflight-hold-log-tab-button");
   }
 
-  if (button.dataset.holdOpenBound !== "true") {
+  if (button.dataset.tab !== "hold" && button.dataset.holdOpenBound !== "true") {
     button.dataset.holdOpenBound = "true";
     button.addEventListener("click", (event) => {
       event.preventDefault();
