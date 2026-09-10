@@ -311,12 +311,17 @@ function attachHoldLog(app, html) {
   if (!nav) return;
   root.dataset.holdLogUxAttached = "true";
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "arkflight-hold-log-tab-button";
-  button.dataset.holdTab = "";
-  button.innerHTML = '<i class="fa-solid fa-box-open"></i> Hold';
-  nav.insertBefore(button, nav.querySelector('[data-tab="fittings"]') ?? null);
+  let button = nav.querySelector("[data-hold-tab]");
+  if (!button) {
+    button = document.createElement("button");
+    button.type = "button";
+    button.className = "arkflight-hold-log-tab-button";
+    button.dataset.holdTab = "";
+    button.innerHTML = '<i class="fa-solid fa-box-open"></i> Hold';
+    nav.insertBefore(button, nav.querySelector("[data-open-shipwright]") ?? null);
+  } else {
+    button.classList.add("arkflight-hold-log-tab-button");
+  }
 
   button.addEventListener("click", (event) => {
     event.preventDefault();
