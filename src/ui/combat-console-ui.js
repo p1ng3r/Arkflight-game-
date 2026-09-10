@@ -245,7 +245,7 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
       else if (!enoughAP) reason = `Need ${selectedWeapon.fireAP} AP`;
     } else if (resolver === "workTheGuns") {
       usable = Boolean(control.ok && availability.ok && selectedWeapon && !selectedWeapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
-      buttonLabel = "Work Guns";
+      buttonLabel = "Reload";
       if (!selectedWeapon) reason = "Choose Weapon";
       else if (selectedWeapon.ready) reason = "Weapon Ready";
     } else if (choices.length === 0 && (
