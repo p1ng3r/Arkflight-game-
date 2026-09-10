@@ -128,7 +128,7 @@
         <button type="button" class="{{#if openWeapons}}is-active{{/if}}" data-toggle-panel="weapons"><i class="fa-solid fa-sword"></i> Weapons</button>
         <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs title="{{arcButtonLabel}}"><i class="fa-solid fa-wave-square"></i> Weapon Arcs</button>
         <button type="button" class="{{#if openLog}}is-active{{/if}}" data-toggle-panel="log"><i class="fa-solid fa-scroll"></i> Log</button>
-        <button type="button" class="is-end" data-end-turn {{#unless gm}}disabled{{/unless}}><i class="fa-solid fa-forward-step"></i> End Turn</button>
+        <button type="button" class="is-end" data-end-turn {{#unless canEndTurn}}disabled{{/unless}} title="{{#if canEndTurn}}End this ship's active turn{{else}}Only the GM or an owner of the active ship can end this turn{{/if}}"><i class="fa-solid fa-forward-step"></i> End Turn</button>
       </nav>
     </footer>
   {{/if}}
