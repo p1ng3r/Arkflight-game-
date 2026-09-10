@@ -40,6 +40,7 @@ function install(id, arc, mountIndex, upgrades = {}) {
   return Object.freeze({
     instanceId: `${id}:${arc}:${mountIndex}`,
     id,
+    mount: arc,
     arc,
     mountIndex,
     upgrades: Object.freeze({
@@ -272,11 +273,11 @@ function percentileProfile(vector, level) {
   ])));
 }
 
-function summarizeIdentity(spec, derived) {
-  const hull = SHIP_CATALOGS.hulls?.[spec.hullId];
-  const hullPattern = SHIP_CATALOGS.hullPatterns?.[spec.hullPattern];
-  const engine = SHIP_CATALOGS.arkengines?.[spec.arkengineId];
-  const enginePattern = SHIP_CATALOGS.arkenginePatterns?.[spec.arkenginePattern];
+function summarizeIdentity(ship, derived) {
+  const hull = SHIP_CATALOGS.hulls?.[ship.hull.chassisId];
+  const hullPattern = SHIP_CATALOGS.hullPatterns?.[ship.hull.patternId];
+  const engine = SHIP_CATALOGS.arkengines?.[ship.arkengine.chassisId];
+  const enginePattern = SHIP_CATALOGS.arkenginePatterns?.[ship.arkengine.patternId];
   return Object.freeze({
     hullTraits: Object.freeze([...(hull?.traits ?? [])]),
     hullPatternTraits: Object.freeze([...(hullPattern?.traits ?? [])]),
@@ -287,34 +288,35 @@ function summarizeIdentity(spec, derived) {
   });
 }
 
-function weaponProfile(spec, derived) {
-  return Object.freeze(spec.weapons.map((entry) => {
-    const weapon = SHIP_CATALOGS.weapons?.[entry.id];
-    if (!weapon) return Object.freeze({ id: entry.id, missing: true, mount: entry.arc, mountIndex: entry.mountIndex });
-    const damage = weaponDamageProfile(weapon, entry);
+function weaponProfile(spec, derived, combatState) {
+  return Object.freeze(Object.values(combatState.weapons ?? {}).map((weaponState) => {
+    const weapon = SHIP_CATALOGS.weapons?.[weaponState.id];
+    if (!weapon) return Object.freeze({ id: weaponState.key, definitionId: weaponState.id, missing: true, mount: weaponState.mount, mountIndex: weaponState.mountIndex });
+    const installState = { upgrades: weaponState.upgrades };
+    const damage = weaponDamageProfile(weapon, installState);
     const combat = weapon.data?.combat ?? {};
     return Object.freeze({
-      id: entry.instanceId ?? `${entry.id}:${entry.arc}:${entry.mountIndex}`,
-      definitionId: entry.id,
-      name: weapon.name,
-      family: weapon.data?.family ?? weapon.data?.category ?? entry.id,
+      id: weaponState.key,
+      definitionId: weaponState.id,
+      name: weaponState.name ?? weapon.name,
+      family: weapon.data?.family ?? weapon.data?.category ?? weaponState.id,
       category: weapon.data?.category ?? "weapon",
-      mount: entry.arc,
-      mountIndex: entry.mountIndex,
+      mount: weaponState.mount,
+      mountIndex: weaponState.mountIndex,
       size: weapon.data?.size ?? "small",
-      fireAP: Math.max(1, Math.trunc(Number(combat.fireAP) || 1)),
-      reload: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0)),
+      fireAP: weaponState.fireAP,
+      reload: weaponState.reloadRounds,
       arcTemplate: combat.arcTemplate ?? "wide",
       range: Object.freeze({ ...(combat.rangeHexes ?? {}) }),
       damage: parseDice(damage.dice),
       type: damage.type ?? "damage",
       threat: weapon.data?.systemThreat ?? "hull",
-      potency: Math.max(0, Math.trunc(Number(entry.upgrades?.potency) || 0)),
-      impact: Math.max(0, Math.trunc(Number(entry.upgrades?.impact) || 0)),
+      potency: Math.max(0, Math.trunc(Number(weaponState.upgrades?.potency) || 0)),
+      impact: Math.max(0, Math.trunc(Number(weaponState.upgrades?.impact) || 0)),
       attackBonus: shipWeaponAttackBonus({
         battlewatchPerception: spec.crewPerception,
         shipWeaponAttackBonus: derived.stats?.weaponAttackBonus ?? 0,
-        install: entry
+        install: installState
       })
     });
   }));
@@ -329,37 +331,38 @@ export function deriveBuild(buildOrId) {
   const vector = combatStatVector(derived);
   return Object.freeze({
     id: spec.id,
-    name: spec.name,
+    name: ship.identity?.name ?? spec.name,
     role: spec.role,
     spec,
     ship,
     derived,
+    combatState,
     validation,
     vector,
-    percentile: percentileProfile(vector, spec.level),
-    identity: summarizeIdentity(spec, derived),
+    percentile: percentileProfile(vector, ship.progression?.level ?? spec.level),
+    identity: summarizeIdentity(ship, derived),
     profile: Object.freeze({
       id: spec.id,
-      name: spec.name,
-      level: spec.level,
-      chassis: spec.hullId,
-      hullPattern: spec.hullPattern,
-      arkengine: spec.arkengineId,
-      arkenginePattern: spec.arkenginePattern,
+      name: ship.identity?.name ?? spec.name,
+      level: Number(ship.progression?.level ?? spec.level),
+      chassis: ship.hull.chassisId,
+      hullPattern: ship.hull.patternId,
+      arkengine: ship.arkengine.chassisId,
+      arkenginePattern: ship.arkengine.patternId,
       ac: vector.armorClass,
-      hullMax: vector.hullIntegrity,
-      lifeveilMax: vector.lifeveilCapacity,
+      hullMax: Number(ship.resources?.hull?.max ?? vector.hullIntegrity),
+      lifeveilMax: Number(ship.resources?.lifeveil?.max ?? vector.lifeveilCapacity),
       moraleMax: Number(ship.resources?.morale?.max ?? derived.stats?.moraleCapacity ?? 5),
-      strainMax: vector.strainCapacity,
+      strainMax: Number(combatState.strain?.max ?? vector.strainCapacity),
       hardness: vector.hardness,
       apMax: Number(combatState.economy?.ap?.max ?? 0),
       rpMax: Number(combatState.economy?.rp?.max ?? 0),
-      combatSpeed: vector.combatSpeed,
-      maneuverability: vector.maneuverability,
+      combatSpeed: Number(combatState.mobility?.speed ?? vector.combatSpeed),
+      maneuverability: Number(combatState.mobility?.maneuverability ?? vector.maneuverability),
       shipWeaponAttackBonus: vector.weaponAttackBonus,
       crewPerception: spec.crewPerception,
       traits: Object.freeze([...(derived.tags ?? [])]),
-      weapons: weaponProfile(spec, derived)
+      weapons: weaponProfile(spec, derived, combatState)
     })
   });
 }
