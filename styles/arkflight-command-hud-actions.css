@@ -1,0 +1,114 @@
+/* Arkflight Command HUD — station action clarity layer. */
+.arkflight-combat-console .afcs-action-row {
+  align-items: start;
+  padding: 10px;
+}
+
+.arkflight-combat-console .afcs-action-text {
+  min-width: 0;
+}
+
+.arkflight-combat-console .afcs-action-text > strong {
+  font-size: 14px;
+  line-height: 1.15;
+  color: #f2f8fb;
+}
+
+.arkflight-combat-console .afcs-action-effect {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px !important;
+  line-height: 1.35;
+  color: #d8eaf1 !important;
+}
+
+.arkflight-combat-console .afcs-rule-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+
+.arkflight-combat-console .afcs-rule-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 2px 6px;
+  border: 1px solid rgba(91, 145, 165, .38);
+  border-radius: 999px;
+  background: rgba(8, 22, 31, .94);
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: .03em;
+  white-space: nowrap;
+  color: #b9d3dd;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-cost {
+  border-color: rgba(84, 181, 220, .55);
+  color: #82d8f5;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-reaction {
+  border-color: rgba(163, 115, 224, .55);
+  color: #c7a3f4;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-bonus {
+  border-color: rgba(87, 190, 150, .55);
+  color: #8ce0bc;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-strain {
+  border-color: rgba(213, 99, 88, .58);
+  color: #ff9c91;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-limit,
+.arkflight-combat-console .afcs-rule-chip.is-duration {
+  border-color: rgba(190, 148, 67, .52);
+  color: #e6c376;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-choice {
+  border-color: rgba(108, 137, 206, .5);
+  color: #a9c0f2;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-free {
+  color: #94d7aa;
+}
+
+.arkflight-combat-console .afcs-action-full-rules {
+  margin-top: 7px;
+  border-top: 1px solid rgba(92, 135, 151, .2);
+  padding-top: 5px;
+}
+
+.arkflight-combat-console .afcs-action-full-rules > summary {
+  width: fit-content;
+  cursor: pointer;
+  user-select: none;
+  font-size: 9px;
+  line-height: 1.2;
+  color: #84cce4;
+}
+
+.arkflight-combat-console .afcs-action-full-rules[open] > summary {
+  color: #b0e5f5;
+}
+
+.arkflight-combat-console .afcs-action-full-rules > p {
+  margin: 6px 0 1px;
+  padding: 6px 8px;
+  border-left: 2px solid rgba(88, 174, 203, .45);
+  background: rgba(5, 17, 25, .72);
+  font-size: 9px;
+  line-height: 1.4;
+  color: #a9c4cf;
+}
+
+.arkflight-combat-console .afcs-action-meta {
+  align-self: center;
+}
