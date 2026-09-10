@@ -16,14 +16,14 @@ test("station mastery is a sibling button with its own popup handler", () => {
   assert.match(ui, /await showMastery\(state, stationId\)/);
 });
 
-test("portrait double click opens the assigned actor sheet", () => {
+test("portrait click opens the assigned actor sheet", () => {
   assert.match(ui, /state\.assignments\?\.\[stationId\]\?\.actorId/);
-  assert.match(ui, /addEventListener\("dblclick"/);
-  assert.match(ui, /openActorSheet\(actor\)/);
+  assert.match(ui, /portraitButton\.addEventListener\("click"/);
+  assert.match(ui, /openActorDocument\(currentActor\)/);
 });
 
 test("planning portraits remain circular and larger without increasing row height", () => {
-  assert.match(css, /\.arkflight-command-summary-row\{min-height:62px/);
-  assert.match(css, /\.arkflight-planning-avatar\{width:52px!important;height:52px!important;border-radius:50%!important;overflow:hidden!important/);
+  assert.match(css, /\.arkflight-event-board \.arkflight-command-summary-row\{min-height:62px!important/);
+  assert.match(css, /\.arkflight-event-board \.arkflight-command-summary-row \.arkflight-planning-avatar\{[^}]*width:65px!important;height:65px!important;border-radius:50%!important;overflow:hidden!important/);
   assert.match(css, /object-fit:cover!important;border-radius:50%!important;transform:none!important/);
 });
