@@ -26,7 +26,8 @@ const REFRESH_HOOKS = [
   "updateToken",
   "targetToken",
   "arkflightStationActionResolved",
-  "arkflightStationActionsRefreshed"
+  "arkflightStationActionsRefreshed",
+  "arkflightStationActionRemoteResult"
 ];
 let combatConsole = null;
 let refreshQueued = false;
