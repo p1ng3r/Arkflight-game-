@@ -1,6 +1,7 @@
 import { AREA_STATES } from "./ship-schema.js";
 import { applyTalentProgression, clampShipLevel, progressionView, shipDefenseProgressionBonus } from "./progression.js";
 import { resolveInstalledModTalentSynergies } from "./mod-talent-synergy.js";
+import { applyShipSpecialization } from "./specialization-rules.js";
 import { CORE_COMBAT_ACTIONS_BY_STATION } from "../content/combat-actions.js";
 import {
   assertCanonicalEffectTarget,
@@ -91,6 +92,7 @@ export function deriveShip(ship, catalogs = {}) {
   }
 
   applyTalentProgression(derived, baseStats, ship, stationCapabilities, capabilities);
+  applyShipSpecialization(derived, ship, capabilities);
 
   const talentIds = [...(ship?.progression?.talentIds ?? [])];
   const modTalentSynergies = resolveInstalledModTalentSynergies(components, talentIds);
