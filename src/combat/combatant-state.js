@@ -1,7 +1,7 @@
 import { COMBAT_POINT_TYPES, effectiveMobility, hullCombatProfile, normalizeHexHeading } from "./combat-schema.js";
 import { normalizeWeaponUpgrades } from "./weapon-combat.js";
 
-export const COMBATANT_STATE_VERSION = 3;
+export const COMBATANT_STATE_VERSION = 4;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -12,10 +12,19 @@ function track(value, max) {
   return Object.freeze({ value: clamp(value, 0, safeMax), max: safeMax });
 }
 
+function requiredDerivedStats(derived) {
+  const stats = derived?.stats;
+  if (!stats) throw new Error("Arkflight combat state requires authoritative derived ship stats.");
+  return stats;
+}
+
 function weaponInstallKey(install, index) {
   if (install && typeof install === "object" && install.instanceId) return String(install.instanceId);
   const id = typeof install === "string" ? install : install?.id;
-  const mount = typeof install === "object" && install?.arc != null ? `${install.arc}:${Number(install.mountIndex) || 0}` : `slot:${index}`;
+  const facing = typeof install === "object"
+    ? (install?.mount ?? install?.arc ?? null)
+    : null;
+  const mount = facing != null ? `${facing}:${Number(install.mountIndex) || 0}` : `slot:${index}`;
   return `${id ?? "weapon"}@${mount}`;
 }
 
@@ -31,7 +40,7 @@ function installedWeaponStates(ship, catalogs = {}) {
       key,
       id,
       name: weapon?.name ?? id,
-      mount: typeof install === "object" ? install?.arc ?? null : null,
+      mount: typeof install === "object" ? (install?.mount ?? install?.arc ?? null) : null,
       mountIndex: typeof install === "object" ? Number(install?.mountIndex) || 0 : null,
       upgrades: normalizeWeaponUpgrades(install),
       fireAP: Math.max(1, Math.trunc(Number(combat.fireAP) || 1)),
@@ -45,18 +54,18 @@ function installedWeaponStates(ship, catalogs = {}) {
 
 export function createCombatantState(ship, { derived = null, catalogs = {}, rotation = 0, speedPenalty = 0, maneuverPenalty = 0 } = {}) {
   if (!ship?.hull?.chassisId) throw new Error("Arkflight combat requires a commissioned ship hull.");
-  const stats = derived?.stats ?? {};
+  const stats = requiredDerivedStats(derived);
   const profile = hullCombatProfile(ship, {
     actionBonus: Number(stats.actionBonus) || 0,
     reactionBonus: Number(stats.reactionBonus) || 0
   });
   const mobility = effectiveMobility({
-    combatSpeed: stats.combatSpeed ?? 1,
-    maneuverability: stats.maneuverability ?? 1,
+    combatSpeed: stats.combatSpeed,
+    maneuverability: stats.maneuverability,
     speedPenalty,
     maneuverPenalty
   });
-  const strainMax = Math.max(0, Number(ship.resources?.strain?.max) || Number(stats.strainCapacity) || 0);
+  const strainMax = Math.max(0, Number(stats.strainCapacity) || 0);
   const strainValue = clamp(ship.resources?.strain?.value, 0, strainMax);
 
   return Object.freeze({
@@ -160,6 +169,19 @@ export function weaponReloadRemaining(weaponState, round) {
   return Math.max(0, Math.trunc(Number(weaponState?.readyRound) || 0) - Math.trunc(Number(round) || 0));
 }
 
+export function reduceWeaponReload(state, weaponKey, round, amount = 1) {
+  const weapon = state?.weapons?.[weaponKey];
+  if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
+  const reduction = Math.max(0, Math.trunc(Number(amount) || 0));
+  if (reduction <= 0) return state;
+  const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
+  const updated = Object.freeze({ ...weapon, readyRound: Math.max(combatRound, Number(weapon.readyRound ?? combatRound) - reduction) });
+  return Object.freeze({
+    ...state,
+    weapons: Object.freeze({ ...state.weapons, [weaponKey]: updated })
+  });
+}
+
 export function fireWeapon(state, weaponKey, round) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
@@ -181,10 +203,10 @@ export function workTheGuns(state, weaponKey, round) {
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
   if (weaponReloadRemaining(weapon, combatRound) <= 0) throw new Error(`${weapon.name} is already ready.`);
   let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
-  const updated = Object.freeze({ ...weapon, readyRound: Math.max(combatRound, weapon.readyRound - 1) });
+  next = reduceWeaponReload(next, weaponKey, combatRound, 1);
+  const updated = next.weapons[weaponKey];
   return Object.freeze({
     ...next,
-    weapons: Object.freeze({ ...next.weapons, [weaponKey]: updated }),
     log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "work-the-guns", weaponKey, ap: 1, readyRound: updated.readyRound })])
   });
 }
