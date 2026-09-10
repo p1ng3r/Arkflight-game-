@@ -107,6 +107,14 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       await this.actor.update({ [`flags.${MODULE_ID}.ship.resources.${key}.value`]: value, [`flags.${MODULE_ID}.ship.resources.${key}.max`]: max });
     });
     for (const button of html.querySelectorAll("[data-compendium-pack]")) button.addEventListener("click", (event) => { event.preventDefault(); const packId = event.currentTarget.dataset.compendiumPack; const pack = game.packs?.get(packId); if (!pack) return ui.notifications?.warn(`Arkflight Compendium pack is not available yet: ${packId}`); pack.render(true); });
+    html.querySelector("[data-open-combat]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      game.arkflight?.openCombatConsole?.(this.actor);
+    });
+    html.querySelector("[data-open-shipwright]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      game.arkflight?.openShipwrightWorkspace?.(this.actor);
+    });
 
     for (const button of html.querySelectorAll("[data-refit-build]")) button.addEventListener("click", async (event) => {
       event.preventDefault(); if (!(game.user.isGM || this.actor.isOwner)) return;
