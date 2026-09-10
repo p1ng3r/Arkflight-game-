@@ -557,3 +557,8 @@
   z-index: 20;
   filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
 }
+
+
+.arkflight-workspace-board-stage:has(.arkflight-workspace-socket:hover) {
+  overflow: visible;
+}
