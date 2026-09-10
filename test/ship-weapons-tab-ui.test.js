@@ -67,3 +67,11 @@ test("legacy weapon controls do not force GM-only fire resolution", () => {
   assert.doesNotMatch(legacy, /combat resolution is currently GM-authoritative/);
   assert.doesNotMatch(legacy, /api\.fireAtTarget\(weaponState\.key, target\.id, combatant\)/);
 });
+
+
+test("native station combat effects preserve the player fire socket relay", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(effects, /if \(!game\.user\?\.isGM\) return originalStationAction\(actionId, options, reference\)/);
+  assert.match(effects, /return enhancedFireAtTarget\(base, options\.weaponKey, options\.targetId, reference\)/);
+  assert.match(effects, /Only the GM may resolve Arkflight ship combat attacks/);
+});
