@@ -729,7 +729,7 @@ function attachTokenCombatConsoleButton(hud, html = null) {
   button.dataset.tooltip = "Open Arkflight Combat Strip";
   button.title = "Open Arkflight Combat Strip";
   button.setAttribute("aria-label", "Open Arkflight Combat Strip");
-  button.innerHTML = '<i class="fa-solid fa-gauge-high fa-fw"></i>';
+  button.innerHTML = '<img class="arkflight-token-combat-emblem" src="modules/arkflight-game/assets/ui/branding/emblems/arkflight_weapons_crest.webp" alt="">';
   button.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
