@@ -8,6 +8,7 @@ const template = readFileSync(new URL("../templates/combat-console.hbs", import.
 const css = readFileSync(new URL("../styles/arkflight-command-hud.css", import.meta.url), "utf8");
 const actionCss = readFileSync(new URL("../styles/arkflight-command-hud-actions.css", import.meta.url), "utf8");
 const combatApi = readFileSync(new URL("../src/foundry/combat-api.js", import.meta.url), "utf8");
+const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
 const moduleJson = JSON.parse(readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 const LEGACY_MODULES = [
@@ -152,4 +153,23 @@ test("active ship owners can end their turn through the GM-validated combat rela
   assert.match(commandHud, /await api\.endTurn\(combatant\)/);
   assert.match(template, /\{\{#unless canEndTurn\}\}disabled\{\{\/unless\}\}/);
   assert.doesNotMatch(template, /\{\{#unless gm\}\}disabled\{\{\/unless\}\}/);
+});
+
+
+test("all players can view every station while only assigned station crew can use its actions", () => {
+  assert.match(source, /stationActionControl\?\.\(action\.id, combatant\)/);
+  assert.match(source, /control\.ok && availability\.ok/);
+  assert.match(source, /"not-your-station": "Assigned Crew Only"/);
+  assert.doesNotMatch(source, /reason = "GM Resolve"/);
+  assert.match(stationApi, /function stationControl/);
+  assert.match(stationApi, /testUserPermission\?\.\(user, "OWNER"\)/);
+  assert.match(stationApi, /reason: "not-your-station"/);
+  assert.match(stationApi, /STATION_ACTION_REQUEST/);
+  assert.match(stationApi, /requestStationAction/);
+  assert.match(stationApi, /handleStationActionSocket/);
+  assert.match(stationApi, /canUseStationAction/);
+  assert.match(source, /api\.stationAction\("battlewatch-fire-weapon"/);
+  assert.match(source, /api\.stationAction\("battlewatch-reload-weapon"/);
+  assert.match(template, /data-station="{{id}}"/);
+  assert.doesNotMatch(template, /data-station="{{id}}"[^>]*disabled/);
 });
