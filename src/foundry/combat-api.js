@@ -25,6 +25,7 @@ import { validateShip } from "../ship/validate-ship.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
+const TURN_START_SNAPSHOTS = new Map();
 
 function requireGM() {
   if (!game.user?.isGM) throw new Error("Only the GM may change Arkflight ship combat state.");
@@ -248,6 +249,88 @@ async function updateCombatantState(combatant, state, { persistStrain = false } 
   return state;
 }
 
+function tokenTurnSnapshot(combatant, combat = game.combat) {
+  const token = combatant?.token;
+  const state = combatantState(combatant);
+  if (!combatant?.id || !token || !state) return null;
+  return Object.freeze({
+    combatId: combat?.id ?? null,
+    combatantId: combatant.id,
+    round: Math.max(1, Number(combat?.round ?? 1)),
+    turn: Number(combat?.turn ?? 0),
+    x: Number(token.x ?? 0),
+    y: Number(token.y ?? 0),
+    rotation: normalizeHexHeading(token.rotation ?? state.mobility?.heading ?? 0),
+    heading: normalizeHexHeading(state.mobility?.heading ?? token.rotation ?? 0),
+    movementUsed: Math.max(0, Math.trunc(Number(state.mobility?.movement?.used) || 0)),
+    maneuverUsed: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.used) || 0))
+  });
+}
+
+function ensureTurnStartSnapshot(combatant, combat = game.combat) {
+  if (!combatant?.id) return null;
+  const existing = TURN_START_SNAPSHOTS.get(combatant.id);
+  const round = Math.max(1, Number(combat?.round ?? 1));
+  const turn = Number(combat?.turn ?? 0);
+  if (existing?.combatId === combat?.id && existing.round === round && existing.turn === turn) return existing;
+  const snapshot = tokenTurnSnapshot(combatant, combat);
+  if (snapshot) TURN_START_SNAPSHOTS.set(combatant.id, snapshot);
+  return snapshot;
+}
+
+function movementUndoStatus(combatant) {
+  const snapshot = combatant?.id ? TURN_START_SNAPSHOTS.get(combatant.id) : null;
+  const token = combatant?.token;
+  const state = combatantState(combatant);
+  if (!snapshot || !token || !state) return Object.freeze({ canUndoMove: false, canUndoFacing: false, canResetPosition: false });
+  const moved = Number(token.x ?? 0) !== snapshot.x || Number(token.y ?? 0) !== snapshot.y || Number(state.mobility?.movement?.used ?? 0) !== snapshot.movementUsed;
+  const turned = normalizeHexHeading(token.rotation ?? state.mobility?.heading ?? 0) !== snapshot.rotation
+    || normalizeHexHeading(state.mobility?.heading ?? 0) !== snapshot.heading
+    || Number(state.mobility?.maneuver?.used ?? 0) !== snapshot.maneuverUsed;
+  return Object.freeze({ canUndoMove: moved, canUndoFacing: turned, canResetPosition: moved || turned });
+}
+
+async function restoreTurnStart(combatant, { move = false, facing = false } = {}) {
+  requireGM();
+  if (!combatant?.id) throw new Error("Choose an Arkflight ship Combatant.");
+  const snapshot = TURN_START_SNAPSHOTS.get(combatant.id);
+  if (!snapshot) throw new Error("No turn-start position has been recorded for this ship.");
+  const token = combatant.token;
+  const state = combatantState(combatant);
+  if (!token || !state) throw new Error("Ship token or combat state is unavailable.");
+
+  const tokenChanges = {};
+  if (move) {
+    tokenChanges.x = snapshot.x;
+    tokenChanges.y = snapshot.y;
+  }
+  if (facing) tokenChanges.rotation = snapshot.rotation;
+  if (Object.keys(tokenChanges).length) {
+    await token.update(tokenChanges, { arkflightCombatUndo: true, arkflightCombatFacing: true });
+  }
+
+  const mobility = state.mobility ?? {};
+  const next = Object.freeze({
+    ...state,
+    mobility: Object.freeze({
+      ...mobility,
+      heading: facing ? snapshot.heading : mobility.heading,
+      movement: Object.freeze({
+        ...(mobility.movement ?? {}),
+        used: move ? snapshot.movementUsed : Math.max(0, Math.trunc(Number(mobility.movement?.used) || 0))
+      }),
+      maneuver: Object.freeze({
+        ...(mobility.maneuver ?? {}),
+        used: facing ? snapshot.maneuverUsed : Math.max(0, Math.trunc(Number(mobility.maneuver?.used) || 0))
+      })
+    })
+  });
+  await updateCombatantState(combatant, next);
+  try { await token.clearMovementHistory?.(); } catch (_error) { /* convenience only */ }
+  Hooks.callAll("arkflightCombatPositionUndone", { combatant, move, facing, snapshot, state: next });
+  return next;
+}
+
 async function rollShipInitiative(reference, { combat = null, combatant = null } = {}) {
   requireGM();
   const profile = initiativeProfile(reference);
@@ -298,6 +381,7 @@ async function beginTurn(combatant, round) {
   const next = beginCombatantTurn(current, round);
   if (next !== current) await updateCombatantState(combatant, next);
   try { await combatant.token?.clearMovementHistory?.(); } catch (_error) { /* movement history is convenience only */ }
+  ensureTurnStartSnapshot(combatant, game.combat);
   return next;
 }
 
@@ -393,6 +477,22 @@ Hooks.once("ready", () => {
       const weapon = combatantState(combatant)?.weapons?.[weaponKey];
       return weapon ? weaponReloadRemaining(weapon, game.combat?.round ?? 1) : null;
     },
+    movementUndoStatus(reference = null) {
+      const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return movementUndoStatus(combatant);
+    },
+    async undoMove(reference = null) {
+      const combatant = await requireCombatant(reference);
+      return restoreTurnStart(combatant, { move: true, facing: false });
+    },
+    async undoFacing(reference = null) {
+      const combatant = await requireCombatant(reference);
+      return restoreTurnStart(combatant, { move: false, facing: true });
+    },
+    async resetTurnPosition(reference = null) {
+      const combatant = await requireCombatant(reference);
+      return restoreTurnStart(combatant, { move: true, facing: true });
+    },
     async nextRound() {
       requireGM();
       if (!game.combat) throw new Error("No active Foundry combat exists.");
@@ -478,3 +578,6 @@ Hooks.on("updateToken", async (token, changes, options) => {
   try { await updateCombatantState(combatant, recordFacingChange(state, steps, heading)); }
   catch (error) { console.warn("Arkflight | Could not record ship facing", error); }
 });
+
+
+Hooks.on("deleteCombat", () => TURN_START_SNAPSHOTS.clear());
