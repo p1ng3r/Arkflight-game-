@@ -150,8 +150,10 @@ function renderArmory(root, actor) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = `arkflight-mount-slot ${weapon ? "is-occupied" : "is-empty"}`;
+      const weaponImg = weapon?.img ?? weapon?.data?.art?.img ?? "";
+      button.classList.toggle("has-weapon-art", Boolean(weaponImg));
       button.innerHTML = weapon
-        ? `<strong>${weapon.name}</strong><span>${String(weapon.data?.size ?? "small").toUpperCase()} · ${weapon.data?.damageProfile?.dice ?? "—"} ${weapon.data?.damageProfile?.type ?? ""}</span><em>FITTED</em>`
+        ? `${weaponImg ? `<img class="arkflight-mount-weapon-art" src="${weaponImg}" alt="${weapon.name}">` : ""}<strong>${weapon.name}</strong><span>${String(weapon.data?.size ?? "small").toUpperCase()} · ${weapon.data?.damageProfile?.dice ?? "—"} ${weapon.data?.damageProfile?.type ?? ""}</span><em>FITTED</em>`
         : `<strong>EMPTY MOUNT</strong><span>${String(mount.maxSize).toUpperCase()} maximum</span><em>AVAILABLE</em>`;
       button.addEventListener("click", () => selectMount(arc, index, mount.maxSize));
       slots.append(button);
