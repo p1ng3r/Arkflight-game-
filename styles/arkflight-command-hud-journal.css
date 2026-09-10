@@ -7,7 +7,7 @@
   border-radius: 6px;
   background: rgba(7, 24, 33, 0.72);
   color: #9dd8e8;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -97,7 +97,7 @@
 
 .arkflight-combat-reference .afcr-kicker {
   margin: 0 0 2px;
-  font-size: clamp(8px, 1.05vw, 11px);
+  font-size: clamp(10px, 1.2vw, 13px);
   line-height: 1;
   font-weight: 800;
   letter-spacing: .15em;
@@ -164,8 +164,8 @@
   background: rgba(250, 239, 211, .9);
   box-shadow: inset 0 1px rgba(255,255,255,.52);
   color: #4d341b;
-  font-size: 10px;
-  line-height: 1;
+  font-size: 11px;
+  line-height: 1.05;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -226,7 +226,7 @@
 
 .arkflight-combat-reference .afcr-chip.is-tag {
   min-height: 20px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   opacity: .88;
 }
@@ -261,8 +261,8 @@
   border: 0;
   border-bottom: 1px solid rgba(115, 77, 31, .23);
   color: #493017;
-  font-size: 15px;
-  line-height: 1.1;
+  font-size: 17px;
+  line-height: 1.15;
   font-weight: 800;
   letter-spacing: .035em;
 }
@@ -270,13 +270,13 @@
 .arkflight-combat-reference .afcr-section p {
   margin: 0;
   color: #3c2b19;
-  font-size: 12px;
-  line-height: 1.48;
+  font-size: 13.5px;
+  line-height: 1.56;
 }
 
 .arkflight-combat-reference .afcr-quick-text {
-  font-size: 14px !important;
-  line-height: 1.45 !important;
+  font-size: 15.5px !important;
+  line-height: 1.52 !important;
   font-weight: 700;
   color: #342311 !important;
 }
@@ -301,8 +301,8 @@
 .arkflight-combat-reference .afcr-meta-grid strong,
 .arkflight-combat-reference .afcr-threat-list strong {
   color: #735025;
-  font-size: 9px;
-  line-height: 1.1;
+  font-size: 10.5px;
+  line-height: 1.2;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -310,8 +310,8 @@
 .arkflight-combat-reference .afcr-meta-grid span,
 .arkflight-combat-reference .afcr-threat-list span {
   color: #342516;
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: 12.5px;
+  line-height: 1.38;
 }
 
 .arkflight-combat-reference .afcr-action-list,
@@ -341,13 +341,13 @@
 .arkflight-combat-reference .afcr-resource-card > strong {
   margin: 0;
   color: #402a14;
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 800;
 }
 
 .arkflight-combat-reference .afcr-action-card-head > span {
   color: #775a36;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -355,8 +355,8 @@
 .arkflight-combat-reference .afcr-action-card p,
 .arkflight-combat-reference .afcr-resource-card p {
   margin: 0;
-  font-size: 10.5px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .arkflight-combat-reference .afcr-progression {
@@ -377,7 +377,7 @@
 }
 
 .arkflight-combat-reference .afcr-progression strong {
-  font-size: 12px;
+  font-size: 13px;
   color: #705026;
 }
 
@@ -397,7 +397,8 @@
   margin: 10px 0 0;
   text-align: center;
   color: #755d41;
-  font-size: 9px;
+  font-size: 10px;
+  line-height: 1.25;
   opacity: .82;
 }
 
