@@ -60,7 +60,7 @@
               {{#each weapons}}
                 <article class="afcs-weapon-row {{#unless ready}}is-reloading{{/unless}} {{#unless legal}}is-illegal{{/unless}}">
                   <div class="afcs-weapon-text"><strong>{{name}}</strong><span>{{mountLabel}} {{mountIndex}} · {{damage}} · {{fireAP}} AP</span><small>{{solution}}</small></div>
-                  <div class="afcs-weapon-meta"><em>{{statusLabel}}</em>{{#if ready}}<button type="button" data-fire-weapon="{{key}}" {{#unless legal}}disabled{{/unless}}>Fire</button>{{else}}<button type="button" data-work-weapon="{{key}}">Work Guns</button>{{/if}}</div>
+                  <div class="afcs-weapon-meta"><em>{{statusLabel}}</em><button type="button" class="afcs-weapon-row-arc {{#if arcVisible}}is-active{{/if}}" data-toggle-weapon-arc="{{key}}" title="{{arcButtonLabel}} for {{name}}"><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>{{#if ready}}<button type="button" data-fire-weapon="{{key}}" {{#unless legal}}disabled{{/unless}}>Fire</button>{{else}}<button type="button" data-work-weapon="{{key}}">Work Guns</button>{{/if}}</div>
                 </article>
               {{/each}}
             </section>
