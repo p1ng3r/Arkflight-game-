@@ -360,6 +360,7 @@ function enhance(app, html) {
 }
 
 Hooks.on("renderActorSheet", enhance);
+Hooks.on("renderApplicationV2", enhance);
 
 window.addEventListener("resize", () => {
   for (const app of Object.values(ui?.windows ?? {})) {
