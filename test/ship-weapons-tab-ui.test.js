@@ -7,7 +7,7 @@ const css = readFileSync(new URL("../styles/ship-weapons-tab.css", import.meta.u
 const moduleJson = JSON.parse(readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 test("ship sheet weapon tab exposes targeting, arcs, attack and damage controls", () => {
-  assert.match(ui, /data\.arkflightWeaponsTab/);
+  assert.match(ui, /data-arkflight-weapons-tab/);
   assert.match(ui, /toggleFiringArcs\(combatant\)/);
   assert.match(ui, /api\.targetingSolution\(weaponState\.key, targetId, combatant\)/);
   assert.match(ui, /api\.fireAtTarget\(weaponState\.key, target\.id, combatant\)/);
