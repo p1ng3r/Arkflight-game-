@@ -263,7 +263,7 @@
   display: block;
 }
 
-.arkflight-sheet-tabs .arkflight-combat-stations-tab-button.is-combat-stations-active {
+.arkflight-sheet-tabs [data-tab="combat"].is-combat-stations-active {
   border-color: rgba(111, 198, 215, 0.8);
   color: #f0d69a;
   background: linear-gradient(180deg, rgba(44, 54, 42, 0.92), rgba(25, 31, 27, 0.95));
