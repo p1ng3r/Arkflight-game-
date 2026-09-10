@@ -1,7 +1,7 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { weaponArcCheck } from "../combat/weapon-targeting.js";
 import { deriveShip } from "../ship/derive-ship.js";
-import { firingArcsVisible, redrawFiringArcs, setFiringArcsVisible } from "./weapon-combat-station-ui.js";
+import { firingArcsVisible, firingArcWeaponVisible, redrawFiringArcs, setFiringArcsVisible, toggleWeaponFiringArc } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -478,6 +478,8 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
 
     for (const weapon of weapons) {
       weapon.selected = weapon.key === this.selectedWeaponKey;
+      weapon.arcVisible = Boolean(combatant && firingArcWeaponVisible(combatant, weapon.key));
+      weapon.arcButtonLabel = weapon.arcVisible ? "Hide Arc" : "Show Arc";
       if (targetCombatant) {
         try {
           const solution = api.targetingSolution(weapon.key, targetCombatant, combatant);
@@ -615,6 +617,16 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       toggleAllConsoleArcs(combatant);
       this.render({ force: true });
     });
+
+    for (const button of root.querySelectorAll("[data-toggle-weapon-arc]")) {
+      button.addEventListener("click", () => {
+        if (!combatant) return;
+        const weaponKey = button.dataset.toggleWeaponArc;
+        if (!weaponKey) return;
+        toggleWeaponFiringArc(combatant, weaponKey);
+        this.render({ force: true });
+      });
+    }
 
     root.querySelector("[data-fire-selected]")?.addEventListener("click", () => this.#fireSelected(combatant));
 
