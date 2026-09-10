@@ -61,52 +61,151 @@ function costLabel(action) {
   return parts.length ? parts.join(" + ") : "No fixed cost";
 }
 
+function chip(label, tone = "default") {
+  return `<span class="afcr-chip is-${escapeHtml(tone)}">${escapeHtml(label)}</span>`;
+}
+
+function actionChips(action) {
+  const cost = stationActionEconomy(action, 1);
+  const chips = [];
+  if (action.rules?.costSource === "weapon.fireAP") chips.push(chip("Weapon AP", "ap"));
+  else {
+    if (action.id === "captain-drive-the-crew") chips.push(chip("+1 AP", "gain"));
+    else if (cost.ap > 0) chips.push(chip(`${cost.ap} AP`, "ap"));
+    if (cost.rp > 0) chips.push(chip(`${cost.rp} RP`, "rp"));
+  }
+  if (cost.morale > 0) chips.push(chip(`-${cost.morale} Morale`, "morale"));
+  if (cost.supplies > 0) chips.push(chip(`-${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`, "supplies"));
+  if (cost.lifeveil > 0) chips.push(chip(`-${cost.lifeveil} Lifeveil`, "lifeveil"));
+  if (cost.strain > 0) chips.push(chip(`+${cost.strain} Strain`, "strain"));
+  chips.push(chip(labelize(action.timing), action.timing === "reaction" ? "reaction" : "timing"));
+  return chips.join("");
+}
+
+function section(title, body, kind = "") {
+  return `<section class="afcr-section ${kind ? `is-${escapeHtml(kind)}` : ""}"><h2>${escapeHtml(title)}</h2><div class="afcr-section-body">${body}</div></section>`;
+}
+
+function codexPage({ kicker = "Arkflight Combat Reference", title, subtitle = "", station = "fundamentals", chips = "", body = "" }) {
+  return `<article class="arkflight-combat-reference afcr-codex" data-station="${escapeHtml(station)}">
+    <div class="afcr-art-frame" aria-hidden="true"></div>
+    <header class="afcr-masthead">
+      <p class="afcr-kicker">${escapeHtml(kicker)}</p>
+      <h1>${escapeHtml(title)}</h1>
+      ${subtitle ? `<p class="afcr-subtitle">${escapeHtml(subtitle)}</p>` : ""}
+    </header>
+    <div class="afcr-content">
+      ${chips ? `<div class="afcr-chip-row">${chips}</div>` : ""}
+      ${body}
+    </div>
+  </article>`;
+}
+
 function actionPageHtml(action) {
   const rules = action.rules ?? {};
-  const trigger = rules.trigger ? labelize(rules.trigger) : "—";
-  const expires = rules.expires ? labelize(rules.expires) : "—";
-  const tags = Array.isArray(action.tags) ? action.tags.map(labelize).join(", ") : "";
-  return `<article class="arkflight-combat-reference">
-    <p><strong>${escapeHtml(labelize(action.station))} Station Action</strong></p>
-    <h1>${escapeHtml(action.name)}</h1>
-    <p><strong>Cost / Pressure:</strong> ${escapeHtml(costLabel(action))}</p>
-    <dl>
-      <dt><strong>Timing</strong></dt><dd>${escapeHtml(labelize(action.timing))}</dd>
-      <dt><strong>Category</strong></dt><dd>${escapeHtml(labelize(action.category))}</dd>
-      <dt><strong>Trigger</strong></dt><dd>${escapeHtml(trigger)}</dd>
-      <dt><strong>Duration / Expiry</strong></dt><dd>${escapeHtml(expires)}</dd>
-    </dl>
-    <h2>Full Rules</h2>
-    <p>${escapeHtml(stationActionRulesText(action))}</p>
-    ${tags ? `<h3>Rules Tags</h3><p>${escapeHtml(tags)}</p>` : ""}
-    <hr>
-    <p><small>Arkflight Action ID: <code>${escapeHtml(action.id)}</code></small></p>
-  </article>`;
+  const trigger = rules.trigger ? labelize(rules.trigger) : "None";
+  const expires = rules.expires ? labelize(rules.expires) : "Immediate";
+  const tags = Array.isArray(action.tags) ? action.tags.map(labelize) : [];
+  const quick = `<p class="afcr-quick-text">${escapeHtml(action.summary ?? stationActionRulesText(action))}</p>`;
+  const meta = `<div class="afcr-meta-grid">
+    <div><strong>Cost / Pressure</strong><span>${escapeHtml(costLabel(action))}</span></div>
+    <div><strong>Timing</strong><span>${escapeHtml(labelize(action.timing))}</span></div>
+    <div><strong>Trigger</strong><span>${escapeHtml(trigger)}</span></div>
+    <div><strong>Duration / Expiry</strong><span>${escapeHtml(expires)}</span></div>
+    <div><strong>Category</strong><span>${escapeHtml(labelize(action.category))}</span></div>
+    <div><strong>Station Bonus</strong><span>Use only where the rule explicitly says Station Bonus.</span></div>
+  </div>`;
+  const tagBody = tags.length ? `<div class="afcr-tag-row">${tags.map((tag) => chip(tag, "tag")).join("")}</div>` : "";
+
+  return codexPage({
+    title: action.name,
+    subtitle: `${labelize(action.station)} Station Action`,
+    station: action.station,
+    chips: actionChips(action),
+    body: [
+      section("Quick Effect", quick, "callout"),
+      section("At a Glance", meta, "meta"),
+      section("Full Rules", `<p>${escapeHtml(stationActionRulesText(action))}</p>`, "rules"),
+      tagBody ? section("Rules Tags", tagBody, "tags") : "",
+      `<p class="afcr-source-id">Arkflight Action ID: <code>${escapeHtml(action.id)}</code></p>`
+    ].join("")
+  });
+}
+
+function fundamentalsStationBonusHtml() {
+  return codexPage({
+    kicker: "Arkflight Combat Fundamentals",
+    title: "Station Bonus",
+    subtitle: "Ship-level scaling for station actions",
+    station: "fundamentals",
+    chips: `${chip("Levels 1–9: +1", "station")}${chip("Levels 10–19: +2", "station")}${chip("Level 20: +3", "station")}`,
+    body: [
+      section("Definition", `<p class="afcr-quick-text">${escapeHtml(STATION_BONUS_DEFINITION)}</p>`, "callout"),
+      section("Progression", `<div class="afcr-progression"><div><strong>1–9</strong><span>+1</span></div><div><strong>10–19</strong><span>+2</span></div><div><strong>20</strong><span>+3</span></div></div>`, "meta"),
+      section("Using Station Bonus", `<p>When an action says <strong>Station Bonus</strong>, substitute the current ship's value. If an action does not mention Station Bonus, do not add it. It is not a universal modifier to every check, attack, recovery amount, or ship statistic.</p>`, "rules")
+    ].join("")
+  });
+}
+
+function fundamentalsResourcesHtml(identities) {
+  const resourceCards = Object.entries(identities).map(([key, text]) => `<article class="afcr-resource-card is-${escapeHtml(key)}"><strong>${escapeHtml(key.toUpperCase())}</strong><p>${escapeHtml(text)}</p></article>`).join("");
+  return codexPage({
+    kicker: "Arkflight Combat Fundamentals",
+    title: "Combat Resources",
+    subtitle: "What each ship resource means during battle",
+    station: "fundamentals",
+    body: [
+      section("Resource Identities", `<div class="afcr-resource-grid">${resourceCards}</div>`, "resources"),
+      section("Combat Economy", `<p>Routine actions usually cost AP or RP only. Extraordinary speed, repairs, rushed gunnery, crew-pushing, and stronger wards can also spend Morale, Supplies, Lifeveil, or add Strain. Secondary costs are part of the action and must be available when the action is used.</p>`, "callout")
+    ].join("")
+  });
+}
+
+function fundamentalsStrainHtml() {
+  const areas = [
+    ["Drive the Crew", "Morale"],
+    ["Overcharge Arkengine", "Arkengine"],
+    ["Redistribute Power", "Arkengine"],
+    ["Hard Turn", "Rigging"],
+    ["Evasive Maneuver", "Rigging"]
+  ];
+  return codexPage({
+    kicker: "Arkflight Combat Fundamentals",
+    title: "Strain Limit",
+    subtitle: "Push the ship hard enough and something gives",
+    station: "fundamentals",
+    chips: `${chip("Stable", "safe")}${chip("Stressed", "warning")}${chip("Damaged", "warning")}${chip("Critical", "danger")}${chip("Disabled", "danger")}`,
+    body: [
+      section("Threshold Rule", `<p class="afcr-quick-text">${escapeHtml(STRAIN_THRESHOLD_DEFINITION)}</p>`, "callout"),
+      section("Threatened Areas", `<div class="afcr-threat-list">${areas.map(([action, area]) => `<div><strong>${escapeHtml(action)}</strong><span>${escapeHtml(area)}</span></div>`).join("")}</div>`, "meta"),
+      section("When the Limit Is Crossed", `<p>The threatened Area degrades one step: <strong>Stable → Stressed → Damaged → Critical → Disabled</strong>. One Strain Limit is then subtracted from current Strain and overflow remains. A single station action can degrade at most one Area from its Strain crossing. If the threatened Area is already Disabled, it cannot degrade further, but the threshold is still consumed.</p>`, "rules")
+    ].join("")
+  });
 }
 
 function fundamentalsJournal() {
   const identities = stationResourceIdentity();
   const format = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
-  const source = { stationBonus: STATION_BONUS_DEFINITION, strain: STRAIN_THRESHOLD_DEFINITION, resources: identities };
+  const source = { stationBonus: STATION_BONUS_DEFINITION, strain: STRAIN_THRESHOLD_DEFINITION, resources: identities, style: "arkflight-codex-v2" };
   return {
     name: "Arkflight Combat — Fundamentals",
     pages: [
       {
         name: "Station Bonus",
         type: "text",
-        text: { format, content: `<article class="arkflight-combat-reference"><p><strong>ARKFLIGHT COMBAT FUNDAMENTALS</strong></p><h1>Station Bonus</h1><p>${escapeHtml(STATION_BONUS_DEFINITION)}</p><h2>Progression</h2><ul><li><strong>Ship levels 1–9:</strong> +1</li><li><strong>Ship levels 10–19:</strong> +2</li><li><strong>Ship level 20:</strong> +3</li></ul><p>When an action says “Station Bonus,” substitute the current ship's value. If an action does not mention Station Bonus, do not add it.</p></article>` },
+        text: { format, content: fundamentalsStationBonusHtml() },
         flags: { [FLAG_SCOPE]: { combatFundamental: "station-bonus" } }
       },
       {
         name: "Combat Resources",
         type: "text",
-        text: { format, content: `<article class="arkflight-combat-reference"><p><strong>ARKFLIGHT COMBAT FUNDAMENTALS</strong></p><h1>Combat Resources</h1><dl>${Object.entries(identities).map(([key, text]) => `<dt><strong>${escapeHtml(key.toUpperCase())}</strong></dt><dd>${escapeHtml(text)}</dd>`).join("")}</dl><h2>Design Rule</h2><p>Routine actions usually cost AP or RP only. Extraordinary speed, repairs, rushed gunnery, crew-pushing, and stronger wards can also spend Morale, Supplies, Lifeveil, or add Strain.</p></article>` },
+        text: { format, content: fundamentalsResourcesHtml(identities) },
         flags: { [FLAG_SCOPE]: { combatFundamental: "resources" } }
       },
       {
         name: "Strain Limit",
         type: "text",
-        text: { format, content: `<article class="arkflight-combat-reference"><p><strong>ARKFLIGHT COMBAT FUNDAMENTALS</strong></p><h1>Strain Limit</h1><p>${escapeHtml(STRAIN_THRESHOLD_DEFINITION)}</p><h2>Threatened Areas</h2><ul><li><strong>Drive the Crew:</strong> Morale</li><li><strong>Overcharge Arkengine:</strong> Arkengine</li><li><strong>Redistribute Power:</strong> Arkengine</li><li><strong>Hard Turn:</strong> Rigging</li><li><strong>Evasive Maneuver:</strong> Rigging</li></ul><p>If the threatened area is already Disabled, it cannot degrade further, but the Strain threshold is still consumed and overflow remains.</p></article>` },
+        text: { format, content: fundamentalsStrainHtml() },
         flags: { [FLAG_SCOPE]: { combatFundamental: "strain-limit" } }
       }
     ],
@@ -115,21 +214,28 @@ function fundamentalsJournal() {
 }
 
 function stationOverviewHtml(station, actions) {
-  return `<article class="arkflight-combat-reference">
-    <p><strong>ARKFLIGHT COMBAT REFERENCE</strong></p>
-    <h1>${escapeHtml(labelize(station))} Station</h1>
-    <p>This journal is the full rules reference for the ${escapeHtml(labelize(station))} station. During combat, the Command HUD resolves level-scaled values for the current ship.</p>
-    <h2>Station Bonus</h2>
-    <p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>
-    <h2>Station Actions</h2>
-    <ul>${actions.map((action) => `<li><strong>${escapeHtml(action.name)}</strong> — ${escapeHtml(costLabel(action))}. ${escapeHtml(stationActionRulesText(action))}</li>`).join("")}</ul>
-  </article>`;
+  const cards = actions.map((action) => `<article class="afcr-action-card">
+    <div class="afcr-action-card-head"><h3>${escapeHtml(action.name)}</h3><span>${escapeHtml(labelize(action.timing))}</span></div>
+    <p>${escapeHtml(action.summary ?? stationActionRulesText(action))}</p>
+    <div class="afcr-chip-row is-compact">${actionChips(action)}</div>
+  </article>`).join("");
+
+  return codexPage({
+    title: `${labelize(station)} Station`,
+    subtitle: "Combat actions, duties, and tactical reference",
+    station,
+    body: [
+      section("Station Role", `<p>This journal is the full rules reference for the <strong>${escapeHtml(labelize(station))}</strong> station. During combat, the Command HUD resolves the ship's current level-scaled values; use these pages for the complete authored rules.</p>`, "callout"),
+      section("Station Bonus", `<p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>`, "rules"),
+      section("Station Actions", `<div class="afcr-action-list">${cards}</div>`, "actions")
+    ].join("")
+  });
 }
 
 function stationJournal(station) {
   const actions = Object.values(COMBAT_ACTIONS).filter((action) => action.station === station);
   const format = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
-  const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText) };
+  const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText), style: "arkflight-codex-v2" };
   const sourceHash = stableHash(source);
   return {
     name: `Arkflight Combat — ${labelize(station)}`,
