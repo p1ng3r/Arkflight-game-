@@ -78,6 +78,9 @@ test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and toke
 test("Command HUD End Turn advances Foundry initiative and follows the active Arkflight ship", () => {
   assert.match(template, /data-end-turn/);
   assert.match(commandHud, /combat\.nextTurn\(\)/);
+  assert.match(commandHud, /waitForCombatAdvance/);
+  assert.match(commandHud, /nextTurnCoordinates/);
+  assert.match(commandHud, /combat\.update\(\{ round: fallback\.round, turn: fallback\.turn \}\)/);
   assert.match(commandHud, /stopImmediatePropagation/);
   assert.match(commandHud, /app\.setReference\?\.\(next\.actor\)/);
   assert.match(commandHud, /arkflightCombatTurnChanged/);
