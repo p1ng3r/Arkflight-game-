@@ -320,7 +320,7 @@ async function executeAuthoritative(base, actionId, options = {}, reference = nu
     return fire(options.weaponKey, options.targetId, combatant);
   }
   if (resolver === "workTheGuns") {
-    if (!options.weaponKey) throw new Error("Work the Guns requires an installed weapon.");
+    if (!options.weaponKey) throw new Error("Reload requires an installed weapon.");
     const result = await base.workTheGuns(options.weaponKey, combatant);
     const state = base.state(combatant);
     const notes = await updatePersistentShipForAction(combatant.actor, action, options, state, state);
