@@ -28,7 +28,7 @@
 
   <nav class="arkflight-sheet-tabs" aria-label="Arkflight ship sheet sections">
     <button type="button" data-tab="overview" class="{{#if arkflight.tab.overview}}is-active{{/if}}"><i class="fa-solid fa-gauge-high"></i> Overview</button>
-    <button type="button" data-hold-tab><i class="fa-solid fa-box-open"></i> Hold</button>
+    <button type="button" data-tab="hold" data-hold-tab class="{{#if arkflight.tab.hold}}is-active{{/if}}"><i class="fa-solid fa-box-open"></i> Hold</button>
     <button type="button" data-open-combat><i class="fa-solid fa-crosshairs"></i> Combat</button>
     <button type="button" data-open-shipwright><i class="fa-solid fa-hammer"></i> Shipwright</button>
   </nav>
@@ -36,6 +36,10 @@
   {{#unless arkflight.validation.ok}}
     <section class="arkflight-readiness-banner"><strong><i class="fa-solid fa-triangle-exclamation"></i> {{arkflight.validation.label}}</strong><div>{{#each arkflight.validation.errors as |error|}}<span>{{error}}</span>{{/each}}</div></section>
   {{/unless}}
+
+  {{#if arkflight.tab.hold}}
+    <main class="arkflight-hold-log-host" data-hold-log-host></main>
+  {{/if}}
 
   {{#if arkflight.tab.overview}}
     <section class="arkflight-resource-strip">{{#each arkflight.resources as |resource|}}<div class="arkflight-resource-card"><div class="arkflight-resource-label"><i class="fa-solid {{resource.icon}}"></i> {{resource.label}}</div><div class="arkflight-resource-values">{{#if ../arkflight.canOperate}}<input type="number" min="0" max="{{resource.max}}" value="{{resource.value}}" data-resource="{{resource.key}}">{{else}}<strong>{{resource.value}}</strong>{{/if}}<span>/</span><strong>{{resource.max}}</strong></div></div>{{/each}}</section>
