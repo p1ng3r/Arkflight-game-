@@ -575,3 +575,9 @@
   z-index: 20;
   filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
 }
+
+
+.arkflight-bay-center:has(.arkflight-bay-socket:hover),
+.arkflight-bay-schematic:has(.arkflight-bay-socket:hover) {
+  overflow: visible;
+}
