@@ -186,7 +186,7 @@ function fundamentalsStrainHtml() {
 function fundamentalsJournal() {
   const identities = stationResourceIdentity();
   const format = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
-  const source = { stationBonus: STATION_BONUS_DEFINITION, strain: STRAIN_THRESHOLD_DEFINITION, resources: identities, style: "arkflight-codex-v2" };
+  const source = { stationBonus: STATION_BONUS_DEFINITION, strain: STRAIN_THRESHOLD_DEFINITION, resources: identities, style: "arkflight-codex-v3" };
   return {
     name: "Arkflight Combat — Fundamentals",
     pages: [
@@ -235,7 +235,7 @@ function stationOverviewHtml(station, actions) {
 function stationJournal(station) {
   const actions = Object.values(COMBAT_ACTIONS).filter((action) => action.station === station);
   const format = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
-  const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText), style: "arkflight-codex-v2" };
+  const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText), style: "arkflight-codex-v3" };
   const sourceHash = stableHash(source);
   return {
     name: `Arkflight Combat — ${labelize(station)}`,
