@@ -483,7 +483,7 @@ function repairShipwrightCapacity(app, root, actor) {
   }
 }
 
-Hooks.on("renderActorSheet", (app, html) => {
+function attachShipProgression(app, html) {
   const actor = app?.actor ?? app?.document;
   if (!isShip(actor)) return;
   const root = sheetElement(html);
@@ -499,7 +499,10 @@ Hooks.on("renderActorSheet", (app, html) => {
   button.innerHTML = '<i class="fa-solid fa-star"></i> SHIP LEVEL UP';
   button.addEventListener("click", (event) => { event.preventDefault(); openShipProgression(actor); });
   header.append(button);
-});
+}
+
+Hooks.on("renderActorSheet", attachShipProgression);
+Hooks.on("renderApplicationV2", attachShipProgression);
 
 Hooks.once("ready", () => {
   game.arkflight ??= {};
