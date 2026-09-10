@@ -23,13 +23,16 @@ test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated Ap
   assert.doesNotMatch(appSource, /static get defaultOptions/);
 });
 
-test("Hold navigation is a native ApplicationV2 vessel-sheet tab", () => {
+test("Hold navigation renders the legacy Hold page directly through ApplicationV2 context", () => {
   assert.match(template, /data-tab="hold"/);
   assert.match(template, /data-hold-log-host/);
-  assert.match(appSource, /activeTab === "hold"/);
-  assert.match(appSource, /openArkflightHold\(this\.actor, html\)/);
-  assert.match(holdSource, /nativeHost/);
-  assert.match(holdSource, /nativeHost\.append\(shell\)/);
+  assert.match(template, /\{\{\{arkflight\.holdHtml\}\}\}/);
+  assert.match(appSource, /buildArkflightHoldHtml/);
+  assert.match(appSource, /holdHtml: this\.activeTab === "hold"/);
+  assert.match(appSource, /bindArkflightHoldControls\(this\.actor, html\)/);
+  assert.match(holdSource, /export function buildArkflightHoldHtml/);
+  assert.match(holdSource, /Cargo & Vessel Stores/);
+  assert.match(holdSource, /export function bindArkflightHoldControls/);
 });
 
 test("Combat navigation is a native ApplicationV2 vessel-sheet tab", () => {
