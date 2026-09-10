@@ -1,6 +1,7 @@
 import { component, COMPONENT_TYPES } from "../ship/component-rules.js";
 import { defaultRefitCosts, refitSpec } from "../ship/refit-rules.js";
 import { shipModRarityRule } from "../ship/ship-mod-rarity.js";
+import { withWeaponArt } from "./weapon-art.js";
 
 // Alpha combat values: this core catalog is intentionally compact. Ammunition
 // and special load types are a separate future layer rather than duplicate guns.
@@ -287,7 +288,7 @@ export const WEAPONS = Object.freeze(Object.fromEntries(Object.entries(D).map(([
   const refitTier = Math.max(1, Math.trunc(Number(entry.tier) || 1));
   const rarity = RARITY_BY_REFIT_TIER[refitTier] ?? "standard";
   const rarityRule = shipModRarityRule(rarity);
-  return [id, component({
+  return [id, withWeaponArt(component({
     id,
     name: entry.name,
     type: COMPONENT_TYPES.WEAPON,
@@ -316,5 +317,5 @@ export const WEAPONS = Object.freeze(Object.fromEntries(Object.entries(D).map(([
       cargo: entry.cargo,
       refit: refitFor(entry)
     }
-  })];
+  }))];
 })));
