@@ -28,9 +28,12 @@ test("weapon station supports target lock and Foundry canvas targeting", () => {
   assert.match(source, /targetingSolution/);
 });
 
-test("weapon fire control explicitly resolves and applies target damage", () => {
+test("weapon fire control routes through player-authorized station relay and authoritative damage", () => {
   assert.match(source, /Fire &amp; Apply Damage/);
-  assert.match(source, /fireAtTarget/);
+  assert.match(source, /stationAction\("battlewatch-fire-weapon"/);
+  assert.match(source, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
+  assert.doesNotMatch(source, /api\.fireAtTarget\(weaponState\.key, target\.id, combatant\)/);
+  assert.match(combatApi, /async function fireAtTarget/);
   assert.match(combatApi, /applyHardnessToDamage/);
   assert.match(combatApi, /ship\.resources\.hull\.value/);
   assert.match(combatApi, /target\.actor\.update/);
