@@ -9,6 +9,7 @@ import { SHIP_CATALOGS } from "../src/content/index.js";
 const template = readFileSync(new URL("../templates/ship/ship-sheet.hbs", import.meta.url), "utf8");
 const appSource = readFileSync(new URL("../src/ui/ship-sheet-app.js", import.meta.url), "utf8");
 const holdSource = readFileSync(new URL("../src/ui/hold-log-ux.js", import.meta.url), "utf8");
+const combatSource = readFileSync(new URL("../src/ui/combat-station-actions-ui.js", import.meta.url), "utf8");
 
 test("Arkflight vessel sheet uses Foundry ApplicationV2 instead of deprecated ApplicationV1", () => {
   assert.match(appSource, /HandlebarsApplicationMixin\(ActorSheetV2\)/);
@@ -36,7 +37,12 @@ test("Combat navigation is a native ApplicationV2 vessel-sheet tab", () => {
   assert.match(template, /data-combat-stations-host/);
   assert.match(appSource, /activeTab === "combat"/);
   assert.match(appSource, /renderArkflightCombatStations\(this, html, this\.actor\)/);
+  assert.match(combatSource, /export function renderArkflightCombatStations/);
+  assert.match(combatSource, /data-combat-stations-host/);
+  assert.match(combatSource, /nativeHost\.append\(shell\)/);
   assert.doesNotMatch(appSource, /\[data-open-combat\]/);
+  assert.doesNotMatch(combatSource, /attachCombatTab/);
+  assert.doesNotMatch(combatSource, /Hooks\.on\("renderActorSheet"/);
 });
 
 test("live ship sheet exposes native Overview Hold Combat plus Shipwright navigation", () => {
