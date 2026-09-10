@@ -2,7 +2,7 @@
   <aside class="arkflight-gm-rail" aria-label="Arkflight GM Operations navigation">
     <div class="arkflight-gm-brand"><i class="fa-solid fa-screwdriver-wrench"></i><span>GM Operations</span></div>
     <nav class="arkflight-gm-nav">
-      {{#each sections}}<button type="button" class="arkflight-gm-nav-button {{#if active}}active{{/if}}" data-gm-section="{{id}}"><i class="{{icon}}"></i><span>{{label}}</span>{{#if status}}<span class="arkflight-gm-nav-status" title="Active operation"></span>{{/if}}</button>{{/each}}
+      {{#each sections}}<button type="button" class="arkflight-gm-nav-button {{#if active}}active{{/if}}" data-gm-section="{{id}}">{{#if iconImg}}<img class="arkflight-gm-nav-emblem" src="{{iconImg}}" alt="">{{else}}<i class="{{icon}}"></i>{{/if}}<span>{{label}}</span>{{#if status}}<span class="arkflight-gm-nav-status" title="Active operation"></span>{{/if}}</button>{{/each}}
     </nav>
   </aside>
 
