@@ -31,24 +31,28 @@ test("Hold navigation is a native ApplicationV2 vessel-sheet tab", () => {
   assert.match(holdSource, /\(nativeHost \?\? root\)\.append\(shell\)/);
 });
 
-test("live ship sheet restores operational Overview Hold Combat and Shipwright navigation", () => {
+test("Combat navigation is a native ApplicationV2 vessel-sheet tab", () => {
+  assert.match(template, /data-tab="combat"/);
+  assert.match(template, /data-combat-stations-host/);
+  assert.match(appSource, /activeTab === "combat"/);
+  assert.match(appSource, /renderArkflightCombatStations\(this, html, this\.actor\)/);
+  assert.doesNotMatch(appSource, /\[data-open-combat\]/);
+});
+
+test("live ship sheet exposes native Overview Hold Combat plus Shipwright navigation", () => {
   assert.match(template, /data-tab="overview"/);
-  assert.match(template, /data-hold-tab/);
-  assert.match(template, /data-open-combat/);
+  assert.match(template, /data-tab="hold"/);
+  assert.match(template, /data-tab="combat"/);
   assert.match(template, /data-open-shipwright/);
   assert.doesNotMatch(template, /data-tab="fittings"/);
   assert.doesNotMatch(template, /data-tab="refit"/);
-  assert.match(appSource, /openCombatConsole/);
+  assert.doesNotMatch(template, /data-open-combat/);
+  assert.match(appSource, /renderArkflightCombatStations/);
   assert.match(appSource, /openShipwrightWorkspace/);
 });
 
 test("live ship sheet never presents Watchmaster to players", () => {
   assert.doesNotMatch(template, /Watchmaster/); assert.doesNotMatch(appSource, /Watchmaster/); assert.match(template, /Ship Areas/); assert.match(template, /Stations &amp; Crew/);
-});
-
-test("Fittings uses installed views and Compendium entry points instead of full catalog grids", () => {
-  assert.match(template, /Installed Hardware/i); assert.match(template, /data-compendium-pack/); assert.match(template, /arkflight\.view\.fittings\.shipMods/); assert.match(template, /arkflight\.view\.fittings\.arkengineMods/);
-  assert.doesNotMatch(template, /arkflight\.commissioning\.shipMods/); assert.doesNotMatch(template, /arkflight\.commissioning\.arkengineMods/);
 });
 
 test("structured operational stats are human-readable", () => {
@@ -90,14 +94,4 @@ test("Refit summary counts only active work orders while retaining completed his
   assert.equal(refit.history.length, 1);
 });
 
-test("new Refit tab exposes build install remove and start controls", () => {
-  assert.match(template, /data-refit-build/); assert.match(template, /data-refit-install/); assert.match(template, /data-refit-remove/); assert.match(template, /data-refit-start/);
-  assert.match(appSource, /arkflightRefitInstallRequested/);
-});
 
-
-test("Refit blueprint cards use dedicated category blueprint artwork", () => {
-  assert.match(template, /arkflight-blueprint-card/);
-  assert.match(template, /item\.blueprintImg/);
-  assert.match(appSource, /Arkflight Vessel/);
-});
