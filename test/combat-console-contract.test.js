@@ -107,7 +107,7 @@ test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and toke
   assert.match(source, /Open Arkflight Combat Strip/);
 });
 
-test("Command HUD can undo turn movement and facing without refunding AP", () => {
+test("Command HUD can undo turn movement and facing and refund only Helm-purchase AP", () => {
   assert.match(combatApi, /TURN_START_SNAPSHOTS/);
   assert.match(combatApi, /movementUndoStatus/);
   assert.match(combatApi, /undoMove/);
@@ -115,6 +115,10 @@ test("Command HUD can undo turn movement and facing without refunding AP", () =>
   assert.match(combatApi, /resetTurnPosition/);
   assert.match(combatApi, /movementUsed/);
   assert.match(combatApi, /maneuverUsed/);
+  assert.match(combatApi, /movementPurchases/);
+  assert.match(combatApi, /maneuverPurchases/);
+  assert.match(combatApi, /const apRefund = moveRefund \+ facingRefund/);
+  assert.match(combatApi, /value: Math\.min\(apMax, apValue \+ apRefund\)/);
   assert.match(template, /data-undo-move/);
   assert.match(template, /data-undo-facing/);
   assert.match(template, /data-reset-turn-position/);
