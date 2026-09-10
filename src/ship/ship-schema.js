@@ -75,9 +75,13 @@ function migrateStations(stations = {}) {
 function normalizeProgression(progression = {}) {
   const level = Math.max(1, Math.min(20, Math.trunc(Number(progression.level) || 1)));
   const xp = Math.max(0, Math.trunc(Number(progression.xp) || 0));
+  const specializationId = typeof progression.specializationId === "string" && progression.specializationId.trim()
+    ? progression.specializationId.trim()
+    : null;
   return {
     level,
     xp: level >= 20 ? Math.min(1000, xp) : Math.min(999, xp),
+    specializationId,
     talentIds: [...new Set(progression.talentIds ?? [])],
     arkcraftUpgrades: { ...(progression.arkcraftUpgrades ?? {}) }
   };
@@ -194,7 +198,13 @@ function mergeShip(base, overrides) {
     },
     refit: { ...base.refit, ...(overrides.refit ?? {}), workOrders: [...(overrides.refit?.workOrders ?? base.refit.workOrders)] },
     areas: { ...base.areas, ...(overrides.areas ?? {}) },
-    progression: { ...base.progression, ...(overrides.progression ?? {}), talentIds: [...(overrides.progression?.talentIds ?? base.progression.talentIds)], arkcraftUpgrades: { ...base.progression.arkcraftUpgrades, ...(overrides.progression?.arkcraftUpgrades ?? {}) } },
+    progression: {
+      ...base.progression,
+      ...(overrides.progression ?? {}),
+      specializationId: overrides.progression?.specializationId ?? base.progression.specializationId ?? null,
+      talentIds: [...(overrides.progression?.talentIds ?? base.progression.talentIds)],
+      arkcraftUpgrades: { ...base.progression.arkcraftUpgrades, ...(overrides.progression?.arkcraftUpgrades ?? {}) }
+    },
     conditions: [...(overrides.conditions ?? base.conditions)]
   };
 }
