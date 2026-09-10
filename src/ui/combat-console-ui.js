@@ -562,7 +562,8 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       openStations: this.openPanel === "stations",
       openWeapons: this.openPanel === "weapons",
       openLog: this.openPanel === "log",
-      gm: Boolean(game.user?.isGM)
+      gm: Boolean(game.user?.isGM),
+      canEndTurn: Boolean(combatant && api?.canEndTurn?.(combatant))
     };
   }
 
@@ -585,8 +586,13 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     }
 
     root.querySelector("[data-end-turn]")?.addEventListener("click", async () => {
-      if (!game.user?.isGM || !game.combat) return;
-      try { await game.combat.nextTurn(); } catch (_error) { /* noop */ }
+      if (!combatant || typeof api?.endTurn !== "function") return;
+      try {
+        await api.endTurn(combatant);
+      } catch (error) {
+        console.error("Arkflight combat console end turn failed", error);
+        ui.notifications?.error?.(error?.message ?? "End Turn failed.");
+      }
     });
 
     const bindUndo = (selector, action, failureLabel) => {
