@@ -4,6 +4,7 @@ import { MASTERY_CATALOG } from "../content/base-mastery.js";
 import { CREW_EDGE_CARDS } from "../content/crew-edge-cards.js";
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
 import { auditModArt } from "../content/mod-art.js";
+import { chooseRefitAssetKind } from "../ui/refit-asset-choice.js";
 
 const FLAG_SCOPE = "arkflight";
 const FLAG_KEY = "compendiumSource";
@@ -376,6 +377,92 @@ function open(packKey) {
 }
 
 function auditArt() { return auditModArt(ACTIVE_SHIP_MODS, ARKENGINE_MODS); }
+
+
+function rootElement(app, html) {
+  const element = html instanceof HTMLElement ? html : html?.[0] ?? app?.element?.[0] ?? app?.element;
+  if (!(element instanceof HTMLElement)) return null;
+  return element.querySelector?.(".arkflight-ship-shell") ?? (element.matches?.(".arkflight-ship-shell") ? element : null);
+}
+
+function parseDragData(event) {
+  const transfer = event?.dataTransfer;
+  if (!transfer) return null;
+  for (const type of ["text/plain", "application/json"]) {
+    const raw = transfer.getData(type);
+    if (!raw) continue;
+    try { return JSON.parse(raw); } catch { /* try next */ }
+  }
+  return null;
+}
+
+function managedModDropFamily(data) {
+  const uuid = String(data?.uuid ?? "");
+  if (uuid.includes("world.arkflight-ship-mods")) return "shipMod";
+  if (uuid.includes("world.arkflight-arkengine-mods")) return "arkengineMod";
+  return null;
+}
+
+async function handleManagedModDrop(event, actor) {
+  const data = parseDragData(event);
+  const family = managedModDropFamily(data);
+  if (!family) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  event.stopImmediatePropagation?.();
+
+  if (!game.user?.isGM) {
+    ui.notifications?.warn?.("A GM must add Arkflight fittings or blueprints to a vessel.");
+    return;
+  }
+
+  try {
+    const item = await fromUuid(data.uuid);
+    const source = item?.flags?.[FLAG_SCOPE]?.[FLAG_KEY];
+    const expectedType = family === "shipMod" ? "shipMod" : "arkengineMod";
+    const componentId = source?.sourceId;
+    if (!componentId || item?.flags?.arkflight?.contentType !== expectedType) throw new Error("Dropped Item is not a managed Arkflight Mod.");
+
+    const catalog = family === "shipMod" ? ACTIVE_SHIP_MODS : ARKENGINE_MODS;
+    if (!catalog?.[componentId]) throw new Error("Dropped Arkflight Mod is not in the current catalog.");
+
+    const choice = await chooseRefitAssetKind({ name: item.name, family });
+    if (!choice) return;
+
+    const refit = game.arkflight?.refit;
+    const result = choice === "blueprint"
+      ? await refit?.learnBlueprint?.(actor, family, componentId)
+      : await refit?.acquireComponent?.(actor, family, componentId, 1);
+
+    if (!result?.ok) {
+      const reason = result?.reason ?? "unknown error";
+      const duplicate = reason === "blueprint-already-known";
+      ui.notifications?.warn?.(duplicate ? `${item.name} blueprint is already known.` : `${item.name} could not be added: ${reason}.`);
+      return;
+    }
+
+    ui.notifications?.info?.(choice === "blueprint"
+      ? `${item.name} blueprint learned.`
+      : `${item.name} added to the vessel as a physical fitting.`);
+    actor.sheet?.render?.({ force: true });
+  } catch (error) {
+    console.error("Arkflight | Managed Mod drop failed", error);
+    ui.notifications?.error?.(`Arkflight Mod drop failed: ${error.message}`);
+  }
+}
+
+function wireManagedModDrops(app, html) {
+  const actor = app?.actor ?? app?.document ?? app?.object;
+  if (actor?.type !== "vehicle" || !actor?.flags?.["arkflight-game"]?.ship) return;
+  const root = rootElement(app, html);
+  if (!root || root.dataset.arkflightManagedModDropBound === "true") return;
+  root.dataset.arkflightManagedModDropBound = "true";
+  root.addEventListener("drop", (event) => handleManagedModDrop(event, actor), true);
+}
+
+Hooks.on("renderActorSheet", wireManagedModDrops);
+Hooks.on("renderApplicationV2", wireManagedModDrops);
 
 Hooks.once("ready", async () => {
   game.arkflight ??= {};
