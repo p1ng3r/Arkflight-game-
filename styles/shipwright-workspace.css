@@ -822,3 +822,44 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
+
+
+/* Authoritative category-window scrolling: Ship Mods, Arkengine Mods, Weapons */
+.arkflight-workspace-board-layout {
+  max-height: calc(100vh - 235px);
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar,
+.arkflight-workspace-inventory-list::-webkit-scrollbar,
+.arkflight-workspace-work-list::-webkit-scrollbar,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar {
+  width: 12px;
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar-track,
+.arkflight-workspace-inventory-list::-webkit-scrollbar-track,
+.arkflight-workspace-work-list::-webkit-scrollbar-track,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar-track {
+  background: rgba(8, 11, 12, .85);
+  border-left: 1px solid rgba(105, 86, 50, .4);
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar-thumb,
+.arkflight-workspace-inventory-list::-webkit-scrollbar-thumb,
+.arkflight-workspace-work-list::-webkit-scrollbar-thumb,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(126, 104, 59, .95), rgba(69, 88, 92, .95));
+  border: 2px solid rgba(8, 11, 12, .9);
+  border-radius: 8px;
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar-thumb:hover,
+.arkflight-workspace-inventory-list::-webkit-scrollbar-thumb:hover,
+.arkflight-workspace-work-list::-webkit-scrollbar-thumb:hover,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(163, 132, 70, .98), rgba(83, 123, 132, .98));
+}
