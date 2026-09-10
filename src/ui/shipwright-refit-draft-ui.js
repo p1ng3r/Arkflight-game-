@@ -148,6 +148,7 @@ function renderSocketAssignments(root, draft) {
     delete socket.dataset.refitStagedId;
     socket.querySelector(".arkflight-refit-staged-label")?.remove();
     socket.querySelector(".arkflight-refit-staged-component")?.remove();
+    if (!socket.querySelector(".arkflight-bay-installed-component")) socket.classList.remove("has-component-art");
   }
 
   for (const assignment of draft.assignments) {
