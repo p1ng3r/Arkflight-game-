@@ -34,6 +34,7 @@
     "styles/ship-weapons-tab.css",
     "styles/combat-station-actions.css",
     "styles/arkflight-command-hud.css",
+    "styles/arkflight-command-hud-actions.css",
     "styles/shipwright-interaction.css",
     "styles/shipwright-bay.css",
     "styles/shipwright-arkengine-sockets.css",
