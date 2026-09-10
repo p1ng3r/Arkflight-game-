@@ -118,5 +118,6 @@ test("legacy vessel navigation injection stays retired", () => {
   assert.doesNotMatch(consolidationSource, /createElement\("button"\)/);
   assert.doesNotMatch(consolidationSource, /data\.openShipwright/);
   assert.doesNotMatch(consolidationSource, /append\(button\)/);
+  assert.doesNotMatch(consolidationSource, /Hooks\.on\("renderActorSheet"/);
   assert.match(consolidationSource, /polishNativeShipSheet/);
 });
