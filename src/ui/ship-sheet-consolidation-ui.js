@@ -76,5 +76,4 @@ function polishNativeShipSheet(app, html) {
   decorateHoldScrap(root);
 }
 
-Hooks.on("renderActorSheet", polishNativeShipSheet);
 Hooks.on("renderApplicationV2", polishNativeShipSheet);
