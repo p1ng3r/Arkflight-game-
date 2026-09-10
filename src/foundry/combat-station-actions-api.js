@@ -9,6 +9,8 @@ import {
   executeStationStateAction,
   getCoreCombatActionDefinitionsForStation,
   stationActionAvailability,
+  stationActionEconomy,
+  stationActionRulesText,
   stationEffectProfile
 } from "../combat/index.js";
 
@@ -61,6 +63,20 @@ function actionSelection(action, options = {}) {
   return options.selection ?? options.targetId ?? options.station ?? options.facing ?? options.system ?? options.choice ?? null;
 }
 
+function resourceValue(ship, key) {
+  return Math.max(0, Number(ship?.resources?.[key]?.value) || 0);
+}
+
+function persistentCostAvailability(actor, action) {
+  const ship = shipPayload(actor);
+  if (!ship) return Object.freeze({ ok: false, reason: "ship-required" });
+  const cost = stationActionEconomy(action, shipLevel(actor));
+  for (const key of ["morale", "supplies", "lifeveil"]) {
+    if (cost[key] > resourceValue(ship, key)) return Object.freeze({ ok: false, reason: `insufficient-${key}` });
+  }
+  return Object.freeze({ ok: true, reason: null });
+}
+
 async function updatePersistentShipForAction(actor, action, options, beforeState, afterState) {
   const ship = shipPayload(actor);
   if (!ship) return [];
@@ -68,7 +84,19 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   const notes = [];
   const resolver = action.rules?.resolver;
   const selection = actionSelection(action, options);
-  const profile = stationEffectProfile(shipLevel(actor));
+  const level = shipLevel(actor);
+  const profile = stationEffectProfile(level);
+  const cost = stationActionEconomy(action, level);
+
+  for (const key of ["morale", "supplies", "lifeveil"]) {
+    const amount = cost[key];
+    if (!amount) continue;
+    const current = resourceValue(ship, key);
+    if (current < amount) throw new Error(`${action.name} requires ${amount} ${key}.`);
+    const next = current - amount;
+    patches[`flags.${MODULE_ID}.ship.resources.${key}.value`] = next;
+    notes.push(`${key[0].toUpperCase()}${key.slice(1)} ${current} → ${next}`);
+  }
 
   if (Number(beforeState?.strain?.value ?? 0) !== Number(afterState?.strain?.value ?? 0)) {
     patches[`flags.${MODULE_ID}.ship.resources.strain.value`] = Number(afterState.strain.value);
@@ -82,14 +110,14 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
       patches[`flags.${MODULE_ID}.ship.areas.morale.state`] = nextArea;
       notes.push(`Morale area ${currentArea} → ${nextArea}`);
       if (profile.master) {
-        const current = Math.max(0, Number(ship.resources?.morale?.value) || 0);
+        const current = resourceValue(ship, "morale");
         const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
         const next = Math.min(max, current + profile.bonus);
         patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
         notes.push(`Morale ${current} → ${next}`);
       }
     } else {
-      const current = Math.max(0, Number(ship.resources?.morale?.value) || 0);
+      const current = resourceValue(ship, "morale");
       const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
       const next = Math.min(max, current + profile.bonus);
       patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
@@ -108,7 +136,7 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   }
 
   if (resolver === "mendLifeveil") {
-    const current = Math.max(0, Number(ship.resources?.lifeveil?.value) || 0);
+    const current = resourceValue(ship, "lifeveil");
     const max = Math.max(current, Number(ship.resources?.lifeveil?.max) || 0);
     const restore = 5 * profile.bonus;
     const next = Math.min(max, current + restore);
@@ -134,12 +162,17 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   return notes;
 }
 
-function actionCostLabel(action) {
+function actionCostLabel(action, actor) {
   if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
+  const cost = stationActionEconomy(action, shipLevel(actor));
   const parts = [];
-  if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
-  if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
-  if (Number(action.rules?.strain) > 0) parts.push(`+${action.rules.strain} Strain max`);
+  if (cost.ap > 0) parts.push(`${cost.ap} AP`);
+  if (cost.rp > 0) parts.push(`${cost.rp} RP`);
+  if (cost.morale > 0) parts.push(`${cost.morale} Morale`);
+  if (cost.supplies > 0) parts.push(`${cost.supplies} Supplies`);
+  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil} Lifeveil`);
+  if (cost.strain > 0) parts.push(`+${cost.strain} Strain`);
+  if (action.id === "captain-drive-the-crew") parts.unshift("Gain +1 AP");
   return parts.join(" · ") || "No cost";
 }
 
@@ -152,7 +185,7 @@ async function postActionChat({ actor, crewActor, action, selection, notes = [] 
   const profile = stationEffectProfile(shipLevel(actor));
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: crewActor ?? actor }),
-    content: `<div class="arkflight-chat-card arkflight-station-action-chat"><strong>${esc(actor.name)} — ${esc(action.name)}</strong><br><em>${esc(action.station)} ${action.timing}</em> · ${esc(actionCostLabel(action))} · Station Bonus +${profile.bonus}${selectionLine}${notesLine}<hr><p>${esc(action.description)}</p></div>`
+    content: `<div class="arkflight-chat-card arkflight-station-action-chat"><strong>${esc(actor.name)} — ${esc(action.name)}</strong><br><em>${esc(action.station)} ${action.timing}</em> · ${esc(actionCostLabel(action, actor))} · Station Bonus +${profile.bonus}${selectionLine}${notesLine}<hr><p>${esc(stationActionRulesText(action))}</p></div>`
   });
 }
 
@@ -165,7 +198,9 @@ function runtimeAvailability(base, actionId, reference = null) {
   if (action.timing === COMBAT_ACTION_TIMING.ACTION && game.combat?.combatant?.id !== combatant.id) {
     return Object.freeze({ ok: false, reason: "not-this-ships-turn" });
   }
-  return stationActionAvailability(base.state(combatant), action, { round: game.combat?.round ?? 1 });
+  const stateAvailability = stationActionAvailability(base.state(combatant), action, { round: game.combat?.round ?? 1, shipLevel: shipLevel(combatant.actor) });
+  if (!stateAvailability.ok) return stateAvailability;
+  return persistentCostAvailability(combatant.actor, action);
 }
 
 async function execute(base, actionId, options = {}, reference = null) {
@@ -179,6 +214,8 @@ async function execute(base, actionId, options = {}, reference = null) {
   if (action.timing === COMBAT_ACTION_TIMING.ACTION && game.combat?.combatant?.id !== combatant.id) {
     throw new Error(`${action.name} can be used only during ${combatant.name}'s combat turn.`);
   }
+  const costCheck = persistentCostAvailability(combatant.actor, action);
+  if (!costCheck.ok) throw new Error(`${action.name} is unavailable: ${costCheck.reason}.`);
 
   const resolver = action.rules?.resolver;
   if (resolver === "fireAtTarget") {
@@ -188,7 +225,11 @@ async function execute(base, actionId, options = {}, reference = null) {
   }
   if (resolver === "workTheGuns") {
     if (!options.weaponKey) throw new Error("Work the Guns requires an installed weapon.");
-    return base.workTheGuns(options.weaponKey, combatant);
+    const result = await base.workTheGuns(options.weaponKey, combatant);
+    const state = base.state(combatant);
+    const notes = await updatePersistentShipForAction(combatant.actor, action, options, state, state);
+    if (notes.length) await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes });
+    return result;
   }
 
   const before = base.state(combatant);
@@ -205,20 +246,17 @@ async function execute(base, actionId, options = {}, reference = null) {
 
   if (resolver === "issueOrder") notes.push("Applies only to the chosen station's next qualifying roll; fixed effects are not inflated.");
   if (resolver === "coordinateAssault") notes.push(`Target Hardness reduced by ${profile.bonus} for ${profile.advanced ? 2 : 1} qualifying attack${profile.advanced ? "s" : ""}.`);
-  if (resolver === "driveCrew") {
-    const strain = profile.legendary ? 0 : profile.master ? 1 : 2;
-    notes.push(`Net +1 AP this turn; ${strain} Strain.`);
-  }
+  if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 1 Morale; +${stationActionEconomy(action, level).strain} Strain.`);
   if (resolver === "ventStrain") notes.push(`Vents up to ${1 + profile.bonus} Strain.`);
   if (resolver === "hardTurn") notes.push(`+${Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus} maneuver allowance; pivot permitted.`);
-  if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${before?.mobility?.maneuverability ?? 0} maneuver allowance; +1 Strain.`);
-  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +1 maneuver allowance; no Strain.`);
-  if (resolver === "redistributePower" && selection === "weapons") notes.push(`Next ${profile.advanced ? 2 : 1} weapon attack${profile.advanced ? "s" : ""} gain +${profile.bonus} damage.`);
-  if (resolver === "redistributePower" && selection === "lifeveil") notes.push(`Next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} gain ${2 * profile.bonus} mitigation.`);
+  if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${before?.mobility?.maneuverability ?? 0} maneuver allowance; +2 Strain.`);
+  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +1 maneuver allowance; +1 Strain.`);
+  if (resolver === "redistributePower" && selection === "weapons") notes.push(`Next ${profile.advanced ? 2 : 1} weapon attack${profile.advanced ? "s" : ""} gain +${profile.bonus} damage; +1 Strain.`);
+  if (resolver === "redistributePower" && selection === "lifeveil") notes.push(`Next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} gain ${2 * profile.bonus} mitigation; +1 Strain.`);
   if (resolver === "setAttackVector") notes.push(`Selected facing gains ${15 * profile.bonus}° extra firing-arc tolerance while heading is unchanged.`);
-  if (resolver === "readyBroadside") notes.push(`Selected battery's next shot gains +${2 * profile.bonus} damage${profile.master ? " and reduces reload by 1" : ""}.`);
-  if (resolver === "reinforceLifeveil") notes.push(`Next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} reduce damage by ${2 * profile.bonus}.`);
-  if (resolver === "focusWard") notes.push(`Next ${profile.advanced ? 2 : 1} matching hit${profile.advanced ? "s" : ""} reduce damage by ${3 * profile.bonus}.`);
+  if (resolver === "readyBroadside") notes.push(`Spend 1 Supply; selected battery's next shot gains +${2 * profile.bonus} damage${profile.master ? " and reduces reload by 1" : ""}.`);
+  if (resolver === "reinforceLifeveil") notes.push(`Spend 5 Lifeveil; next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} reduce damage by ${2 * profile.bonus}.`);
+  if (resolver === "focusWard") notes.push(`Spend 10 Lifeveil; next ${profile.advanced ? 2 : 1} matching hit${profile.advanced ? "s" : ""} reduce damage by ${3 * profile.bonus}.`);
   if (action.timing === COMBAT_ACTION_TIMING.REACTION) notes.push("Reaction resolves against the current trigger and consumes shared RP.");
 
   await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes });
