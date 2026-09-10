@@ -15,7 +15,6 @@ function catalogName(catalog, id, fallback = "Not commissioned") { return id && 
 function resolveStationAssignment(value) { if (!value) return "Unassigned"; const actor = game.actors?.get(value) ?? game.actors?.find((entry) => entry.uuid === value); return actor?.name ?? String(value); }
 function resourceView(ship, key, label, icon, maxOverride = null) { const resource = ship.resources?.[key] ?? { value: 0, max: 0 }; const max = maxOverride == null ? statValue(resource.max) : statValue(maxOverride); return { key, label, icon, value: statValue(resource.value), max }; }
 function tabState(activeTab) { return Object.freeze({ overview: activeTab === "overview", hold: activeTab === "hold", combat: activeTab === "combat" }); }
-function fittingCapacity(label, used, max) { const u = statValue(used); const m = statValue(max); return Object.freeze({ label, used: u, max: m, over: u > m, overBy: Math.max(0, u - m), text: u > m ? `${u} installed / ${m} capacity — ${u - m} over` : `${u} / ${m}` }); }
 function validationPresentation(ship, validation) {
   if (validation.ok) return { statusClass: "is-ready", label: "VOYAGE READY" };
   const commissioned = Boolean(ship.hull?.chassisId && ship.arkengine?.chassisId);
@@ -49,8 +48,6 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
     const derived = validation.derived ?? deriveShip(ship, SHIP_CATALOGS);
     const sheetView = buildShipSheetView({ ship, derived, catalogs: SHIP_CATALOGS, resolveAssignment: resolveStationAssignment });
     const stats = derived.stats ?? {};
-    const engine = SHIP_CATALOGS.arkengines?.[ship.arkengine?.chassisId] ?? null;
-    const engineCapacity = Number(engine?.data?.modCapacity ?? 0) + Number(stats.arkengineModCapacity ?? 0);
     const readiness = validationPresentation(ship, validation);
     return {
       ...data,
@@ -71,11 +68,6 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
           resourceView(ship, "morale", "Morale", "fa-flag", stats.moraleCapacity)
         ],
         cargoUsed: statValue(ship.cargo?.used), cargoCapacity: statValue(stats.cargoCapacity),
-        fittingCapacity: {
-          rooms: fittingCapacity("Rooms", derived.usage?.rooms, stats.roomCapacity),
-          shipMods: fittingCapacity("Ship Mods", derived.usage?.shipMods, stats.shipModCapacity),
-          arkengineMods: fittingCapacity("Arkengine Mods", derived.usage?.arkengineMods, engineCapacity)
-        },
         view: sheetView, tags: [...(derived.tags ?? [])], capabilities: [...(derived.capabilities ?? [])], conditions: [...(ship.conditions ?? [])],
         validation: { ok: validation.ok, ...readiness, errors: [...validation.errors], warnings: [...validation.warnings] }
       }
