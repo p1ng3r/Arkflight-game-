@@ -1,9 +1,9 @@
 import { openArkflightHold } from "./hold-log-ux.js";
+import { renderArkflightCombatStations } from "./combat-station-actions-ui.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { createShip } from "../ship/ship-schema.js";
 import { validateShip } from "../ship/validate-ship.js";
-import { findAvailableRefitSocketAssignment, installedSocketLayout } from "../ship/refit-sockets.js";
 import { buildShipSheetView, SHIP_SHEET_TABS } from "./ship-sheet-view-model.js";
 
 const MODULE_ID = "arkflight-game";
@@ -14,25 +14,12 @@ function statValue(value) { return Number.isFinite(Number(value)) ? Number(value
 function catalogName(catalog, id, fallback = "Not commissioned") { return id && catalog?.[id]?.name ? catalog[id].name : fallback; }
 function resolveStationAssignment(value) { if (!value) return "Unassigned"; const actor = game.actors?.get(value) ?? game.actors?.find((entry) => entry.uuid === value); return actor?.name ?? String(value); }
 function resourceView(ship, key, label, icon, maxOverride = null) { const resource = ship.resources?.[key] ?? { value: 0, max: 0 }; const max = maxOverride == null ? statValue(resource.max) : statValue(maxOverride); return { key, label, icon, value: statValue(resource.value), max }; }
-function tabState(activeTab) { return Object.freeze({ overview: activeTab === "overview", hold: activeTab === "hold", fittings: activeTab === "fittings", refit: activeTab === "refit" }); }
+function tabState(activeTab) { return Object.freeze({ overview: activeTab === "overview", hold: activeTab === "hold", combat: activeTab === "combat" }); }
 function fittingCapacity(label, used, max) { const u = statValue(used); const m = statValue(max); return Object.freeze({ label, used: u, max: m, over: u > m, overBy: Math.max(0, u - m), text: u > m ? `${u} installed / ${m} capacity — ${u - m} over` : `${u} / ${m}` }); }
 function validationPresentation(ship, validation) {
   if (validation.ok) return { statusClass: "is-ready", label: "VOYAGE READY" };
   const commissioned = Boolean(ship.hull?.chassisId && ship.arkengine?.chassisId);
   return { statusClass: "is-incomplete", label: commissioned ? `REFIT ATTENTION · ${validation.errors.length}` : `COMMISSIONING REQUIRED · ${validation.errors.length}` };
-}
-function catalogForFamily(family) { return family === "arkengineMod" ? SHIP_CATALOGS.arkengineMods : family === "weapon" ? SHIP_CATALOGS.weapons : SHIP_CATALOGS.shipMods; }
-function firstFreeAssignment(ship, family, componentId) {
-  const result = findAvailableRefitSocketAssignment(ship, SHIP_CATALOGS, { family, componentId });
-  return result.ok ? { family, componentId, socketIndices: [...result.socketIndices] } : null;
-}
-async function startQueued(actor, queued, noun) {
-  if (!queued?.ok || !queued.job) { ui.notifications?.warn(`${noun} could not be queued: ${queued?.reason ?? "unknown error"}.`); return false; }
-  const started = await game.arkflight?.refit?.startWork?.(actor, queued.job.id);
-  if (!started?.ok) { ui.notifications?.warn(`${noun} was queued but could not start: ${started?.reason ?? "unknown error"}.`); return false; }
-  ui.notifications?.info(`${noun} started — ${started.job.remainingHours}h remaining.`);
-  actor.sheet?.render?.({ force: true });
-  return true;
 }
 
 export function isArkflightShip(actor) { if (actor?.type !== "vehicle") return false; return actor?.flags?.[MODULE_ID]?.isArkflightShip === true || Boolean(shipFlag(actor)); }
@@ -108,41 +95,13 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       await this.actor.update({ [`flags.${MODULE_ID}.ship.resources.${key}.value`]: value, [`flags.${MODULE_ID}.ship.resources.${key}.max`]: max });
     });
     for (const button of html.querySelectorAll("[data-compendium-pack]")) button.addEventListener("click", (event) => { event.preventDefault(); const packId = event.currentTarget.dataset.compendiumPack; const pack = game.packs?.get(packId); if (!pack) return ui.notifications?.warn(`Arkflight Compendium pack is not available yet: ${packId}`); pack.render(true); });
-    html.querySelector("[data-open-combat]")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      game.arkflight?.openCombatConsole?.(this.actor);
-    });
     html.querySelector("[data-open-shipwright]")?.addEventListener("click", (event) => {
       event.preventDefault();
       game.arkflight?.openShipwrightWorkspace?.(this.actor);
     });
 
     if (this.activeTab === "hold") openArkflightHold(this.actor, html);
-
-    for (const button of html.querySelectorAll("[data-refit-build]")) button.addEventListener("click", async (event) => {
-      event.preventDefault(); if (!(game.user.isGM || this.actor.isOwner)) return;
-      const family = event.currentTarget.dataset.family; const id = event.currentTarget.dataset.id; const method = event.currentTarget.dataset.method ?? "crew";
-      try { await startQueued(this.actor, await game.arkflight?.refit?.queueBuild?.(this.actor, family, id, { method }), `Build ${catalogForFamily(family)?.[id]?.name ?? id}`); } catch (error) { ui.notifications?.error(error.message); }
-    });
-    for (const button of html.querySelectorAll("[data-refit-install]")) button.addEventListener("click", async (event) => {
-      event.preventDefault(); if (!(game.user.isGM || this.actor.isOwner)) return;
-      const family = event.currentTarget.dataset.family; const id = event.currentTarget.dataset.id; const method = event.currentTarget.dataset.method ?? "crew"; const ship = shipFlag(this.actor);
-      const assignment = firstFreeAssignment(ship, family, id);
-      if (!assignment) return ui.notifications?.warn("No legal free sockets are available. Resolve over-capacity or remove a fitting first.");
-      const draft = { actorUuid: this.actor.uuid, assignments: [assignment] };
-      if (method === "crew") { Hooks.callAll("arkflightRefitInstallRequested", { actor: this.actor, draft, preview: null, method: "crew" }); return; }
-      try { await startQueued(this.actor, await game.arkflight?.refit?.beginInstallDraft?.(this.actor, draft, { method: "shipyard" }), `Install ${catalogForFamily(family)?.[id]?.name ?? id}`); } catch (error) { ui.notifications?.error(error.message); }
-    });
-    for (const button of html.querySelectorAll("[data-refit-remove]")) button.addEventListener("click", async (event) => {
-      event.preventDefault(); if (!(game.user.isGM || this.actor.isOwner)) return;
-      const family = event.currentTarget.dataset.family; const id = event.currentTarget.dataset.id; const layout = installedSocketLayout(shipFlag(this.actor), SHIP_CATALOGS, family); const placement = layout.placements.find((entry) => entry.componentId === id);
-      if (!placement) return ui.notifications?.warn("That fitting is not installed.");
-      try { const queued = await game.arkflight?.refit?.queueRemove?.(this.actor, family, id, { method: "crew", socketIndices: [...placement.socketIndices], sourceInstallJobId: placement.sourceJobId ?? "" }); await startQueued(this.actor, queued, `Remove ${catalogForFamily(family)?.[id]?.name ?? id}`); } catch (error) { ui.notifications?.error(error.message); }
-    });
-    for (const button of html.querySelectorAll("[data-refit-start]")) button.addEventListener("click", async (event) => {
-      event.preventDefault(); if (!(game.user.isGM || this.actor.isOwner)) return;
-      try { const result = await game.arkflight?.refit?.startWork?.(this.actor, event.currentTarget.dataset.refitStart); if (!result?.ok) ui.notifications?.warn(`Could not start work: ${result?.reason ?? "unknown error"}.`); else { ui.notifications?.info(`Work started — ${result.job.remainingHours}h remaining.`); this.render({ force: true }); } } catch (error) { ui.notifications?.error(error.message); }
-    });
+    if (this.activeTab === "combat") renderArkflightCombatStations(this, html, this.actor);
   }
 }
 
