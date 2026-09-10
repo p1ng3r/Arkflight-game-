@@ -50,10 +50,6 @@ Hooks.once("ready", () => {
     ...base,
     workTheGuns: scaledWorkTheGuns,
     stationAction(actionId, options = {}, reference = null) {
-      if (actionId === "battlewatch-reload-weapon") {
-        if (!options.weaponKey) throw new Error("Work the Guns requires an installed weapon.");
-        return scaledWorkTheGuns(options.weaponKey, reference);
-      }
       return originalStationAction(actionId, options, reference);
     }
   });
