@@ -1,0 +1,466 @@
+/* Arkflight Command HUD v1
+ * Single visual authority for the ship-combat canvas overlay.
+ * Deliberately avoids Foundry window geometry and keeps the canvas clickable
+ * everywhere outside the command deck itself.
+ */
+
+.arkflight-combat-console,
+.arkflight-combat-console.application,
+.arkflight-combat-console.window-app {
+  position: fixed !important;
+  left: 50% !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: 96px !important;
+  width: min(1420px, calc(100vw - 180px)) !important;
+  min-width: 1100px !important;
+  height: 124px !important;
+  min-height: 124px !important;
+  max-height: 124px !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  z-index: 100 !important;
+}
+
+.arkflight-combat-console .window-header,
+.arkflight-combat-console .window-resize-handle,
+.arkflight-combat-console [data-action="minimize"],
+.arkflight-combat-console [data-action="maximize"] {
+  display: none !important;
+}
+
+.arkflight-combat-console .window-content,
+.arkflight-combat-console .window-content > section,
+.arkflight-combat-console .window-content form,
+.arkflight-combat-console .afcs-shell {
+  position: relative !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 124px !important;
+  min-height: 124px !important;
+  max-height: 124px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+}
+
+.afcs-commandbar {
+  position: relative;
+  width: 100%;
+  height: 124px;
+  display: grid;
+  grid-template-columns: 238px minmax(0, 1fr) 270px 34px;
+  grid-template-rows: 42px 29px 35px;
+  grid-template-areas:
+    "ship status target close"
+    "vitals vitals vitals vitals"
+    "stations stations actions actions";
+  column-gap: 12px;
+  row-gap: 5px;
+  box-sizing: border-box;
+  padding: 7px 9px 7px 11px;
+  border: 1px solid rgba(82, 151, 178, .48);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(7, 20, 31, .985), rgba(3, 11, 18, .985)),
+    radial-gradient(circle at 18% 0%, rgba(40, 143, 180, .14), transparent 34%);
+  box-shadow:
+    0 13px 30px rgba(0, 0, 0, .48),
+    inset 0 0 0 1px rgba(179, 135, 50, .12);
+  color: #eaf6fb;
+  pointer-events: auto;
+}
+
+.afcs-commandbar.is-active-turn {
+  border-color: rgba(88, 190, 151, .72);
+  box-shadow:
+    0 13px 30px rgba(0, 0, 0, .48),
+    0 0 18px rgba(64, 184, 140, .12),
+    inset 0 0 0 1px rgba(179, 135, 50, .14);
+}
+
+.afch-ship {
+  grid-area: ship;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.afch-ship img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border: 1px solid rgba(83, 164, 195, .55);
+  border-radius: 9px;
+  background: rgba(5, 16, 24, .8);
+}
+
+.afch-ship strong,
+.afch-target strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  line-height: 1.05;
+  color: #f4dda0;
+}
+
+.afch-kicker,
+.afch-ship small,
+.afch-target small {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+  line-height: 1.1;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #73d6b5;
+}
+
+.afch-status {
+  grid-area: status;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 66px 118px 105px 135px 80px;
+  gap: 7px;
+  align-items: stretch;
+}
+
+.afch-stat {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 8px;
+  border: 1px solid rgba(77, 139, 164, .28);
+  border-radius: 8px;
+  background: rgba(8, 24, 35, .72);
+}
+
+.afch-stat label {
+  margin: 0 0 2px;
+  font-size: 7px;
+  line-height: 1;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #7eb5c9;
+}
+
+.afch-stat strong {
+  font-size: 13px;
+  line-height: 1;
+  color: #edf9ff;
+  white-space: nowrap;
+}
+
+.afch-stat.ap strong { color: #72d7f4; }
+.afch-stat.rp strong { color: #c4a2ff; }
+.afch-stat.strain strong { color: #ff9a8f; }
+
+.afch-target {
+  grid-area: target;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4px 9px;
+  border: 1px solid rgba(179, 136, 53, .35);
+  border-radius: 8px;
+  background: rgba(29, 20, 8, .35);
+}
+
+.afch-target .afch-kicker { color: #caac68; }
+.afch-target small { color: #9cc2d0; text-transform: none; letter-spacing: 0; }
+
+.afch-close {
+  grid-area: close;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  align-self: center;
+  justify-self: center;
+  padding: 0;
+  border: 1px solid rgba(107, 158, 177, .45);
+  border-radius: 50%;
+  background: rgba(4, 15, 23, .95);
+  color: #d6edf5;
+}
+
+.afch-vitals {
+  grid-area: vitals;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 1.25fr 1fr .85fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.afch-vital {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(55px, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.afch-vital label {
+  font-size: 8px;
+  line-height: 1;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: #8ab7c7;
+}
+
+.afch-vital strong {
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+  color: #eaf7fb;
+}
+
+.afch-meter {
+  position: relative;
+  height: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(91, 135, 151, .46);
+  border-radius: 999px;
+  background: rgba(2, 10, 15, .92);
+}
+
+.afch-meter > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  border-radius: inherit;
+}
+
+.afch-vital.hull .afch-meter > i { background: linear-gradient(90deg, #30985d, #78dba0); }
+.afch-vital.lifeveil .afch-meter > i { background: linear-gradient(90deg, #327fce, #82cdf8); }
+.afch-vital.morale .afch-meter > i { background: linear-gradient(90deg, #ad7620, #e7be5c); }
+.afch-vital.strain .afch-meter > i { background: linear-gradient(90deg, #a63d38, #f27970); }
+.afch-vital.supplies .afch-meter > i { background: linear-gradient(90deg, #65753c, #aabd68); }
+
+.afch-stations {
+  grid-area: stations;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.afch-actions {
+  grid-area: actions;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.afch-stations button,
+.afch-actions button,
+.afcs-drawer button,
+.afcs-drawer select {
+  min-width: 0;
+  min-height: 31px;
+  height: 31px;
+  padding: 0 8px;
+  border: 1px solid rgba(69, 137, 165, .45);
+  border-radius: 8px;
+  background: rgba(7, 23, 34, .95);
+  color: #dceff7;
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.afch-stations button:hover,
+.afch-actions button:hover,
+.afcs-drawer button:hover {
+  border-color: rgba(100, 200, 229, .72);
+  background: rgba(12, 38, 53, .98);
+}
+
+.afch-stations button.is-active,
+.afch-actions button.is-active {
+  border-color: rgba(100, 205, 178, .72);
+  box-shadow: inset 0 0 0 1px rgba(100, 205, 178, .12);
+  color: #89e0c3;
+}
+
+.afch-actions .is-end {
+  border-color: rgba(184, 135, 43, .75);
+  background: linear-gradient(180deg, rgba(127, 84, 13, .96), rgba(91, 57, 7, .96));
+  color: #fff1c6;
+}
+
+/* Upward drawers: deeper choices never make the command bar taller. */
+.afcs-drawer {
+  position: absolute;
+  left: 0;
+  bottom: 134px;
+  z-index: 40;
+  display: none;
+  width: min(560px, 46vw);
+  max-height: min(520px, calc(100vh - 300px));
+  overflow: hidden;
+  border: 1px solid rgba(73, 149, 178, .52);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(7, 20, 30, .99), rgba(3, 11, 17, .99));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .58);
+  color: #e8f4f8;
+  pointer-events: auto;
+}
+
+.afcs-drawer.is-open { display: block; }
+.afcs-drawer-weapons { left: auto; right: 0; width: min(650px, 52vw); }
+.afcs-drawer-log { left: auto; right: 0; width: min(440px, 38vw); }
+
+.afcs-drawer > header,
+.afcs-weapon-toolbar,
+.afcs-target-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.afcs-drawer > header {
+  justify-content: space-between;
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(78, 145, 170, .28);
+}
+
+.afcs-drawer > header span {
+  display: block;
+  font-size: 8px;
+  letter-spacing: .12em;
+  color: #79bfd7;
+}
+
+.afcs-drawer > header strong { display: block; margin-top: 2px; color: #f1d996; }
+.afcs-drawer > header button { width: 30px; padding: 0; }
+
+.afcs-station-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+}
+
+.afcs-station-tabs button {
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.afcs-station-tabs small { font-size: 7px; color: #87a9b5; }
+.afcs-station-tabs button.is-active { border-color: #65c9a8; color: #83dfc0; }
+
+.afcs-action-list,
+.afcs-weapon-groups,
+.afcs-log-list {
+  max-height: 380px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.afcs-action-row,
+.afcs-weapon-row,
+.afcs-log-entry,
+.afcs-target-summary {
+  border: 1px solid rgba(73, 132, 154, .26);
+  border-radius: 9px;
+  background: rgba(8, 23, 33, .84);
+}
+
+.afcs-action-row,
+.afcs-weapon-row,
+.afcs-log-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 6px;
+  padding: 8px;
+}
+
+.afcs-action-text strong,
+.afcs-weapon-text strong,
+.afcs-log-entry strong { display: block; color: #e8f4f8; }
+.afcs-action-text span,
+.afcs-weapon-text span,
+.afcs-log-entry span { display: block; margin-top: 2px; font-size: 9px; color: #9ec0cd; }
+.afcs-action-text small,
+.afcs-weapon-text small { display: block; margin-top: 3px; font-size: 8px; color: #7fa0ad; }
+
+.afcs-action-meta,
+.afcs-weapon-meta { display: flex; align-items: center; gap: 6px; }
+.afcs-action-meta em,
+.afcs-weapon-meta em { font-size: 8px; color: #d0ac62; white-space: nowrap; }
+
+.afcs-weapon-toolbar { padding: 8px; }
+.afcs-weapon-toolbar select { flex: 1; }
+.afcs-target-summary { margin: 0 8px 8px; padding: 7px; }
+.afcs-target-summary img { width: 38px; height: 38px; object-fit: cover; border-radius: 7px; }
+.afcs-target-summary strong { display: block; }
+.afcs-target-summary span,
+.afcs-target-summary small { display: block; margin-top: 2px; font-size: 8px; color: #9dbcc8; }
+
+.afcs-weapon-group h4 {
+  margin: 8px 2px 5px;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #79bcd4;
+}
+.afcs-weapon-row.is-illegal { opacity: .55; }
+.afcs-weapon-row.is-reloading { opacity: .72; }
+
+.afcs-empty-state { padding: 16px; text-align: center; color: #8faab5; font-size: 10px; }
+
+.afcs-offline {
+  width: 520px;
+  max-width: calc(100vw - 40px);
+  margin: auto;
+  padding: 14px 18px;
+  border: 1px solid rgba(184, 135, 43, .6);
+  border-radius: 12px;
+  background: rgba(6, 18, 27, .98);
+  color: #e8f4f8;
+  pointer-events: auto;
+}
+
+@media (max-width: 1200px) {
+  .arkflight-combat-console,
+  .arkflight-combat-console.application,
+  .arkflight-combat-console.window-app {
+    width: calc(100vw - 28px) !important;
+    min-width: 0 !important;
+  }
+  .afcs-commandbar {
+    grid-template-columns: 190px minmax(0, 1fr) 220px 32px;
+  }
+  .afch-status { grid-template-columns: 50px 86px 82px 100px 62px; gap: 4px; }
+  .afch-stations button,
+  .afch-actions button { padding: 0 4px; font-size: 8px; }
+}
