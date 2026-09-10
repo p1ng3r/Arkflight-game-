@@ -461,3 +461,13 @@
 .arkflight-gm-weapon-row{display:grid;grid-template-columns:minmax(12rem,1fr) minmax(16rem,1.4fr);gap:.55rem 1rem;padding:.8rem;margin:.55rem 0;border:1px solid rgba(207,178,108,.25);background:rgba(8,14,20,.38)}
 .arkflight-gm-weapon-identity,.arkflight-gm-weapon-stats{display:flex;flex-wrap:wrap;gap:.35rem .75rem;align-items:center}.arkflight-gm-weapon-identity span,.arkflight-gm-weapon-stats span{font-size:.75rem;opacity:.78}.arkflight-gm-weapon-row label{display:flex;align-items:center;gap:.5rem;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em}.arkflight-gm-weapon-row select{min-width:11rem;flex:1}.arkflight-gm-weapon-solution{padding:.4rem .55rem;border-left:3px solid #8b6b45;background:rgba(0,0,0,.18)}.arkflight-gm-weapon-solution.is-legal{border-color:#67ad7b}.arkflight-gm-weapon-solution.is-illegal{border-color:#b95e57}.arkflight-gm-weapon-row .arkflight-gm-command-actions{grid-column:1/-1;margin-top:0}.arkflight-gm-weapon-empty{opacity:.72;font-style:italic}
 @media(max-width:760px){.arkflight-gm-weapon-row{grid-template-columns:1fr}.arkflight-gm-weapon-console-head{display:block}.arkflight-gm-weapon-console-head small{display:block;text-align:left}.arkflight-gm-weapon-row .arkflight-gm-command-actions{grid-column:1}}
+
+
+.arkflight-gm-nav-emblem {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border: 0;
+  background: transparent;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.45));
+}
