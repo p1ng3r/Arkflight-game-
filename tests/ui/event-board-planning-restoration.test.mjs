@@ -23,7 +23,7 @@ test("planning restoration remains visual-only and Lock Plan stays controller-ow
 
 test("restored planning stylesheet is loaded without legacy player-action styles", () => {
   assert.ok(moduleManifest.styles.includes("styles/event-board-planning-restoration.css"));
-  assert.match(cssSource, /grid-template-columns:minmax\(360px,.82fr\) minmax\(0,1.18fr\)/);
+  assert.match(cssSource, /grid-template-columns:minmax\(430px,.9fr\) minmax\(0,1.1fr\)/);
   assert.match(cssSource, /arkflight-board-footer/);
   for (const legacy of moduleManifest.styles) assert.doesNotMatch(legacy, /player-action-board|player-action-command-bar/);
   for (const legacy of moduleManifest.esmodules) assert.doesNotMatch(legacy, /player-action-board|player-action-command-bar/);
