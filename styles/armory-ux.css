@@ -18,3 +18,20 @@
   pointer-events: none;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,.72));
 }
+
+
+.arkflight-ship-sheet .arkflight-mount-slot.has-weapon-art {
+  overflow: visible;
+}
+.arkflight-mount-weapon-art {
+  transition: transform 140ms ease, filter 140ms ease;
+  transform-origin: center;
+}
+.arkflight-ship-sheet .arkflight-mount-slot.has-weapon-art:hover {
+  z-index: 50;
+}
+.arkflight-ship-sheet .arkflight-mount-slot.has-weapon-art:hover .arkflight-mount-weapon-art {
+  transform: translateY(-50%) scale(2);
+  z-index: 20;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
+}
