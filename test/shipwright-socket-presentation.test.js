@@ -106,3 +106,12 @@ test("Shipwright selected sockets and hover cards stay visually readable near bo
   assert.match(workspaceCss, /bottom:\s*calc\(100% \+ 34px\)/);
   assert.match(workspaceCss, /arkflight-workspace-blueprint-list/);
 });
+
+
+test("Shipwright fitting boards remain fully reachable with vertical scrolling", () => {
+  assert.match(workspaceCss, /arkflight-shipwright-workspace \.window-content[\s\S]*?overflow-y:\s*auto/);
+  assert.match(workspaceCss, /scrollbar-gutter:\s*stable/);
+  assert.match(workspaceCss, /arkflight-workspace-inventory-list[\s\S]*?overflow-y:\s*auto/);
+  assert.match(workspaceCss, /arkflight-workspace-work-list[\s\S]*?overflow-y:\s*auto/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout[\s\S]*?padding-bottom:\s*16px/);
+});
