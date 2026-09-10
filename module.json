@@ -151,5 +151,7 @@
     "src/ui/ship-sheet-refit-gameplay-ui.js",
     "src/ui/voyage-abandon-ui.js",
     "src/ui/refit-alpha-cleanup-ui.js"
-  ]
+  ],
+  "manifest": "https://raw.githubusercontent.com/p1ng3r/Arkflight-game-/main/module.json",
+  "download": "https://github.com/p1ng3r/Arkflight-game-/releases/download/v0.1.0/arkflight-game-v0.1.0.zip"
 }
