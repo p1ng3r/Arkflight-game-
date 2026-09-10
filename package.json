@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "combat:gauntlet": "node scripts/combat-gauntlet.mjs"
+    "combat:gauntlet": "node scripts/combat-build-gauntlet.mjs --matrix",
+    "combat:gauntlet:single": "node scripts/combat-build-gauntlet.mjs",
+    "combat:gauntlet:legacy": "node scripts/combat-gauntlet.mjs",
+    "combat:build-lab": "node scripts/combat-build-lab.mjs"
   }
 }
