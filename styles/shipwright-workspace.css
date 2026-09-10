@@ -1,10 +1,15 @@
 .arkflight-shipwright-workspace .window-content {
+  min-height: 0;
   padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   background: #090b0c;
 }
 
 .arkflight-workspace-shell {
   min-height: 100%;
+  height: auto;
   padding: 10px;
   color: #e8dfc9;
   background: linear-gradient(180deg, rgba(10,14,16,.98), rgba(4,7,8,.99));
@@ -199,8 +204,10 @@
 .arkflight-workspace-board-layout {
   display: grid;
   grid-template-columns: minmax(0,1.45fr) minmax(290px,.55fr);
+  align-items: start;
   gap: 10px;
   margin-top: 8px;
+  padding-bottom: 16px;
 }
 
 .arkflight-workspace-board-panel {
@@ -784,4 +791,34 @@
   margin-top: 2px;
   color: #819ba1;
   font-size: 8px;
+}
+
+
+/* The three fitting boards can be taller than the ApplicationV2 viewport.
+   Keep the entire Shipwright page reachable instead of clipping below the window. */
+.arkflight-shipwright-workspace .window-content > .arkflight-workspace-shell {
+  overflow: visible;
+}
+
+.arkflight-workspace-board-panel,
+.arkflight-workspace-sidecol {
+  align-self: start;
+}
+
+.arkflight-workspace-inventory-list,
+.arkflight-workspace-work-list,
+.arkflight-workspace-blueprint-list {
+  scrollbar-width: thin;
+}
+
+.arkflight-workspace-inventory-list {
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.arkflight-workspace-work-list {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
