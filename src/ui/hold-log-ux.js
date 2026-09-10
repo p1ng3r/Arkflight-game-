@@ -301,6 +301,21 @@ function renderHoldLog(root, actor) {
   });
 }
 
+export function openArkflightHold(actor, rootOrApp = null) {
+  if (!actor?.flags?.[MODULE_ID]?.ship) return false;
+  const candidate = rootOrApp?.element ?? rootOrApp?.[0] ?? rootOrApp;
+  const root = candidate?.matches?.(".arkflight-ship-shell")
+    ? candidate
+    : candidate?.querySelector?.(".arkflight-ship-shell");
+  if (!root) return false;
+
+  const nav = root.querySelector(".arkflight-sheet-tabs");
+  nav?.querySelectorAll("button").forEach((entry) => entry.classList.remove("is-active", "is-hold-active"));
+  nav?.querySelector("[data-hold-tab]")?.classList.add("is-active", "is-hold-active");
+  renderHoldLog(root, actor);
+  return true;
+}
+
 function attachHoldLog(app, html) {
   const actor = app?.actor ?? app?.document;
   if (!actor?.flags?.[MODULE_ID]?.ship) return;
@@ -323,13 +338,14 @@ function attachHoldLog(app, html) {
     button.classList.add("arkflight-hold-log-tab-button");
   }
 
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    nav.querySelectorAll("button").forEach((entry) => entry.classList.remove("is-active", "is-hold-active"));
-    button.classList.add("is-active", "is-hold-active");
-    renderHoldLog(root, actor);
-  });
+  if (button.dataset.holdOpenBound !== "true") {
+    button.dataset.holdOpenBound = "true";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openArkflightHold(actor, root);
+    });
+  }
 
   for (const other of [...nav.querySelectorAll("[data-tab]")]) {
     other.addEventListener("click", () => restoreSheet(root), { capture: true });
@@ -343,6 +359,7 @@ Hooks.once("ready", () => {
   game.arkflight ??= {};
   game.arkflight.hold = Object.freeze({
     scrapPerHold: SCRAP_PER_HOLD,
+    open(actor, rootOrApp = actor?.sheet) { return openArkflightHold(actor, rootOrApp); },
     usage(actor) {
       const ship = shipFlag(actor);
       return ship ? holdManifest(actor, ship) : null;
