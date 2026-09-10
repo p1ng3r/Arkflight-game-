@@ -564,8 +564,9 @@
 }
 
 
-.arkflight-workspace-socket-effect {
+.arkflight-workspace-socket .arkflight-workspace-socket-effect {
   position: absolute;
+  inset: auto;
   left: 50%;
   top: calc(100% + 34px);
   z-index: 60;
