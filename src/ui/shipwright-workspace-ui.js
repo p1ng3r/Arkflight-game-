@@ -71,6 +71,58 @@ function gpToCp(gp) { return Math.max(0, Math.ceil(Number(gp || 0) * 100)); }
 function partyCopper() { return Math.max(0, Number(partyTreasury()?.inventory?.coins?.copperValue ?? 0)); }
 function partyGoldDisplay() { return partyCopper() / 100; }
 function titleCase(value) { return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
+function statLabel(value) {
+  const labels = {
+    hullIntegrity: "Hull Integrity",
+    cargoCapacity: "Cargo Capacity",
+    detection: "Detection",
+    armorClass: "Armor Class",
+    lifeveilCapacity: "Lifeveil Capacity",
+    maneuverability: "Maneuverability",
+    strainCapacity: "Strain Capacity",
+    combatSpeed: "Combat Speed",
+    voyageSpeedTravelHexDays: "Travel Time",
+    arkengineFuelSlots: "Arkengine Fuel Slots",
+    hardBurnStrainCost: "Hard Burn Strain Cost"
+  };
+  return labels[value] ?? titleCase(String(value ?? "").replace(/([a-z])([A-Z])/g, "$1 $2"));
+}
+
+function modifierLabel(kind, value) {
+  return `${titleCase(String(kind ?? "special effect"))}${Number.isFinite(Number(value)) ? ` ${Number(value) >= 0 ? "+" : ""}${Number(value)}` : ""}`;
+}
+
+function componentBonusLines(item, group) {
+  if (!item) return ["No catalog effect recorded."];
+  const lines = [];
+  for (const effect of item.effects ?? []) {
+    const value = Number(effect.value ?? 0);
+    const sign = value >= 0 ? "+" : "";
+    lines.push(`${statLabel(effect.target)} ${sign}${value}`);
+  }
+  for (const resistance of item.data?.resistances ?? []) {
+    lines.push(`${titleCase(resistance.type)} Resistance +${Number(resistance.value ?? 0)}`);
+  }
+  for (const modifier of item.data?.ruleModifiers ?? []) lines.push(modifierLabel(modifier.kind, modifier.value));
+  for (const hook of item.data?.fuelHooks ?? []) lines.push(modifierLabel(hook.kind, hook.value));
+  for (const capability of item.capabilities ?? []) lines.push(titleCase(capability));
+  if (group === "weapon") {
+    const damage = item.data?.damageProfile;
+    const combat = item.data?.combat ?? {};
+    const range = combat.rangeHexes ?? {};
+    if (damage?.dice) lines.push(`${damage.dice} ${titleCase(damage.type)} damage`);
+    if (combat.fireAP != null) lines.push(`Fire ${combat.fireAP} AP`);
+    if (combat.reloadRounds != null) lines.push(`Reload ${combat.reloadRounds} round${Number(combat.reloadRounds) === 1 ? "" : "s"}`);
+    if (range.max != null) lines.push(`Range ${range.min ?? 0}–${range.max} hex`);
+  }
+  if (!lines.length && item.description) lines.push(item.description);
+  return [...new Set(lines)];
+}
+
+function componentEffectSummary(item, group) {
+  return componentBonusLines(item, group).join(" · ");
+}
+
 
 function weaponFitsMount(weapon, mount, ship) {
   if (!weapon || !mount) return false;
@@ -96,6 +148,8 @@ function inventoryRows(actor, group, selectedSocket = null) {
       family: familyFor(group),
       slotClass: titleCase(item?.data?.refit?.slotClass ?? (group === "weapon" ? item?.data?.size : "flexible")),
       compatible: selectedSocket == null || Boolean(assignment),
+      effectSummary: componentEffectSummary(item, group),
+      bonusLines: componentBonusLines(item, group),
       draggable: true
     };
   });
@@ -127,6 +181,10 @@ function socketRows(actor, group) {
       componentName: component?.name ?? "",
       componentImg,
       hasComponentArt: Boolean(componentImg),
+      componentEffect: componentEffectSummary(component, group),
+      componentBonusLines: componentBonusLines(component, group),
+      sourceInstallJobId: placement?.sourceJobId ?? "",
+      placementSocketIndices: [...(placement?.socketIndices ?? [])],
       mount,
       mountLabel: mount ? `${mount.facing} ${mount.mountIndex + 1} · max ${mount.maxSize}` : "",
       typeLabel: mount ? `${titleCase(mount.facing)} Mount ${mount.mountIndex + 1}` : group === "ship" ? `Flexible Ship Mod Socket ${index + 1}` : `Flexible Arkengine Socket ${index + 1}`,
@@ -308,6 +366,41 @@ async function installDialog(actor, group, componentId, socketIndex) {
   try { await installWithPayment(actor, group, componentId, socketIndex, payment, gpCost); } catch (error) { ui.notifications?.error?.(error.message); }
 }
 
+async function uninstallDialog(actor, group, row) {
+  if (!row?.occupied || !row.componentId) return;
+  const item = catalogFor(group)?.[row.componentId];
+  if (!item) return ui.notifications?.warn?.("That installed fitting is not in the current catalog.");
+  const mode = service(actor);
+  const allowed = shipAllowsRefitMode(shipFlag(actor), mode);
+  if (!allowed) return ui.notifications?.warn?.(`${shipOperationalStatus(shipFlag(actor)).label} does not currently allow ${serviceLabel(mode)} refit work.`);
+
+  const confirmed = await new Promise((resolve) => {
+    new DialogV2({
+      window: { title: `Uninstall ${item.name}?` },
+      content: `<div class="arkflight-uninstall-confirm"><img src="${item.img ?? ASSETS.remove}" alt=""><div><h2>Uninstall ${escape(item.name)}?</h2><p>${escape(componentEffectSummary(item, group))}</p><small>The fitting will be removed through the normal ${escape(serviceLabel(mode))} refit workflow and returned to vessel inventory when completed.</small></div></div>`,
+      buttons: [
+        { action: "cancel", label: "Cancel", callback: () => resolve(false) },
+        { action: "confirm", label: "Uninstall", icon: "fa-solid fa-arrow-right-from-bracket", default: true, callback: () => resolve(true) }
+      ],
+      close: () => resolve(false)
+    }).render({ force: true });
+  });
+  if (!confirmed) return;
+
+  try {
+    const queued = await game.arkflight?.refit?.queueRemove?.(actor, familyFor(group), row.componentId, {
+      method: mode === "shipyard" ? "shipyard" : "crew",
+      serviceMode: mode,
+      socketIndices: [...(row.placementSocketIndices ?? [])],
+      sourceInstallJobId: row.sourceInstallJobId ?? ""
+    });
+    await startQueued(actor, queued, `Uninstall ${item.name}`);
+  } catch (error) {
+    console.error("Arkflight | Uninstall fitting failed", error);
+    ui.notifications?.error?.(error.message);
+  }
+}
+
 export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
   constructor(actor, options = {}) { super(options); this.actor = actor; this.group = null; this.selectedSocket = null; }
   static DEFAULT_OPTIONS = { id: "arkflight-shipwright-{id}", classes: ["arkflight-shipwright-workspace"], position: { width: 1350, height: 800 }, window: { title: "Arkflight Shipwright Workspace", resizable: true } };
@@ -360,10 +453,21 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
     const root = this.element;
     for (const button of root.querySelectorAll("[data-workbench-category]")) button.addEventListener("click", () => { this.group = button.dataset.workbenchCategory; this.selectedSocket = null; this.render({ force: true }); });
     root.querySelector("[data-workbench-home]")?.addEventListener("click", () => { this.group = null; this.selectedSocket = null; this.render({ force: true }); });
+    const socketRowsByIndex = new Map((context?.sockets ?? []).map((row) => [Number(row.index), row]));
     for (const socket of root.querySelectorAll("[data-workspace-socket]")) {
       socket.addEventListener("click", () => {
         const index = Number(socket.dataset.socketIndex);
         this.selectedSocket = this.selectedSocket === index ? null : index;
+        this.render({ force: true });
+      });
+      socket.addEventListener("contextmenu", async (event) => {
+        const index = Number(socket.dataset.socketIndex);
+        const row = socketRowsByIndex.get(index);
+        if (!row?.occupied) return;
+        event.preventDefault();
+        event.stopPropagation();
+        await uninstallDialog(this.actor, this.group, row);
+        this.selectedSocket = null;
         this.render({ force: true });
       });
       socket.addEventListener("dragover", (event) => { if (socket.dataset.occupied === "true" || socket.dataset.reserved === "true") return; event.preventDefault(); event.dataTransfer.dropEffect = "copy"; socket.classList.add("is-drop-ready"); });
