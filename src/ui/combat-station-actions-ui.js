@@ -18,17 +18,6 @@ function titleCase(value) {
   return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function actorFrom(app) {
-  const actor = app?.actor ?? app?.document ?? null;
-  return actor?.documentName === "Actor" ? actor : null;
-}
-
-function rootFrom(app, html = null) {
-  const candidate = html?.[0] ?? html ?? app?.element?.[0] ?? app?.element;
-  if (!(candidate instanceof HTMLElement)) return null;
-  return candidate.matches?.(".arkflight-ship-shell") ? candidate : candidate.querySelector?.(".arkflight-ship-shell");
-}
-
 function shipFlag(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
 }
@@ -45,24 +34,6 @@ function crewName(api, combatant, station, actor) {
   return game.actors?.get?.(ref)?.name
     ?? game.actors?.contents?.find?.((entry) => entry.uuid === ref || entry.name === ref)?.name
     ?? String(ref);
-}
-
-function restoreCombatState(root) {
-  root.querySelector(".arkflight-combat-stations-shell")?.remove();
-  for (const child of root.querySelectorAll('[data-combat-stations-hidden="combat"]')) {
-    child.hidden = false;
-    delete child.dataset.combatStationsHidden;
-  }
-  for (const child of root.querySelectorAll('[data-combat-stations-hidden="already"]')) delete child.dataset.combatStationsHidden;
-  root.querySelectorAll(".arkflight-sheet-tabs button").forEach((entry) => entry.classList.remove("is-combat-stations-active"));
-}
-
-function hideBaseSections(root) {
-  for (const child of [...root.children]) {
-    if (child.matches?.("header,.arkflight-sheet-tabs,.arkflight-readiness-banner,.arkflight-combat-stations-shell")) continue;
-    child.dataset.combatStationsHidden = child.hidden ? "already" : "combat";
-    child.hidden = true;
-  }
 }
 
 function choiceOptions(action, api, combatant, actor) {
@@ -177,11 +148,8 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
 
 export function renderArkflightCombatStations(app, root, actor) {
   const nativeHost = root.querySelector("[data-combat-stations-host]");
-  if (nativeHost) nativeHost.replaceChildren();
-  else {
-    restoreCombatState(root);
-    hideBaseSections(root);
-  }
+  if (!nativeHost) return false;
+  nativeHost.replaceChildren();
 
   const nav = root.querySelector(".arkflight-sheet-tabs");
   nav?.querySelectorAll("button").forEach((entry) => entry.classList.remove("is-combat-stations-active"));
@@ -189,7 +157,7 @@ export function renderArkflightCombatStations(app, root, actor) {
 
   const shell = document.createElement("main");
   shell.className = "arkflight-combat-stations-shell";
-  (nativeHost ?? root).append(shell);
+  nativeHost.append(shell);
   OPEN_TABS.set(actor.uuid, { app, root, actor });
 
   const api = game.arkflight?.combat;
