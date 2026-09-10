@@ -100,6 +100,15 @@ function permissionLabel(api, combatant) {
   return "View only";
 }
 
+async function postDamageRoll(actor, result, weaponName, targetName) {
+  const damage = result?.damage;
+  if (!damage?.roll?.toMessage) return;
+  await damage.roll.toMessage({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    flavor: `<strong>${esc(weaponName)} Damage — ${esc(targetName)}</strong><br>${Number(damage.incoming)} ${esc(titleCase(damage.type))} − ${Number(damage.absorbed)} Hardness = <strong>${Number(damage.hullDamage)} Hull</strong> (${Number(damage.before)} → ${Number(damage.after)})`
+  });
+}
+
 function lastShotHtml(last) {
   if (!last?.result || last.result.requested) return "";
   const { result, targetName, weaponName } = last;
@@ -295,7 +304,10 @@ export function renderArkflightWeaponsTab(app, root, actor) {
           targetId: target.id,
           selection: target.id
         }, combatant);
-        if (result && !result.requested) app._arkflightLastWeaponResult = { result, weaponName: weaponState.name, targetName: target.name };
+        if (result && !result.requested) {
+          app._arkflightLastWeaponResult = { result, weaponName: weaponState.name, targetName: target.name };
+          await postDamageRoll(actor, result, weaponState.name, target.name);
+        }
         redrawFiringArcs(combatant);
         app.render?.({ force: true });
       } catch (error) {
