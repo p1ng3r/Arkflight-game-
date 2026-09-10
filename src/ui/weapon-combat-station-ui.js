@@ -338,12 +338,13 @@ function buildShipWeaponStation(app, actor) {
       const workButton = document.createElement("button");
       workButton.type = "button";
       workButton.innerHTML = '<i class="fa-solid fa-rotate"></i> Work the Guns · 1 AP';
-      workButton.disabled = !game.user?.isGM || Number(state?.economy?.ap?.value ?? 0) < 1;
+      const reloadControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
+      workButton.disabled = !reloadControl.ok || Number(state?.economy?.ap?.value ?? 0) < 1;
       workButton.addEventListener("click", async () => {
         try {
-          await api.workTheGuns(weaponState.key, combatant);
+          await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
           app.render(false);
-        } catch (error) { ui.notifications?.error(error?.message ?? "Work the Guns failed."); }
+        } catch (error) { ui.notifications?.error(error?.message ?? "Reload failed."); }
       });
       actions.append(workButton);
     }
@@ -367,8 +368,9 @@ function buildShipWeaponStation(app, actor) {
         }
       }
 
-      fireButton.disabled = !game.user?.isGM || remaining > 0 || !enoughAP || !legal;
-      if (!game.user?.isGM) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> GM Fire Control';
+      const fireControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
+      fireButton.disabled = !fireControl.ok || remaining > 0 || !enoughAP || !legal;
+      if (!fireControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> Battlewatch Only';
       else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reloading · ${remaining} round${remaining === 1 ? "" : "s"}`;
       else if (!enoughAP) fireButton.innerHTML = `<i class="fa-solid fa-bolt"></i> Need ${weaponState.fireAP} AP`;
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Target Illegal';
@@ -379,7 +381,15 @@ function buildShipWeaponStation(app, actor) {
       const target = targets.find((entry) => entry.id === targetSelect.value);
       if (!target) return ui.notifications?.warn("Select a target ship first.");
       try {
-        const result = await api.fireAtTarget(weaponState.key, target.id, combatant);
+        const result = await api.stationAction("battlewatch-fire-weapon", {
+          weaponKey: weaponState.key,
+          targetId: target.id,
+          selection: target.id
+        }, combatant);
+        if (result?.requested) {
+          app.render(false);
+          return;
+        }
         notifyFireResult(result, target.name, weaponState.name);
         redrawFiringArcs(combatant);
         app.render(false);
@@ -410,7 +420,8 @@ function buildShipWeaponStation(app, actor) {
 
   section.append(list);
   updateAll();
-  if (!game.user?.isGM) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Arkflight combat resolution is currently GM-authoritative; owners can inspect targets and firing arcs here.</p>');
+  const battlewatchControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
+  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> View only — only the assigned Battlewatch player or GM may fire and reload weapons.</p>');
   return section;
 }
 
