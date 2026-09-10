@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
+import { installedSocketLayout } from "../ship/refit-sockets.js";
 
 const MODULE_ID = "arkflight-game";
 const ROOT = `modules/${MODULE_ID}/assets/ui/shipwright`;
@@ -164,24 +165,28 @@ function boardSubtitle(group) {
 
 function renderBoard(group, ship, derived) {
   const sockets = schemaSockets(group, ship, derived);
-  const installed = installedIds(group, ship);
+  const family = group === "ship" ? "shipMod" : group === "arkengine" ? "arkengineMod" : "weapon";
+  const layout = installedSocketLayout(ship, SHIP_CATALOGS, family);
   const catalog = catalogFor(group) ?? {};
   const positions = POSITIONS[group];
   const slotHtml = sockets.map((socket, index) => {
     const [left, top] = positions[index % positions.length];
-    const componentId = installed[index] ?? "";
+    const placement = layout.placements?.find((entry) => entry.socketIndices?.includes(index)) ?? null;
+    const componentId = placement?.componentId ?? "";
     const component = componentId ? catalog?.[componentId] : null;
     const name = component?.name ?? (componentId || "Empty socket");
+    const componentImg = component?.img ?? component?.data?.art?.img ?? "";
     const art = SOCKET[group]?.[socket.type] ?? SOCKET[group]?.flexible;
-    return `<button type="button" class="arkflight-visual-socket ${componentId ? "is-filled" : "is-empty"}" style="left:${left}%;top:${top}%" data-visual-socket data-board="${group}" data-socket-id="${socket.id}" data-socket-type="${socket.type}" title="${socket.type}: ${name}">
+    return `<button type="button" class="arkflight-visual-socket ${componentId ? "is-filled" : "is-empty"} ${componentImg ? "has-component-art" : ""}" style="left:${left}%;top:${top}%" data-visual-socket data-board="${group}" data-socket-id="${socket.id}" data-socket-type="${socket.type}" title="${socket.type}: ${name}">
       <img class="arkflight-visual-socket-base" src="${art}" alt="">
+      ${componentImg ? `<img class="arkflight-visual-socket-component" src="${componentImg}" alt="${name}">` : ""}
       <img class="arkflight-visual-socket-state" src="${COMPATIBLE}" alt="">
       ${componentId ? `<span class="arkflight-visual-socket-installed">${index + 1}</span>` : ""}
     </button>`;
   }).join("");
 
   return `<section class="arkflight-visual-board-panel" data-visual-board-panel="${group}">
-    <div class="arkflight-visual-board-heading"><div><span>SHIPWRIGHT VISUAL FITTING</span><h2>${boardTitle(group)}</h2><p>${boardSubtitle(group)}</p></div><strong>${installed.length} installed / ${sockets.length} sockets</strong></div>
+    <div class="arkflight-visual-board-heading"><div><span>SHIPWRIGHT VISUAL FITTING</span><h2>${boardTitle(group)}</h2><p>${boardSubtitle(group)}</p></div><strong>${layout.placements?.filter((entry) => !entry.overCapacity).length ?? 0} installed / ${sockets.length} sockets</strong></div>
     <div class="arkflight-visual-board is-${group}">
       <img class="arkflight-visual-board-art" src="${BOARD[group]}" alt="${boardTitle(group)}">
       <div class="arkflight-visual-socket-layer">${slotHtml}</div>
