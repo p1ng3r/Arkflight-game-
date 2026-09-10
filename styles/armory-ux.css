@@ -31,7 +31,7 @@
   z-index: 50;
 }
 .arkflight-ship-sheet .arkflight-mount-slot.has-weapon-art:hover .arkflight-mount-weapon-art {
-  transform: translateY(-50%) scale(2);
+  transform: translateY(-50%) scale(3);
   z-index: 20;
   filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
 }
