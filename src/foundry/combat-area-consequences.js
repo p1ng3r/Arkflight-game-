@@ -1,4 +1,4 @@
-import { effectiveMobility } from "../combat/combat-schema.js";
+import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
 import { applyWeaponSystemThreat, areaMobilityPenalties, weaponSystemThreat } from "../combat/system-damage.js";
 import { applyAreaIntegrityCaps } from "../ship/area-readiness.js";
 import { deriveShip } from "../ship/derive-ship.js";
@@ -12,14 +12,6 @@ function cappedShip(ship) {
   const hullBaseMax = Number(ship?.resources?.hull?.baseMax ?? ship?.resources?.hull?.max) || 0;
   const lifeveilBaseMax = Number(ship?.resources?.lifeveil?.baseMax ?? ship?.resources?.lifeveil?.max) || 0;
   return applyAreaIntegrityCaps(ship, { hullBaseMax, lifeveilBaseMax });
-}
-function patchMobility(state, ship) {
-  if (!state?.mobility) return state;
-  const derived = deriveShip(ship, SHIP_CATALOGS);
-  const penalties = areaMobilityPenalties(ship);
-  const mobility = effectiveMobility({ combatSpeed:derived.stats.combatSpeed, maneuverability:derived.stats.maneuverability, speedPenalty:penalties.speedPenalty, maneuverPenalty:penalties.maneuverPenalty });
-  if (state.mobility.speed === mobility.speed && state.mobility.maneuverability === mobility.maneuverability) return state;
-  return Object.freeze({ ...state, mobility:Object.freeze({ ...state.mobility, speed:mobility.speed, maneuverability:mobility.maneuverability }) });
 }
 
 async function applyMechanicalConsequences(actor) {
@@ -35,13 +27,20 @@ async function applyMechanicalConsequences(actor) {
   const base = game.arkflight?.combat;
   const combatant = base?.findCombatant?.(actor) ?? null;
   const latestShip = shipPayload(actor) ?? after;
+  const penalties = areaMobilityPenalties(latestShip);
   let next = null;
   if (combatant) {
-    const state = base.state?.(combatant);
-    next = patchMobility(state, latestShip);
-    if (next !== state) await combatant.update({ [STATE_PATH]: next });
+    const state = base.state?.(combatant) ?? null;
+    const derived = deriveShip(latestShip, SHIP_CATALOGS);
+    next = reconcileCombatantState(latestShip, state, {
+      derived,
+      catalogs: SHIP_CATALOGS,
+      rotation: state?.mobility?.heading ?? combatant?.token?.rotation ?? 0,
+      speedPenalty: penalties.speedPenalty,
+      maneuverPenalty: penalties.maneuverPenalty
+    });
+    if (JSON.stringify(next) !== JSON.stringify(state)) await combatant.update({ [STATE_PATH]: next });
   }
-  const penalties = areaMobilityPenalties(latestShip);
   Hooks.callAll("arkflightAreaConsequencesApplied", { actor, combatant, ship:latestShip, state:next, penalties });
   return { actor, combatant, ship:latestShip, state:next, penalties };
 }
