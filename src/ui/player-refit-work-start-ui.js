@@ -2,7 +2,7 @@ const MODULE_ID = "arkflight-game";
 
 function shipPayload(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 
-Hooks.on("renderActorSheet", (app, html) => {
+function attachPlayerRefitWorkStart(app, html) {
   const actor = app?.actor ?? app?.document;
   const ship = shipPayload(actor);
   if (!ship || (!game.user?.isGM && !actor?.isOwner)) return;
@@ -44,4 +44,7 @@ Hooks.on("renderActorSheet", (app, html) => {
     const actions = right.querySelector(".arkflight-bay-actions");
     if (actions) actions.before(panel); else right.append(panel);
   }));
-});
+}
+
+Hooks.on("renderActorSheet", attachPlayerRefitWorkStart);
+Hooks.on("renderApplicationV2", attachPlayerRefitWorkStart);
