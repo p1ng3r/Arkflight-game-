@@ -77,3 +77,13 @@ test("installed fitting effect card stays hidden until its socket is hovered", (
   assert.match(workspaceCss, /\.arkflight-workspace-socket \.arkflight-workspace-socket-effect \{[\s\S]*?display:\s*none/);
   assert.match(workspaceCss, /\.arkflight-workspace-socket:hover \.arkflight-workspace-socket-effect \{[\s\S]*?display:\s*block/);
 });
+
+
+test("Owned Fittings tray shows the catalog artwork beside each physical fitting", () => {
+  assert.match(workspace, /img: item\?\.img \?\? item\?\.data\?\.art\?\.img/);
+  assert.match(template, /arkflight-owned-fitting-art/);
+  assert.match(template, /item\.img/);
+  assert.match(template, /arkflight-owned-fitting-count/);
+  assert.match(workspaceCss, /arkflight-workspace-inventory-list article\.has-fitting-art/);
+  assert.match(workspaceCss, /arkflight-owned-fitting-art/);
+});
