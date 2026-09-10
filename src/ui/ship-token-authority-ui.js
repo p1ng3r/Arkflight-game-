@@ -72,3 +72,6 @@ function injectAuthorityWarning(app, html) {
 Hooks.on("renderActorSheet", (app, html) => {
   requestAnimationFrame(() => injectAuthorityWarning(app, html));
 });
+Hooks.on("renderApplicationV2", (app, html) => {
+  requestAnimationFrame(() => injectAuthorityWarning(app, html));
+});
