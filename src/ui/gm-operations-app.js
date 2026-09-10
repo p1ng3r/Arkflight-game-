@@ -5,7 +5,7 @@ const PRIMARY_SECTIONS = [
   { id: "command", label: "Command", icon: "fa-solid fa-gauge-high" },
   { id: "ships", label: "Ships", icon: "fa-solid fa-ship" },
   { id: "generate", label: "Generate", icon: "fa-solid fa-wand-magic-sparkles" },
-  { id: "operations", label: "Operations", icon: "fa-solid fa-compass" },
+  { id: "operations", label: "Operations", icon: "fa-solid fa-compass", iconImg: "modules/arkflight-game/assets/ui/branding/emblems/arkflight_engineer_crest.webp" },
   { id: "time-work", label: "Time & Work", icon: "fa-solid fa-clock" },
   { id: "salvage", label: "Salvage", icon: "fa-solid fa-toolbox" },
   { id: "library", label: "Library", icon: "fa-solid fa-book-open" }
