@@ -8,6 +8,8 @@ const workspaceCss = readFileSync(new URL("../styles/shipwright-workspace.css", 
 const visualBoards = readFileSync(new URL("../src/ui/ship-sheet-visual-boards-ui.js", import.meta.url), "utf8");
 const visualBoardsCss = readFileSync(new URL("../styles/ship-sheet-visual-boards.css", import.meta.url), "utf8");
 const armory = readFileSync(new URL("../src/ui/armory-ux.js", import.meta.url), "utf8");
+const armoryCss = readFileSync(new URL("../styles/armory-ux.css", import.meta.url), "utf8");
+const bayCss = readFileSync(new URL("../styles/shipwright-bay.css", import.meta.url), "utf8");
 
 test("Shipwright weapon sockets expose facing-specific art and mount rules", () => {
   for (const type of ["prow", "broadside", "stern", "deck", "flexible"]) assert.match(workspace, new RegExp(`socket_weapon_${type}\\.webp`));
@@ -48,5 +50,6 @@ test("visual fitting boards and armory mounts use installed mod and weapon artwo
 test("installed fitting and weapon art doubles in size on hover", () => {
   assert.match(workspaceCss, /arkflight-workspace-socket:hover[\s\S]*?arkflight-workspace-socket-component[\s\S]*?transform:\s*scale\(2\)/);
   assert.match(visualBoardsCss, /arkflight-visual-socket:hover[\s\S]*?arkflight-visual-socket-component[\s\S]*?transform:\s*scale\(2\)/);
-  assert.match(armory, /arkflight-mount-weapon-art/);
+  assert.match(bayCss, /arkflight-bay-socket:hover[\s\S]*?arkflight-bay-installed-component[\s\S]*?transform:\s*scale\(2\)/);
+  assert.match(armoryCss, /arkflight-mount-slot\.has-weapon-art:hover[\s\S]*?arkflight-mount-weapon-art[\s\S]*?scale\(2\)/);
 });
