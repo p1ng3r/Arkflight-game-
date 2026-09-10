@@ -127,9 +127,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 8px;
-  line-height: 1.1;
-  letter-spacing: .08em;
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: .07em;
   text-transform: uppercase;
   color: #73d6b5;
 }
@@ -156,9 +156,9 @@
 
 .afch-stat label {
   margin: 0 0 2px;
-  font-size: 7px;
-  line-height: 1;
-  letter-spacing: .1em;
+  font-size: 8px;
+  line-height: 1.05;
+  letter-spacing: .08em;
   text-transform: uppercase;
   color: #7eb5c9;
 }
@@ -221,16 +221,16 @@
 }
 
 .afch-vital label {
-  font-size: 8px;
-  line-height: 1;
-  letter-spacing: .07em;
+  font-size: 9px;
+  line-height: 1.05;
+  letter-spacing: .06em;
   text-transform: uppercase;
   color: #8ab7c7;
 }
 
 .afch-vital strong {
-  font-size: 9px;
-  line-height: 1;
+  font-size: 10.5px;
+  line-height: 1.05;
   white-space: nowrap;
   color: #eaf7fb;
 }
@@ -285,8 +285,8 @@
   border-radius: 8px;
   background: rgba(7, 23, 34, .95);
   color: #dceff7;
-  font-size: 9px;
-  line-height: 1;
+  font-size: 10px;
+  line-height: 1.05;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -350,8 +350,8 @@
 
 .afcs-drawer > header span {
   display: block;
-  font-size: 8px;
-  letter-spacing: .12em;
+  font-size: 9px;
+  letter-spacing: .1em;
   color: #79bfd7;
 }
 
@@ -373,7 +373,7 @@
   justify-content: center;
   gap: 3px;
 }
-.afcs-station-tabs small { font-size: 7px; color: #87a9b5; }
+.afcs-station-tabs small { font-size: 8.5px; line-height: 1.1; color: #87a9b5; }
 .afcs-station-tabs button.is-active { border-color: #65c9a8; color: #83dfc0; }
 
 .afcs-action-list,
@@ -409,14 +409,14 @@
 .afcs-log-entry strong { display: block; color: #e8f4f8; }
 .afcs-action-text span,
 .afcs-weapon-text span,
-.afcs-log-entry span { display: block; margin-top: 2px; font-size: 9px; color: #9ec0cd; }
+.afcs-log-entry span { display: block; margin-top: 2px; font-size: 10.5px; line-height: 1.3; color: #9ec0cd; }
 .afcs-action-text small,
-.afcs-weapon-text small { display: block; margin-top: 3px; font-size: 8px; color: #7fa0ad; }
+.afcs-weapon-text small { display: block; margin-top: 3px; font-size: 9.5px; line-height: 1.25; color: #7fa0ad; }
 
 .afcs-action-meta,
 .afcs-weapon-meta { display: flex; align-items: center; gap: 6px; }
 .afcs-action-meta em,
-.afcs-weapon-meta em { font-size: 8px; color: #d0ac62; white-space: nowrap; }
+.afcs-weapon-meta em { font-size: 9.5px; line-height: 1.15; color: #d0ac62; white-space: nowrap; }
 
 .afcs-weapon-toolbar { padding: 8px; }
 .afcs-weapon-toolbar select { flex: 1; }
@@ -424,19 +424,19 @@
 .afcs-target-summary img { width: 38px; height: 38px; object-fit: cover; border-radius: 7px; }
 .afcs-target-summary strong { display: block; }
 .afcs-target-summary span,
-.afcs-target-summary small { display: block; margin-top: 2px; font-size: 8px; color: #9dbcc8; }
+.afcs-target-summary small { display: block; margin-top: 2px; font-size: 9.5px; line-height: 1.25; color: #9dbcc8; }
 
 .afcs-weapon-group h4 {
   margin: 8px 2px 5px;
-  font-size: 9px;
-  letter-spacing: .12em;
+  font-size: 10.5px;
+  letter-spacing: .1em;
   text-transform: uppercase;
   color: #79bcd4;
 }
 .afcs-weapon-row.is-illegal { opacity: .55; }
 .afcs-weapon-row.is-reloading { opacity: .72; }
 
-.afcs-empty-state { padding: 16px; text-align: center; color: #8faab5; font-size: 10px; }
+.afcs-empty-state { padding: 16px; text-align: center; color: #8faab5; font-size: 11px; line-height: 1.35; }
 
 .afcs-offline {
   width: 520px;
@@ -462,5 +462,5 @@
   }
   .afch-status { grid-template-columns: 50px 86px 82px 100px 62px; gap: 4px; }
   .afch-stations button,
-  .afch-actions button { padding: 0 4px; font-size: 8px; }
+  .afch-actions button { padding: 0 4px; font-size: 9px; }
 }
