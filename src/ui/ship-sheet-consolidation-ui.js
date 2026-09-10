@@ -30,8 +30,7 @@ function fixSupplyLedger(root, actor) {
   if (max <= 0) return;
 
   for (const row of root.querySelectorAll(".arkflight-log-resource")) {
-    const label = row.querySelector("span")?.textContent?.trim();
-    if (label !== "Supplies") continue;
+    if (row.querySelector("span")?.textContent?.trim() !== "Supplies") continue;
     const strong = row.querySelector("strong");
     if (strong) strong.textContent = `${value} / ${max}`;
   }
@@ -39,9 +38,9 @@ function fixSupplyLedger(root, actor) {
 
 function decorateHoldScrap(root) {
   if (root.querySelector("[data-arkflight-hold-scrap-icon]")) return;
-  const subhead = [...root.querySelectorAll(".arkflight-log-subhead")].find((entry) => entry.querySelector("span")?.textContent?.trim() === "AETHER SCRAP");
-  const row = subhead?.parentElement?.querySelector(".arkflight-hold-item");
-  const label = row?.firstElementChild;
+  const subhead = [...root.querySelectorAll(".arkflight-log-subhead")]
+    .find((entry) => entry.querySelector("span")?.textContent?.trim() === "AETHER SCRAP");
+  const label = subhead?.parentElement?.querySelector(".arkflight-hold-item")?.firstElementChild;
   if (!label) return;
 
   label.style.display = "grid";
@@ -69,40 +68,13 @@ function decorateHoldScrap(root) {
   label.prepend(icon);
 }
 
-function refreshHoldPolish(root, actor) {
+function polishNativeShipSheet(app, html) {
+  const actor = actorFrom(app);
+  const root = rootFrom(app, html);
+  if (!actor || !shipFlag(actor) || !root) return;
   fixSupplyLedger(root, actor);
   decorateHoldScrap(root);
 }
 
-function consolidateNavigation(app, html) {
-  const actor = actorFrom(app);
-  const root = rootFrom(app, html);
-  if (!actor || !shipFlag(actor) || !root) return;
-  const nav = root.querySelector(".arkflight-sheet-tabs");
-  if (!nav) return;
-
-
-  if (!nav.querySelector("[data-open-shipwright]")) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.dataset.openShipwright = "";
-    button.innerHTML = '<i class="fa-solid fa-hammer"></i> Shipwright';
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      game.arkflight?.openShipwrightWorkspace?.(actor, "workbench");
-    });
-    nav.append(button);
-  }
-
-  const holdButton = nav.querySelector("[data-hold-tab]");
-  if (holdButton && holdButton.dataset.supplyFixWired !== "true") {
-    holdButton.dataset.supplyFixWired = "true";
-    holdButton.addEventListener("click", () => setTimeout(() => refreshHoldPolish(root, actor), 0));
-  }
-
-  refreshHoldPolish(root, actor);
-}
-
-Hooks.on("renderActorSheet", consolidateNavigation);
-Hooks.on("renderApplicationV2", consolidateNavigation);
+Hooks.on("renderActorSheet", polishNativeShipSheet);
+Hooks.on("renderApplicationV2", polishNativeShipSheet);
