@@ -114,14 +114,19 @@ function socketRows(actor, group) {
     const placement = placements.find((row) => row.socketIndices?.includes(index));
     const pending = activeJobs.find((job) => job.type === "install" && job.componentFamily === family && ["PLANNED","WORKING","planned","working"].includes(job.status) && job.socketIndices?.includes(index));
     const mount = family === "weapon" ? layout.mounts?.find((entry) => entry.index === index) : null;
+    const componentId = placement?.componentId ?? pending?.componentId ?? "";
+    const component = componentId ? catalogFor(group)?.[componentId] ?? null : null;
+    const componentImg = component?.img ?? component?.data?.art?.img ?? "";
     return {
       index, number: index + 1, left, top, labelAbove: top >= 82,
       occupied: occupied.has(index),
       reserved: reserved.has(index),
       working: pending?.status === "WORKING" || pending?.status === "working",
       available: !occupied.has(index) && !reserved.has(index),
-      componentId: placement?.componentId ?? pending?.componentId ?? "",
-      componentName: (catalogFor(group)?.[placement?.componentId ?? pending?.componentId]?.name) ?? "",
+      componentId,
+      componentName: component?.name ?? "",
+      componentImg,
+      hasComponentArt: Boolean(componentImg),
       mount,
       mountLabel: mount ? `${mount.facing} ${mount.mountIndex + 1} · max ${mount.maxSize}` : "",
       typeLabel: mount ? `${titleCase(mount.facing)} Mount ${mount.mountIndex + 1}` : group === "ship" ? `Flexible Ship Mod Socket ${index + 1}` : `Flexible Arkengine Socket ${index + 1}`,
