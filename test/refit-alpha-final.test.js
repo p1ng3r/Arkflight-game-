@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const moduleJson = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 const cleanupPath = new URL("../src/ui/refit-alpha-cleanup-ui.js", import.meta.url);
@@ -12,13 +13,15 @@ const portrait = fs.readFileSync(new URL("../src/ui/ship-portrait-ui.js", import
 const workOrder = fs.readFileSync(new URL("../src/ui/shipwright-refit-work-order-ui.js", import.meta.url), "utf8");
 const time = fs.readFileSync(new URL("../src/foundry/refit-time.js", import.meta.url), "utf8");
 
-test("final Refit Alpha presentation assets load last", () => {
-  assert.equal(moduleJson.styles.at(-1), "styles/refit-alpha-unified.css");
+test("final Refit Alpha presentation assets load after the core refit layers", () => {
+  const unifiedIndex = moduleJson.styles.indexOf("styles/refit-alpha-unified.css");
+  assert.ok(unifiedIndex >= 0);
+  assert.ok(unifiedIndex > moduleJson.styles.indexOf("styles/shipwright-refit-draft.css"));
   assert.equal(moduleJson.esmodules.at(-1), "src/ui/refit-alpha-cleanup-ui.js");
 });
 
 test("final cleanup UI parses and removes ambiguous Apply Refit language", () => {
-  const parsed = spawnSync(process.execPath, ["--check", cleanupPath.pathname], { encoding: "utf8" });
+  const parsed = spawnSync(process.execPath, ["--check", fileURLToPath(cleanupPath)], { encoding: "utf8" });
   assert.equal(parsed.status, 0, parsed.stderr || parsed.stdout);
   assert.match(cleanupSource, /SAVE CORE BUILD/);
   assert.match(cleanupSource, /INSTALL MOD — CREW/);
