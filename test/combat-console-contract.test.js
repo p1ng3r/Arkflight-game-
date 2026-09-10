@@ -6,6 +6,7 @@ const source = readFileSync(new URL("../src/ui/combat-console-ui.js", import.met
 const commandHud = readFileSync(new URL("../src/ui/arkflight-command-hud-ui.js", import.meta.url), "utf8");
 const template = readFileSync(new URL("../templates/combat-console.hbs", import.meta.url), "utf8");
 const css = readFileSync(new URL("../styles/arkflight-command-hud.css", import.meta.url), "utf8");
+const actionCss = readFileSync(new URL("../styles/arkflight-command-hud-actions.css", import.meta.url), "utf8");
 const moduleJson = JSON.parse(readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 const LEGACY_MODULES = [
@@ -28,6 +29,7 @@ test("Arkflight Command HUD is the single registered canvas combat presentation"
   assert.ok(moduleJson.esmodules.includes("src/ui/combat-console-ui.js"));
   assert.ok(moduleJson.esmodules.includes("src/ui/arkflight-command-hud-ui.js"));
   assert.ok(moduleJson.styles.includes("styles/arkflight-command-hud.css"));
+  assert.ok(moduleJson.styles.includes("styles/arkflight-command-hud-actions.css"));
   for (const path of LEGACY_MODULES) assert.equal(moduleJson.esmodules.includes(path), false, `${path} must stay retired`);
   for (const path of LEGACY_STYLES) assert.equal(moduleJson.styles.includes(path), false, `${path} must stay retired`);
 
@@ -60,6 +62,21 @@ test("Command HUD permanently exposes core combat state and all five ship vitals
   assert.match(commandHud, /deriveShip/);
   assert.match(commandHud, /supplyCapacity/);
   assert.match(commandHud, /state\?\.strain/);
+});
+
+test("Command HUD station cards resolve exact level-based effects and expose readable rule metadata", () => {
+  assert.match(commandHud, /stationEffectProfile/);
+  assert.match(commandHud, /resolvedStationEffect/);
+  assert.match(commandHud, /actionRuleChips/);
+  assert.match(commandHud, /decorateActionCards/);
+  assert.match(commandHud, /3 \* bonus/);
+  assert.match(commandHud, /15 \* bonus/);
+  assert.match(commandHud, /5 \* bonus/);
+  assert.match(commandHud, /profile\.advanced \? 2 : 1/);
+  assert.match(commandHud, /Full Rules/);
+  assert.match(actionCss, /afcs-action-effect/);
+  assert.match(actionCss, /afcs-rule-chips/);
+  assert.match(actionCss, /afcs-action-full-rules/);
 });
 
 test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and token launch controls", () => {
