@@ -1,6 +1,7 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
+import { areaMobilityPenalties } from "../combat/system-damage.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
@@ -38,17 +39,20 @@ function buildReconciledState(combatant) {
   const ship = shipPayload(combatant?.actor);
   if (!ship) return null;
   const derived = deriveShip(ship, SHIP_CATALOGS);
+  const penalties = areaMobilityPenalties(ship);
   return reconcileCombatantState(ship, currentState(combatant), {
     derived,
     catalogs: SHIP_CATALOGS,
-    rotation: combatant?.token?.rotation ?? 0
+    rotation: currentState(combatant)?.mobility?.heading ?? combatant?.token?.rotation ?? 0,
+    speedPenalty: penalties.speedPenalty,
+    maneuverPenalty: penalties.maneuverPenalty
   });
 }
 
 /**
  * Adopt any Foundry combatant backed by an Arkflight ship Actor, stamp the
- * Arkflight combatant identity flags, and rebuild its transient combat weapon
- * rows from the Actor's authoritative Shipwright-installed loadout.
+ * Arkflight combatant identity flags, and rebuild its transient combat state
+ * from the Actor's authoritative derived build while preserving runtime facts.
  */
 export async function syncCombatantLoadout(combatant) {
   if (!game.user?.isGM || !hasArkflightShipActor(combatant) || syncing.has(combatant.id)) return false;
@@ -66,10 +70,10 @@ export async function syncCombatantLoadout(combatant) {
       [SHIP_COMBATANT_PATH]: true,
       [SHIP_ACTOR_UUID_PATH]: combatant.actor.uuid
     });
-    console.info(`Arkflight | Adopted/synced combat loadout for ${combatant.name}: ${Object.keys(next.weapons ?? {}).length} weapon(s).`);
+    console.info(`Arkflight | Adopted/synced combat build for ${combatant.name}: ${Object.keys(next.weapons ?? {}).length} weapon(s).`);
     return true;
   } catch (error) {
-    console.error(`Arkflight | Failed to sync combat loadout for ${combatant.name}`, error);
+    console.error(`Arkflight | Failed to sync combat build for ${combatant.name}`, error);
     return false;
   } finally {
     syncing.delete(combatant.id);
