@@ -47,9 +47,27 @@ test("visual fitting boards and armory mounts use installed mod and weapon artwo
 });
 
 
-test("installed fitting and weapon art doubles in size on hover", () => {
-  assert.match(workspaceCss, /arkflight-workspace-socket:hover[\s\S]*?arkflight-workspace-socket-component[\s\S]*?transform:\s*scale\(2\)/);
-  assert.match(visualBoardsCss, /arkflight-visual-socket:hover[\s\S]*?arkflight-visual-socket-component[\s\S]*?transform:\s*scale\(2\)/);
-  assert.match(bayCss, /arkflight-bay-socket:hover[\s\S]*?arkflight-bay-installed-component[\s\S]*?transform:\s*scale\(2\)/);
-  assert.match(armoryCss, /arkflight-mount-slot\.has-weapon-art:hover[\s\S]*?arkflight-mount-weapon-art[\s\S]*?scale\(2\)/);
+test("installed fitting and weapon art triples in size on hover", () => {
+  assert.match(workspaceCss, /arkflight-workspace-socket:hover[\s\S]*?arkflight-workspace-socket-component[\s\S]*?transform:\s*scale\(3\)/);
+  assert.match(visualBoardsCss, /arkflight-visual-socket:hover[\s\S]*?arkflight-visual-socket-component[\s\S]*?transform:\s*scale\(3\)/);
+  assert.match(bayCss, /arkflight-bay-socket:hover[\s\S]*?arkflight-bay-installed-component[\s\S]*?transform:\s*scale\(3\)/);
+  assert.match(armoryCss, /arkflight-mount-slot\.has-weapon-art:hover[\s\S]*?arkflight-mount-weapon-art[\s\S]*?scale\(3\)/);
+});
+
+
+test("installed sockets expose effects and right-click uninstall confirmation", () => {
+  assert.match(workspace, /componentBonusLines/);
+  assert.match(template, /Effects \/ Bonuses/);
+  assert.match(template, /Right-click to uninstall/);
+  assert.match(workspace, /addEventListener\("contextmenu"/);
+  assert.match(workspace, /uninstallDialog\(this\.actor, this\.group, row\)/);
+  assert.match(workspace, /Uninstall \$\{escape\(item\.name\)\}\?/);
+  assert.match(workspace, /queueRemove/);
+});
+
+test("right-hand owned fittings list explicit bonuses and effects", () => {
+  assert.match(workspace, /effectSummary: componentEffectSummary/);
+  assert.match(workspace, /bonusLines: componentBonusLines/);
+  assert.match(template, /arkflight-fitting-bonus-label/);
+  assert.match(template, /item\.bonusLines/);
 });
