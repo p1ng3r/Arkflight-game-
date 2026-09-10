@@ -108,6 +108,22 @@
           </div>
         </section>
 
+        <section class="arkflight-workspace-tray arkflight-workspace-blueprint-tray" style="--tray-art:url('{{assets.inventoryTray}}')">
+          <header>
+            <h2>Known Blueprints <span class="arkflight-blueprint-count">{{blueprintCount}}</span></h2>
+            <small>Blueprints are designs, not installed hardware. Fabricate a physical fitting from Repairs &amp; Fabrication, then install it into a compatible socket.</small>
+          </header>
+          <div class="arkflight-workspace-blueprint-list">
+            {{#each blueprints as |item|}}
+              <article title="{{item.effectSummary}}">
+                <img src="{{../assets.blueprint}}" alt="Blueprint">
+                <div><strong>{{item.name}}</strong><small>Known {{#if ../isWeapon}}weapon{{else}}fitting{{/if}} blueprint</small><div class="arkflight-fitting-bonuses">{{#each item.bonusLines as |bonus|}}<span>{{bonus}}</span>{{/each}}</div></div>
+              </article>
+            {{/each}}
+            {{#unless blueprints.length}}<p>No known blueprints in this category. Drag a managed compendium entry onto the vessel and choose Blueprint to learn one.</p>{{/unless}}
+          </div>
+        </section>
+
         <section class="arkflight-workspace-tray arkflight-workspace-worktray" style="--tray-art:url('{{assets.workTray}}')">
           <header><h2>Active Work</h2><small>Reserved sockets remain unavailable until their work order resolves.</small></header>
           {{#if hasWorkOrders}}
