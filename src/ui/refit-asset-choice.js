@@ -8,7 +8,7 @@ export const REFIT_BLUEPRINT_ICONS = Object.freeze({
 });
 
 export function blueprintIconForFamily(family) {
-  return REFIT_BLUEPRINT_ICONS[family] ?? `${ROOT}/mod-ui/blueprint_fabrication_icon.webp`;
+  return REFIT_BLUEPRINT_ICONS[family] ?? `modules/${MODULE_ID}/assets/ui/shipwright/workbench/blueprint_fabrication_icon.webp`;
 }
 
 export function chooseRefitAssetKind({ name = "Arkflight fitting", family = "shipMod" } = {}) {
