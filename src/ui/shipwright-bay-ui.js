@@ -1,3 +1,5 @@
+import { SHIP_CATALOGS } from "../content/index.js";
+
 const MODULE_ID = "arkflight-game";
 const TARGET_WIDTH = 1720;
 const TARGET_HEIGHT = 940;
@@ -105,6 +107,18 @@ function cardBenefit(card) {
   if (explicit) return explicit;
   return card?.querySelector("p")?.textContent?.trim() || "Changes the vessel's fitted capability.";
 }
+function catalogForKind(kind) {
+  if (kind === "shipMod") return SHIP_CATALOGS.shipMods;
+  if (kind === "arkengineMod") return SHIP_CATALOGS.arkengineMods;
+  if (kind === "weapon") return SHIP_CATALOGS.weapons;
+  return null;
+}
+
+function fittingArt(kind, id) {
+  const item = catalogForKind(kind)?.[id];
+  return item?.img ?? item?.data?.art?.img ?? "";
+}
+
 
 function setSelected(root, card) {
   for (const entry of root.querySelectorAll(".arkflight-fitting-card.is-bay-selected")) entry.classList.remove("is-bay-selected");
@@ -182,8 +196,11 @@ function buildSchematic(root, stage, meta, center) {
     socket.style.left = `${x}%`;
     socket.style.top = `${y}%`;
     socket.dataset.socketIndex = String(index);
+    const componentId = entry?.card?.dataset?.id ?? "";
+    const componentImg = entry ? fittingArt(meta.kind, componentId) : "";
+    socket.classList.toggle("has-component-art", Boolean(componentImg));
     socket.innerHTML = entry
-      ? `<i class="fa-solid fa-lock"></i><span>${entry.linked ? "LINKED" : index + 1}</span>`
+      ? `${componentImg ? `<img class="arkflight-bay-installed-component" src="${componentImg}" alt="${cardName(entry.card)}">` : '<i class="fa-solid fa-lock"></i>'}<span>${entry.linked ? "LINKED" : index + 1}</span>`
       : `<i class="fa-solid fa-plus"></i><span>${index + 1}</span>`;
     socket.title = entry ? `${cardName(entry.card)} — ${entry.linked ? "linked socket" : "installed"}` : `${meta.socketLabel} ${index + 1}`;
 
