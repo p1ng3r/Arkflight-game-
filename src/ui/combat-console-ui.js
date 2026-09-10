@@ -1,5 +1,4 @@
 import { SHIP_CATALOGS } from "../content/index.js";
-import { weaponArcCheck } from "../combat/weapon-targeting.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { firingArcsVisible, firingArcWeaponVisible, redrawFiringArcs, setFiringArcsVisible, toggleWeaponFiringArc } from "./weapon-combat-station-ui.js";
 
@@ -20,10 +19,6 @@ const FACINGS = Object.freeze([
   { id: "starboard", label: "Starboard", color: 0xd7b16b },
   { id: "aft", label: "Aft", color: 0xc6756c }
 ]);
-const DEG_TO_RAD = Math.PI / 180;
-const CONSOLE_ARCS_VISIBLE = new Set();
-const CONSOLE_ARC_FACINGS = new Map();
-const CONSOLE_ARC_GRAPHICS = new Map();
 const REFRESH_HOOKS = [
   "updateActor",
   "updateCombat",
@@ -313,59 +308,6 @@ function buildLogEntries(state, lastShot) {
     });
   }
   return entries;
-}
-
-function arcLayer() {
-  return canvas?.interface ?? canvas?.controls ?? canvas?.stage ?? null;
-}
-
-function tokenCenter(combatant) {
-  const center = combatant?.token?.object?.center;
-  if (center) return { x: Number(center.x), y: Number(center.y) };
-  const token = combatant?.token;
-  const grid = Number(canvas?.grid?.size ?? canvas?.scene?.grid?.size ?? 100) || 100;
-  return {
-    x: Number(token?.x ?? 0) + Number(token?.width ?? 1) * grid / 2,
-    y: Number(token?.y ?? 0) + Number(token?.height ?? 1) * grid / 2
-  };
-}
-
-function removeConsoleArcGraphics(id) {
-  const graphics = CONSOLE_ARC_GRAPHICS.get(id);
-  if (!graphics) return;
-  try { graphics.parent?.removeChild?.(graphics); } catch (_error) { /* cleanup */ }
-  try { graphics.destroy?.({ children: true }); } catch (_error) { /* cleanup */ }
-  CONSOLE_ARC_GRAPHICS.delete(id);
-}
-
-function selectedFacings(combatant) {
-  if (!combatant?.id) return new Set();
-  if (!CONSOLE_ARC_FACINGS.has(combatant.id)) {
-    CONSOLE_ARC_FACINGS.set(combatant.id, new Set(FACINGS.map((entry) => entry.id)));
-  }
-  return CONSOLE_ARC_FACINGS.get(combatant.id);
-}
-
-function drawSector(graphics, { x, y, radius, center, halfWidth, color }) {
-  if (!(radius > 0)) return;
-  const start = (center - halfWidth - 90) * DEG_TO_RAD;
-  const end = (center + halfWidth - 90) * DEG_TO_RAD;
-  const modern = typeof graphics.fill === "function" && typeof graphics.stroke === "function";
-  if (modern) {
-    graphics.moveTo(x, y);
-    graphics.arc(x, y, radius, start, end);
-    graphics.lineTo(x, y);
-    graphics.closePath?.();
-    graphics.fill({ color, alpha: 0.16 });
-    graphics.stroke({ color, width: 3, alpha: 0.92 });
-    return;
-  }
-  graphics.lineStyle?.(3, color, 0.92);
-  graphics.beginFill?.(color, 0.16);
-  graphics.moveTo?.(x, y);
-  graphics.arc?.(x, y, radius, start, end);
-  graphics.lineTo?.(x, y);
-  graphics.endFill?.();
 }
 
 function redrawConsoleArcs(combatant) {
