@@ -571,7 +571,7 @@
 }
 .arkflight-bay-socket:hover .arkflight-bay-installed-component,
 .arkflight-bay-socket:hover .arkflight-refit-staged-component {
-  transform: scale(2);
+  transform: scale(3);
   z-index: 20;
   filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
 }
