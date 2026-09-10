@@ -99,6 +99,52 @@ function bindClose(app, root) {
   });
 }
 
+function waitForCombatAdvance(combat, previousTurn, previousRound, timeout = 350) {
+  return new Promise((resolve) => {
+    const started = performance.now();
+    const check = () => {
+      if (combat.turn !== previousTurn || combat.round !== previousRound) return resolve(true);
+      if (performance.now() - started >= timeout) return resolve(false);
+      requestAnimationFrame(check);
+    };
+    check();
+  });
+}
+
+function nextTurnCoordinates(combat, previousTurn, previousRound) {
+  const turns = [...(combat.turns ?? [])];
+  if (turns.length < 2) return null;
+
+  const currentIndex = Number.isInteger(previousTurn) && previousTurn >= 0
+    ? Math.min(previousTurn, turns.length - 1)
+    : Math.max(0, turns.findIndex((entry) => entry.id === combat.combatant?.id));
+  const nextIndex = (currentIndex + 1) % turns.length;
+  const nextRound = nextIndex === 0 ? Math.max(1, Number(previousRound) || 1) + 1 : Math.max(1, Number(previousRound) || 1);
+  return { turn: nextIndex, round: nextRound };
+}
+
+async function advanceCombatTurn(combat) {
+  const previousTurn = Number(combat.turn);
+  const previousRound = Number(combat.round);
+  const previousId = combat.combatant?.id ?? null;
+  const fallback = nextTurnCoordinates(combat, previousTurn, previousRound);
+  if (!fallback) throw new Error("There is no other combatant in initiative to advance to.");
+
+  await combat.nextTurn();
+  let advanced = await waitForCombatAdvance(combat, previousTurn, previousRound);
+
+  if (!advanced) {
+    await combat.update({ round: fallback.round, turn: fallback.turn });
+    advanced = await waitForCombatAdvance(combat, previousTurn, previousRound);
+  }
+
+  const next = combat.combatant ?? combat.turns?.[combat.turn] ?? null;
+  if (!advanced || !next || next.id === previousId) {
+    throw new Error("Foundry combat turn did not advance after the fallback update.");
+  }
+  return next;
+}
+
 function bindEndTurn(app, root) {
   const button = root.querySelector("[data-end-turn]");
   if (!button || button.dataset.afchTurnBound === "true") return;
@@ -122,15 +168,9 @@ function bindEndTurn(app, root) {
       return;
     }
 
-    const previousId = combat.combatant?.id ?? null;
     button.disabled = true;
     try {
-      const updatedCombat = await combat.nextTurn();
-      const next = updatedCombat?.combatant ?? combat.combatant ?? null;
-      if (!next || next.id === previousId) {
-        throw new Error("Foundry did not advance to another combatant.");
-      }
-
+      const next = await advanceCombatTurn(combat);
       if (shipPayload(next.actor)) app.setReference?.(next.actor);
       else app.render?.({ force: true });
     } catch (error) {
