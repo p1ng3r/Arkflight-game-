@@ -116,7 +116,8 @@ function unavailableLabel(reason) {
     "insufficient-rp": "Not Enough RP",
     "once-per-round": "Used This Round",
     "reaction-readied": "Reaction Readied",
-    "combatant-required": "Combat Offline"
+    "combatant-required": "Combat Offline",
+    "not-your-station": "Assigned Crew Only"
   })[reason] ?? "Unavailable";
 }
 
@@ -227,9 +228,11 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
     const availability = api.stationActionAvailability?.(action.id, combatant)
       ?? { ok: false, reason: "combatant-required" };
     const resolver = action.rules?.resolver;
-    let usable = Boolean(game.user?.isGM && availability.ok);
+    const control = api.stationActionControl?.(action.id, combatant)
+      ?? { ok: Boolean(game.user?.isGM), reason: game.user?.isGM ? null : "not-your-station" };
+    let usable = Boolean(control.ok && availability.ok);
     let buttonLabel = action.timing === "reaction" ? "Ready" : "Use";
-    let reason = availability.ok ? "" : unavailableLabel(availability.reason);
+    let reason = !control.ok ? unavailableLabel(control.reason) : (availability.ok ? "" : unavailableLabel(availability.reason));
 
     if (resolver === "fireAtTarget") {
       let legal = false;
@@ -238,7 +241,7 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
         catch (_error) { legal = false; }
       }
       const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(selectedWeapon?.fireAP ?? 99);
-      usable = Boolean(game.user?.isGM && availability.ok && selectedWeapon?.ready && selectedTargetId && legal && enoughAP);
+      usable = Boolean(control.ok && availability.ok && selectedWeapon?.ready && selectedTargetId && legal && enoughAP);
       buttonLabel = "Fire";
       if (!selectedWeapon) reason = "Choose Weapon";
       else if (!selectedTargetId) reason = "Choose Target";
@@ -246,7 +249,7 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
       else if (!legal) reason = "Illegal Shot";
       else if (!enoughAP) reason = `Need ${selectedWeapon.fireAP} AP`;
     } else if (resolver === "workTheGuns") {
-      usable = Boolean(game.user?.isGM && availability.ok && selectedWeapon && !selectedWeapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
+      usable = Boolean(control.ok && availability.ok && selectedWeapon && !selectedWeapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
       buttonLabel = "Work Guns";
       if (!selectedWeapon) reason = "Choose Weapon";
       else if (selectedWeapon.ready) reason = "Weapon Ready";
@@ -256,11 +259,6 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
     )) {
       usable = false;
       reason = "No Valid Choice";
-    }
-
-    if (!game.user?.isGM) {
-      usable = false;
-      reason = "GM Resolve";
     }
 
     return {
@@ -466,6 +464,8 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     if (!targets.some((entry) => entry.id === this.selectedTargetId)) this.selectedTargetId = canvasTarget?.id ?? targets[0]?.id ?? null;
     const targetCombatant = targets.find((entry) => entry.id === this.selectedTargetId) ?? null;
     const target = targetSummary(targetCombatant, this.selectedWeaponKey, combatant);
+    const battlewatchFireControl = combatant ? api?.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: false } : { ok: false };
+    const battlewatchReloadControl = combatant ? api?.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
     const arcVisible = Boolean(combatant && firingArcsVisible(combatant));
     const undoStatus = combatant ? api?.movementUndoStatus?.(combatant) ?? {} : {};
     const stationRows = STATIONS.map((entry) => ({
@@ -495,6 +495,8 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         weapon.solution = "No target";
       }
       weapon.statusLabel = weapon.ready ? "Ready" : `Reload ${weapon.remaining}`;
+      weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= weapon.fireAP);
+      weapon.canReload = Boolean(battlewatchReloadControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
     }
 
     const ap = Number(state?.economy?.ap?.value ?? 0);
@@ -527,7 +529,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       hasWeapons: weapons.length > 0,
       selectedWeaponKey: this.selectedWeaponKey,
       canFireSelected: Boolean(
-        game.user?.isGM
+        battlewatchFireControl.ok
         && combatant
         && game.combat?.combatant?.id === combatant.id
         && target?.legal
@@ -669,7 +671,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         const key = button.dataset.workWeapon;
         if (!key) return;
         try {
-          await api.workTheGuns(key, combatant);
+          await api.stationAction("battlewatch-reload-weapon", { weaponKey: key, selection: key }, combatant);
           this.render({ force: true });
         } catch (error) {
           console.error("Arkflight combat console work guns failed", error);
@@ -687,10 +689,12 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         const selection = card?.querySelector("[data-action-choice]")?.value ?? null;
         try {
           button.disabled = true;
-          if (action.rules?.resolver === "fireAtTarget") await this.#fireSelected(combatant);
-          else if (action.rules?.resolver === "workTheGuns") {
+          if (action.rules?.resolver === "fireAtTarget") {
+            if (!this.selectedWeaponKey || !this.selectedTargetId) throw new Error("Choose a weapon and target first.");
+            await api.stationAction(actionId, { selection, weaponKey: this.selectedWeaponKey, targetId: this.selectedTargetId }, combatant);
+          } else if (action.rules?.resolver === "workTheGuns") {
             if (!this.selectedWeaponKey) throw new Error("Choose an installed weapon first.");
-            await api.workTheGuns(this.selectedWeaponKey, combatant);
+            await api.stationAction(actionId, { selection, weaponKey: this.selectedWeaponKey }, combatant);
           } else await api.stationAction(actionId, { selection }, combatant);
           this.render({ force: true });
         } catch (error) {
@@ -721,7 +725,15 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       return null;
     }
     try {
-      const result = await api.fireAtTarget(this.selectedWeaponKey, this.selectedTargetId, combatant);
+      const result = await api.stationAction("battlewatch-fire-weapon", {
+        weaponKey: this.selectedWeaponKey,
+        targetId: this.selectedTargetId,
+        selection: this.selectedTargetId
+      }, combatant);
+      if (result?.requested) {
+        this.render({ force: true });
+        return result;
+      }
       this.lastShot = {
         weapon: result.solution?.weapon?.name ?? "Ship Weapon",
         target: result.solution?.target?.name ?? "Target",
