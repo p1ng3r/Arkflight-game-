@@ -153,6 +153,23 @@
   filter: saturate(.45) brightness(.52);
   opacity: .76;
 }
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.has-component-art .arkflight-engine-socket-art {
+  opacity: .32;
+  filter: saturate(.35) brightness(.48);
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.has-component-art .arkflight-engine-socket-marker {
+  opacity: 0;
+}
+
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket .arkflight-bay-installed-component,
+.arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket .arkflight-refit-staged-component {
+  inset: 16px;
+  z-index: 5;
+  width: calc(100% - 32px);
+  height: calc(100% - 32px);
+}
+
 
 .arkflight-ship-shell .arkflight-bay-schematic.is-engine .arkflight-bay-socket.is-occupied .arkflight-engine-socket-marker {
   background: rgba(16, 11, 5, .86);
