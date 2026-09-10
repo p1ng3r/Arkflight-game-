@@ -1,6 +1,16 @@
 #!/usr/bin/env node
 
 import { BENCHMARK_BUILD_SPECS, auditBuild, deriveBuild } from "./combat-build-lab.mjs";
+import {
+  applyHardnessToDamage,
+  applyWeaponSystemThreat,
+  degreeOfSuccess,
+  fireWeapon,
+  reduceWeaponReload,
+  stationEffectProfile,
+  weaponReloadRemaining,
+  workTheGuns
+} from "../src/combat/index.js";
 
 export const POLICIES = Object.freeze(["balanced", "aggressive", "defensive"]);
 export const SCENARIOS = Object.freeze(["broadside", "open-duel", "pursuit-objective"]);
@@ -14,11 +24,7 @@ export const BUILD_PAIRINGS = Object.freeze([
   Object.freeze({ id: "battle-vs-line-l10", rumBuild: "rum-battle-l10", ironBuild: "iron-line-l10", purpose: "battle-refit brigantine against battle-refit frigate" })
 ]);
 
-function stationBonus(level) {
-  const value = Math.max(1, Math.min(20, Math.trunc(Number(level) || 1)));
-  return value >= 20 ? 3 : value >= 10 ? 2 : 1;
-}
-
+function stationBonus(level) { return stationEffectProfile(level).bonus; }
 function clamp(value, min, max) { return Math.max(min, Math.min(max, Number(value) || 0)); }
 function avg(values) { return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0; }
 function median(values) {
@@ -53,34 +59,42 @@ function rollDamage(rng, die) {
   for (let i = 0; i < Math.max(0, Number(die?.count ?? 0)); i += 1) total += 1 + Math.floor(rng() * Math.max(1, Number(die?.faces ?? 1)));
   return Math.max(0, total);
 }
-function degreeOfSuccess(die, total, dc) {
-  let degree = total >= dc + 10 ? 3 : total >= dc ? 2 : total <= dc - 10 ? 0 : 1;
-  if (die === 20) degree = Math.min(3, degree + 1);
-  if (die === 1) degree = Math.max(0, degree - 1);
-  return degree;
-}
 
-function profile(buildId) {
+function benchmark(buildId) {
   const build = deriveBuild(buildId);
   if (!build.validation.ok) throw new Error(`${buildId} is not a legal benchmark build: ${build.validation.errors.join("; ")}`);
-  return build.profile;
+  return build;
 }
+function profile(buildId) { return benchmark(buildId).profile; }
 
 export const BENCHMARK_SHIPS = Object.freeze({
   rumRunner: profile("rum-stock-l5"),
   ironSpear: profile("iron-stock-l5")
 });
 
-function initialState(ship, policy) {
+function areaIndexes(ship) {
+  const order = ["stable", "stressed", "degraded", "critical", "disabled"];
+  return Object.freeze(Object.fromEntries(["hull", "arkengine", "rigging", "lifeveil", "morale"].map((area) => [
+    area,
+    Math.max(0, order.indexOf(String(ship?.areas?.[area]?.state ?? "stable")))
+  ])));
+}
+
+function initialState(build, policy) {
+  const ship = build.profile;
+  const combatState = structuredClone(build.combatState);
   return {
+    build,
     ship,
     policy,
+    systemShip: structuredClone(build.ship),
+    combatState,
     hull: ship.hullMax,
     hullMax: ship.hullMax,
     lifeveil: ship.lifeveilMax,
     strain: 0,
-    areas: { hull: 0, arkengine: 0, rigging: 0, lifeveil: 0, morale: 0 },
-    reload: Object.fromEntries(ship.weapons.map((weapon) => [weapon.id, 0])),
+    round: 1,
+    areas: { ...areaIndexes(build.ship) },
     stats: {
       damage: 0,
       shots: 0,
@@ -96,26 +110,41 @@ function initialState(ship, policy) {
   };
 }
 
+function syncScalarEconomy(state) {
+  state.ap = Number(state.combatState?.economy?.ap?.value ?? 0);
+  state.rp = Number(state.combatState?.economy?.rp?.value ?? 0);
+}
+function resetTurnState(state, round) {
+  state.round = round;
+  state.combatState = {
+    ...state.combatState,
+    turnKey: `sim:${round}`,
+    economy: {
+      ap: { value: state.ship.apMax, max: state.ship.apMax },
+      rp: { value: state.ship.rpMax, max: state.ship.rpMax }
+    }
+  };
+  syncScalarEconomy(state);
+  state.attackBuff = 0;
+  state.hardnessReduction = 0;
+  state.damageBuff = 0;
+}
 function effectiveSpeed(state) {
-  return Math.max(1,
-    state.ship.combatSpeed
-    - (state.areas.arkengine >= 1 ? 1 : 0)
-    - (state.areas.arkengine >= 3 ? 1 : 0)
-    - (state.areas.arkengine >= 4 ? 1 : 0)
-    - (state.areas.rigging >= 2 ? 1 : 0)
-  );
+  const penalty = applyWeaponSystemThreat(state.systemShip, { threat: "hull", degree: -1, hullDamage: 0 }).mobilityPenalties;
+  return Math.max(1, state.ship.combatSpeed - Number(penalty?.speedPenalty ?? 0));
 }
 function effectiveManeuver(state) {
-  return Math.max(1,
-    state.ship.maneuverability
-    - (state.areas.rigging >= 1 ? 1 : 0)
-    - (state.areas.rigging >= 3 ? 1 : 0)
-  );
+  const penalty = applyWeaponSystemThreat(state.systemShip, { threat: "hull", degree: -1, hullDamage: 0 }).mobilityPenalties;
+  return Math.max(1, state.ship.maneuverability - Number(penalty?.maneuverPenalty ?? 0));
 }
 function spendAP(state, station, amount) {
   const cost = Math.max(0, Math.trunc(Number(amount) || 0));
   if (state.ap < cost) return false;
   state.ap -= cost;
+  state.combatState = {
+    ...state.combatState,
+    economy: { ...state.combatState.economy, ap: { ...state.combatState.economy.ap, value: state.ap } }
+  };
   state.stats.ap[station] += cost;
   return true;
 }
@@ -123,19 +152,14 @@ function gainStrain(state, amount) {
   state.strain = clamp(state.strain + amount, 0, state.ship.strainMax);
   state.stats.peakStrain = Math.max(state.stats.peakStrain, state.strain);
 }
-function beginTurn(state) {
-  state.ap = state.ship.apMax;
-  state.rp = state.ship.rpMax;
-  state.attackBuff = 0;
-  state.hardnessReduction = 0;
-  state.damageBuff = 0;
-  for (const weapon of state.ship.weapons) state.reload[weapon.id] = Math.max(0, state.reload[weapon.id] - 1);
-}
-
 function chooseReaction(state) {
   if (state.rp <= 0) return { ac: 0, brace: 0 };
   const bonus = stationBonus(state.ship.level);
   state.rp -= 1;
+  state.combatState = {
+    ...state.combatState,
+    economy: { ...state.combatState.economy, rp: { ...state.combatState.economy.rp, value: state.rp } }
+  };
   state.stats.rp += 1;
   if (state.policy === "defensive") return { ac: 0, brace: 3 * bonus };
   if (state.policy === "balanced") {
@@ -145,33 +169,19 @@ function chooseReaction(state) {
   return { ac: bonus, brace: 0 };
 }
 
-function systemThreshold(state) {
-  return Math.max(12, Math.ceil(state.ship.hullMax * 0.15));
-}
-
 function applySystemDamage(state, threat, degree, hullDamage) {
-  if (hullDamage <= 0) return;
-  const area = ["hull", "arkengine", "rigging", "lifeveil"].includes(threat) ? threat : "hull";
-  const triggered = area === "hull"
-    ? hullDamage >= systemThreshold(state)
-    : degree === 3 || hullDamage >= systemThreshold(state);
-  if (!triggered) return;
-  state.areas[area] = Math.min(4, Number(state.areas[area] ?? 0) + 1);
-  state.stats.systemHits += 1;
-  if (area === "lifeveil") {
-    const fraction = [1, 0.90, 0.65, 0.25, 0][state.areas.lifeveil];
-    state.lifeveil = Math.min(state.lifeveil, Math.floor(state.ship.lifeveilMax * fraction));
-  }
-  if (area === "hull") {
-    const fraction = [1, 0.90, 0.65, 0.25, 0][state.areas.hull];
-    state.hullMax = Math.floor(state.ship.hullMax * fraction);
-    state.hull = Math.min(state.hull, state.hullMax);
-  }
+  const before = areaIndexes(state.systemShip);
+  const outcome = applyWeaponSystemThreat(state.systemShip, { threat, degree, hullDamage });
+  if (!outcome.triggered || !outcome.degraded) return;
+  state.systemShip = structuredClone(outcome.ship);
+  state.areas = { ...areaIndexes(state.systemShip) };
+  state.hullMax = Number(state.systemShip.resources?.hull?.max ?? state.hullMax);
+  state.hull = Math.min(state.hull, state.hullMax);
+  state.lifeveil = Math.min(state.lifeveil, Number(state.systemShip.resources?.lifeveil?.max ?? state.lifeveil));
+  if (JSON.stringify(before) !== JSON.stringify(state.areas)) state.stats.systemHits += 1;
 }
 
-function salvoKey(weapon) {
-  return `${weapon.mount}|${weapon.family}|${weapon.type}|${weapon.threat}|${weapon.arcTemplate}`;
-}
+function salvoKey(weapon) { return `${weapon.mount}|${weapon.family}|${weapon.type}|${weapon.threat}|${weapon.arcTemplate}`; }
 function compatibleGroups(weapons) {
   const groups = new Map();
   for (const weapon of weapons) {
@@ -181,7 +191,10 @@ function compatibleGroups(weapons) {
   }
   return [...groups.values()];
 }
-
+function readyWeapon(state, weapon) {
+  const row = state.combatState.weapons?.[weapon.id];
+  return Boolean(row && weaponReloadRemaining(row, state.round) <= 0);
+}
 function chooseMount(state, foe, scenario, rng, side) {
   if (scenario === "broadside") return side === "rumRunner" ? "port" : "starboard";
   if (scenario === "pursuit-objective") return side === "rumRunner" ? "aft" : "fore";
@@ -189,10 +202,9 @@ function chooseMount(state, foe, scenario, rng, side) {
   const broadsideChance = clamp(0.56 + mobilityEdge, 0.22, 0.86);
   return rng() < broadsideChance ? (side === "rumRunner" ? "port" : "starboard") : "fore";
 }
-
 function setupPolicy(state, mount) {
   const bonus = stationBonus(state.ship.level);
-  const ready = state.ship.weapons.filter((weapon) => weapon.mount === mount && state.reload[weapon.id] === 0);
+  const ready = state.ship.weapons.filter((weapon) => weapon.mount === mount && readyWeapon(state, weapon));
   const groups = compatibleGroups(ready);
   const salvo = groups.filter((group) => group.length >= 2).sort((a, b) => b.length - a.length)[0] ?? [];
   const reserve = salvo.length >= 2
@@ -202,60 +214,82 @@ function setupPolicy(state, mount) {
   if (state.policy === "aggressive") {
     if (state.strain <= state.ship.strainMax - 2 && state.ap - 1 >= reserve && spendAP(state, "captain", 1)) {
       state.ap += 2;
+      state.combatState = { ...state.combatState, economy: { ...state.combatState.economy, ap: { value: state.ap, max: Math.max(state.ap, state.combatState.economy.ap.max) } } };
       gainStrain(state, state.ship.level >= 20 ? 0 : state.ship.level >= 15 ? 1 : 2);
     }
     if (state.ap - 1 >= reserve && spendAP(state, "captain", 1)) state.hardnessReduction = bonus;
   } else if (state.policy === "defensive") {
-    if (state.strain >= Math.ceil(state.ship.strainMax * 0.55) && state.ap - 1 >= reserve && spendAP(state, "engineer", 1)) {
-      state.strain = Math.max(0, state.strain - (1 + bonus));
-    }
+    if (state.strain >= Math.ceil(state.ship.strainMax * 0.55) && state.ap - 1 >= reserve && spendAP(state, "engineer", 1)) state.strain = Math.max(0, state.strain - (1 + bonus));
   }
 
   if (state.policy !== "aggressive" && state.ap - 1 >= reserve && spendAP(state, "battlewatch", 1)) state.attackBuff = bonus;
   if (["port", "starboard"].includes(mount) && state.policy === "balanced" && state.ap - 1 >= reserve && spendAP(state, "battlewatch", 1)) state.damageBuff = 2 * bonus;
 }
 
+function fireSimWeapon(state, weapon) {
+  if (!state.combatState.weapons?.[weapon.id]) return false;
+  try {
+    state.combatState = fireWeapon(state.combatState, weapon.id, state.round);
+    syncScalarEconomy(state);
+    state.stats.ap.battlewatch += weapon.fireAP;
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
 function attackPacket(attacker, defender, weapons, rng, { salvo = false } = {}) {
-  const cost = weapons.reduce((sum, weapon) => sum + weapon.fireAP, 0);
-  if (!spendAP(attacker, "battlewatch", cost)) return false;
-  for (const weapon of weapons) attacker.reload[weapon.id] = weapon.reload;
+  const totalCost = weapons.reduce((sum, weapon) => sum + weapon.fireAP, 0);
+  if (attacker.ap < totalCost || weapons.some((weapon) => !readyWeapon(attacker, weapon))) return false;
+  for (const weapon of weapons) if (!fireSimWeapon(attacker, weapon)) return false;
 
   const reaction = chooseReaction(defender);
   const die = d20(rng);
-  // A coordinated salvo uses the weakest participating fire-control solution,
-  // preventing ordering a high-potency gun first to drag weaker guns upward.
   const baseAttack = Math.min(...weapons.map((weapon) => Number(weapon.attackBonus) || 0));
-  const degree = degreeOfSuccess(die, die + baseAttack + attacker.attackBuff, defender.ship.ac + reaction.ac);
+  const degree = degreeOfSuccess(die + baseAttack + attacker.attackBuff, die, defender.ship.ac + reaction.ac);
   attacker.attackBuff = 0;
   attacker.stats.shots += 1;
   if (salvo) attacker.stats.salvos += 1;
-  if (degree < 2) return true;
+  if (degree < 1) return true;
 
   attacker.stats.hits += 1;
-  if (degree === 3) attacker.stats.crits += 1;
+  if (degree === 2) attacker.stats.crits += 1;
   let incoming = weapons.reduce((sum, weapon) => sum + rollDamage(rng, weapon.damage), 0) + attacker.damageBuff;
   attacker.damageBuff = 0;
-  if (degree === 3) incoming *= 2;
+  if (degree === 2) incoming *= 2;
 
   const hardness = Math.max(0, defender.ship.hardness - attacker.hardnessReduction);
   attacker.hardnessReduction = 0;
-  const hullDamage = Math.max(0, incoming - hardness - reaction.brace);
+  const afterHardness = applyHardnessToDamage(incoming, hardness).hullDamage;
+  const hullDamage = Math.max(0, afterHardness - reaction.brace);
   defender.hull = Math.max(0, defender.hull - hullDamage);
+  defender.systemShip.resources.hull.value = defender.hull;
   attacker.stats.damage += hullDamage;
-
-  // Same-threat salvos are required by compatibility, so a single threatened
-  // area is unambiguous for system-damage resolution.
   applySystemDamage(defender, weapons[0]?.threat ?? "hull", degree, hullDamage);
   return true;
 }
 
-function takeTurn(state, foe, scenario, rng, side) {
-  beginTurn(state);
+function workSimWeapon(state, weapon) {
+  if (state.ap < 1 || !state.combatState.weapons?.[weapon.id]) return false;
+  try {
+    let next = workTheGuns(state.combatState, weapon.id, state.round);
+    next = reduceWeaponReload(next, weapon.id, state.round, Math.max(0, stationBonus(state.ship.level) - 1));
+    state.combatState = next;
+    syncScalarEconomy(state);
+    state.stats.ap.battlewatch += 1;
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function takeTurn(state, foe, scenario, rng, side, round) {
+  resetTurnState(state, round);
   const mount = chooseMount(state, foe, scenario, rng, side);
   state.stats.mountTurns[mount] = Number(state.stats.mountTurns[mount] ?? 0) + 1;
   setupPolicy(state, mount);
 
-  let ready = state.ship.weapons.filter((weapon) => weapon.mount === mount && state.reload[weapon.id] === 0);
+  let ready = state.ship.weapons.filter((weapon) => weapon.mount === mount && readyWeapon(state, weapon));
   for (const group of compatibleGroups(ready)) {
     const cost = group.reduce((sum, weapon) => sum + weapon.fireAP, 0);
     if (group.length >= 2 && cost <= state.ap) {
@@ -273,13 +307,11 @@ function takeTurn(state, foe, scenario, rng, side) {
   }
 
   const loading = state.ship.weapons
-    .filter((weapon) => weapon.mount === mount && state.reload[weapon.id] > 0)
-    .sort((a, b) => state.reload[a.id] - state.reload[b.id]);
+    .filter((weapon) => weapon.mount === mount && !readyWeapon(state, weapon))
+    .sort((a, b) => weaponReloadRemaining(state.combatState.weapons[a.id], state.round) - weaponReloadRemaining(state.combatState.weapons[b.id], state.round));
   for (const weapon of loading) {
-    if (state.ap < 1) break;
-    const reduction = stationBonus(state.ship.level);
-    if (spendAP(state, "battlewatch", 1)) state.reload[weapon.id] = Math.max(0, state.reload[weapon.id] - reduction);
-    if (weapon.fireAP <= state.ap && state.reload[weapon.id] === 0) {
+    if (!workSimWeapon(state, weapon)) break;
+    if (weapon.fireAP <= state.ap && readyWeapon(state, weapon)) {
       attackPacket(state, foe, [weapon], rng);
       if (foe.hull <= 0) return;
     }
@@ -295,12 +327,14 @@ export function simulateBattle({
   seed = 1,
   maxRounds = 40
 } = {}) {
-  const rumProfile = profile(rumBuild);
-  const ironProfile = profile(ironBuild);
+  const rumBuildData = benchmark(rumBuild);
+  const ironBuildData = benchmark(ironBuild);
+  const rumProfile = rumBuildData.profile;
+  const ironProfile = ironBuildData.profile;
   if (rumProfile.level !== ironProfile.level) throw new Error(`Build-aware gauntlet compares equal ship levels; got ${rumProfile.level} vs ${ironProfile.level}.`);
   const rng = mulberry32(seed);
-  const rum = initialState(rumProfile, rumPolicy);
-  const iron = initialState(ironProfile, ironPolicy);
+  const rum = initialState(rumBuildData, rumPolicy);
+  const iron = initialState(ironBuildData, ironPolicy);
   const rumFirst = rng() < 0.5;
   const order = rumFirst
     ? [[rum, iron, "rumRunner"], [iron, rum, "ironSpear"]]
@@ -310,7 +344,7 @@ export function simulateBattle({
   for (round = 1; round <= cap && rum.hull > 0 && iron.hull > 0; round += 1) {
     for (const [actor, foe, side] of order) {
       if (actor.hull <= 0 || foe.hull <= 0) break;
-      takeTurn(actor, foe, scenario, rng, side);
+      takeTurn(actor, foe, scenario, rng, side, round);
     }
   }
 
@@ -343,10 +377,7 @@ function aggregate(results, key) {
     critRate: sum((state) => state.stats.crits) / Math.max(1, sum((state) => state.stats.shots)),
     averagePeakStrain: sum((state) => state.stats.peakStrain) / results.length,
     averageFinalHull: sum((state) => state.hull) / results.length,
-    apPerBattle: Object.freeze(Object.fromEntries(["captain", "battlewatch", "navigator", "engineer", "veilwarden"].map((station) => [
-      station,
-      sum((state) => state.stats.ap[station]) / results.length
-    ])))
+    apPerBattle: Object.freeze(Object.fromEntries(["captain", "battlewatch", "navigator", "engineer", "veilwarden"].map((station) => [station, sum((state) => state.stats.ap[station]) / results.length])))
   });
 }
 
@@ -365,30 +396,14 @@ export function runMatchup({
   let ironWins = 0;
   let draws = 0;
   for (let i = 0; i < runs; i += 1) {
-    const result = simulateBattle({
-      rumBuild,
-      ironBuild,
-      rumPolicy,
-      ironPolicy,
-      scenario,
-      seed: (seed + Math.imul(i + 1, 2654435761)) >>> 0,
-      maxRounds
-    });
+    const result = simulateBattle({ rumBuild, ironBuild, rumPolicy, ironPolicy, scenario, seed: (seed + Math.imul(i + 1, 2654435761)) >>> 0, maxRounds });
     results.push(result);
     if (result.winner === "rumRunner") rumWins += 1;
     else if (result.winner === "ironSpear") ironWins += 1;
     else draws += 1;
   }
   return Object.freeze({
-    rumBuild,
-    ironBuild,
-    scenario,
-    rumPolicy,
-    ironPolicy,
-    runs,
-    rumWins,
-    ironWins,
-    draws,
+    rumBuild, ironBuild, scenario, rumPolicy, ironPolicy, runs, rumWins, ironWins, draws,
     rumWinRate: rumWins / runs,
     rumWin95: wilson95(rumWins, runs),
     avgRounds: avg(results.map((result) => result.rounds)),
@@ -398,33 +413,18 @@ export function runMatchup({
   });
 }
 
-export function runGauntlet({
-  rumBuild = "rum-stock-l5",
-  ironBuild = "iron-stock-l5",
-  runs = 5000,
-  seed = 8675309,
-  maxRounds = 40
-} = {}) {
+export function runGauntlet({ rumBuild = "rum-stock-l5", ironBuild = "iron-stock-l5", runs = 5000, seed = 8675309, maxRounds = 40 } = {}) {
   const matchups = [];
   let offset = 0;
   for (const scenario of SCENARIOS) {
     for (const rumPolicy of POLICIES) {
       for (const ironPolicy of POLICIES) {
-        matchups.push(runMatchup({
-          rumBuild,
-          ironBuild,
-          rumPolicy,
-          ironPolicy,
-          scenario,
-          runs,
-          seed: (seed + offset++ * 1000003) >>> 0,
-          maxRounds
-        }));
+        matchups.push(runMatchup({ rumBuild, ironBuild, rumPolicy, ironPolicy, scenario, runs, seed: (seed + offset++ * 1000003) >>> 0, maxRounds }));
       }
     }
   }
   return Object.freeze({
-    model: "derived-build-salvo-system-geometry-v3",
+    model: "authoritative-derived-build-live-rules-v4",
     rumBuild,
     ironBuild,
     runsPerMatchup: runs,
@@ -440,43 +440,26 @@ export function runBuildMatrix({ runs = 2000, seed = 8675309, maxRounds = 40 } =
   const reports = [];
   let offset = 0;
   for (const pairing of BUILD_PAIRINGS) {
-    reports.push(Object.freeze({
-      pairing,
-      report: runGauntlet({
-        rumBuild: pairing.rumBuild,
-        ironBuild: pairing.ironBuild,
-        runs,
-        seed: (seed + offset++ * 7919) >>> 0,
-        maxRounds
-      })
-    }));
+    reports.push(Object.freeze({ pairing, report: runGauntlet({ rumBuild: pairing.rumBuild, ironBuild: pairing.ironBuild, runs, seed: (seed + offset++ * 7919) >>> 0, maxRounds }) }));
   }
-  return Object.freeze({
-    model: "derived-build-matrix-v3",
-    runsPerMatchup: runs,
-    pairings: Object.freeze(reports)
-  });
+  return Object.freeze({ model: "authoritative-derived-build-matrix-v4", runsPerMatchup: runs, pairings: Object.freeze(reports) });
 }
 
 function pct(value) { return `${(value * 100).toFixed(1)}%`; }
-function balancedRow(report, scenario) {
-  return report.matchups.find((row) => row.scenario === scenario && row.rumPolicy === "balanced" && row.ironPolicy === "balanced");
-}
+function balancedRow(report, scenario) { return report.matchups.find((row) => row.scenario === scenario && row.rumPolicy === "balanced" && row.ironPolicy === "balanced"); }
 function printReport(report) {
-  console.log(`Arkflight Build-Aware Gauntlet v3 — ${report.rumBuild} vs ${report.ironBuild}`);
+  console.log(`Arkflight Build-Aware Gauntlet v4 — ${report.rumBuild} vs ${report.ironBuild}`);
   console.log(`Derived stats: Rum AC ${report.profiles.rum.ac} Hull ${report.profiles.rum.hullMax} Hard ${report.profiles.rum.hardness} Speed ${report.profiles.rum.combatSpeed} Man ${report.profiles.rum.maneuverability} AP/RP ${report.profiles.rum.apMax}/${report.profiles.rum.rpMax}`);
   console.log(`               Iron AC ${report.profiles.iron.ac} Hull ${report.profiles.iron.hullMax} Hard ${report.profiles.iron.hardness} Speed ${report.profiles.iron.combatSpeed} Man ${report.profiles.iron.maneuverability} AP/RP ${report.profiles.iron.apMax}/${report.profiles.iron.rpMax}`);
   for (const scenario of SCENARIOS) {
     console.log(`\n${scenario}`);
-    for (const row of report.matchups.filter((entry) => entry.scenario === scenario)) {
-      console.log(`${row.rumPolicy.padEnd(10)} vs ${row.ironPolicy.padEnd(10)} Rum ${pct(row.rumWinRate).padStart(6)} · ${row.avgRounds.toFixed(2)} rnd · DPR ${row.rum.damagePerRound.toFixed(1)}/${row.iron.damagePerRound.toFixed(1)} · salvos ${row.rum.salvosPerBattle.toFixed(1)}/${row.iron.salvosPerBattle.toFixed(1)} · sys ${row.rum.systemHitsPerBattle.toFixed(2)}/${row.iron.systemHitsPerBattle.toFixed(2)}`);
-    }
+    for (const row of report.matchups.filter((entry) => entry.scenario === scenario)) console.log(`${row.rumPolicy.padEnd(10)} vs ${row.ironPolicy.padEnd(10)} Rum ${pct(row.rumWinRate).padStart(6)} · ${row.avgRounds.toFixed(2)} rnd · DPR ${row.rum.damagePerRound.toFixed(1)}/${row.iron.damagePerRound.toFixed(1)} · salvos ${row.rum.salvosPerBattle.toFixed(1)}/${row.iron.salvosPerBattle.toFixed(1)} · sys ${row.rum.systemHitsPerBattle.toFixed(2)}/${row.iron.systemHitsPerBattle.toFixed(2)}`);
   }
   console.log("\nRum Runner build weaknesses:", report.audits.rum.weaknesses.map((row) => row.label).join(", ") || "none at/below fleet 25th percentile");
   console.log("Top strengthening options:", report.audits.rum.recommendations.slice(0, 5).map((row) => row.name).join(" · ") || "none from direct-stat candidates");
 }
 function printMatrix(matrix) {
-  console.log(`Arkflight Derived Build Matrix v3 — ${matrix.pairings.length} build pairings`);
+  console.log(`Arkflight Derived Build Matrix v4 — ${matrix.pairings.length} build pairings`);
   console.log("Pairing | Broadside | Open Duel | Pursuit/Objective | Rum weak areas");
   for (const { pairing, report } of matrix.pairings) {
     const broad = balancedRow(report, "broadside");
