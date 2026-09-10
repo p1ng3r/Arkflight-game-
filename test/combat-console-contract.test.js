@@ -77,6 +77,9 @@ test("Command HUD station cards resolve exact level-based effects and expose rea
   assert.match(actionCss, /afcs-action-effect/);
   assert.match(actionCss, /afcs-rule-chips/);
   assert.match(actionCss, /afcs-action-full-rules/);
+  assert.match(actionCss, /font-size:\s*12px !important/);
+  assert.match(actionCss, /font-size:\s*9px/);
+  assert.match(css, /font-size:\s*10\.5px/);
 });
 
 test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and token launch controls", () => {
