@@ -45,7 +45,7 @@
         </select>
         <button type="button" data-use-canvas-target {{#unless hasTargets}}disabled{{/unless}} title="Use canvas target"><i class="fa-solid fa-crosshairs"></i></button>
         <button type="button" data-lock-target {{#unless target}}disabled{{/unless}} title="Target on canvas"><i class="fa-solid fa-bullseye"></i></button>
-        <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>
+        <button type="button" class="afcs-weapon-arc-toggle {{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs title="{{arcButtonLabel}}"><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>
       </div>
       {{#if target}}
       <div class="afcs-target-summary {{#if target.legal}}is-legal{{else}}is-illegal{{/if}}">
@@ -117,7 +117,7 @@
 
       <nav class="afch-actions" aria-label="Combat controls">
         <button type="button" class="{{#if openWeapons}}is-active{{/if}}" data-toggle-panel="weapons"><i class="fa-solid fa-sword"></i> Weapons</button>
-        <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs><i class="fa-solid fa-wave-square"></i> Arcs</button>
+        <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs title="{{arcButtonLabel}}"><i class="fa-solid fa-wave-square"></i> Weapon Arcs</button>
         <button type="button" class="{{#if openLog}}is-active{{/if}}" data-toggle-panel="log"><i class="fa-solid fa-scroll"></i> Log</button>
         <button type="button" class="is-end" data-end-turn {{#unless gm}}disabled{{/unless}}><i class="fa-solid fa-forward-step"></i> End Turn</button>
       </nav>
