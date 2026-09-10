@@ -1,5 +1,6 @@
 import { bindArkflightHoldControls, buildArkflightHoldHtml } from "./hold-log-ux.js";
 import { renderArkflightCombatStations } from "./combat-station-actions-ui.js";
+import { renderArkflightWeaponsTab } from "./ship-weapons-tab-ui.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { createShip } from "../ship/ship-schema.js";
@@ -14,7 +15,7 @@ function statValue(value) { return Number.isFinite(Number(value)) ? Number(value
 function catalogName(catalog, id, fallback = "Not commissioned") { return id && catalog?.[id]?.name ? catalog[id].name : fallback; }
 function resolveStationAssignment(value) { if (!value) return "Unassigned"; const actor = game.actors?.get(value) ?? game.actors?.find((entry) => entry.uuid === value); return actor?.name ?? String(value); }
 function resourceView(ship, key, label, icon, maxOverride = null) { const resource = ship.resources?.[key] ?? { value: 0, max: 0 }; const max = maxOverride == null ? statValue(resource.max) : statValue(maxOverride); return { key, label, icon, value: statValue(resource.value), max }; }
-function tabState(activeTab) { return Object.freeze({ overview: activeTab === "overview", hold: activeTab === "hold", combat: activeTab === "combat" }); }
+function tabState(activeTab) { return Object.freeze({ overview: activeTab === "overview", hold: activeTab === "hold", combat: activeTab === "combat", weapons: activeTab === "weapons" }); }
 function validationPresentation(ship, validation) {
   if (validation.ok) return { statusClass: "is-ready", label: "VOYAGE READY" };
   const commissioned = Boolean(ship.hull?.chassisId && ship.arkengine?.chassisId);
@@ -95,6 +96,7 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
 
     if (this.activeTab === "hold") bindArkflightHoldControls(this.actor, html);
     if (this.activeTab === "combat") renderArkflightCombatStations(this, html, this.actor);
+    if (this.activeTab === "weapons") renderArkflightWeaponsTab(this, html, this.actor);
   }
 }
 
