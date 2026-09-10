@@ -21,9 +21,8 @@ function validateWeaponUpgrades(install, weapon, errors) {
   }
 }
 
-function validateWeaponInstalls(ship, catalogs, hull, errors, warnings) {
+function validateWeaponInstalls(ship, catalogs, mounts, errors, warnings) {
   const installs = ship.weapons ?? [];
-  const mounts = hull?.data?.baseStats?.weaponMounts ?? {};
   const occupied = new Set();
 
   for (const install of installs) {
@@ -34,7 +33,7 @@ function validateWeaponInstalls(ship, catalogs, hull, errors, warnings) {
 
     validateWeaponUpgrades(install, weapon, errors);
 
-    const mountFacing = install?.arc;
+    const mountFacing = install?.arc ?? install?.mount;
     const mountIndex = Number(install?.mountIndex);
     const mount = mounts?.[mountFacing];
     if (!mount || !Number.isInteger(mountIndex) || mountIndex < 0 || mountIndex >= Number(mount.count ?? 0)) {
@@ -86,7 +85,7 @@ export function validateShip(ship, catalogs = {}) {
   if (Number.isFinite(engineCapacity) && derived.usage.arkengineMods > engineCapacity) errors.push(`Arkengine Mod capacity exceeded: ${derived.usage.arkengineMods}/${engineCapacity}.`);
 
   if ((ship.cargo?.used ?? 0) > (derived.stats.cargoCapacity ?? 0)) warnings.push(`Cargo exceeds capacity: ${ship.cargo.used}/${derived.stats.cargoCapacity}.`);
-  if (hull) validateWeaponInstalls(ship, catalogs, hull, errors, warnings);
+  if (hull) validateWeaponInstalls(ship, catalogs, derived.stats.weaponMounts ?? {}, errors, warnings);
 
   return Object.freeze({ ok: errors.length === 0, errors: Object.freeze(errors), warnings: Object.freeze(warnings), derived });
 }
