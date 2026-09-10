@@ -50,11 +50,61 @@ const SHIP_FILES = Object.freeze({
 });
 
 const ARKENGINE_FILES = Object.freeze({
-  standard: new Set(["pressure-lattice-tuning.webp"]),
-  rare: new Set(["pressure-lattice-governor.webp"]),
-  epic: new Set(["harmonic-pressure-dynamo.webp"]),
-  legendary: new Set(["worldheart-pressure-dynamo.webp"]),
-  mythic: new Set(["singularity-worldheart-dynamo.webp"])
+  standard: new Set([
+    "pressure-lattice-tuning.webp",
+    "veil-projector-focusing.webp",
+    "cooling-loop-expansion.webp",
+    "fuel-matrix-efficiency.webp",
+    "stormwake-injector.webp",
+    "voidglass-regulator.webp",
+    "choir-harmonic-lattice.webp",
+    "overburn-catalysts.webp",
+    "deepwake-stabilizers.webp",
+    "aetherite-core-bracing.webp",
+    "coldwake-condensers.webp",
+    "veil-pressure-equalizer.webp"
+  ]),
+  rare: new Set([
+    "pressure-lattice-governor.webp",
+    "focused-veil-manifold.webp",
+    "coldwake-recirculation-loop.webp",
+    "refined-fuel-matrix.webp",
+    "stormwake-twin-injectors.webp",
+    "deepwake-voidglass-heart.webp",
+    "resonant-choir-core.webp",
+    "controlled-overburn-catalysts.webp",
+    "aetherite-core-cage.webp",
+    "deep-reserve-fuel-siphons.webp"
+  ]),
+  epic: new Set([
+    "harmonic-pressure-dynamo.webp",
+    "seraphic-veil-reactor.webp",
+    "absolute-zero-recirculator.webp",
+    "consecrated-fuel-crucible.webp",
+    "tempest-triad-injectors.webp",
+    "black-tide-stability-core.webp",
+    "grand-choir-resonator.webp",
+    "phoenix-overburn-chamber.webp",
+    "adamant-core-suspension.webp",
+    "sovereign-hard-burn-governor.webp"
+  ]),
+  legendary: new Set([
+    "worldheart-pressure-dynamo.webp",
+    "aegis-sun-veil-reactor.webp",
+    "winterstar-recirculation-crown.webp",
+    "saintfire-fuel-reliquary.webp",
+    "thunderlord-tempest-injectors.webp",
+    "abyssal-tide-stability-heart.webp",
+    "archon-overburn-forge.webp",
+    "crown-of-the-sovereign-burn.webp"
+  ]),
+  mythic: new Set([
+    "singularity-worldheart-dynamo.webp",
+    "firmament-veil-heart.webp",
+    "crown-of-the-first-burn.webp",
+    "godspark-emergency-nexus.webp",
+    "saintfire-eternity-reliquary.webp"
+  ])
 });
 
 // These preserve the catalog/gameplay IDs and rarities while pointing older
