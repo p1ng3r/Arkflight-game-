@@ -71,3 +71,9 @@ test("right-hand owned fittings list explicit bonuses and effects", () => {
   assert.match(template, /arkflight-fitting-bonus-label/);
   assert.match(template, /item\.bonusLines/);
 });
+
+
+test("installed fitting effect card stays hidden until its socket is hovered", () => {
+  assert.match(workspaceCss, /\.arkflight-workspace-socket \.arkflight-workspace-socket-effect \{[\s\S]*?display:\s*none/);
+  assert.match(workspaceCss, /\.arkflight-workspace-socket:hover \.arkflight-workspace-socket-effect \{[\s\S]*?display:\s*block/);
+});
