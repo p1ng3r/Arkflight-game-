@@ -49,7 +49,14 @@ export function applyWeaponSystemThreat(ship, { weapon = null, threat = null, de
     ? String(threat).toLowerCase()
     : weaponSystemThreat(weapon);
   if (!systemThreatTriggers(ship, { degree, hullDamage, threat: threatenedArea })) {
-    return Object.freeze({ ship, triggered: false, degraded: false, threatenedArea, threshold: systemDamageThreshold(ship) });
+    return Object.freeze({
+      ship,
+      triggered: false,
+      degraded: false,
+      threatenedArea,
+      threshold: systemDamageThreshold(ship),
+      mobilityPenalties: areaMobilityPenalties(ship)
+    });
   }
 
   const degraded = degradeAreaOneStep(ship, threatenedArea);
