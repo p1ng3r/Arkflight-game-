@@ -50,7 +50,7 @@
   overflow: hidden;
   color: var(--afcr-ink);
   isolation: isolate;
-  background: transparent;
+  background: #d8c294;
   border: 0;
   border-radius: 0;
   box-shadow: 0 18px 42px rgba(10, 15, 20, .34);
@@ -428,13 +428,20 @@
 
 /* Keep Foundry's own journal chrome from fighting the Arkflight codex artwork. */
 .journal-entry-page:has(.arkflight-combat-reference.afcr-codex) {
-  background: transparent;
+  background:
+    linear-gradient(180deg, rgba(214, 195, 153, .98), rgba(194, 169, 119, .98));
 }
 
 .journal-entry-page:has(.arkflight-combat-reference.afcr-codex) .journal-page-content,
 .journal-entry-page:has(.arkflight-combat-reference.afcr-codex) .editor-content {
-  padding: 0;
-  background: transparent;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba(224, 207, 167, .96), rgba(205, 181, 133, .96));
+}
+
+.journal-entry-page:has(.arkflight-combat-reference.afcr-codex) .prosemirror,
+.journal-entry-page:has(.arkflight-combat-reference.afcr-codex) .editor-container {
+  background: rgba(214, 194, 151, .96);
 }
 
 .journal-entry-page:has(.arkflight-combat-reference.afcr-codex) > header {
