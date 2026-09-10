@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { WEAPONS } from "../src/content/index.js";
+import { auditWeaponArt, UNUSED_PACKAGED_WEAPON_ART } from "../src/content/weapon-art.js";
 import {
   PF2E_SHIP_WEAPON_SCHEMA_VERSION,
   parsePf2eWeaponDamage,
@@ -58,6 +59,26 @@ test("all sixteen current ship weapons have PF2e-compatible base damage dice", (
     assert.match(damage.die, /^d(?:4|6|8|10|12)$/);
     assert.ok(damage.damageType, weapon.name);
   }
+});
+
+test("all current ship weapons resolve packaged Arkflight artwork", () => {
+  const audit = auditWeaponArt(WEAPONS);
+  assert.equal(audit.total, 16);
+  assert.equal(audit.matched, 16);
+  assert.deepEqual(audit.missing, []);
+  assert.equal(WEAPONS["deck-ballista"].img, "modules/arkflight-game/assets/icons/weapons/deck_ballista.webp");
+  assert.equal(WEAPONS["aether-arc-projector"].img, "modules/arkflight-game/assets/icons/weapons/aether_arc_projector.webp");
+  assert.equal(WEAPONS["light-broadside-cannon"].img, "modules/arkflight-game/assets/icons/weapons/balanced_broadside_battery.webp");
+  assert.deepEqual([...UNUSED_PACKAGED_WEAPON_ART], [
+    "standard_deck_ballista.webp",
+    "iron_mortar.webp",
+    "modular_rocket_rack.webp"
+  ]);
+});
+
+test("PF2e ship weapon documents inherit Arkflight weapon artwork", () => {
+  const source = pf2eShipWeaponDocumentBase(WEAPONS["stormglass-lance"]);
+  assert.equal(source.img, "modules/arkflight-game/assets/icons/weapons/stormglass_lance.webp");
 });
 
 test("invalid ship weapon damage formulas fail loudly instead of creating malformed PF2e Items", () => {
