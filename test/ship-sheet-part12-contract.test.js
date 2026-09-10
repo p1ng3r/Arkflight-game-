@@ -28,7 +28,7 @@ test("Hold navigation is a native ApplicationV2 vessel-sheet tab", () => {
   assert.match(appSource, /activeTab === "hold"/);
   assert.match(appSource, /openArkflightHold\(this\.actor, html\)/);
   assert.match(holdSource, /nativeHost/);
-  assert.match(holdSource, /\(nativeHost \?\? root\)\.append\(shell\)/);
+  assert.match(holdSource, /nativeHost\.append\(shell\)/);
 });
 
 test("Combat navigation is a native ApplicationV2 vessel-sheet tab", () => {
