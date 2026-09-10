@@ -7,6 +7,7 @@ const commandHud = readFileSync(new URL("../src/ui/arkflight-command-hud-ui.js",
 const template = readFileSync(new URL("../templates/combat-console.hbs", import.meta.url), "utf8");
 const css = readFileSync(new URL("../styles/arkflight-command-hud.css", import.meta.url), "utf8");
 const actionCss = readFileSync(new URL("../styles/arkflight-command-hud-actions.css", import.meta.url), "utf8");
+const combatApi = readFileSync(new URL("../src/foundry/combat-api.js", import.meta.url), "utf8");
 const moduleJson = JSON.parse(readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 
 const LEGACY_MODULES = [
@@ -102,7 +103,22 @@ test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and toke
   assert.match(template, /\{\{arcButtonLabel\}\}/);
   assert.match(template, /Weapon Arcs/);
   assert.match(template, /afcs-drawer-log/);
+  assert.match(template, /data-work-weapon="\{\{key\}\}"[^>]*>[^<]*(?:<i[^>]*><\/i>\s*)?Reload/);
   assert.match(source, /Open Arkflight Combat Strip/);
+});
+
+test("Command HUD can undo turn movement and facing without refunding AP", () => {
+  assert.match(combatApi, /TURN_START_SNAPSHOTS/);
+  assert.match(combatApi, /movementUndoStatus/);
+  assert.match(combatApi, /undoMove/);
+  assert.match(combatApi, /undoFacing/);
+  assert.match(combatApi, /resetTurnPosition/);
+  assert.match(combatApi, /movementUsed/);
+  assert.match(combatApi, /maneuverUsed/);
+  assert.match(template, /data-undo-move/);
+  assert.match(template, /data-undo-facing/);
+  assert.match(template, /data-reset-turn-position/);
+  assert.match(css, /afch-undo-controls/);
 });
 
 test("Command HUD End Turn advances Foundry initiative and follows the active Arkflight ship", () => {
