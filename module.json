@@ -36,6 +36,7 @@
     "styles/combat-console.css",
     "styles/combat-console-compact.css",
     "styles/combat-strip-layout-fix.css",
+    "styles/combat-flow-hud.css",
     "styles/combat-strip-final.css",
     "styles/shipwright-interaction.css",
     "styles/shipwright-bay.css",
