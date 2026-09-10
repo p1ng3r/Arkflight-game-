@@ -1,6 +1,7 @@
 import { SHIP_CATALOGS, WEAPONS } from "../content/index.js";
 import { PF2E_SHIP_WEAPON_SCHEMA_VERSION, pf2eShipWeaponDocumentBase } from "./pf2e-ship-weapon-source.js";
 import { auditWeaponArt } from "../content/weapon-art.js";
+import { chooseRefitAssetKind } from "../ui/refit-asset-choice.js";
 
 const MODULE_ID = "arkflight-game";
 const FLAG_SCOPE = "arkflight";
@@ -246,15 +247,24 @@ async function handleWeaponDrop(event, actor) {
 
     const ship = actor?.flags?.[MODULE_ID]?.ship;
     if (!ship) throw new Error("This actor does not have Arkflight ship data.");
-    const result = await game.arkflight?.refit?.learnBlueprint?.(actor, "weapon", weaponId);
-    if (!result.ok) {
-      const message = result.reason === "blueprint-already-known"
-        ? `${item.name}'s blueprint is already known. Fabricate a physical copy before installation.`
-        : `Weapon blueprint could not be learned: ${result.reason ?? "unknown error"}.`;
+
+    const choice = await chooseRefitAssetKind({ name: item.name, family: "weapon" });
+    if (!choice) return;
+    const result = choice === "blueprint"
+      ? await game.arkflight?.refit?.learnBlueprint?.(actor, "weapon", weaponId)
+      : await game.arkflight?.refit?.acquireComponent?.(actor, "weapon", weaponId, 1);
+
+    if (!result?.ok) {
+      const reason = result?.reason ?? "unknown error";
+      const message = reason === "blueprint-already-known"
+        ? `${item.name}'s blueprint is already known.`
+        : `${item.name} could not be added: ${reason}.`;
       ui.notifications?.warn?.(message);
       return;
     }
-    ui.notifications?.info?.(`${item.name} blueprint learned. Fabricate it with Aether Scrap, then schedule installation in a legal mount.`);
+    ui.notifications?.info?.(choice === "blueprint"
+      ? `${item.name} blueprint learned.`
+      : `${item.name} added to the vessel as a physical weapon fitting.`);
     actor.sheet?.render?.({ force: true });
   } catch (error) {
     console.error("Arkflight | Weapon blueprint drop failed", error);
