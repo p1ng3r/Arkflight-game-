@@ -136,7 +136,8 @@ function restructureStrip(app, strip) {
     buildVital("Hull", "hull", resources.hull?.value, resources.hull?.max),
     buildVital("Lifeveil", "lifeveil", resources.lifeveil?.value, resources.lifeveil?.max),
     buildVital("Morale", "morale", resources.morale?.value, resources.morale?.max),
-    buildVital("Strain", "strain", strainValue, strainMax)
+    buildVital("Strain", "strain", strainValue, strainMax),
+    buildVital("Supplies", "supplies", resources.supply?.value ?? resources.supplies?.value, resources.supply?.max ?? resources.supplies?.max)
   );
 }
 
