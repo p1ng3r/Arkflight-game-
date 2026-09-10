@@ -708,3 +708,80 @@
   font-weight: 800;
   text-align: center;
 }
+
+
+.arkflight-workspace-socket.is-selected {
+  z-index: 45;
+  filter: drop-shadow(0 0 10px rgba(117, 206, 225, .45));
+}
+
+.arkflight-workspace-socket.is-selected .arkflight-workspace-socket-base {
+  filter: brightness(1.18) drop-shadow(0 0 6px rgba(117, 206, 225, .55));
+}
+
+.arkflight-workspace-socket.is-label-above .arkflight-workspace-socket-effect {
+  top: auto;
+  bottom: calc(100% + 34px);
+}
+
+.arkflight-workspace-blueprint-tray {
+  min-height: 0;
+}
+
+.arkflight-workspace-blueprint-tray header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.arkflight-blueprint-count {
+  min-width: 24px;
+  padding: 2px 6px;
+  border: 1px solid rgba(112, 180, 194, .32);
+  border-radius: 999px;
+  color: #a9d9e1;
+  background: rgba(8, 27, 33, .75);
+  font-size: 9px;
+  text-align: center;
+}
+
+.arkflight-workspace-blueprint-list {
+  display: grid;
+  gap: 6px;
+  max-height: 190px;
+  overflow: auto;
+}
+
+.arkflight-workspace-blueprint-list > article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 7px;
+  border: 1px solid rgba(86, 127, 136, .28);
+  background: rgba(7, 18, 22, .7);
+}
+
+.arkflight-workspace-blueprint-list > article > img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  border: 0;
+  background: transparent;
+}
+
+.arkflight-workspace-blueprint-list strong,
+.arkflight-workspace-blueprint-list small {
+  display: block;
+}
+
+.arkflight-workspace-blueprint-list strong {
+  color: #e3cf9b;
+  font-size: 10px;
+}
+
+.arkflight-workspace-blueprint-list small {
+  margin-top: 2px;
+  color: #819ba1;
+  font-size: 8px;
+}
