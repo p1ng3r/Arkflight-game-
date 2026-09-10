@@ -28,6 +28,13 @@ test("valid socket click and drop are intercepted into staging instead of legacy
   assert.match(uiSource, /root\.addEventListener\("drop"/);
 });
 
+test("staged ship and Arkengine fittings preview their catalog art inside sockets", () => {
+  assert.match(uiSource, /arkflight-refit-staged-component/);
+  assert.match(uiSource, /item\?\.img \?\? item\?\.data\?\.art\?\.img/);
+  assert.match(cssSource, /arkflight-refit-staged-component/);
+  assert.match(cssSource, /has-component-art/);
+});
+
 test("draft UI exposes install cost, shipyard labor, and mechanical stat deltas", () => {
   assert.match(uiSource, /refitDraftInstallParts/);
   assert.match(uiSource, /previewRefitDraft/);
