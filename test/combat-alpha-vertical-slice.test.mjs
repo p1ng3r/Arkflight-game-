@@ -26,6 +26,13 @@ function installedWeapon(state, mount) {
   return row;
 }
 
+function commissionedShip(build) {
+  const ship = structuredClone(build.ship);
+  ship.resources.hull.value = ship.resources.hull.max;
+  ship.resources.lifeveil.value = ship.resources.lifeveil.max;
+  return ship;
+}
+
 test("Combat Alpha vertical slice uses real builds from movement through victory", () => {
   const rum = deriveBuild("rum-stock-l5");
   const iron = deriveBuild("iron-stock-l5");
@@ -33,6 +40,10 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
   assert.equal(iron.validation.ok, true);
   assert.equal(rum.profile.chassis, "brigantine");
   assert.equal(iron.profile.chassis, "frigate");
+  const rumShip = commissionedShip(rum);
+  const ironShip = commissionedShip(iron);
+  assert.equal(shipCombatOutcome(rumShip).status, "active");
+  assert.equal(shipCombatOutcome(ironShip).status, "active");
 
   // Start a real combat turn, buy movement, move, then buy a maneuver and turn.
   let state = beginCombatantTurn(rum.combatState, 1);
@@ -92,7 +103,7 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
   const hardened = applyHardnessToDamage(incoming, iron.derived.stats.hardness);
   assert.equal(hardened.hullDamage, 7);
 
-  let targetShip = structuredClone(iron.ship);
+  let targetShip = structuredClone(ironShip);
   targetShip.resources.hull.value = Math.max(1, targetShip.resources.hull.value - hardened.hullDamage);
   const threshold = systemDamageThreshold(targetShip);
   for (let i = 0; i < 4; i += 1) {
@@ -107,13 +118,13 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
   assert.equal(shipCombatOutcome(targetShip).status, "disabled");
 
   const victory = combatVictoryState([
-    { id: "rum-runner", ship: rum.ship },
+    { id: "rum-runner", ship: rumShip },
     { id: "iron-spear", ship: targetShip }
   ]);
   assert.equal(victory.ended, true);
   assert.equal(victory.winnerId, "rum-runner");
 
-  const destroyedIron = structuredClone(iron.ship);
+  const destroyedIron = structuredClone(ironShip);
   destroyedIron.resources.hull.value = 0;
   assert.equal(shipCombatOutcome(destroyedIron).status, "destroyed");
 });
