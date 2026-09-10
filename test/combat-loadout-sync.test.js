@@ -176,6 +176,24 @@ test("current-schema reconciliation refreshes build facts while preserving trans
   assert.deepEqual(synced.log, current.log);
 });
 
+test("combat reconciliation preserves current strain when only capacity increases", () => {
+  const ship = rumRunner();
+  const baseDerived = deriveShip(ship, SHIP_CATALOGS);
+  const base = createCombatantState(ship, { derived: baseDerived, catalogs: SHIP_CATALOGS });
+  const current = { ...base, strain: { value: 4, max: 4 } };
+  const upgradedDerived = {
+    ...baseDerived,
+    stats: { ...baseDerived.stats, strainCapacity: 6 }
+  };
+
+  const synced = reconcileCombatantState(ship, current, {
+    derived: upgradedDerived,
+    catalogs: SHIP_CATALOGS
+  });
+
+  assert.deepEqual(synced.strain, { value: 4, max: 6 });
+});
+
 test("combat weapon hydration prefers explicit mount over legacy arc", () => {
   const ship = rumRunner({
     weapons: [{
