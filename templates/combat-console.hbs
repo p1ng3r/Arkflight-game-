@@ -60,7 +60,7 @@
               {{#each weapons}}
                 <article class="afcs-weapon-row {{#unless ready}}is-reloading{{/unless}} {{#unless legal}}is-illegal{{/unless}}">
                   <div class="afcs-weapon-text"><strong>{{name}}</strong><span>{{mountLabel}} {{mountIndex}} · {{damage}} · {{fireAP}} AP</span><small>{{solution}}</small></div>
-                  <div class="afcs-weapon-meta"><em>{{statusLabel}}</em><button type="button" class="afcs-weapon-row-arc {{#if arcVisible}}is-active{{/if}}" data-toggle-weapon-arc="{{key}}" title="{{arcButtonLabel}} for {{name}}"><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>{{#if ready}}<button type="button" data-fire-weapon="{{key}}" {{#unless legal}}disabled{{/unless}}>Fire</button>{{else}}<button type="button" data-work-weapon="{{key}}">Work Guns</button>{{/if}}</div>
+                  <div class="afcs-weapon-meta"><em>{{statusLabel}}</em><button type="button" class="afcs-weapon-row-arc {{#if arcVisible}}is-active{{/if}}" data-toggle-weapon-arc="{{key}}" title="{{arcButtonLabel}} for {{name}}"><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>{{#if ready}}<button type="button" data-fire-weapon="{{key}}" {{#unless legal}}disabled{{/unless}}>Fire</button>{{else}}<button type="button" data-work-weapon="{{key}}" title="Spend 1 AP to reduce remaining reload by 1 round"><i class="fa-solid fa-rotate"></i> Reload</button>{{/if}}</div>
                 </article>
               {{/each}}
             </section>
@@ -75,6 +75,15 @@
         {{#if logEntries.length}}{{#each logEntries}}<article class="afcs-log-entry {{tone}}"><i class="{{icon}}"></i><div><strong>{{title}}</strong><span>{{detail}}</span></div></article>{{/each}}{{else}}<div class="afcs-empty-state">No ship-combat entries yet.</div>{{/if}}
       </div>
     </section>
+
+    {{#if showUndoControls}}
+    <nav class="afch-undo-controls" aria-label="Undo ship movement">
+      <span><i class="fa-solid fa-clock-rotate-left"></i> Turn Position</span>
+      <button type="button" data-undo-move {{#unless canUndoMove}}disabled{{/unless}} title="Return to this turn's starting position without refunding AP"><i class="fa-solid fa-arrow-rotate-left"></i> Undo Move</button>
+      <button type="button" data-undo-facing {{#unless canUndoFacing}}disabled{{/unless}} title="Return to this turn's starting facing without refunding AP"><i class="fa-solid fa-rotate-left"></i> Undo Facing</button>
+      <button type="button" data-reset-turn-position {{#unless canResetTurnPosition}}disabled{{/unless}} title="Return both position and facing to the start of this turn"><i class="fa-solid fa-backward-fast"></i> Reset Both</button>
+    </nav>
+    {{/if}}
 
     <footer class="afcs-commandbar {{#if activeTurn}}is-active-turn{{/if}}">
       <section class="afch-ship">
