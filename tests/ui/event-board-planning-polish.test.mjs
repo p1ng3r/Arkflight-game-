@@ -28,10 +28,11 @@ test("planning controls use readable full-width treatment", () => {
   assert.match(css, /arkflight-action-vignette-copy/);
 });
 
-test("Mastery and Tactics use compact clickable detail links", () => {
+test("Mastery and Tactics use compact clickable detail controls", () => {
   assert.match(compactCss, /arkflight-planning-utility-compact/);
   assert.match(compactCss, /arkflight-ability-info-link/);
   assert.match(polishUi, /showAbilityDetails/);
-  assert.match(polishUi, /compactMasteries/);
+  assert.match(polishUi, /bindMasteryCard/);
+  assert.match(polishUi, /compactStationRows/);
   assert.match(polishUi, /compactTactics/);
 });
