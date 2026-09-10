@@ -36,6 +36,18 @@ function titleCase(value) {
   return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function stationActionBlockerLabel(reason) {
+  const labels = {
+    "not-this-ships-turn": "Not this ship's turn",
+    "insufficient-ap": "Need 1 AP",
+    "insufficient-supplies": "Need 1 Supply",
+    "station-unassigned": "Battlewatch unassigned",
+    "not-your-station": "Battlewatch only",
+    "missing-state-or-action": "Combat state unavailable"
+  };
+  return labels[reason] ?? titleCase(reason || "Unavailable");
+}
+
 function isArkflightShip(actor) {
   return Boolean(actor?.flags?.[MODULE_ID]?.ship);
 }
@@ -337,13 +349,20 @@ function buildShipWeaponStation(app, actor) {
     if (remaining > 0) {
       const workButton = document.createElement("button");
       workButton.type = "button";
-      workButton.innerHTML = '<i class="fa-solid fa-rotate"></i> Work the Guns · 1 AP';
-      const reloadControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
-      workButton.disabled = !reloadControl.ok || Number(state?.economy?.ap?.value ?? 0) < 1;
+      const reloadControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
+      const reloadAvailability = api.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: true, reason: null };
+      const blocker = !reloadControl.ok ? reloadControl.reason : !reloadAvailability.ok ? reloadAvailability.reason : null;
+      workButton.disabled = Boolean(blocker);
+      workButton.innerHTML = blocker
+        ? `<i class="fa-solid fa-lock"></i> ${esc(stationActionBlockerLabel(blocker))}`
+        : '<i class="fa-solid fa-rotate"></i> Reload · 1 AP · 1 Supply';
+      workButton.title = blocker
+        ? `Reload unavailable: ${stationActionBlockerLabel(blocker)}.`
+        : "Spend 1 AP and 1 Supply to reduce this weapon's remaining reload time.";
       workButton.addEventListener("click", async () => {
         try {
-          await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
-          app.render(false);
+          const result = await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
+          if (!result?.requested) app.render(false);
         } catch (error) { ui.notifications?.error(error?.message ?? "Reload failed."); }
       });
       actions.append(workButton);
@@ -502,6 +521,14 @@ Hooks.on("renderApplicationV2", (app) => enhanceGMWeaponConsole(app));
 Hooks.on("updateToken", () => setTimeout(refreshVisibleFiringArcs, 0));
 Hooks.on("updateCombatant", () => setTimeout(refreshVisibleFiringArcs, 0));
 Hooks.on("updateCombat", () => setTimeout(refreshVisibleFiringArcs, 0));
+Hooks.on("arkflightStationActionRemoteResult", (payload) => {
+  if (payload?.actionId !== "battlewatch-reload-weapon") return;
+  for (const app of Object.values(ui.windows ?? {})) {
+    const actor = app?.actor ?? app?.document?.actor ?? (app?.document?.documentName === "Actor" ? app.document : null);
+    const combatant = actor ? combatantForActor(actor) : null;
+    if (combatant?.id === payload.combatantId) app.render?.(false);
+  }
+});
 Hooks.on("deleteCombat", () => { ARC_VISIBLE.clear(); clearArcGraphics(); });
 Hooks.on("canvasReady", () => refreshVisibleFiringArcs());
 Hooks.on("tearDownCanvas", () => clearArcGraphics());
