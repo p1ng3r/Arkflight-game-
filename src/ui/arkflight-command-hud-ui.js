@@ -99,13 +99,73 @@ function bindClose(app, root) {
   });
 }
 
+function bindEndTurn(app, root) {
+  const button = root.querySelector("[data-end-turn]");
+  if (!button || button.dataset.afchTurnBound === "true") return;
+  button.dataset.afchTurnBound = "true";
+  button.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    if (!game.user?.isGM) {
+      ui.notifications?.warn("Only the GM may advance Arkflight ship initiative.");
+      return;
+    }
+
+    const combat = game.combat;
+    if (!combat) {
+      ui.notifications?.warn("No active Foundry combat exists.");
+      return;
+    }
+    if (!combat.started) {
+      ui.notifications?.warn("Start the Foundry combat encounter before ending a ship turn.");
+      return;
+    }
+
+    const previousId = combat.combatant?.id ?? null;
+    button.disabled = true;
+    try {
+      const updatedCombat = await combat.nextTurn();
+      const next = updatedCombat?.combatant ?? combat.combatant ?? null;
+      if (!next || next.id === previousId) {
+        throw new Error("Foundry did not advance to another combatant.");
+      }
+
+      if (shipPayload(next.actor)) app.setReference?.(next.actor);
+      else app.render?.({ force: true });
+    } catch (error) {
+      console.error("Arkflight | End Turn failed", error);
+      ui.notifications?.error(error?.message ?? "Could not advance to the next combatant.");
+      button.disabled = false;
+    }
+  }, { capture: true });
+}
+
+function followActiveShip(app) {
+  const current = game.combat?.combatant ?? null;
+  if (!current?.actor || !shipPayload(current.actor)) return;
+  if (app.actorId === current.actor.id) return;
+  app.setReference?.(current.actor);
+}
+
 function enhance(app) {
   const root = hudRoot(app);
   if (!root) return;
   updateVitals(app, root);
   bindCommandStations(app, root);
   bindClose(app, root);
+  bindEndTurn(app, root);
 }
 
 Hooks.on("renderApplicationV2", enhance);
 Hooks.on("renderApplication", enhance);
+Hooks.on("arkflightCombatTurnChanged", ({ combatant }) => {
+  const app = game.arkflight?.combatConsole?.application ?? null;
+  if (!app?.rendered || !combatant?.actor || !shipPayload(combatant.actor)) return;
+  if (app.actorId !== combatant.actor.id) app.setReference?.(combatant.actor);
+});
+Hooks.on("updateCombat", (combat, changes) => {
+  if (!(Object.hasOwn(changes ?? {}, "turn") || Object.hasOwn(changes ?? {}, "round"))) return;
+  const app = game.arkflight?.combatConsole?.application ?? null;
+  if (app?.rendered && combat === game.combat) requestAnimationFrame(() => followActiveShip(app));
+});
