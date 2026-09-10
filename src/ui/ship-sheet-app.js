@@ -14,7 +14,7 @@ function statValue(value) { return Number.isFinite(Number(value)) ? Number(value
 function catalogName(catalog, id, fallback = "Not commissioned") { return id && catalog?.[id]?.name ? catalog[id].name : fallback; }
 function resolveStationAssignment(value) { if (!value) return "Unassigned"; const actor = game.actors?.get(value) ?? game.actors?.find((entry) => entry.uuid === value); return actor?.name ?? String(value); }
 function resourceView(ship, key, label, icon, maxOverride = null) { const resource = ship.resources?.[key] ?? { value: 0, max: 0 }; const max = maxOverride == null ? statValue(resource.max) : statValue(maxOverride); return { key, label, icon, value: statValue(resource.value), max }; }
-function tabState(activeTab) { return Object.freeze({ overview: activeTab === "overview", fittings: activeTab === "fittings", refit: activeTab === "refit" }); }
+function tabState(activeTab) { return Object.freeze({ overview: activeTab === "overview", hold: activeTab === "hold", fittings: activeTab === "fittings", refit: activeTab === "refit" }); }
 function fittingCapacity(label, used, max) { const u = statValue(used); const m = statValue(max); return Object.freeze({ label, used: u, max: m, over: u > m, overBy: Math.max(0, u - m), text: u > m ? `${u} installed / ${m} capacity — ${u - m} over` : `${u} / ${m}` }); }
 function validationPresentation(ship, validation) {
   if (validation.ok) return { statusClass: "is-ready", label: "VOYAGE READY" };
@@ -108,11 +108,6 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       await this.actor.update({ [`flags.${MODULE_ID}.ship.resources.${key}.value`]: value, [`flags.${MODULE_ID}.ship.resources.${key}.max`]: max });
     });
     for (const button of html.querySelectorAll("[data-compendium-pack]")) button.addEventListener("click", (event) => { event.preventDefault(); const packId = event.currentTarget.dataset.compendiumPack; const pack = game.packs?.get(packId); if (!pack) return ui.notifications?.warn(`Arkflight Compendium pack is not available yet: ${packId}`); pack.render(true); });
-    html.querySelector("[data-hold-tab]")?.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openArkflightHold(this.actor, html);
-    });
     html.querySelector("[data-open-combat]")?.addEventListener("click", (event) => {
       event.preventDefault();
       game.arkflight?.openCombatConsole?.(this.actor);
@@ -121,6 +116,8 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       event.preventDefault();
       game.arkflight?.openShipwrightWorkspace?.(this.actor);
     });
+
+    if (this.activeTab === "hold") openArkflightHold(this.actor, html);
 
     for (const button of html.querySelectorAll("[data-refit-build]")) button.addEventListener("click", async (event) => {
       event.preventDefault(); if (!(game.user.isGM || this.actor.isOwner)) return;
