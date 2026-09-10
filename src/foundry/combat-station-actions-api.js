@@ -13,6 +13,7 @@ import {
   stationActionRulesText,
   stationActionStrainArea,
   stationEffectMagnitude,
+  reduceWeaponReload,
   stationEffectProfile
 } from "../combat/index.js";
 
@@ -322,11 +323,31 @@ async function executeAuthoritative(base, actionId, options = {}, reference = nu
   }
   if (resolver === "workTheGuns") {
     if (!options.weaponKey) throw new Error("Reload requires an installed weapon.");
-    const result = await base.workTheGuns(options.weaponKey, combatant);
-    const state = base.state(combatant);
+    const round = Math.max(1, Number(game.combat?.round ?? 1));
+    const profile = stationEffectProfile(shipLevel(combatant.actor));
+    let state = await base.workTheGuns(options.weaponKey, combatant);
+    const extraReduction = Math.max(0, profile.bonus - 1);
+    if (extraReduction > 0) {
+      state = reduceWeaponReload(state, options.weaponKey, round, extraReduction);
+      await combatant.update({ [STATE_PATH]: state });
+    }
+
     const notes = await updatePersistentShipForAction(combatant.actor, action, options, state, state);
-    if (notes.length) await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes });
-    return result;
+    const weapon = state.weapons?.[options.weaponKey];
+    const remaining = Math.max(0, Number(weapon?.readyRound ?? round) - round);
+    notes.push(`Reload reduced by ${profile.bonus} round${profile.bonus === 1 ? "" : "s"}; ${remaining} remaining.`);
+    await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes });
+    Hooks.callAll("arkflightStationActionResolved", {
+      combat: game.combat,
+      combatant,
+      actor: combatant.actor,
+      crewActor,
+      action,
+      selection: options.weaponKey,
+      state,
+      notes
+    });
+    return state;
   }
 
   const before = base.state(combatant);
