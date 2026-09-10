@@ -12,8 +12,8 @@ import {
   buildShipSheetView
 } from "../src/ui/ship-sheet-view-model.js";
 
-test("vessel sheet uses native Overview Hold and Combat tabs", () => {
-  assert.deepEqual(SHIP_SHEET_TABS, ["overview", "hold", "combat"]);
+test("vessel sheet uses native Overview Hold Combat and Weapons tabs", () => {
+  assert.deepEqual(SHIP_SHEET_TABS, ["overview", "hold", "combat", "weapons"]);
 });
 
 test("five persistent Areas own the visible station penalty ladder", () => {
