@@ -467,6 +467,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     const targetCombatant = targets.find((entry) => entry.id === this.selectedTargetId) ?? null;
     const target = targetSummary(targetCombatant, this.selectedWeaponKey, combatant);
     const arcVisible = Boolean(combatant && firingArcsVisible(combatant));
+    const undoStatus = combatant ? api?.movementUndoStatus?.(combatant) ?? {} : {};
     const stationRows = STATIONS.map((entry) => ({
       ...entry,
       active: entry.id === this.selectedStation,
@@ -535,6 +536,10 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       ),
       arcVisible,
       arcButtonLabel: arcVisible ? "Hide Weapon Arcs" : "Show Weapon Arcs",
+      canUndoMove: Boolean(game.user?.isGM && undoStatus.canUndoMove),
+      canUndoFacing: Boolean(game.user?.isGM && undoStatus.canUndoFacing),
+      canResetTurnPosition: Boolean(game.user?.isGM && undoStatus.canResetPosition),
+      showUndoControls: Boolean(undoStatus.canResetPosition),
       resources: {
         round,
         ap,
@@ -583,6 +588,22 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       if (!game.user?.isGM || !game.combat) return;
       try { await game.combat.nextTurn(); } catch (_error) { /* noop */ }
     });
+
+    const bindUndo = (selector, action, failureLabel) => {
+      root.querySelector(selector)?.addEventListener("click", async () => {
+        if (!game.user?.isGM || !combatant || typeof api?.[action] !== "function") return;
+        try {
+          await api[action](combatant);
+          this.render({ force: true });
+        } catch (error) {
+          console.error(`Arkflight combat console ${failureLabel} failed`, error);
+          ui.notifications?.error(error?.message ?? failureLabel);
+        }
+      });
+    };
+    bindUndo("[data-undo-move]", "undoMove", "Undo Move");
+    bindUndo("[data-undo-facing]", "undoFacing", "Undo Facing");
+    bindUndo("[data-reset-turn-position]", "resetTurnPosition", "Reset Turn Position");
 
     for (const button of root.querySelectorAll("[data-station]")) {
       button.addEventListener("click", () => {
