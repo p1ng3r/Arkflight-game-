@@ -17,8 +17,9 @@ test("planning station rail is a compact two-line command summary", () => {
 
 test("rail mastery is clickable and opens the same Mastery detail dialog", () => {
   assert.match(polish, /showMastery\(state, stationId\)/);
-  assert.match(polish, /arkflight-rail-mastery-link/);
-  assert.match(polish, /role", "link"/);
+  assert.match(polish, /className = "arkflight-rail-mastery-link"/);
+  assert.match(polish, /masteryButton\.type = "button"/);
+  assert.match(polish, /masteryButton\.addEventListener\("click"/);
 });
 
 test("compact station rail stylesheet is loaded by the module", () => {
