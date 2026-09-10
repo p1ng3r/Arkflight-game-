@@ -177,24 +177,6 @@ function pf2eManifestRows(rows) {
   </div>`).join("");
 }
 
-function hideNormalSections(root) {
-  for (const child of [...root.children]) {
-    if (child.matches?.("header,.arkflight-sheet-tabs,.arkflight-readiness-banner,.arkflight-hold-log-shell")) continue;
-    child.dataset.holdHidden = child.hidden ? "already" : "hold";
-    child.hidden = true;
-  }
-}
-
-function restoreSheet(root) {
-  root.querySelector(".arkflight-hold-log-shell")?.remove();
-  for (const child of root.querySelectorAll('[data-hold-hidden="hold"]')) {
-    child.hidden = false;
-    delete child.dataset.holdHidden;
-  }
-  for (const child of root.querySelectorAll('[data-hold-hidden="already"]')) delete child.dataset.holdHidden;
-  root.querySelectorAll(".arkflight-sheet-tabs button").forEach((entry) => entry.classList.remove("is-hold-active"));
-}
-
 function renderHoldLog(root, actor) {
   const ship = shipFlag(actor);
   if (!ship) return;
@@ -205,13 +187,8 @@ function renderHoldLog(root, actor) {
   const cargoUsed = manifest.total;
   const cargoOver = cargoCapacity >= 0 && cargoUsed > cargoCapacity;
   const nativeHost = root.querySelector("[data-hold-log-host]");
-
-  if (nativeHost) nativeHost.replaceChildren();
-  else {
-    restoreSheet(root);
-    hideNormalSections(root);
-    root.querySelector(".arkflight-hold-log-shell")?.remove();
-  }
+  if (!nativeHost) return false;
+  nativeHost.replaceChildren();
 
   const identityFields = IDENTITY_FIELDS.map(([key, label]) => `
     <label class="arkflight-log-field"><span>${label}</span><input type="text" data-log-identity="${key}" value="${escapeHtml(draft.identity?.[key] ?? "")}"></label>`).join("");
@@ -270,7 +247,7 @@ function renderHoldLog(root, actor) {
       </div>
     </section>`;
 
-  (nativeHost ?? root).append(shell);
+  nativeHost.append(shell);
 
   for (const input of shell.querySelectorAll("[data-log-identity]")) {
     input.addEventListener("input", (event) => {
@@ -314,50 +291,10 @@ export function openArkflightHold(actor, rootOrApp = null) {
   if (!root) return false;
 
   const nav = root.querySelector(".arkflight-sheet-tabs");
-  nav?.querySelectorAll("button").forEach((entry) => entry.classList.remove("is-active", "is-hold-active"));
-  nav?.querySelector("[data-hold-tab]")?.classList.add("is-active", "is-hold-active");
-  renderHoldLog(root, actor);
-  return true;
+  nav?.querySelectorAll("button").forEach((entry) => entry.classList.remove("is-hold-active"));
+  nav?.querySelector('[data-tab="hold"]')?.classList.add("is-active", "is-hold-active");
+  return renderHoldLog(root, actor) !== false;
 }
-
-function attachHoldLog(app, html) {
-  const actor = app?.actor ?? app?.document;
-  if (!actor?.flags?.[MODULE_ID]?.ship) return;
-  const candidate = html?.[0] ?? html ?? app?.element;
-  const root = candidate?.matches?.(".arkflight-ship-shell") ? candidate : candidate?.querySelector?.(".arkflight-ship-shell");
-  if (!root || root.dataset.holdLogUxAttached === "true") return;
-  const nav = root.querySelector(".arkflight-sheet-tabs");
-  if (!nav) return;
-  root.dataset.holdLogUxAttached = "true";
-
-  let button = nav.querySelector("[data-hold-tab]");
-  if (!button) {
-    button = document.createElement("button");
-    button.type = "button";
-    button.className = "arkflight-hold-log-tab-button";
-    button.dataset.holdTab = "";
-    button.innerHTML = '<i class="fa-solid fa-box-open"></i> Hold';
-    nav.insertBefore(button, nav.querySelector("[data-open-shipwright]") ?? null);
-  } else {
-    button.classList.add("arkflight-hold-log-tab-button");
-  }
-
-  if (button.dataset.tab !== "hold" && button.dataset.holdOpenBound !== "true") {
-    button.dataset.holdOpenBound = "true";
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      openArkflightHold(actor, root);
-    });
-  }
-
-  for (const other of [...nav.querySelectorAll("[data-tab]")]) {
-    other.addEventListener("click", () => restoreSheet(root), { capture: true });
-  }
-}
-
-Hooks.on("renderActorSheet", (app, html) => attachHoldLog(app, html));
-Hooks.on("renderApplicationV2", (app, html) => attachHoldLog(app, html));
 
 Hooks.once("ready", () => {
   game.arkflight ??= {};
