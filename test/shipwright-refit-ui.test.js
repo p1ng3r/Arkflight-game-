@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const moduleJson = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
 const uiPath = new URL("../src/ui/shipwright-refit-inventory-ui.js", import.meta.url);
@@ -14,7 +15,7 @@ test("Part 4 Shipwright UI assets are loaded by module.json", () => {
 });
 
 test("Part 4 Shipwright UI source parses as valid JavaScript", () => {
-  const result = spawnSync(process.execPath, ["--check", uiPath.pathname], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, ["--check", fileURLToPath(uiPath)], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr || result.stdout);
 });
 
