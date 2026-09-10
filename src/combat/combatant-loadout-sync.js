@@ -52,44 +52,71 @@ function reconciledWeapons(freshWeapons, currentWeapons = {}) {
   ));
 }
 
+function reconcileTrack(freshTrack, currentTrack) {
+  if (!validTrack(currentTrack)) return freshTrack;
+  const spent = Math.max(0, Number(currentTrack.max) - Number(currentTrack.value));
+  const max = Number(freshTrack.max);
+  return Object.freeze({ value: Math.max(0, max - spent), max });
+}
+
+function reconcileEconomy(fresh, current) {
+  if (!validEconomy(current)) return fresh;
+  return Object.freeze({
+    ap: reconcileTrack(fresh.ap, current.ap),
+    rp: reconcileTrack(fresh.rp, current.rp)
+  });
+}
+
+function reconcileMobility(fresh, current) {
+  if (!validMobility(current)) return fresh;
+  return Object.freeze({
+    ...fresh,
+    heading: current.heading,
+    movement: Object.freeze({ ...current.movement }),
+    maneuver: Object.freeze({ ...current.maneuver })
+  });
+}
+
+function reconcileStrain(fresh, current) {
+  const value = finiteNumber(current?.value);
+  if (value == null) return fresh;
+  return Object.freeze({ value: Math.max(0, Math.min(value, fresh.max)), max: fresh.max });
+}
+
 /**
  * Reconcile transient Foundry combat state against the ship Actor's authoritative
- * installed loadout. Shipwright/refit owns the physical installation list;
- * combat state owns only runtime data such as reload timing.
+ * derived build. Shipwright/refit owns physical installation and build facts;
+ * combat state owns only transient facts such as spent points, heading, reload
+ * timing, movement already taken this turn, and combat history.
  */
 export function reconcileCombatantState(ship, currentState, {
   derived = null,
   catalogs = {},
-  rotation = 0
+  rotation = 0,
+  speedPenalty = 0,
+  maneuverPenalty = 0
 } = {}) {
-  const fresh = createCombatantState(ship, { derived, catalogs, rotation });
+  const fresh = createCombatantState(ship, {
+    derived,
+    catalogs,
+    rotation,
+    speedPenalty,
+    maneuverPenalty
+  });
   if (!currentState) return fresh;
 
   const weapons = reconciledWeapons(fresh.weapons, currentState.weapons);
-  const currentVersion = Math.trunc(Number(currentState.version) || 0);
-  const schemaCurrent = currentVersion === COMBATANT_STATE_VERSION;
-  const economyCurrent = validEconomy(currentState);
-  const mobilityCurrent = validMobility(currentState);
+  const schemaCurrent = Math.trunc(Number(currentState.version) || 0) === COMBATANT_STATE_VERSION;
 
-  // A stale combatant from an older combat-state schema must be made playable
-  // again. Preserve valid runtime tracks when possible, but repair missing/zero
-  // AP and other obsolete structures from the current hull profile.
-  if (!schemaCurrent || !economyCurrent || !mobilityCurrent) {
-    return Object.freeze({
-      ...fresh,
-      turnKey: typeof currentState.turnKey === "string" ? currentState.turnKey : fresh.turnKey,
-      economy: economyCurrent ? currentState.economy : fresh.economy,
-      mobility: mobilityCurrent ? currentState.mobility : fresh.mobility,
-      weapons,
-      log: Array.isArray(currentState.log) ? Object.freeze([...currentState.log]) : fresh.log
-    });
-  }
-
-  // Current-schema states retain AP, movement, heading, strain and history while
-  // their weapon rows are rebuilt from whatever is physically installed now.
   return Object.freeze({
-    ...currentState,
+    ...fresh,
+    turnKey: typeof currentState.turnKey === "string" ? currentState.turnKey : fresh.turnKey,
+    economy: reconcileEconomy(fresh.economy, currentState.economy),
+    mobility: reconcileMobility(fresh.mobility, currentState.mobility),
+    weapons,
+    strain: reconcileStrain(fresh.strain, currentState.strain),
+    log: Array.isArray(currentState.log) ? Object.freeze([...currentState.log]) : fresh.log,
     version: COMBATANT_STATE_VERSION,
-    weapons
+    migratedFromVersion: schemaCurrent ? undefined : Math.trunc(Number(currentState.version) || 0)
   });
 }
