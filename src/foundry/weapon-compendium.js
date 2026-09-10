@@ -255,15 +255,15 @@ async function handleWeaponDrop(event, actor) {
       return;
     }
     ui.notifications?.info?.(`${item.name} blueprint learned. Fabricate it with Aether Scrap, then schedule installation in a legal mount.`);
-    actor.sheet?.render?.(false);
+    actor.sheet?.render?.({ force: true });
   } catch (error) {
     console.error("Arkflight | Weapon blueprint drop failed", error);
     ui.notifications?.error?.(`Arkflight weapon blueprint failed: ${error.message}`);
   }
 }
 
-Hooks.on("renderActorSheet", (app, html) => {
-  const actor = app?.actor ?? app?.object;
+function wireWeaponCompendiumSheet(app, html) {
+  const actor = app?.actor ?? app?.document ?? app?.object;
   const ship = actor?.flags?.[MODULE_ID]?.ship;
   if (actor?.type !== "vehicle" || !ship) return;
   const root = rootElement(app, html);
@@ -278,7 +278,10 @@ Hooks.on("renderActorSheet", (app, html) => {
   if (root.dataset.arkflightWeaponDropBound === "true") return;
   root.dataset.arkflightWeaponDropBound = "true";
   root.addEventListener("drop", (event) => handleWeaponDrop(event, actor), true);
-});
+}
+
+Hooks.on("renderActorSheet", wireWeaponCompendiumSheet);
+Hooks.on("renderApplicationV2", wireWeaponCompendiumSheet);
 
 Hooks.once("ready", async () => {
   game.arkflight ??= {};
