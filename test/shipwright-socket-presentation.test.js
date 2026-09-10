@@ -115,3 +115,11 @@ test("Shipwright fitting boards remain fully reachable with vertical scrolling",
   assert.match(workspaceCss, /arkflight-workspace-work-list[\s\S]*?overflow-y:\s*auto/);
   assert.match(workspaceCss, /arkflight-workspace-board-layout[\s\S]*?padding-bottom:\s*16px/);
 });
+
+
+test("Shipwright category windows show an explicit vertical scrollbar", () => {
+  assert.match(workspaceCss, /arkflight-workspace-board-layout[\s\S]*?overflow-y:\s*scroll/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout[\s\S]*?max-height:\s*calc\(100vh - 235px\)/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout::\-webkit-scrollbar[\s\S]*?width:\s*12px/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout::\-webkit-scrollbar-thumb/);
+});
