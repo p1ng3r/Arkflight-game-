@@ -331,11 +331,6 @@ function bindEndTurn(app, root) {
     event.preventDefault();
     event.stopImmediatePropagation();
 
-    if (!game.user?.isGM) {
-      ui.notifications?.warn("Only the GM may advance Arkflight ship initiative.");
-      return;
-    }
-
     const combat = game.combat;
     if (!combat) {
       ui.notifications?.warn("No active Foundry combat exists.");
@@ -346,11 +341,22 @@ function bindEndTurn(app, root) {
       return;
     }
 
+    const api = game.arkflight?.combat;
+    const combatant = combat.combatant ?? null;
+    if (!api?.canEndTurn?.(combatant)) {
+      ui.notifications?.warn("You may only end the active turn for a ship you own.");
+      return;
+    }
+
     button.disabled = true;
     try {
-      const next = await advanceCombatTurn(combat);
-      if (shipPayload(next.actor)) app.setReference?.(next.actor);
-      else app.render?.({ force: true });
+      if (game.user?.isGM) {
+        const next = await advanceCombatTurn(combat);
+        if (shipPayload(next.actor)) app.setReference?.(next.actor);
+        else app.render?.({ force: true });
+      } else {
+        await api.endTurn(combatant);
+      }
     } catch (error) {
       console.error("Arkflight | End Turn failed", error);
       ui.notifications?.error(error?.message ?? "Could not advance to the next combatant.");
