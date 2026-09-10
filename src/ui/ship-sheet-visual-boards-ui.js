@@ -261,6 +261,7 @@ function enhance(app, html) {
 }
 
 Hooks.on("renderActorSheet", enhance);
+Hooks.on("renderApplicationV2", enhance);
 Hooks.on("renderArkflightShipSheet", enhance);
 
 export const ARKFLIGHT_VISUAL_BOARD_ASSETS = Object.freeze({ BOARD, SOCKET, COMPATIBLE, INCOMPATIBLE });
