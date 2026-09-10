@@ -28,8 +28,9 @@
 
   <nav class="arkflight-sheet-tabs" aria-label="Arkflight ship sheet sections">
     <button type="button" data-tab="overview" class="{{#if arkflight.tab.overview}}is-active{{/if}}"><i class="fa-solid fa-gauge-high"></i> Overview</button>
-    <button type="button" data-tab="fittings" class="{{#if arkflight.tab.fittings}}is-active{{/if}}"><i class="fa-solid fa-screwdriver-wrench"></i> Fittings</button>
-    <button type="button" data-tab="refit" class="{{#if arkflight.tab.refit}}is-active{{/if}}"><i class="fa-solid fa-hammer"></i> Refit</button>
+    <button type="button" data-hold-tab><i class="fa-solid fa-box-open"></i> Hold</button>
+    <button type="button" data-open-combat><i class="fa-solid fa-crosshairs"></i> Combat</button>
+    <button type="button" data-open-shipwright><i class="fa-solid fa-hammer"></i> Shipwright</button>
   </nav>
 
   {{#unless arkflight.validation.ok}}
