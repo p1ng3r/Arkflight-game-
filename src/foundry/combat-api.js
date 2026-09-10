@@ -263,7 +263,11 @@ function tokenTurnSnapshot(combatant, combat = game.combat) {
     rotation: normalizeHexHeading(token.rotation ?? state.mobility?.heading ?? 0),
     heading: normalizeHexHeading(state.mobility?.heading ?? token.rotation ?? 0),
     movementUsed: Math.max(0, Math.trunc(Number(state.mobility?.movement?.used) || 0)),
-    maneuverUsed: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.used) || 0))
+    movementPurchases: Math.max(0, Math.trunc(Number(state.mobility?.movement?.purchases) || 0)),
+    movementAllowance: Math.max(0, Math.trunc(Number(state.mobility?.movement?.allowance) || 0)),
+    maneuverUsed: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.used) || 0)),
+    maneuverPurchases: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.purchases) || 0)),
+    maneuverAllowance: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.allowance) || 0))
   });
 }
 
@@ -310,24 +314,53 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
   }
 
   const mobility = state.mobility ?? {};
+  const movement = mobility.movement ?? {};
+  const maneuver = mobility.maneuver ?? {};
+  const moveRefund = move
+    ? Math.max(0, Math.trunc(Number(movement.purchases) || 0) - snapshot.movementPurchases)
+    : 0;
+  const facingRefund = facing
+    ? Math.max(0, Math.trunc(Number(maneuver.purchases) || 0) - snapshot.maneuverPurchases)
+    : 0;
+  const apRefund = moveRefund + facingRefund;
+  const ap = state.economy?.ap ?? { value: 0, max: 0 };
+  const apMax = Math.max(0, Math.trunc(Number(ap.max) || 0));
+  const apValue = Math.max(0, Math.trunc(Number(ap.value) || 0));
+
   const next = Object.freeze({
     ...state,
+    economy: Object.freeze({
+      ...(state.economy ?? {}),
+      ap: Object.freeze({
+        ...ap,
+        value: Math.min(apMax, apValue + apRefund),
+        max: apMax
+      })
+    }),
     mobility: Object.freeze({
       ...mobility,
       heading: facing ? snapshot.heading : mobility.heading,
       movement: Object.freeze({
-        ...(mobility.movement ?? {}),
-        used: move ? snapshot.movementUsed : Math.max(0, Math.trunc(Number(mobility.movement?.used) || 0))
+        ...movement,
+        purchases: move ? snapshot.movementPurchases : Math.max(0, Math.trunc(Number(movement.purchases) || 0)),
+        allowance: move
+          ? Math.max(snapshot.movementAllowance, Math.max(0, Math.trunc(Number(movement.allowance) || 0)) - moveRefund * Math.max(1, Math.trunc(Number(mobility.speed) || 1)))
+          : Math.max(0, Math.trunc(Number(movement.allowance) || 0)),
+        used: move ? snapshot.movementUsed : Math.max(0, Math.trunc(Number(movement.used) || 0))
       }),
       maneuver: Object.freeze({
-        ...(mobility.maneuver ?? {}),
-        used: facing ? snapshot.maneuverUsed : Math.max(0, Math.trunc(Number(mobility.maneuver?.used) || 0))
+        ...maneuver,
+        purchases: facing ? snapshot.maneuverPurchases : Math.max(0, Math.trunc(Number(maneuver.purchases) || 0)),
+        allowance: facing
+          ? Math.max(snapshot.maneuverAllowance, Math.max(0, Math.trunc(Number(maneuver.allowance) || 0)) - facingRefund * Math.max(1, Math.trunc(Number(mobility.maneuverability) || 1)))
+          : Math.max(0, Math.trunc(Number(maneuver.allowance) || 0)),
+        used: facing ? snapshot.maneuverUsed : Math.max(0, Math.trunc(Number(maneuver.used) || 0))
       })
     })
   });
   await updateCombatantState(combatant, next);
   try { await token.clearMovementHistory?.(); } catch (_error) { /* convenience only */ }
-  Hooks.callAll("arkflightCombatPositionUndone", { combatant, move, facing, snapshot, state: next });
+  Hooks.callAll("arkflightCombatPositionUndone", { combatant, move, facing, snapshot, state: next, apRefund });
   return next;
 }
 
