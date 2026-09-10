@@ -37,10 +37,10 @@ test("Drive the Crew HUD copy shows the net player-facing result and Morale cost
 });
 
 test("HUD exposes Supplies Lifeveil Morale and Strain costs clearly", () => {
-  assert.match(hudSource, /is-morale/);
-  assert.match(hudSource, /is-supply/);
-  assert.match(hudSource, /is-lifeveil/);
-  assert.match(hudSource, /is-strain/);
+  assert.match(hudSource, /tone: "morale"/);
+  assert.match(hudSource, /tone: "supply"/);
+  assert.match(hudSource, /tone: "lifeveil"/);
+  assert.match(hudSource, /tone: "strain"/);
   assert.match(economySource, /"engineer-emergency-repair": Object\.freeze\(\{ supplies: 2 \}\)/);
   assert.match(economySource, /"veilwarden-focus-ward": Object\.freeze\(\{ lifeveil: 10 \}\)/);
 });
