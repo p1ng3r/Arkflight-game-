@@ -17,8 +17,8 @@
 .arkflight-combat-console .afcs-action-effect {
   display: block;
   margin-top: 5px;
-  font-size: 11px !important;
-  line-height: 1.35;
+  font-size: 12px !important;
+  line-height: 1.42;
   color: #d8eaf1 !important;
 }
 
@@ -37,13 +37,14 @@
 .arkflight-combat-console .afcs-station-bonus-help strong {
   color: #8ce0bc;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 11px;
+  line-height: 1.15;
 }
 
 .arkflight-combat-console .afcs-station-bonus-help span {
   color: #b8ced6;
-  font-size: 9px;
-  line-height: 1.3;
+  font-size: 10px;
+  line-height: 1.38;
 }
 
 .arkflight-combat-console .afcs-rule-chips {
@@ -61,8 +62,8 @@
   border: 1px solid rgba(91, 145, 165, .38);
   border-radius: 999px;
   background: rgba(8, 22, 31, .94);
-  font-size: 8px;
-  line-height: 1;
+  font-size: 9px;
+  line-height: 1.05;
   font-weight: 650;
   letter-spacing: .03em;
   white-space: nowrap;
@@ -129,8 +130,8 @@
   width: fit-content;
   cursor: pointer;
   user-select: none;
-  font-size: 9px;
-  line-height: 1.2;
+  font-size: 10px;
+  line-height: 1.25;
   color: #84cce4;
 }
 
@@ -143,8 +144,8 @@
   padding: 6px 8px;
   border-left: 2px solid rgba(88, 174, 203, .45);
   background: rgba(5, 17, 25, .72);
-  font-size: 9px;
-  line-height: 1.4;
+  font-size: 10px;
+  line-height: 1.48;
   color: #a9c4cf;
 }
 
