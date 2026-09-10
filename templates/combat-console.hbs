@@ -3,7 +3,7 @@
     <div class="afcs-offline">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <div>
-        <strong>Combat Strip Offline</strong>
+        <strong>Combat HUD Offline</strong>
         <span>{{offlineReason}}</span>
       </div>
     </div>
@@ -76,28 +76,51 @@
       </div>
     </section>
 
-    <footer class="afcs-strip {{#if activeTurn}}is-active-turn{{/if}}">
-      <div class="afcs-ship">{{#if shipImg}}<img src="{{shipImg}}" alt="{{shipName}}">{{/if}}<div><strong>{{shipName}}</strong><span>{{#if activeTurn}}Active Turn{{else}}Standby{{/if}}</span></div></div>
-
-      <div class="afcs-center">
-        <div class="afcs-resource-row">
-          <div class="afcs-stat"><label>Round</label><strong>{{resources.round}}</strong></div>
-          <div class="afcs-stat is-pips"><label>AP {{resources.ap}} / {{resources.apMax}}</label><div class="afcs-pips is-ap">{{#each resources.apPips}}<i class="{{#if filled}}is-filled{{/if}}"></i>{{/each}}</div><small>Spent {{resources.apSpent}}</small></div>
-          <div class="afcs-stat is-pips"><label>RP {{resources.rp}} / {{resources.rpMax}}</label><div class="afcs-pips is-rp">{{#each resources.rpPips}}<i class="{{#if filled}}is-filled{{/if}}"></i>{{/each}}</div><small>Spent {{resources.rpSpent}}</small></div>
-          <div class="afcs-stat is-pips is-strain"><label>Strain {{resources.strain}} / {{resources.strainMax}}</label><div class="afcs-pips is-strain">{{#each resources.strainPips}}<i class="{{#if filled}}is-filled{{/if}}"></i>{{/each}}</div></div>
-          <div class="afcs-stat"><label>Heading</label><strong>{{resources.heading}}°</strong></div>
-          <div class="afcs-stat is-target"><label>Target</label><strong>{{targetName}}</strong></div>
+    <footer class="afcs-commandbar {{#if activeTurn}}is-active-turn{{/if}}">
+      <section class="afch-ship">
+        {{#if shipImg}}<img src="{{shipImg}}" alt="{{shipName}}">{{/if}}
+        <div>
+          <strong>{{shipName}}</strong>
+          <small>{{#if activeTurn}}Active Turn{{else}}Standby{{/if}}</small>
         </div>
-        <div class="afcs-vitals-row" aria-label="Ship combat resources"></div>
-      </div>
+      </section>
 
-      <div class="afcs-controls">
-        <button type="button" class="{{#if openStations}}is-active{{/if}}" data-toggle-panel="stations"><i class="fa-solid fa-users"></i> Stations</button>
+      <section class="afch-status" aria-label="Combat status">
+        <div class="afch-stat"><label>Round</label><strong>{{resources.round}}</strong></div>
+        <div class="afch-stat ap"><label>Action Points</label><strong>AP {{resources.ap}} / {{resources.apMax}}</strong></div>
+        <div class="afch-stat rp"><label>Reaction Points</label><strong>RP {{resources.rp}} / {{resources.rpMax}}</strong></div>
+        <div class="afch-stat strain"><label>Strain</label><strong>{{resources.strain}} / {{resources.strainMax}}</strong></div>
+        <div class="afch-stat"><label>Heading</label><strong>{{resources.heading}}°</strong></div>
+      </section>
+
+      <section class="afch-target">
+        <span class="afch-kicker">Target</span>
+        <strong>{{targetName}}</strong>
+        <small>{{#if target}}{{target.solutionText}}{{else}}No firing solution{{/if}}</small>
+      </section>
+
+      <button type="button" class="afch-close" data-afch-close title="Close combat HUD" aria-label="Close combat HUD"><i class="fa-solid fa-xmark"></i></button>
+
+      <section class="afch-vitals" aria-label="Ship resources">
+        <div class="afch-vital hull" data-afch-vital="hull"><label>Hull</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+        <div class="afch-vital lifeveil" data-afch-vital="lifeveil"><label>Lifeveil</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+        <div class="afch-vital morale" data-afch-vital="morale"><label>Morale</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+        <div class="afch-vital strain" data-afch-vital="strain"><label>Strain</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+        <div class="afch-vital supplies" data-afch-vital="supplies"><label>Supplies</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+      </section>
+
+      <nav class="afch-stations" aria-label="Ship stations">
+        {{#each stationRows}}
+          <button type="button" data-command-station="{{id}}" class="{{#if active}}is-active{{/if}}" title="{{label}} — {{crew}}"><i class="{{icon}}"></i> {{label}}</button>
+        {{/each}}
+      </nav>
+
+      <nav class="afch-actions" aria-label="Combat controls">
         <button type="button" class="{{#if openWeapons}}is-active{{/if}}" data-toggle-panel="weapons"><i class="fa-solid fa-sword"></i> Weapons</button>
-        <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>
+        <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs><i class="fa-solid fa-wave-square"></i> Arcs</button>
         <button type="button" class="{{#if openLog}}is-active{{/if}}" data-toggle-panel="log"><i class="fa-solid fa-scroll"></i> Log</button>
         <button type="button" class="is-end" data-end-turn {{#unless gm}}disabled{{/unless}}><i class="fa-solid fa-forward-step"></i> End Turn</button>
-      </div>
+      </nav>
     </footer>
   {{/if}}
 </section>
