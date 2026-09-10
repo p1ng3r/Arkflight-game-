@@ -540,3 +540,20 @@
   .arkflight-workbench-hotspot.is-weapon { right: 3%; top: 67%; }
   .arkflight-install-scroll-grid { grid-template-columns: 1fr; }
 }
+
+
+.arkflight-workspace-socket {
+  overflow: visible;
+}
+.arkflight-workspace-socket-component {
+  transition: transform 140ms ease, filter 140ms ease;
+  transform-origin: center;
+}
+.arkflight-workspace-socket:hover {
+  z-index: 50;
+}
+.arkflight-workspace-socket:hover .arkflight-workspace-socket-component {
+  transform: scale(2);
+  z-index: 20;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
+}
