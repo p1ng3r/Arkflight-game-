@@ -49,7 +49,7 @@ function desiredGeometry() {
   const width = Math.min(1500, available);
   const height = 132;
   const left = Math.max(18, Math.round(leftPad + (available - width) / 2));
-  const top = Math.max(18, Math.round(window.innerHeight - height - 28));
+  const top = Math.max(18, Math.round(window.innerHeight - height - 116));
   return { width, height, left, top };
 }
 
@@ -60,7 +60,7 @@ function fitWindow(app, { forcePosition = false } = {}) {
     const rect = app.element?.getBoundingClientRect?.();
     if (!rect) return;
     const maxLeft = Math.max(8, canvasRightEdge() - rect.width - 8);
-    const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+    const maxTop = Math.max(8, window.innerHeight - rect.height - 108);
     const left = Math.max(8, Math.min(maxLeft, rect.left));
     const top = Math.max(8, Math.min(maxTop, rect.top));
     try { app.setPosition?.({ width: geometry.width, height: geometry.height, left, top }); }
@@ -97,6 +97,14 @@ function buildVital(label, cssClass, value, max) {
   return wrapper;
 }
 
+function combatantForApp(app) {
+  const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
+  if (!actor || !game.combat) return null;
+  return game.arkflight?.combat?.findCombatant?.(actor)
+    ?? [...(game.combat?.combatants ?? [])].find((entry) => entry.actorId === actor.id)
+    ?? null;
+}
+
 function restructureStrip(app, strip) {
   const ship = strip.querySelector(":scope > .afcs-ship");
   const controls = strip.querySelector(":scope > .afcs-controls");
@@ -120,19 +128,16 @@ function restructureStrip(app, strip) {
   if (!vitalsRow) return;
   const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
   const resources = shipPayload(actor)?.resources ?? {};
+  const combatant = combatantForApp(app);
+  const state = combatant ? game.arkflight?.combat?.state?.(combatant) : null;
+  const strainValue = state?.strain?.value ?? resources.strain?.value;
+  const strainMax = state?.strain?.max ?? resources.strain?.max;
   vitalsRow.replaceChildren(
     buildVital("Hull", "hull", resources.hull?.value, resources.hull?.max),
     buildVital("Lifeveil", "lifeveil", resources.lifeveil?.value, resources.lifeveil?.max),
-    buildVital("Morale", "morale", resources.morale?.value, resources.morale?.max)
+    buildVital("Morale", "morale", resources.morale?.value, resources.morale?.max),
+    buildVital("Strain", "strain", strainValue, strainMax)
   );
-}
-
-function combatantForApp(app) {
-  const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
-  if (!actor || !game.combat) return null;
-  return game.arkflight?.combat?.findCombatant?.(actor)
-    ?? [...(game.combat?.combatants ?? [])].find((entry) => entry.actorId === actor.id)
-    ?? null;
 }
 
 function syncArcButtons(root, combatant) {
@@ -178,7 +183,7 @@ function enableDrag(app, strip) {
     try { handle.setPointerCapture?.(pointerId); } catch (_error) { /* optional */ }
     const move = (moveEvent) => {
       const maxLeft = Math.max(8, canvasRightEdge() - rect.width - 8);
-      const maxTop = Math.max(8, window.innerHeight - rect.height - 8);
+      const maxTop = Math.max(8, window.innerHeight - rect.height - 108);
       const left = Math.max(8, Math.min(maxLeft, startLeft + moveEvent.clientX - startX));
       const top = Math.max(8, Math.min(maxTop, startTop + moveEvent.clientY - startY));
       try { app.setPosition?.({ left, top }); } catch (_error) { /* convenience */ }
