@@ -20,6 +20,7 @@ const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const COMBAT_SOCKET = `module.${MODULE_ID}`;
 const STATION_ACTION_REQUEST = "station-action-request";
+const STATION_ACTION_RESULT = "station-action-result";
 const AREA_ORDER = Object.freeze([
   AREA_STATES.STABLE,
   AREA_STATES.STRESSED,
@@ -402,7 +403,27 @@ async function requestStationAction(base, actionId, options = {}, reference = nu
   return Object.freeze({ requested: true, combatant: control.combatant, action: control.action });
 }
 
+function emitStationActionResult(payload = {}) {
+  game.socket?.emit?.(COMBAT_SOCKET, {
+    type: STATION_ACTION_RESULT,
+    userId: payload.userId ?? null,
+    combatId: payload.combatId ?? game.combat?.id ?? null,
+    combatantId: payload.combatantId ?? null,
+    actionId: payload.actionId ?? null,
+    ok: Boolean(payload.ok),
+    message: payload.message ?? null
+  });
+}
+
 async function handleStationActionSocket(base, payload = {}) {
+  if (payload?.type === STATION_ACTION_RESULT) {
+    if (!payload.userId || payload.userId !== game.user?.id) return;
+    if (payload.ok) ui.notifications?.info(payload.message ?? "Arkflight station action resolved.");
+    else ui.notifications?.error(payload.message ?? "Arkflight station action failed.");
+    Hooks.callAll("arkflightStationActionRemoteResult", payload);
+    return;
+  }
+
   if (!game.user?.isGM || payload?.type !== STATION_ACTION_REQUEST) return;
   const primary = activePrimaryGM();
   if (!primary || primary.id !== game.user.id) return;
@@ -414,19 +435,37 @@ async function handleStationActionSocket(base, payload = {}) {
     ?? null;
   if (!requester || !requester.active || !combat || combat.id !== payload.combatId || !combatant) return;
 
+  const reply = (ok, message) => emitStationActionResult({
+    userId: requester.id,
+    combatId: combat.id,
+    combatantId: combatant.id,
+    actionId: payload.actionId,
+    ok,
+    message
+  });
+
   const control = stationControl(base, payload.actionId, combatant, requester);
   if (!control.ok) {
+    const message = control.reason === "not-your-station"
+      ? `Only the player assigned to ${control.action?.station ?? "that"} station may use this action.`
+      : `Station action unavailable: ${control.reason}.`;
     console.warn("Arkflight | Rejected station action request", { reason: control.reason, userId: requester.id, actionId: payload.actionId });
+    reply(false, message);
     return;
   }
 
   const availability = runtimeAvailability(base, payload.actionId, combatant);
-  if (!availability.ok) return;
+  if (!availability.ok) {
+    reply(false, `${control.action?.name ?? "Station action"} unavailable: ${availability.reason}.`);
+    return;
+  }
 
   try {
     await executeAuthoritative(base, payload.actionId, payload.options ?? {}, combatant);
+    reply(true, `${control.action?.name ?? "Station action"} resolved.`);
   } catch (error) {
     console.error("Arkflight | Player station action request failed", error);
+    reply(false, error?.message ?? "Arkflight station action failed.");
   }
 }
 
