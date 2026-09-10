@@ -4,20 +4,8 @@ import { firingArcsVisible, toggleFiringArcs } from "./weapon-combat-station-ui.
 
 const MODULE_ID = "arkflight-game";
 const HUD_ID = "arkflight-combat-console";
-const initialized = new WeakSet();
 const userMoved = new WeakSet();
 let lastApp = null;
-
-function ensureCombatFlowStylesheet() {
-  const href = "modules/arkflight-game/styles/combat-flow-hud.css";
-  if (document.querySelector('link[data-arkflight-combat-flow]')) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = href;
-  link.dataset.arkflightCombatFlow = "true";
-  document.head.append(link);
-}
-ensureCombatFlowStylesheet();
 
 function isCombatStrip(app) {
   const id = app?.id ?? app?.options?.id ?? "";
@@ -43,12 +31,12 @@ function canvasRightEdge() {
 
 function desiredGeometry() {
   const rightEdge = canvasRightEdge();
-  const leftPad = 72;
-  const rightPad = 20;
-  const available = Math.max(1040, rightEdge - leftPad - rightPad);
-  const width = Math.min(1500, available);
+  const leftPad = 28;
+  const rightPad = 28;
+  const available = Math.max(760, rightEdge - leftPad - rightPad);
+  const width = Math.min(1280, available);
   const height = 132;
-  const left = Math.max(18, Math.round(leftPad + (available - width) / 2));
+  const left = Math.max(18, Math.round((rightEdge - width) / 2));
   const top = Math.max(18, Math.round(window.innerHeight - height - 116));
   return { width, height, left, top };
 }
@@ -59,8 +47,8 @@ function fitWindow(app, { forcePosition = false } = {}) {
   if (userMoved.has(app) && !forcePosition) {
     const rect = app.element?.getBoundingClientRect?.();
     if (!rect) return;
-    const maxLeft = Math.max(8, canvasRightEdge() - rect.width - 8);
-    const maxTop = Math.max(8, window.innerHeight - rect.height - 108);
+    const maxLeft = Math.max(8, canvasRightEdge() - geometry.width - 8);
+    const maxTop = Math.max(8, window.innerHeight - geometry.height - 108);
     const left = Math.max(8, Math.min(maxLeft, rect.left));
     const top = Math.max(8, Math.min(maxTop, rect.top));
     try { app.setPosition?.({ width: geometry.width, height: geometry.height, left, top }); }
@@ -105,26 +93,8 @@ function combatantForApp(app) {
     ?? null;
 }
 
-function restructureStrip(app, strip) {
-  const ship = strip.querySelector(":scope > .afcs-ship");
-  const controls = strip.querySelector(":scope > .afcs-controls");
-  const stats = [...strip.querySelectorAll(":scope > .afcs-stat")];
-  if (!ship || !controls) return;
-
-  let center = strip.querySelector(":scope > .afcs-center");
-  if (!center) {
-    center = document.createElement("div");
-    center.className = "afcs-center";
-    const resourceRow = document.createElement("div");
-    resourceRow.className = "afcs-resource-row";
-    const vitalsRow = document.createElement("div");
-    vitalsRow.className = "afcs-vitals-row";
-    center.append(resourceRow, vitalsRow);
-    strip.insertBefore(center, controls);
-    for (const stat of stats) resourceRow.append(stat);
-  }
-
-  const vitalsRow = center.querySelector(".afcs-vitals-row");
+function populateVitals(app, strip) {
+  const vitalsRow = strip.querySelector(".afcs-vitals-row");
   if (!vitalsRow) return;
   const actor = app.actor ?? (app.actorId ? game.actors?.get(app.actorId) : null);
   const resources = shipPayload(actor)?.resources ?? {};
@@ -179,8 +149,15 @@ function enableDrag(app, strip) {
     if (event.button !== 0 || event.target.closest("button, input, select, textarea, a")) return;
     const rect = app.element?.getBoundingClientRect?.();
     if (!rect) return;
-    event.preventDefault(); event.stopPropagation(); userMoved.add(app); handle.classList.add("is-dragging");
-    const startX = event.clientX, startY = event.clientY, startLeft = rect.left, startTop = rect.top, pointerId = event.pointerId;
+    event.preventDefault();
+    event.stopPropagation();
+    userMoved.add(app);
+    handle.classList.add("is-dragging");
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const startLeft = rect.left;
+    const startTop = rect.top;
+    const pointerId = event.pointerId;
     try { handle.setPointerCapture?.(pointerId); } catch (_error) { /* optional */ }
     const move = (moveEvent) => {
       const maxLeft = Math.max(8, canvasRightEdge() - rect.width - 8);
@@ -191,30 +168,30 @@ function enableDrag(app, strip) {
     };
     const stop = () => {
       handle.classList.remove("is-dragging");
-      handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", stop); handle.removeEventListener("pointercancel", stop);
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", stop);
+      handle.removeEventListener("pointercancel", stop);
       try { handle.releasePointerCapture?.(pointerId); } catch (_error) { /* optional */ }
     };
-    handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", stop); handle.addEventListener("pointercancel", stop);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", stop);
+    handle.addEventListener("pointercancel", stop);
   });
 }
 
 function enhanceStrip(app) {
   if (!isCombatStrip(app)) return;
-  ensureCombatFlowStylesheet();
   const root = app?.element;
   const shell = root?.querySelector?.(".afcs-shell");
   const strip = shell?.querySelector?.(".afcs-strip");
   if (!root || !shell || !strip) return;
   lastApp = app;
   shell.dataset.afcsFinal = "true";
-  restructureStrip(app, strip);
+  populateVitals(app, strip);
   ensureCloseButton(app, strip);
   enableDrag(app, strip);
   bindArcButtons(app, root);
-  if (!initialized.has(app)) {
-    initialized.add(app);
-    requestAnimationFrame(() => requestAnimationFrame(() => fitWindow(app, { forcePosition: true })));
-  }
+  requestAnimationFrame(() => fitWindow(app, { forcePosition: !userMoved.has(app) }));
 }
 
 Hooks.on("renderApplicationV2", enhanceStrip);
