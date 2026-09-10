@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS, WEAPONS } from "../content/index.js";
 import { PF2E_SHIP_WEAPON_SCHEMA_VERSION, pf2eShipWeaponDocumentBase } from "./pf2e-ship-weapon-source.js";
+import { auditWeaponArt } from "../content/weapon-art.js";
 
 const MODULE_ID = "arkflight-game";
 const FLAG_SCOPE = "arkflight";
@@ -285,11 +286,15 @@ Hooks.once("ready", async () => {
     packId: PACK_ID,
     sync: (options = {}) => syncWeaponCompendium(options),
     rebuild: () => syncWeaponCompendium({ force: true, notify: true }),
+    auditArt: () => auditWeaponArt(WEAPONS),
     open: openWeaponCompendium
   };
   if (!game.user?.isGM) return;
   try {
     await syncWeaponCompendium({ notify: true });
+    const artAudit = auditWeaponArt(WEAPONS);
+    console.info("Arkflight | Weapon art audit", artAudit);
+    if (artAudit.missing.length) console.warn("Arkflight | Some weapon artwork is unmatched. Run game.arkflight.weaponCompendium.auditArt() for details.");
   } catch (error) {
     console.error("Arkflight | Weapon compendium bootstrap failed", error);
     ui.notifications?.error?.(`Arkflight weapon compendium could not be synchronized: ${error.message}`);
