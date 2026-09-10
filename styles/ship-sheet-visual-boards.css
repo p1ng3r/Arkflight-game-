@@ -195,3 +195,20 @@
   .arkflight-visual-board { min-height: 340px; }
   .arkflight-visual-socket { width: 46px; height: 46px; }
 }
+
+
+.arkflight-visual-socket {
+  overflow: visible;
+}
+.arkflight-visual-socket-component {
+  transition: transform 140ms ease, filter 140ms ease;
+  transform-origin: center;
+}
+.arkflight-visual-socket:hover {
+  z-index: 50;
+}
+.arkflight-visual-socket:hover .arkflight-visual-socket-component {
+  transform: scale(2);
+  z-index: 20;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
+}
