@@ -75,3 +75,11 @@ test("native station combat effects preserve the player fire socket relay", () =
   assert.match(effects, /return enhancedFireAtTarget\(base, options\.weaponKey, options\.targetId, reference\)/);
   assert.match(effects, /Only the GM may resolve Arkflight ship combat attacks/);
 });
+
+
+test("authoritative enhanced fire resolves Battlewatch assignment by id uuid or name", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(effects, /actor\.uuid === reference \|\| actor\.name === reference/);
+  assert.match(effects, /if \(!game\.user\?\.isGM\) return originalStationAction\(actionId, options, reference\)/);
+  assert.match(effects, /return enhancedFireAtTarget\(base, options\.weaponKey, options\.targetId, reference\)/);
+});
