@@ -1,4 +1,4 @@
-import { stationEffectProfile, workTheGuns as workTheGunsState } from "../combat/index.js";
+import { reduceWeaponReload, stationEffectProfile, workTheGuns as workTheGunsState } from "../combat/index.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
@@ -16,21 +16,6 @@ function resolveCombatant(base, reference = null) {
   return reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
 }
 
-function extraReloadReduction(state, weaponKey, round, amount) {
-  const weapon = state?.weapons?.[weaponKey];
-  const extra = Math.max(0, Math.trunc(Number(amount) || 0));
-  if (!weapon || extra <= 0) return state;
-  const floor = Math.max(1, Math.trunc(Number(round) || 1));
-  const readyRound = Math.max(floor, Number(weapon.readyRound ?? floor) - extra);
-  return Object.freeze({
-    ...state,
-    weapons: Object.freeze({
-      ...state.weapons,
-      [weaponKey]: Object.freeze({ ...weapon, readyRound })
-    })
-  });
-}
-
 Hooks.once("ready", () => {
   const base = game.arkflight?.combat;
   if (!base) return;
@@ -44,7 +29,7 @@ Hooks.once("ready", () => {
     const profile = stationEffectProfile(shipLevel(combatant.actor));
     const before = base.state(combatant);
     let next = workTheGunsState(before, weaponKey, round);
-    next = extraReloadReduction(next, weaponKey, round, Math.max(0, profile.bonus - 1));
+    next = reduceWeaponReload(next, weaponKey, round, Math.max(0, profile.bonus - 1));
     await combatant.update({ [STATE_PATH]: next });
 
     const weapon = next.weapons?.[weaponKey];
