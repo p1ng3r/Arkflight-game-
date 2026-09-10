@@ -18,8 +18,7 @@ function validEconomy(economy) {
     && validTrack(economy?.rp);
 }
 
-function validMobility(state) {
-  const mobility = state?.mobility;
+function validMobility(mobility) {
   return Boolean(
     mobility
     && finiteNumber(mobility.speed) != null
