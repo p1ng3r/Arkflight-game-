@@ -453,7 +453,7 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
     const root = this.element;
     for (const button of root.querySelectorAll("[data-workbench-category]")) button.addEventListener("click", () => { this.group = button.dataset.workbenchCategory; this.selectedSocket = null; this.render({ force: true }); });
     root.querySelector("[data-workbench-home]")?.addEventListener("click", () => { this.group = null; this.selectedSocket = null; this.render({ force: true }); });
-    const socketRowsByIndex = new Map((context?.sockets ?? []).map((row) => [Number(row.index), row]));
+    const socketRowsByIndex = new Map((this.group ? socketRows(this.actor, this.group) : []).map((row) => [Number(row.index), row]));
     for (const socket of root.querySelectorAll("[data-workspace-socket]")) {
       socket.addEventListener("click", () => {
         const index = Number(socket.dataset.socketIndex);
