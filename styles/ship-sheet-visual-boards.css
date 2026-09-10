@@ -212,3 +212,8 @@
   z-index: 20;
   filter: drop-shadow(0 5px 10px rgba(0,0,0,.82));
 }
+
+
+.arkflight-visual-board:has(.arkflight-visual-socket:hover) {
+  overflow: visible;
+}
