@@ -134,6 +134,27 @@ function weaponFitsMount(weapon, mount, ship) {
     && shipLevel >= minShipLevel;
 }
 
+function blueprintRows(actor, group) {
+  const ship = shipFlag(actor);
+  const ids = group === "ship"
+    ? ship?.blueprints?.shipModIds ?? []
+    : group === "arkengine"
+      ? ship?.blueprints?.arkengineModIds ?? []
+      : ship?.blueprints?.weaponIds ?? [];
+  const catalog = catalogFor(group) ?? {};
+  return [...new Set(ids)].map((id) => {
+    const item = catalog[id];
+    return {
+      id,
+      name: item?.name ?? id,
+      img: item?.img ?? item?.data?.art?.img ?? "",
+      family: familyFor(group),
+      effectSummary: componentEffectSummary(item, group),
+      bonusLines: componentBonusLines(item, group)
+    };
+  }).sort((a, b) => a.name.localeCompare(b.name));
+}
+
 function inventoryRows(actor, group, selectedSocket = null) {
   const ship = shipFlag(actor);
   const catalog = catalogFor(group) ?? {};
@@ -437,6 +458,8 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
       compatibleWeapons,
       hasCompatibleWeapons: compatibleWeapons.length > 0,
       inventory: group ? inventoryRows(this.actor, group, selectedRow?.available ? selected : null) : [],
+      blueprints: group ? blueprintRows(this.actor, group) : [],
+      blueprintCount: group ? blueprintRows(this.actor, group).length : 0,
       workOrders: workOrders(this.actor),
       hasWorkOrders: workOrders(this.actor).length > 0,
       serviceMode: mode,
