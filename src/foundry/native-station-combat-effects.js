@@ -42,8 +42,12 @@ function resolveCombatant(base, reference) {
 }
 
 function battlewatchActor(shipActor) {
-  const actorId = shipPayload(shipActor)?.crew?.stations?.battlewatch ?? null;
-  return actorId ? game.actors?.get(actorId) ?? null : null;
+  const reference = shipPayload(shipActor)?.crew?.stations?.battlewatch ?? null;
+  if (!reference) return null;
+  if (reference?.documentName === "Actor") return reference;
+  return game.actors?.get?.(reference)
+    ?? game.actors?.contents?.find?.((actor) => actor.uuid === reference || actor.name === reference)
+    ?? null;
 }
 
 function perceptionModifier(actor) {
