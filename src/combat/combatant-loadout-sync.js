@@ -78,9 +78,13 @@ function reconcileMobility(fresh, current) {
 }
 
 function reconcileStrain(fresh, current) {
-  const value = finiteNumber(current?.value);
-  if (value == null) return fresh;
-  return Object.freeze({ value: Math.max(0, Math.min(value, fresh.max)), max: fresh.max });
+  const currentValue = finiteNumber(current?.value);
+  if (currentValue == null) return fresh;
+  const max = Math.max(0, finiteNumber(fresh?.max) ?? 0);
+  // Strain is transient combat progress. A refit may change its capacity, but
+  // reconciliation must never replace the amount already accumulated with the
+  // Actor's freshly hydrated persistent value. Only clamp when capacity shrinks.
+  return Object.freeze({ value: Math.min(Math.max(0, currentValue), max), max });
 }
 
 /**
