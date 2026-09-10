@@ -118,3 +118,4 @@ function enhance(app, html) {
 }
 
 Hooks.on('renderActorSheet', enhance);
+Hooks.on('renderApplicationV2', enhance);
