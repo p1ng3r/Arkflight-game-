@@ -1,0 +1,30 @@
+.arkflight-combat-console .afcs-action-journal-link {
+  margin-top: 6px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid rgba(92, 184, 214, 0.35);
+  border-radius: 6px;
+  background: rgba(7, 24, 33, 0.72);
+  color: #9dd8e8;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.arkflight-combat-console .afcs-action-journal-link:hover,
+.arkflight-combat-console .afcs-action-journal-link:focus-visible {
+  border-color: rgba(132, 224, 240, 0.8);
+  background: rgba(12, 38, 49, 0.9);
+  color: #d6f7ff;
+}
+
+.arkflight-combat-console .afcs-action-journal-link i {
+  margin-right: 4px;
+}
+
+.arkflight-combat-console .afcs-rule-chip.is-gain {
+  border-color: rgba(94, 220, 151, 0.52);
+  color: #91e8b9;
+  background: rgba(20, 74, 49, 0.3);
+}
