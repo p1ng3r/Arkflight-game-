@@ -177,25 +177,20 @@ function pf2eManifestRows(rows) {
   </div>`).join("");
 }
 
-function renderHoldLog(root, actor) {
+export function buildArkflightHoldHtml(actor) {
   const ship = shipFlag(actor);
-  if (!ship) return;
+  if (!ship) return "";
   const draft = ensureDraft(actor);
   const derived = deriveShip(ship, SHIP_CATALOGS);
   const cargoCapacity = Number(derived.stats?.cargoCapacity ?? 0);
   const manifest = holdManifest(actor, ship);
   const cargoUsed = manifest.total;
   const cargoOver = cargoCapacity >= 0 && cargoUsed > cargoCapacity;
-  const nativeHost = root.querySelector("[data-hold-log-host]");
-  if (!nativeHost) return false;
-  nativeHost.replaceChildren();
 
   const identityFields = IDENTITY_FIELDS.map(([key, label]) => `
     <label class="arkflight-log-field"><span>${label}</span><input type="text" data-log-identity="${key}" value="${escapeHtml(draft.identity?.[key] ?? "")}"></label>`).join("");
 
-  const shell = document.createElement("main");
-  shell.className = "arkflight-hold-log-shell";
-  shell.innerHTML = `
+  return `<main class="arkflight-hold-log-shell">
     <section class="arkflight-hold-column">
       <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">HOLD</span><h2>Cargo & Vessel Stores</h2></div><small>Physical storage aboard ${escapeHtml(actor.name)}.</small></div>
       <div class="arkflight-cargo-meter ${cargoOver ? "is-over" : ""}">
@@ -245,9 +240,16 @@ function renderHoldLog(root, actor) {
         <button type="button" data-log-reset>RESET DRAFT</button>
         <button type="button" class="arkflight-log-apply" data-log-apply ${draft.dirty ? "" : "disabled"}>APPLY LOG CHANGES</button>
       </div>
-    </section>`;
+    </section>
+  </main>`;
+}
 
-  nativeHost.append(shell);
+export function bindArkflightHoldControls(actor, root) {
+  const shell = root?.querySelector?.(".arkflight-hold-log-shell");
+  if (!shell) return false;
+  const draft = ensureDraft(actor);
+  const ship = shipFlag(actor);
+  const manifest = holdManifest(actor, ship);
 
   for (const input of shell.querySelectorAll("[data-log-identity]")) {
     input.addEventListener("input", (event) => {
@@ -265,7 +267,7 @@ function renderHoldLog(root, actor) {
 
   shell.querySelector("[data-log-reset]")?.addEventListener("click", () => {
     drafts.delete(actor.uuid);
-    renderHoldLog(root, actor);
+    actor.sheet?.render?.({ force: true });
   });
 
   shell.querySelector("[data-log-apply]")?.addEventListener("click", async () => {
@@ -275,11 +277,18 @@ function renderHoldLog(root, actor) {
       [`flags.${MODULE_ID}.ship.identity`]: clone(draft.identity),
       [`flags.${MODULE_ID}.ship.cargo`]: nextCargo
     });
-    draft.cargo = clone(nextCargo);
-    draft.dirty = false;
+    drafts.delete(actor.uuid);
     ui.notifications?.info(`${actor.name} vessel record updated.`);
-    renderHoldLog(root, actor);
+    actor.sheet?.render?.({ force: true });
   });
+  return true;
+}
+
+function renderHoldLog(root, actor) {
+  const host = root?.querySelector?.("[data-hold-log-host]");
+  if (!host) return false;
+  host.innerHTML = buildArkflightHoldHtml(actor);
+  return bindArkflightHoldControls(actor, root);
 }
 
 export function openArkflightHold(actor, rootOrApp = null) {
