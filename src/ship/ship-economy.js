@@ -3,7 +3,7 @@ export const SHIP_ECONOMY = Object.freeze({
   supplyGpValue: 1,
   suppliesPerCargo: 10,
   salvagePartsPerCargo: 10,
-  zeroSupplyMoraleLossPerDay: 1,
+  zeroSupplyMoraleLossPerDay: 20,
   zeroSupplyStrainEveryDays: 2
 });
 
