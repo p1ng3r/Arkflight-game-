@@ -46,7 +46,7 @@ function weaponArticle(weapon) {
   const rows = [
     ["Size", labelize(data.size)],
     ["Damage", `${damage.dice ?? "—"} ${labelize(damage.type ?? "")}`.trim()],
-    ["Fire Cost", `${combat.fireAP ?? "—"} AP`],
+    ["Fire Cost", "1 AP"],
     ["Reload", `${combat.reloadRounds ?? 0} round${Number(combat.reloadRounds) === 1 ? "" : "s"}`],
     ["Firing Arc", labelize(combat.arcTemplate)],
     ["Range", `${range.min ?? "—"} min · ${range.optimalMin ?? "—"}–${range.optimalMax ?? "—"} optimal · ${range.max ?? "—"} max`],
