@@ -48,7 +48,7 @@ Arkengine operation, repairs, overdrive, power distribution, and controlled mech
 ### Navigator
 Course finding, positioning, route selection, timing, and exploiting openings in the environment.
 
-### Watchmaster
+### Battlewatch
 Detection, threat assessment, weapons/readiness coordination, hazard anticipation, and tactical warning.
 
 ### Veilwarden
@@ -85,7 +85,7 @@ Authored actions may create benefits for another station, especially a station a
 
 Example:
 
-**Captain → Navigator → Engineer → Watchmaster → Veilwarden**
+**Captain → Navigator → Engineer → Battlewatch → Veilwarden**
 
 If the Captain's selected action can grant the Navigator +2 on success, that relationship should be visible before the plan is locked.
 
@@ -221,7 +221,7 @@ Examples of design territory:
 - Captain — outcome, coordination, Momentum, command;
 - Engineer — Risk, Arkengine Pressure, overdrive, repair;
 - Navigator — DC/course/order/positioning;
-- Watchmaster — Hazards, threat anticipation, openings;
+- Battlewatch — Hazards, threat anticipation, openings;
 - Veilwarden — Pressure mitigation, Lifeveil, supernatural consequences.
 
 Exact ability lists are not locked by this document and should be authored/tested separately.
