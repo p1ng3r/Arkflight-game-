@@ -274,6 +274,8 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
             targetActorId: target.actor?.id ?? null,
             targetName: target.name,
             weaponName: solution.weapon.name,
+            degree,
+            systemThreat: solution.weapon.data?.systemThreat ?? "hull",
             hullDamage: damage.hullDamage,
             effectIds: [],
             effectSnapshots: []
