@@ -234,7 +234,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
     const row = document.createElement("article");
     row.className = "arkflight-weapon-control-row";
     row.innerHTML = `<div class="arkflight-weapon-identity"><strong>${esc(weaponState.name)}</strong><span>${titleCase(weaponState.mount ?? "fore")} Mount ${Number(weaponState.mountIndex ?? 0) + 1} · ${titleCase(combat.arcTemplate ?? "wide")} arc</span></div>
-      <div class="arkflight-weapon-stats"><strong>Attack ${attack.bonus == null ? "—" : signed(attack.bonus)}</strong> · <strong>Damage ${esc(damage.dice ?? "—")} ${esc(titleCase(damage.type))}</strong> · ${Number(weaponState.fireAP ?? 1)} AP · Reload ${Number(weaponState.reloadRounds ?? 0)} · Range ${combat.rangeHexes?.min ?? "—"}/${combat.rangeHexes?.optimalMin ?? "—"}–${combat.rangeHexes?.optimalMax ?? "—"}/${combat.rangeHexes?.max ?? "—"}</div>
+      <div class="arkflight-weapon-stats"><strong>Attack ${attack.bonus == null ? "—" : signed(attack.bonus)}</strong> · <strong>Damage ${esc(damage.dice ?? "—")} ${esc(titleCase(damage.type))}</strong> · 1 AP · Reload ${Number(weaponState.reloadRounds ?? 0)} · Range ${combat.rangeHexes?.min ?? "—"}/${combat.rangeHexes?.optimalMin ?? "—"}–${combat.rangeHexes?.optimalMax ?? "—"}/${combat.rangeHexes?.max ?? "—"}</div>
       <div class="arkflight-weapon-solution" data-native-weapon-solution>Choose a target.</div>
       <div class="arkflight-weapon-row-actions"></div>`;
 
@@ -285,7 +285,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
 
     const update = () => {
       const targetId = targetSelect.value;
-      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(weaponState.fireAP ?? 1);
+      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= 1;
       let legal = false;
       if (!targetId) {
         solutionNode.textContent = "No target selected.";
@@ -306,7 +306,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
       if (!battlewatchControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-eye"></i> Battlewatch Only';
       else if (attack.bonus == null) fireButton.innerHTML = '<i class="fa-solid fa-user-xmark"></i> Assign Battlewatch';
       else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reload ${remaining}`;
-      else if (!enoughAP) fireButton.innerHTML = `<i class="fa-solid fa-bolt"></i> Need ${weaponState.fireAP} AP`;
+      else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Out of Range / Arc';
       else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Roll Attack &amp; Damage';
 
