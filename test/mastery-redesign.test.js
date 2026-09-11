@@ -27,13 +27,13 @@ test("every station now has three redesigned Mastery Techniques", () => {
   assert.equal(BASE_MASTERY.battlewatch[0].id, "battlewatch-call-the-true-opening");
 });
 
-test("Redline improves the chosen Engineer/Navigator check and schedules exactly 1 Strain threatening Arkengine", () => {
+test("Redline improves the chosen Engineer/Navigator check and schedules exactly 1 ship-wide Strain", () => {
   const state = baseState("engineer", "engineer-redline-the-arkengine");
   const next = applyMasteryTechnique(state, "engineer", { targetStationId: "navigator" });
   assert.equal(next.encounter.degreeLifts.navigator, 1);
   assert.equal(next.masteryPostCheckShipEffects.navigator[0].kind, "gain-strain");
   assert.equal(next.masteryPostCheckShipEffects.navigator[0].value, 1);
-  assert.equal(next.masteryPostCheckShipEffects.navigator[0].area, "arkengine");
+  assert.equal("area" in next.masteryPostCheckShipEffects.navigator[0], false);
   assert.equal(next.masteryUses.engineer.masteryId, "engineer-redline-the-arkengine");
 });
 
@@ -52,12 +52,12 @@ test("Not Like This improves Failure to Success and Critical Failure to Failure"
   }
 });
 
-test("Crosswire redirects the threatened Area without moving or duplicating global Strain", () => {
+test("Crosswire redirects only the degradation target without moving or duplicating global Strain", () => {
   const state = baseState("engineer", "engineer-crosswire-the-systems"); state.phase = "round-result"; state.roundResult = { bandId: "failure" };
-  const armed = applyMasteryTechnique(state, "engineer", { fromArea: "arkengine", toArea: "rigging" });
-  const finalized = { ...armed, pendingShipEffects: [{ kind: "gain-strain", value: 3, area: "arkengine", source: "Event round consequence" }] };
+  const armed = applyMasteryTechnique(state, "engineer", { toSystem: "drive" });
+  const finalized = { ...armed, pendingShipEffects: [{ kind: "gain-strain", value: 3, source: "Event round consequence" }] };
   const redirected = applyMasteryConsequenceRedirects({}, armed, finalized);
   assert.equal(redirected.pendingShipEffects[0].value, 3);
-  assert.equal(redirected.pendingShipEffects[0].area, "rigging");
-  assert.equal(redirected.pendingShipEffects[0].redirectedFrom, "arkengine");
+  assert.equal(redirected.pendingShipEffects[0].degradationOverride, "drive");
+  assert.equal("area" in redirected.pendingShipEffects[0], false);
 });
