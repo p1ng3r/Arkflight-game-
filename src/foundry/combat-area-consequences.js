@@ -1,6 +1,6 @@
 import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
 import { combatVictoryState, shipCombatOutcome } from "../combat/combat-outcome.js";
-import { applyWeaponSystemThreat, areaMobilityPenalties, weaponSystemThreat } from "../combat/system-damage.js";
+import { areaMobilityPenalties } from "../combat/system-damage.js";
 import { applyAreaIntegrityCaps } from "../ship/area-readiness.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { SHIP_CATALOGS } from "../content/index.js";
@@ -73,24 +73,3 @@ async function applyMechanicalConsequences(actor) {
 }
 
 Hooks.on("arkflightShipDamageStateChanged", ({ actor } = {}) => { void applyMechanicalConsequences(actor); });
-
-// Critical specialized system hits are handled by combat-flow-usability. This
-// adds the second route: a single exceptionally heavy normal hit can also damage
-// the weapon's threatened Area, so systemThreat is meaningful even without a crit.
-Hooks.on("arkflightNativeShipAttackResolved", ({ target, solution, degree, damage } = {}) => {
-  if (!game.user?.isGM || !target?.actor || !damage || Number(degree) >= 2 || Number(damage.hullDamage) <= 0) return;
-  setTimeout(async () => {
-    const actor = target.actor;
-    const before = shipPayload(actor);
-    if (!before) return;
-    const outcome = applyWeaponSystemThreat(before, { weapon:solution?.weapon, degree, hullDamage:damage.hullDamage });
-    if (!outcome.triggered || !outcome.degraded) return;
-    const threat = weaponSystemThreat(solution?.weapon);
-    const patches = { [`flags.${MODULE_ID}.ship.areas.${threat}.state`]: outcome.state };
-    if (threat === "hull") patches[`flags.${MODULE_ID}.ship.resources.hull`] = outcome.ship.resources.hull;
-    if (threat === "lifeveil") patches[`flags.${MODULE_ID}.ship.resources.lifeveil`] = outcome.ship.resources.lifeveil;
-    await actor.update(patches);
-    ui.notifications?.warn(`${actor.name}: heavy ${threat} hit — ${outcome.previousState} → ${outcome.state}.`);
-    Hooks.callAll("arkflightShipDamageStateChanged", { actor, target, solution, degree, damage, notes:[`${threat} ${outcome.previousState} → ${outcome.state}`], heavySystemHit:true });
-  }, 0);
-});
