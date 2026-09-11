@@ -67,7 +67,7 @@ test("legacy gunnery runtime cannot bypass the shared-owner reload action layer"
   assert.doesNotMatch(balanceRuntime, /stationAction\(/);
   assert.match(stationApi, /reduceWeaponReload/);
   assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
-  assert.match(stationApi, /updatePersistentShipForAction/);
+  assert.match(stationApi, /applyPersistentAction/);
 });
 
 
