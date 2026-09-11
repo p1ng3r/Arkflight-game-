@@ -65,6 +65,7 @@ export function recoverMoraleFromSafeRest(current, {
     MORALE_RULES.maximum,
     MORALE_RULES.ordinaryRestCeiling + Math.max(0, Number(ceilingBonus || 0))
   );
+  if (morale >= ceiling) return Object.freeze({ morale, recovered: 0 });
   const next = Math.min(ceiling, morale + recovery);
   return Object.freeze({ morale: next, recovered: Math.max(0, next - morale) });
 }
