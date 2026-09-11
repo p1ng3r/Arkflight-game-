@@ -212,3 +212,22 @@ test("combat weapon hydration prefers explicit mount over legacy arc", () => {
   });
   assert.equal(state.weapons["mount-authority"].mount, "starboard");
 });
+
+
+test("Drive condition penalties are applied exactly once during combat reconciliation", () => {
+  const ship = rumRunner({
+    shipConditions: { drive: "faltering" }
+  });
+  const derived = deriveShip(ship, SHIP_CATALOGS);
+  assert.equal(derived.stats.combatSpeed, 3);
+  assert.equal(derived.stats.maneuverability, 1);
+
+  const synced = reconcileCombatantState(ship, null, {
+    derived,
+    catalogs: SHIP_CATALOGS,
+    rotation: 0
+  });
+
+  assert.equal(synced.mobility.speed, 3);
+  assert.equal(synced.mobility.maneuverability, 1);
+});
