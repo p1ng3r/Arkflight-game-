@@ -1,4 +1,3 @@
-import { AREA_STATES } from "./ship-schema.js";
 import { driveConditionPenalties, effectiveHullHardness, weaponConditionModifiers } from "./ship-conditions.js";
 import { applyTalentProgression, clampShipLevel, progressionView, shipDefenseProgressionBonus } from "./progression.js";
 import { resolveInstalledModTalentSynergies } from "./mod-talent-synergy.js";
@@ -21,7 +20,6 @@ function applyEffect(stats, effect) {
   throw new Error(`Unsupported Arkflight effect mode: ${effect.mode}`);
 }
 function lookup(catalog, id) { return id ? catalog?.[id] ?? null : null; }
-function areaOperational(ship, area) { return (ship.areas?.[area]?.state ?? AREA_STATES.STABLE) !== AREA_STATES.DISABLED; }
 function freezeModifier(modifier, source = {}) { return Object.freeze({ ...modifier, ...source }); }
 
 function installedComponents(ship, catalogs) {
@@ -32,9 +30,9 @@ function installedComponents(ship, catalogs) {
   const enginePattern = lookup(catalogs.arkenginePatterns, ship.arkengine.patternId);
   if (hull) components.push(hull);
   if (hullPattern) components.push(hullPattern);
-  if (arkengine && areaOperational(ship, "arkengine")) components.push(arkengine);
-  if (enginePattern && areaOperational(ship, "arkengine")) components.push(enginePattern);
-  for (const id of ship.arkengine.modIds ?? []) { const item = lookup(catalogs.arkengineMods, id); if (item && areaOperational(ship, "arkengine")) components.push(item); }
+  if (arkengine) components.push(arkengine);
+  if (enginePattern) components.push(enginePattern);
+  for (const id of ship.arkengine.modIds ?? []) { const item = lookup(catalogs.arkengineMods, id); if (item) components.push(item); }
   for (const id of ship.rooms ?? []) { const item = lookup(catalogs.rooms, id); if (item) components.push(item); }
   for (const id of ship.shipMods ?? []) { const item = lookup(catalogs.shipMods, id); if (item) components.push(item); }
   for (const install of ship.weapons ?? []) { const id = typeof install === "string" ? install : install.id; const item = lookup(catalogs.weapons, id); if (item) components.push(item); }
