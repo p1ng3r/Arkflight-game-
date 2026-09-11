@@ -1,4 +1,4 @@
-import { applyStrainDegradation, resolveStrainContribution, strainDegradationTarget } from "../ship/area-readiness.js";
+import { applyStrainDegradation, resolveStrainContribution, strainDegradationTarget } from "../ship/strain-rules.js";
 import { shipConditionProfile, wouldWorsenToFinalStage } from "../ship/ship-conditions.js";
 
 const CHOICE_TARGETS = Object.freeze([
@@ -122,7 +122,7 @@ async function rollDegradation(ship, {
  * Foundry runtime for one discrete Strain gain.
  *
  * This owns the actual flat-check and d8 rolls. Pure rules remain in
- * area-readiness.js so tests and non-Foundry callers can resolve the math.
+ * strain-rules.js so tests and non-Foundry callers can resolve the math.
  */
 export async function resolveShipStrainGain(ship, {
   amount = 0,
