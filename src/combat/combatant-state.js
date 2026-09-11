@@ -1,5 +1,6 @@
 import { COMBAT_POINT_TYPES, effectiveMobility, hullCombatProfile, normalizeHexHeading } from "./combat-schema.js";
 import { normalizeWeaponUpgrades } from "./weapon-combat.js";
+import { weaponConditionModifiers } from "../ship/ship-conditions.js";
 
 export const COMBATANT_STATE_VERSION = 4;
 
@@ -30,6 +31,7 @@ function weaponInstallKey(install, index) {
 
 function installedWeaponStates(ship, catalogs = {}) {
   const rows = {};
+  const weaponCondition = weaponConditionModifiers(ship);
   for (const [index, install] of (ship?.weapons ?? []).entries()) {
     const id = typeof install === "string" ? install : install?.id;
     if (!id) continue;
@@ -44,7 +46,8 @@ function installedWeaponStates(ship, catalogs = {}) {
       mountIndex: typeof install === "object" ? Number(install?.mountIndex) || 0 : null,
       upgrades: normalizeWeaponUpgrades(install),
       fireAP: 1,
-      reloadRounds: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0)),
+      reloadRounds: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0) + weaponCondition.reloadPenalty),
+      reloadPenalty: weaponCondition.reloadPenalty,
       readyRound: 1,
       lastFiredRound: null
     });
