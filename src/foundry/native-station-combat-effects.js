@@ -59,7 +59,6 @@ function userCanResolveShipState(user, combatant) {
     combatant?.actor
     && userOwnsActor(user, combatant.actor)
     && userCanUpdateDocument(user, combatant.actor)
-    && userCanUpdateDocument(user, combatant)
   );
 }
 
