@@ -863,3 +863,6 @@
 .arkflight-workspace-blueprint-list::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, rgba(163, 132, 70, .98), rgba(83, 123, 132, .98));
 }
+
+.arkflight-raider-pursuit-config{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,420px);gap:14px;align-items:center;padding:10px 14px;margin:0 0 10px;border:1px solid rgba(119,166,184,.45);background:rgba(7,20,26,.88)}
+.arkflight-raider-pursuit-config>div{display:flex;flex-direction:column;gap:3px}.arkflight-raider-pursuit-config span{font-size:9px;letter-spacing:.12em;color:#8fc7d8}.arkflight-raider-pursuit-config strong{font-size:13px;color:#e5dac1}.arkflight-raider-pursuit-config small,.arkflight-raider-pursuit-config em{font-size:10px;color:#9f988a;font-style:normal}.arkflight-raider-pursuit-config select{min-height:34px;width:100%}
