@@ -126,7 +126,7 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
   if (weaponRoute) {
     button.innerHTML = action.rules?.resolver === "fireAtTarget"
       ? '<i class="fa-solid fa-crosshairs"></i> Open Fire Control'
-      : '<i class="fa-solid fa-rotate"></i> Open Weapon Reloads';
+      : '<i class="fa-solid fa-burst"></i> Open Work the Guns';
     button.disabled = availability.reason === "station-unassigned";
   } else {
     const choiceRequired = Boolean(select && select.disabled);
