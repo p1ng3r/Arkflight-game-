@@ -58,13 +58,9 @@ test("player reload UI separates common Reload from Battlewatch Work the Guns", 
 });
 
 
-test("legacy gunnery runtime cannot bypass the shared-owner reload action layer", () => {
-  const balanceRuntime = readFileSync(new URL("../src/foundry/combat-balance-runtime.js", import.meta.url), "utf8");
+test("shared-owner reload logic has one authoritative Foundry runtime", () => {
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
   assert.ok(!moduleJson.esmodules.includes("src/foundry/combat-balance-runtime.js"));
-  assert.doesNotMatch(balanceRuntime, /scaledWorkTheGuns/);
-  assert.doesNotMatch(balanceRuntime, /Only the GM may resolve Arkflight gunnery work/);
-  assert.doesNotMatch(balanceRuntime, /stationAction\(/);
   assert.match(stationApi, /reduceWeaponReload/);
   assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
   assert.match(stationApi, /applyPersistentAction/);
