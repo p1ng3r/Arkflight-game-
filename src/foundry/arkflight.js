@@ -4,7 +4,7 @@ import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { validateShip } from "../ship/validate-ship.js";
 import { deriveShip } from "../ship/derive-ship.js";
-import { applyShipEffects } from "../ship/ship-effects.js";
+import { applyShipEffects, coalesceShipEffects } from "../ship/ship-effects.js";
 import { resolveShipStrainGain } from "./ship-strain-runtime.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
@@ -125,7 +125,7 @@ async function applyEventShipEffects(effects = []) {
 
   const affectedSystems = [];
   const strainOutcomes = [];
-  for (const effect of effects ?? []) {
+  for (const effect of coalesceShipEffects(effects)) {
     if (effect?.kind === "gain-strain" && Number(effect.value ?? 0) > 0) {
       const outcome = await resolveShipStrainGain(working, {
         amount: Number(effect.value),
