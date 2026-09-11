@@ -1,9 +1,7 @@
 import { deriveShip } from "../ship/derive-ship.js";
 import { SHIP_CATALOGS } from "../content/index.js";
-import {
-  AREA_STATES,
-  SHIP_AREA_KEYS
-} from "../ship/ship-schema.js";
+import { canonicalDamageTarget, improveShipCondition } from "../ship/ship-conditions.js";
+import { resolveShipStrainGain } from "./ship-strain-runtime.js";
 import {
   COMBAT_ACTION_TIMING,
   activeStationEffects,
@@ -13,7 +11,6 @@ import {
   stationActionAvailability,
   stationActionEconomy,
   stationActionRulesText,
-  stationActionStrainArea,
   stationEffectMagnitude,
   reloadWeapon,
   reduceWeaponReload,
@@ -25,13 +22,6 @@ const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const COMBAT_SOCKET = `module.${MODULE_ID}`;
 const STATION_ACTION_REQUEST = "station-action-request";
 const STATION_ACTION_RESULT = "station-action-result";
-const AREA_ORDER = Object.freeze([
-  AREA_STATES.STABLE,
-  AREA_STATES.STRESSED,
-  AREA_STATES.DAMAGED,
-  AREA_STATES.CRITICAL,
-  AREA_STATES.DISABLED
-]);
 const ENGAGEMENT_RESOLVERS = new Set(["ramShip", "grappleShip", "breakGrapple", "boardShip"]);
 const MOORED_BLOCKED_RESOLVERS = new Set(["buyMovement", "buyManeuver", "hardTurn", "overchargeArkengine", "impossibleBurn", "turnBetweenHeartbeats"]);
 
@@ -162,19 +152,6 @@ function sanitizeStationOptions(options = {}) {
   });
 }
 
-function improveAreaState(value, steps = 1) {
-  let index = AREA_ORDER.indexOf(value);
-  if (index < 0) index = 0;
-  index = Math.max(0, index - Math.max(1, Math.trunc(Number(steps) || 1)));
-  return AREA_ORDER[index] ?? AREA_STATES.STABLE;
-}
-
-function degradeAreaState(value) {
-  let index = AREA_ORDER.indexOf(value);
-  if (index < 0) index = 0;
-  return AREA_ORDER[Math.min(AREA_ORDER.length - 1, index + 1)] ?? AREA_STATES.DISABLED;
-}
-
 function actionSelection(action, options = {}) {
   return options.selection ?? options.targetId ?? options.station ?? options.facing ?? options.system ?? options.choice ?? null;
 }
@@ -206,32 +183,10 @@ function effectiveStrainGain(beforeState, action, level) {
   return gain;
 }
 
-function resolveStrainThreshold(actor, action, beforeState, afterState) {
-  const level = shipLevel(actor);
-  const gain = effectiveStrainGain(beforeState, action, level);
-  const max = Math.max(0, Number(beforeState?.strain?.max) || Number(afterState?.strain?.max) || 0);
-  const raw = Math.max(0, Number(beforeState?.strain?.value) || 0) + gain;
-  const area = stationActionStrainArea(action);
-  if (gain <= 0 || max <= 0 || raw < max || !area) return Object.freeze({ state: afterState, threshold: null });
-
-  const ship = shipPayload(actor);
-  const currentArea = ship?.areas?.[area]?.state ?? AREA_STATES.STABLE;
-  const nextArea = degradeAreaState(currentArea);
-  const overflow = Math.max(0, raw - max);
-  const state = Object.freeze({
-    ...afterState,
-    strain: Object.freeze({ ...afterState.strain, value: overflow, max })
-  });
-  return Object.freeze({
-    state,
-    threshold: Object.freeze({ area, currentArea, nextArea, overflow, max })
-  });
-}
-
-async function updatePersistentShipForAction(actor, action, options, beforeState, afterState, threshold = null) {
-  const ship = shipPayload(actor);
-  if (!ship) return [];
-  const patches = {};
+async function applyPersistentAction(actor, action, options, beforeState, rawAfterState) {
+  const original = shipPayload(actor);
+  if (!original) return Object.freeze({ ship: null, state: rawAfterState, notes: [], strainOutcome: null });
+  let working = structuredClone(original);
   const notes = [];
   const resolver = action.rules?.resolver;
   const selection = actionSelection(action, options);
@@ -240,72 +195,53 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
   const cost = stationActionEconomy(action, level);
 
   for (const key of ["morale", "supplies", "lifeveil"]) {
-    const amount = cost[key];
+    const amount = Math.max(0, Number(cost[key]) || 0);
     if (!amount) continue;
-    const current = resourceValue(ship, key);
+    const current = resourceValue(working, key);
     if (current < amount) throw new Error(`${action.name} requires ${amount} ${key}.`);
     const next = current - amount;
-    patches[`flags.${MODULE_ID}.ship.resources.${key}.value`] = next;
+    working.resources[key] = { ...(working.resources?.[key] ?? {}), value: next };
     notes.push(`${key[0].toUpperCase()}${key.slice(1)} ${current} → ${next}`);
   }
 
-  if (Number(beforeState?.strain?.value ?? 0) !== Number(afterState?.strain?.value ?? 0)) {
-    patches[`flags.${MODULE_ID}.ship.resources.strain.value`] = Number(afterState.strain.value);
-    notes.push(`Strain ${Number(beforeState?.strain?.value ?? 0)} → ${Number(afterState.strain.value)}`);
-  }
-
-  if (threshold) {
-    patches[`flags.${MODULE_ID}.ship.areas.${threshold.area}.state`] = threshold.nextArea;
-    notes.push(`Strain Limit: ${threshold.area} ${threshold.currentArea} → ${threshold.nextArea}; ${threshold.overflow} Strain overflow remains.`);
-  }
-
   if (resolver === "rallyCrew") {
-    const currentArea = ship.areas?.morale?.state ?? AREA_STATES.STABLE;
-    if (currentArea !== AREA_STATES.STABLE) {
-      const nextArea = improveAreaState(currentArea, 1);
-      patches[`flags.${MODULE_ID}.ship.areas.morale.state`] = nextArea;
-      notes.push(`Morale area ${currentArea} → ${nextArea}`);
-      if (profile.master) {
-        const current = resourceValue(ship, "morale");
-        const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
-        const next = Math.min(max, current + (20 * profile.bonus));
-        patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
-        notes.push(`Morale ${current} → ${next}`);
-      }
-    } else {
-      const current = resourceValue(ship, "morale");
-      const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
-      const next = Math.min(max, current + (20 * profile.bonus));
-      patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
-      notes.push(`Morale ${current} → ${next}`);
-    }
+    const current = resourceValue(working, "morale");
+    const next = Math.min(100, current + (20 * profile.bonus));
+    working.resources.morale = { ...(working.resources?.morale ?? {}), value: next, max: 100 };
+    notes.push(`Morale ${current} → ${next}`);
   }
 
   if (resolver === "emergencyRepair") {
-    const system = SHIP_AREA_KEYS.includes(selection) && selection !== "morale" ? selection : null;
-    if (!system) throw new Error("Emergency Repair requires a Hull, Arkengine, Rigging, or Lifeveil area.");
-    const current = ship.areas?.[system]?.state ?? AREA_STATES.STABLE;
+    const target = canonicalDamageTarget(selection);
     const steps = profile.master ? 2 : 1;
-    const next = improveAreaState(current, steps);
-    patches[`flags.${MODULE_ID}.ship.areas.${system}.state`] = next;
-    notes.push(`${system} area ${current} → ${next}`);
+    if (["hull", "drive", "weapons"].includes(target)) {
+      const repaired = improveShipCondition(working, target, steps);
+      working = repaired.ship;
+      notes.push(`${target}: ${repaired.previous.label} → ${repaired.condition.label}`);
+    } else if (target === "lifeveil") {
+      const current = resourceValue(working, "lifeveil");
+      const next = Math.min(100, current + 25 * steps);
+      working.resources.lifeveil = { ...(working.resources?.lifeveil ?? {}), value: next, max: 100 };
+      notes.push(`Lifeveil ${current}% → ${next}%`);
+    } else {
+      throw new Error("Emergency Repair requires Hull, Drive, Weapons, or Lifeveil.");
+    }
   }
 
   if (resolver === "mendLifeveil") {
-    const current = resourceValue(ship, "lifeveil");
-    const max = Math.max(current, Number(ship.resources?.lifeveil?.max) || 0);
+    const current = resourceValue(working, "lifeveil");
     const restore = 5 * profile.bonus;
-    const next = Math.min(max, current + restore);
-    patches[`flags.${MODULE_ID}.ship.resources.lifeveil.value`] = next;
-    notes.push(`Lifeveil ${current} → ${next}`);
+    const next = Math.min(100, current + restore);
+    working.resources.lifeveil = { ...(working.resources?.lifeveil ?? {}), value: next, max: 100 };
+    notes.push(`Lifeveil ${current}% → ${next}%`);
   }
 
   if (resolver === "purgeInterference") {
-    const conditions = [...(ship.conditions ?? [])];
+    const conditions = [...(working.conditions ?? [])];
     const index = Math.trunc(Number(selection));
     if (Number.isInteger(index) && index >= 0 && index < conditions.length) {
       const [removed] = conditions.splice(index, 1);
-      patches[`flags.${MODULE_ID}.ship.conditions`] = conditions;
+      working.conditions = conditions;
       notes.push(`Purged ${typeof removed === "string" ? removed : removed?.name ?? removed?.id ?? "interference"}`);
     } else if (conditions.length) {
       throw new Error("Choose a ship condition to purge.");
@@ -314,8 +250,31 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
     }
   }
 
-  if (Object.keys(patches).length) await actor.update(patches);
-  return notes;
+  const strainGain = effectiveStrainGain(beforeState, action, level);
+  const strainMax = Math.max(0, Number(beforeState?.strain?.max) || Number(rawAfterState?.strain?.max) || Number(working.resources?.strain?.max) || 0);
+  let strainOutcome = null;
+  let state = rawAfterState;
+  if (strainGain > 0) {
+    strainOutcome = await resolveShipStrainGain(working, {
+      amount: strainGain,
+      currentStrain: Number(beforeState?.strain?.value ?? 0),
+      strainMax,
+      sourceLabel: action.name,
+      speaker: ChatMessage.getSpeaker({ actor })
+    });
+    working = structuredClone(strainOutcome.ship);
+    state = Object.freeze({ ...rawAfterState, strain: strainOutcome.strain });
+    notes.push(...strainOutcome.notes);
+  } else {
+    working.resources.strain = {
+      ...(working.resources?.strain ?? {}),
+      value: Math.max(0, Number(rawAfterState?.strain?.value ?? beforeState?.strain?.value ?? 0)),
+      max: strainMax
+    };
+  }
+
+  await actor.update({ [`flags.${MODULE_ID}.ship`]: working });
+  return Object.freeze({ ship: working, state, notes: Object.freeze(notes), strainOutcome });
 }
 
 function actionCostLabel(action, actor) {
@@ -323,9 +282,9 @@ function actionCostLabel(action, actor) {
   const parts = [];
   if (cost.ap > 0) parts.push(`${cost.ap} AP`);
   if (cost.rp > 0) parts.push(`${cost.rp} RP`);
-  if (cost.morale > 0) parts.push(`${cost.morale} Morale`);
+  if (cost.morale > 0) parts.push(`${cost.morale}% Morale`);
   if (cost.supplies > 0) parts.push(`${cost.supplies} Supplies`);
-  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil} Lifeveil`);
+  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil}% Lifeveil`);
   if (cost.strain > 0) parts.push(`+${cost.strain} Strain`);
   if (action.id === "captain-drive-the-crew") parts.unshift("Gain +1 AP");
   return parts.join(" · ") || "No cost";
@@ -412,10 +371,12 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     const before = base.state(combatant);
     const round = Math.max(1, Number(game.combat?.round ?? 1));
     const state = reloadWeapon(before, options.weaponKey, round);
-    await combatant.update({ [STATE_PATH]: state });
-    const weapon = state.weapons?.[options.weaponKey];
+    const persistent = await applyPersistentAction(combatant.actor, action, options, before, state);
+    const finalState = persistent.state;
+    await combatant.update({ [STATE_PATH]: finalState });
+    const weapon = finalState.weapons?.[options.weaponKey];
     const remaining = Math.max(0, Number(weapon?.readyRound ?? round) - round);
-    const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, state);
+    const notes = [...persistent.notes];
     notes.push(`Reload reduced by 1 round; ${remaining} remaining.`);
     await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes, userId: requesterUserId });
     Hooks.callAll("arkflightStationActionResolved", {
@@ -425,10 +386,10 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
       crewActor,
       action,
       selection: options.weaponKey,
-      state,
+      state: finalState,
       notes
     });
-    return state;
+    return finalState;
   }
 
   const before = base.state(combatant);
@@ -461,10 +422,10 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (resolver === "workTheGuns") {
     rawAfter = reduceWeaponReload(rawAfter, selection, round, workTheGunsRemaining);
   }
-  const strainResolution = resolveStrainThreshold(combatant.actor, action, before, rawAfter);
-  const after = strainResolution.state;
+  const persistent = await applyPersistentAction(combatant.actor, action, options, before, rawAfter);
+  const after = persistent.state;
   await combatant.update({ [STATE_PATH]: after });
-  const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, after, strainResolution.threshold);
+  const notes = [...persistent.notes];
 
   if (ENGAGEMENT_RESOLVERS.has(resolver)) {
     const result = await game.arkflight.combatEngagement.resolve(resolver, combatant, engagementTarget, { requesterUserId });
@@ -476,7 +437,7 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 20% Morale; +${stationActionEconomy(action, level).strain} Strain.`);
   if (resolver === "ventStrain") notes.push(`Vents up to ${1 + profile.bonus} Strain.`);
   if (resolver === "hardTurn") notes.push(`+${Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus} maneuver allowance; pivot permitted.`);
-  if (resolver === "impossibleBurn") notes.push(`Once per battle: +${Math.max(1, Math.ceil(Number(before?.mobility?.speed ?? 1) * 0.5))} movement allowance; +2 Arkengine Strain.`);
+  if (resolver === "impossibleBurn") notes.push(`Once per battle: +${Math.max(1, Math.ceil(Number(before?.mobility?.speed ?? 1) * 0.5))} movement allowance; +2 Strain.`);
   if (resolver === "turnBetweenHeartbeats") notes.push("Once per battle: +2 extraordinary 60° facing steps this turn.");
   if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${before?.mobility?.maneuverability ?? 0} maneuver allowance; +2 Strain.`);
   if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +1 maneuver allowance; +1 Strain.`);
@@ -489,9 +450,14 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (resolver === "focusWard") notes.push(`Spend 10% Lifeveil; next ${profile.advanced ? 2 : 1} matching hit${profile.advanced ? "s" : ""} reduce damage by ${3 * profile.bonus}.`);
   if (action.timing === COMBAT_ACTION_TIMING.REACTION) notes.push("Reaction resolves against the current trigger and consumes shared RP.");
 
-  if (strainResolution.threshold) {
-    ui.notifications?.warn(`${combatant.name}: Strain Limit reached — ${strainResolution.threshold.area} ${strainResolution.threshold.currentArea} → ${strainResolution.threshold.nextArea}.`);
-    Hooks.callAll("arkflightShipDamageStateChanged", { actor: combatant.actor, combatant, action, strainThreshold: strainResolution.threshold, notes });
+  if (persistent.strainOutcome?.degradation) {
+    Hooks.callAll("arkflightShipDamageStateChanged", {
+      actor: combatant.actor,
+      combatant,
+      action,
+      strainResolution: persistent.strainOutcome,
+      notes
+    });
   }
 
   await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes, userId: requesterUserId });
