@@ -119,6 +119,20 @@ export function selectedTalents(ship) {
   return [...new Set(ship?.progression?.talentIds ?? [])].map((id) => SHIP_TALENTS[id]).filter(Boolean);
 }
 
+export function activeSelectedTalents(ship) {
+  const selected = selectedTalents(ship);
+  const owned = new Set(selected.map((talent) => talent.id));
+  const superseded = new Set();
+  for (const talent of selected) {
+    let predecessor = shipTalentProgressionMeta(talent.id)?.upgradeOf ?? null;
+    while (predecessor) {
+      if (owned.has(predecessor)) superseded.add(predecessor);
+      predecessor = shipTalentProgressionMeta(predecessor)?.upgradeOf ?? null;
+    }
+  }
+  return selected.filter((talent) => !superseded.has(talent.id));
+}
+
 export function spentTalentPoints(ship) {
   return selectedTalents(ship).reduce((sum, talent) => sum + Number(talent.cost || 0), 0);
 }
@@ -158,14 +172,14 @@ export function validateProgression(ship) {
 export function combatEconomyBonuses(ship) {
   let actions = 0;
   let reactions = 0;
-  for (const talent of selectedTalents(ship)) {
+  for (const talent of activeSelectedTalents(ship)) {
     for (const effect of talent.effects ?? []) {
       if (effect.mode !== "add") continue;
       if (effect.target === "actionBonus") actions += Number(effect.value || 0);
       if (effect.target === "reactionBonus") reactions += Number(effect.value || 0);
     }
   }
-  return Object.freeze({ actions, reactions });
+  return Object.freeze({ actions: Math.min(1, actions), reactions: Math.min(1, reactions) });
 }
 
 function getPath(object, path) { return path.split(".").reduce((value, key) => value?.[key], object); }
@@ -194,7 +208,7 @@ function ensureProgressionStats(stats) {
 
 export function applyTalentProgression(stats, baseStats, ship, stationCapabilities, capabilities) {
   ensureProgressionStats(stats);
-  const talents = selectedTalents(ship);
+  const talents = activeSelectedTalents(ship);
   for (const talent of talents) {
     const explicitlyAddsShipCapacity = (talent.effects ?? []).some((effect) => effect.mode === "add" && effect.target === "shipModCapacity");
     for (const effect of talent.effects ?? []) {
