@@ -245,7 +245,7 @@ function weaponStatText(weaponState, weapon) {
   const combat = weapon?.data?.combat ?? {};
   const range = combat.rangeHexes ?? {};
   const damage = weapon?.data?.damageProfile ?? {};
-  return `${damage.dice ?? "—"} ${titleCase(damage.type)} · ${weaponState.fireAP ?? 1} AP · Reload ${weaponState.reloadRounds ?? 0} · Range ${range.min ?? "—"} / ${range.optimalMin ?? "—"}–${range.optimalMax ?? "—"} / ${range.max ?? "—"}`;
+  return `${damage.dice ?? "—"} ${titleCase(damage.type)} · 1 AP · Reload ${weaponState.reloadRounds ?? 0} · Range ${range.min ?? "—"} / ${range.optimalMin ?? "—"}–${range.optimalMax ?? "—"} / ${range.max ?? "—"}`;
 }
 
 function notifyFireResult(result, targetName, weaponName) {
@@ -396,7 +396,7 @@ function buildShipWeaponStation(app, actor) {
 
     const update = () => {
       const targetId = targetSelect.value;
-      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(weaponState.fireAP ?? 1);
+      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= 1;
       let legal = false;
       if (!targetId) {
         solutionNode.textContent = "No target selected.";
@@ -417,7 +417,7 @@ function buildShipWeaponStation(app, actor) {
       fireButton.disabled = !fireControl.ok || remaining > 0 || !enoughAP || !legal;
       if (!fireControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> Battlewatch Only';
       else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reloading · ${remaining} round${remaining === 1 ? "" : "s"}`;
-      else if (!enoughAP) fireButton.innerHTML = `<i class="fa-solid fa-bolt"></i> Need ${weaponState.fireAP} AP`;
+      else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Target Illegal';
       else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Apply Damage';
     };
