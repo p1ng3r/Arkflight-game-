@@ -8,7 +8,7 @@ This document defines the game that the clean Arkflight rebuild is trying to pro
 
 Arkflight is a cooperative fantasy ship-encounter game for Foundry VTT using PF2e characters.
 
-Five officers operate one vessel under pressure. The fun comes from making a crew plan, taking calculated risks, arranging station order so officers can help one another, building group Momentum, surviving accumulating Pressure and Hazards, and deciding when to commit each station's once-per-encounter Signature Ability.
+Five officers operate one vessel under pressure. The fun comes from making a crew plan, taking calculated risks, arranging station order so officers can help one another, building group Momentum, surviving accumulating Strain, Ship Conditions, and Hazards, and deciding when to commit each station's once-per-encounter Signature Ability.
 
 The system should create table talk such as:
 
@@ -26,12 +26,12 @@ Every encounter follows this shape:
 2. **Planning** — Each station selects its action, approach where applicable, Risk Bid, and one Signature Ability for the encounter.
 3. **Order** — The crew arranges station resolution order and sees authored station-to-station benefits.
 4. **Resolution** — Stations resolve in order using PF2e checks. Earlier successes may improve later station actions.
-5. **Crew State** — Results change Momentum, Pressure, Hazards, and authored encounter state.
+5. **Crew State** — Results change Momentum, Strain, Ship Conditions, Hazards, and authored encounter state.
 6. **Escalation** — The round changes the fiction and presents the next situation until the encounter closes.
 
 Shorthand:
 
-**Plan → Risk → Order → Roll → Chain → Momentum / Pressure → Escalate**
+**Plan → Risk → Order → Roll → Chain → Momentum / Strain → Escalate**
 
 ---
 
@@ -147,23 +147,27 @@ Design identity:
 
 ---
 
-## 8. Pressure
+## 8. Strain and Ship Conditions
 
-Pressure represents the ship and its systems being driven toward failure.
+**Strain** is the one persistent ship-wide push-your-luck resource. It represents accumulated operational stress caused by driving the vessel beyond safe limits.
 
-Pressure is the primary opposing group state to Momentum.
+Strain is never assigned to an individual system. When new Strain leaves the ship in a danger band, it can trigger a PF2e-style flat check; failed checks worsen a Ship Condition through the shared d8 table.
 
-Different ship systems may carry their own Pressure where that distinction matters, such as Arkengine or Lifeveil Pressure.
+**Ship Conditions** represent persistent damage:
 
-Failures, risky choices, Hazards, and authored consequences can increase Pressure.
+- Hull — structural protection / Hardness;
+- Drive — propulsion and control;
+- Weapons — gunnery readiness;
+- Lifeveil — derived from its 0–100% integrity;
+- Morale — derived from its 0–100% crew resolve.
 
-Thresholds may cause Breaches, complications, or other immediate fictional/gameplay consequences.
+Hazards and authored consequences may add Strain, directly change resources, or explicitly worsen a Ship Condition.
 
-Pressure should create visible danger and hard choices, not hidden accounting.
+Design identities:
 
-Design identity:
+**Strain = risk from pushing the whole vessel.**
 
-**Pressure = cost and deterioration.**
+**Ship Conditions = persistent consequences.**
 
 ---
 
@@ -219,10 +223,10 @@ Signature Abilities should manipulate different parts of the core game rather th
 Examples of design territory:
 
 - Captain — outcome, coordination, Momentum, command;
-- Engineer — Risk, Arkengine Pressure, overdrive, repair;
+- Engineer — Risk, ship-wide Strain, overdrive, repair;
 - Navigator — DC/course/order/positioning;
 - Battlewatch — Hazards, threat anticipation, openings;
-- Veilwarden — Pressure mitigation, Lifeveil, supernatural consequences.
+- Veilwarden — Strain mitigation, Lifeveil, supernatural consequences.
 
 Exact ability lists are not locked by this document and should be authored/tested separately.
 
@@ -258,6 +262,7 @@ The resolution UI should emphasize one active station at a time and clearly show
 - selected Approach;
 - selected Risk Bid;
 - current Momentum;
+- current Strain and relevant Ship Conditions;
 - relevant earned station benefits;
 - relevant Hazard effects;
 - selected Signature Ability and whether it is Available or Expended;
@@ -274,7 +279,7 @@ The game should not stop for generic reaction prompts merely because an ability 
 
 Arkflight uses PF2e characters and PF2e checks rather than replacing them with a separate dice engine.
 
-The ship encounter provides context, tactical sequencing, authored DCs/effects, Momentum, Pressure, Hazards, Risk Bids, station links, and Signature Abilities.
+The ship encounter provides context, tactical sequencing, authored DCs/effects, Momentum, Strain, Ship Conditions, Hazards, Risk Bids, station links, and Signature Abilities.
 
 PF2e remains responsible for the character's actual skills and check resolution wherever practical.
 
@@ -301,7 +306,7 @@ The first playable slice must support:
 11. station-by-station PF2e resolution;
 12. station-link benefits;
 13. Momentum changes;
-14. Pressure changes;
+14. Strain and Ship Condition changes;
 15. Hazards;
 16. Signature use and expenditure;
 17. round escalation;
@@ -354,7 +359,8 @@ The core systems should remain distinct:
 - **Order = teamwork**
 - **Risk = ambition**
 - **Momentum = crew mastery**
-- **Pressure = cost**
+- **Strain = push-your-luck cost**
+- **Ship Conditions = persistent damage**
 - **Hazards = changing battlefield**
 - **Signature Abilities = station mastery**
 
