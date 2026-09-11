@@ -3,6 +3,8 @@ import {
   beginCombatantTurn,
   createCombatantState,
   fireWeapon,
+  facingReconciliation,
+  settleFacingCost,
   headingStepDistance,
   normalizeHexHeading,
   persistentStrainPatch,
@@ -80,6 +82,73 @@ function canUserEndTurn(combatant, user = game.user, combat = game.combat) {
   );
 }
 
+
+function facingEndTurnStatus(combatant) {
+  const state = combatantState(combatant);
+  return state ? facingReconciliation(state) : null;
+}
+
+async function confirmFacingSettlement(combatant) {
+  const status = facingEndTurnStatus(combatant);
+  if (!status || status.apRequired === 0) return true;
+  if (status.impossible) {
+    throw new Error(`${combatant.name} has Maneuverability 0 and cannot cover ${status.uncovered} additional facing step${status.uncovered === 1 ? "" : "s"}. Undo facing or use an effect that grants maneuver allowance.`);
+  }
+  if (!status.affordable) {
+    throw new Error(`${combatant.name} used ${status.used} facing steps; ${status.apRequired} AP are required at End Turn, but only ${status.apRemaining} AP remain.`);
+  }
+
+  const DialogV2 = foundry?.applications?.api?.DialogV2;
+  const esc = foundry.utils.escapeHTML;
+  const content = `<div class="arkflight-facing-reconcile">
+    <p><strong>${esc(combatant.name)}</strong> used <strong>${status.used}</strong> facing step${status.used === 1 ? "" : "s"} this turn.</p>
+    <p>Free: <strong>${status.free}</strong> · Current allowance: <strong>${status.allowance}</strong> · Uncovered: <strong>${status.uncovered}</strong></p>
+    <p>Spend <strong>${status.apRequired} AP</strong> to cover the additional facing and end the turn?</p>
+  </div>`;
+
+  if (DialogV2?.wait) {
+    const choice = await DialogV2.wait({
+      window: { title: `Facing Cost — ${combatant.name}` },
+      content,
+      buttons: [
+        { action: "spend", label: `Spend ${status.apRequired} AP & End Turn`, icon: "fa-solid fa-check", callback: () => true },
+        { action: "return", label: "Return to Turn", icon: "fa-solid fa-rotate-left", default: true, callback: () => false }
+      ],
+      close: () => false
+    });
+    return choice === true;
+  }
+
+  if (globalThis.Dialog) {
+    return new Promise((resolve) => {
+      new Dialog({
+        title: `Facing Cost — ${combatant.name}`,
+        content,
+        buttons: {
+          spend: { label: `Spend ${status.apRequired} AP & End Turn`, callback: () => resolve(true) },
+          return: { label: "Return to Turn", callback: () => resolve(false) }
+        },
+        default: "return",
+        close: () => resolve(false)
+      }).render(true);
+    });
+  }
+
+  return false;
+}
+
+async function applyFacingSettlement(combatant) {
+  const current = combatantState(combatant);
+  if (!current) throw new Error("Arkflight combat state is unavailable.");
+  const result = settleFacingCost(current);
+  if (result.state !== current) await updateCombatantState(combatant, result.state);
+  if (result.apSpent > 0) {
+    ui.notifications?.info(`${combatant.name}: ${result.before.used} facing steps used; ${result.apSpent} AP spent for additional facing.`);
+  }
+  Hooks.callAll("arkflightFacingReconciled", { combatant, ...result });
+  return result;
+}
+
 async function handleCombatSocket(payload = {}) {
   if (!game.user?.isGM || payload?.type !== END_TURN_REQUEST) return;
   const primary = activePrimaryGM();
@@ -93,8 +162,10 @@ async function handleCombatSocket(payload = {}) {
   const requester = game.users?.get?.(payload.userId) ?? null;
   if (!requester || !requester.active || !canUserEndTurn(combatant, requester, combat)) return;
 
-  try { await combat.nextTurn(); }
-  catch (error) {
+  try {
+    await applyFacingSettlement(combatant);
+    await combat.nextTurn();
+  } catch (error) {
     console.error("Arkflight | Player End Turn request failed", error);
   }
 }
@@ -106,7 +177,13 @@ async function endTurnForUser(reference = null) {
   if (!isArkflightCombatant(combatant)) throw new Error("Choose an Arkflight ship Combatant.");
   if (!canUserEndTurn(combatant)) throw new Error("You may only end the active turn for a ship you own.");
 
-  if (game.user?.isGM) return combat.nextTurn();
+  const confirmed = await confirmFacingSettlement(combatant);
+  if (!confirmed) return false;
+
+  if (game.user?.isGM) {
+    await applyFacingSettlement(combatant);
+    return combat.nextTurn();
+  }
 
   const primary = activePrimaryGM();
   if (!primary) throw new Error("An active GM is required to advance Foundry combat.");
@@ -559,6 +636,10 @@ Hooks.once("ready", () => {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
       return canUserEndTurn(combatant);
     },
+    facingStatus(reference = null) {
+      const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return facingEndTurnStatus(combatant);
+    },
     canOperate(reference = null, user = game.user) {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
       return canUserOperateCombatant(combatant, user);
@@ -671,6 +752,21 @@ Hooks.once("ready", () => {
   if (isArkflightCombatant(current)) ensureTurnStartSnapshot(current, game.combat);
 });
 
+
+Hooks.on("preUpdateCombat", (combat, changes) => {
+  if (!(Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn"))) return;
+  const combatant = combat?.combatant ?? null;
+  if (!isArkflightCombatant(combatant)) return;
+  const status = facingEndTurnStatus(combatant);
+  if (!status || status.apRequired === 0) return;
+  if (status.impossible) {
+    ui.notifications?.warn(`${combatant.name}: End Turn blocked. Maneuverability 0 cannot cover the additional facing used this turn.`);
+    return false;
+  }
+  ui.notifications?.warn(`${combatant.name}: End Turn blocked until ${status.apRequired} AP facing cost is reconciled through the Arkflight End Turn control.`);
+  return false;
+});
+
 Hooks.on("updateCombat", async (combat, changes) => {
   if (!game.user?.isGM) return;
   if (!(Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn"))) return;
@@ -730,10 +826,9 @@ Hooks.on("preUpdateToken", (token, changes, options) => {
     ui.notifications?.warn("Arkflight ship facing must use 60° hex headings during combat.");
     return false;
   }
-  const steps = headingStepDistance(state.mobility.heading, snapped);
-  if (state.mobility.maneuver.used + steps <= state.mobility.maneuver.allowance) return;
-  ui.notifications?.warn(`Facing change blocked: spend 1 AP on Maneuver for ${state.mobility.maneuverability} facing step${state.mobility.maneuverability === 1 ? "" : "s"}.`);
-  return false;
+  // Facing is intentionally freeform during the turn. Every 60° step is
+  // recorded by updateToken and any excess is reconciled against AP at End Turn.
+  return;
 });
 
 Hooks.on("updateToken", async (token, changes, options) => {
