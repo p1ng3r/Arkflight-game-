@@ -132,7 +132,7 @@ const SPECIALIST = [
   talent("advanced-battlewatch-arkcraft", "Advanced Battlewatch Arkcraft", TIER.SPECIALIST, 2, "Battlewatch gains a new Specialist Arkcraft Skill.", [unlockArkcraft("battlewatch", ["battlewatch-perfect-firing-solution"])]),
   talent("advanced-veilwarden-arkcraft", "Advanced Veilwarden Arkcraft", TIER.SPECIALIST, 2, "Veilwarden gains a new Specialist Arkcraft Skill.", [unlockArkcraft("veilwarden", ["veilwarden-hold-the-veil"])]),
   talent("mastered-arkcraft", "Mastered Arkcraft", TIER.SPECIALIST, 2, "Upgrade one known Arkcraft Skill to its Specialist version.", [add("arkcraftUpgradeChoices", 1)]),
-  talent("specialist-voyage-systems", "Specialist Voyage Systems", TIER.SPECIALIST, 2, "+1 to all Voyage station rolls.", [pillar("voyage", 1)]),
+  talent("specialist-voyage-systems", "Specialist Voyage Systems", TIER.SPECIALIST, 2, "+2 total to all Voyage station rolls, replacing Voyage-Trained.", [pillar("voyage", 2)]),
   talent("specialist-battle-systems", "Specialist Battle Systems", TIER.SPECIALIST, 2, "+1 Armor Class and +1 ship weapon attack rolls.", [add("armorClass", 1), add("weaponAttackBonus", 1)])
 ];
 
@@ -146,9 +146,9 @@ const LEGENDARY = [
   talent("legendary-navigator-arkcraft", "Legendary Navigator Arkcraft", TIER.LEGENDARY, 3, "Navigator gains a Legendary Arkcraft Skill.", [unlockArkcraft("navigator", ["navigator-turn-between-currents"])]),
   talent("legendary-battlewatch-arkcraft", "Legendary Battlewatch Arkcraft", TIER.LEGENDARY, 3, "Battlewatch gains a Legendary Arkcraft Skill.", [unlockArkcraft("battlewatch", ["battlewatch-kill-line"])]),
   talent("legendary-veilwarden-arkcraft", "Legendary Veilwarden Arkcraft", TIER.LEGENDARY, 3, "Veilwarden gains a Legendary Arkcraft Skill.", [unlockArkcraft("veilwarden", ["veilwarden-sanctuary-unbroken"])]),
-  talent("legendary-drive", "Legendary Drive", TIER.LEGENDARY, 3, "+1 Speed.", [add("combatSpeed", 1)]),
-  talent("legendary-rigging", "Legendary Rigging", TIER.LEGENDARY, 3, "+1 Maneuverability.", [add("maneuverability", 1)]),
-  talent("legendary-strain-reserve", "Legendary Strain Reserve", TIER.LEGENDARY, 3, "+1 Strain Limit.", [add("strainCapacity", 1)]),
+  talent("legendary-drive", "Legendary Drive", TIER.LEGENDARY, 3, "+2 total Speed from the Drive talent line.", [add("combatSpeed", 2)]),
+  talent("legendary-rigging", "Legendary Rigging", TIER.LEGENDARY, 3, "+2 total Maneuverability from the Rigging talent line.", [add("maneuverability", 2)]),
+  talent("legendary-strain-reserve", "Legendary Strain Reserve", TIER.LEGENDARY, 3, "+2 total Strain Limit from the reserve talent line.", [add("strainCapacity", 2)]),
   talent("iron-legend", "Iron Legend", TIER.LEGENDARY, 2, "+30% base Hull maximum.", [percentBase("hullIntegrity", 30)]),
   talent("veil-of-legend", "Veil of Legend", TIER.LEGENDARY, 2, "+30% base Lifeveil maximum.", [percentBase("lifeveilCapacity", 30)]),
   talent("master-crew", "Master Crew", TIER.LEGENDARY, 3, "+1 to every station roll in Voyage and Combat.", [add("allStationBonus", 1)])
@@ -161,7 +161,7 @@ const MYTHIC = [
   talent("void-cannot-have-us", "The Void Cannot Have Us", TIER.MYTHIC, 4, "+50% base Lifeveil maximum.", [percentBase("lifeveilCapacity", 50)], { capabilities: ["mythic-lifeveil-survival"] }),
   talent("legendary-tempo", "Legendary Tempo", TIER.MYTHIC, 4, "+1 Action Point and +1 Reaction Point per combat round.", [add("actionBonus", 1), add("reactionBonus", 1)]),
   talent("one-crew-one-ship", "One Crew, One Ship", TIER.MYTHIC, 4, "+2 to every station roll in Voyage and Combat.", [add("allStationBonus", 2)]),
-  talent("endless-reserve", "Endless Reserve", TIER.MYTHIC, 4, "+2 Strain Limit.", [add("strainCapacity", 2)]),
+  talent("endless-reserve", "Endless Reserve", TIER.MYTHIC, 4, "+3 total Strain Limit from the reserve talent line.", [add("strainCapacity", 3)]),
   talent("master-of-the-black", "Master of the Black", TIER.MYTHIC, 4, "+3 to all Voyage station rolls.", [pillar("voyage", 3)]),
   talent("mythic-broadside", "Mythic Broadside", TIER.MYTHIC, 4, "+3 ship weapon attack rolls and unlock Mythic Broadside.", [add("weaponAttackBonus", 3)], { capabilities: ["mythic-broadside"] }),
   talent("mythic-refit", "Mythic Refit", TIER.MYTHIC, 4, "+1 flexible Ship Mod slot and +1 Arkengine Mod slot.", [add("shipModCapacity", 1), add("arkengineModCapacity", 1), slot("flexible"), slot("arkengine")])
