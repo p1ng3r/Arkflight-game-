@@ -1,4 +1,4 @@
-export const SHIP_SCHEMA_VERSION = 6;
+export const SHIP_SCHEMA_VERSION = 7;
 
 export const SHIP_AREA_KEYS = Object.freeze([
   "hull",
@@ -44,6 +44,20 @@ export const STATION_KEYS = Object.freeze([
 export const LEGACY_STATION_ALIASES = Object.freeze({ watchmaster: "battlewatch" });
 
 function resource(value = 0, max = 0) { return { value, max }; }
+function clampPercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+function normalizePercentageResource(source, defaultValue = 0) {
+  if (!source || typeof source !== "object") return resource(clampPercent(defaultValue), 100);
+  const value = Number(source.value ?? defaultValue);
+  const max = Number(source.max ?? 100);
+  if (Number.isFinite(max) && max > 0 && max !== 100) {
+    return resource(clampPercent((value / max) * 100), 100);
+  }
+  return resource(clampPercent(value), 100);
+}
 function counter(value = 0) { return { value: Math.max(0, Math.trunc(Number(value) || 0)) }; }
 function area(state = AREA_STATES.STABLE) { return { state }; }
 
@@ -136,10 +150,10 @@ function normalizeRewardState(rewards = {}) {
 function normalizeResources(resources = {}) {
   return {
     hull: { ...resource(), ...(resources.hull ?? {}) },
-    lifeveil: { ...resource(), ...(resources.lifeveil ?? {}) },
+    lifeveil: normalizePercentageResource(resources.lifeveil, 100),
     strain: { ...resource(), ...(resources.strain ?? {}) },
     supplies: { ...resource(), ...(resources.supplies ?? {}) },
-    morale: { ...resource(3, 5), ...(resources.morale ?? {}) },
+    morale: normalizePercentageResource(resources.morale, 60),
     salvageParts: counter(resources.salvageParts?.value ?? resources.salvageParts ?? 0)
   };
 }
@@ -154,7 +168,7 @@ export function createShip(overrides = {}) {
     rooms: [], shipMods: [], weapons: [],
     crew: { stations: Object.fromEntries(STATION_KEYS.map((key) => [key, null])), specialists: [] },
     cargo: { used: 0, notes: "" },
-    resources: { hull: resource(), lifeveil: resource(), strain: resource(), supplies: resource(), morale: resource(3, 5), salvageParts: counter() },
+    resources: { hull: resource(), lifeveil: resource(100, 100), strain: resource(), supplies: resource(), morale: resource(60, 100), salvageParts: counter() },
     blueprints: { shipModIds: [], arkengineModIds: [], weaponIds: [] },
     inventory: { shipMods: {}, arkengineMods: {}, weapons: {} },
     refit: { workOrders: [] },
