@@ -72,28 +72,32 @@ test("legacy weapon controls do not force GM-only fire resolution", () => {
 });
 
 
-test("native station combat effects preserve the player fire socket relay", () => {
+test("native station combat effects let owners fire locally and relay only protected target mutation", () => {
   const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
-  assert.match(effects, /if \(!game\.user\?\.isGM\) return originalStationAction\(actionId, options, reference\)/);
-  assert.match(effects, /return enhancedFireAtTarget\(base, options\.weaponKey, options\.targetId, reference\)/);
-  assert.match(effects, /Only the GM may resolve Arkflight ship combat attacks/);
+  assert.match(effects, /userCanResolveShipState\(game\.user, attacker\)/);
+  assert.match(effects, /TARGET_MUTATION_REQUEST = "attack-target-mutation-request"/);
+  assert.match(effects, /canMutateTargetLocally/);
+  assert.match(effects, /game\.socket\?\.emit\?\.\(COMBAT_SOCKET/);
+  assert.doesNotMatch(effects, /Only the GM may resolve Arkflight ship combat attacks/);
 });
 
 
-test("authoritative enhanced fire resolves Battlewatch assignment by id uuid or name", () => {
+test("enhanced fire keeps Battlewatch ownership while player authors the roll", () => {
   const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
   assert.match(effects, /actor\.uuid === reference \|\| actor\.name === reference/);
-  assert.match(effects, /if \(!game\.user\?\.isGM\) return originalStationAction\(actionId, options, reference\)/);
-  assert.match(effects, /return enhancedFireAtTarget\(base, options\.weaponKey, options\.targetId, reference\)/);
+  assert.match(effects, /Only the assigned Battlewatch owner may fire this ship's weapons/);
+  assert.match(effects, /user: requester\?\.id \?\? requesterUserId/);
+  assert.match(effects, /speaker: ChatMessage\.getSpeaker\(\{ actor: battlewatch \}\)/);
 });
 
 
-test("Reload and Work the Guns both use the GM-authoritative station relay", () => {
-  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+test("Reload and Work the Guns resolve locally for shared ship owners", () => {
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
   const consoleUi = readFileSync(new URL("../src/ui/combat-console-ui.js", import.meta.url), "utf8");
-  assert.match(effects, /actionId === "battlewatch-reload-weapon"[\s\S]*?return originalStationAction\(actionId, options, reference\)/);
-  assert.match(stationApi, /resolver === "reloadWeapon"[\s\S]*?base\.reloadWeapon/);
+  assert.match(stationApi, /userOwnsShip/);
+  assert.match(stationApi, /userCanResolveShipState/);
+  assert.match(stationApi, /if \(userCanResolveShipState\(game\.user, control\.combatant\)\)/);
+  assert.match(stationApi, /resolver === "reloadWeapon"[\s\S]*?reloadWeapon\(before, options\.weaponKey, round\)/);
   assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
   assert.match(stationApi, /STATION_ACTION_REQUEST/);
   assert.match(consoleUi, /stationAction\("common-reload-weapon"/);
