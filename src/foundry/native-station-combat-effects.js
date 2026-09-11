@@ -651,14 +651,11 @@ function renderShipDamageControls(message, html) {
 
   const controls = document.createElement("div");
   controls.className = "arkflight-ship-damage-controls";
-  controls.style.marginTop = "0.5rem";
-  controls.style.display = "flex";
-  controls.style.gap = "0.25rem";
-  controls.style.flexWrap = "wrap";
 
   if (record) {
     const status = document.createElement("strong");
-    status.textContent = `Applied ${record.amount} Hull to ${flag.targetName ?? actor.name}`;
+    status.className = "arkflight-damage-applied";
+    status.textContent = `Applied ${record.amount} Hull · ${flag.targetName ?? actor.name}`;
     controls.append(status);
 
     const undo = document.createElement("button");
@@ -670,9 +667,9 @@ function renderShipDamageControls(message, html) {
   } else {
     const base = Math.max(0, Math.trunc(Number(flag.hullDamage) || 0));
     for (const [mode, label] of [
-      ["apply", `Apply ${base} Hull`],
-      ["half", `Half (${Math.floor(base / 2)})`],
-      ["double", `Double (${base * 2})`]
+      ["apply", `Apply ${base}`],
+      ["half", `Half ${Math.floor(base / 2)}`],
+      ["double", `Double ${base * 2}`]
     ]) {
       const button = document.createElement("button");
       button.type = "button";
@@ -701,8 +698,10 @@ function renderShipDamageControls(message, html) {
     }
   });
 
-  const flavor = html.querySelector(".message-content, .chat-message-content, .message-header") ?? html;
-  flavor.append(controls);
+  const host = html.querySelector(".arkflight-attack-chat")
+    ?? html.querySelector(".message-content, .chat-message-content, .message-header")
+    ?? html;
+  host.append(controls);
 }
 
 async function applyProtectedTargetEffects(base, payload = {}) {
