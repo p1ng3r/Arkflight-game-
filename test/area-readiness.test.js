@@ -104,3 +104,15 @@ test("a Disabled Area has no sixth state, but threshold consumption still occurs
   assert.equal(result.ship.areas.lifeveil.state, AREA_STATES.DISABLED);
   assert.equal(result.ship.resources.strain.value, 0);
 });
+
+
+test("Event gain-strain uses the same threshold degradation and overflow rule as combat", () => {
+  const ship = createShip({
+    resources: { strain: { value: 3, max: 4 } },
+    areas: { hull: { state: AREA_STATES.STABLE } }
+  });
+  const result = applyShipEffect(ship, { kind: "gain-strain", area: "hull", value: 2 });
+  assert.equal(result.ship.areas.hull.state, AREA_STATES.STRESSED);
+  assert.equal(result.ship.resources.strain.value, 1);
+  assert.equal(result.strainResolution.thresholdCrossed, true);
+});
