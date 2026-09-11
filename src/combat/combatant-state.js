@@ -197,7 +197,7 @@ export function fireWeapon(state, weaponKey, round) {
   });
 }
 
-export function workTheGuns(state, weaponKey, round) {
+export function reloadWeapon(state, weaponKey, round) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
@@ -207,8 +207,14 @@ export function workTheGuns(state, weaponKey, round) {
   const updated = next.weapons[weaponKey];
   return Object.freeze({
     ...next,
-    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "work-the-guns", weaponKey, ap: 1, readyRound: updated.readyRound })])
+    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "reload-weapon", weaponKey, ap: 1, readyRound: updated.readyRound })])
   });
+}
+
+// Compatibility alias for older callers. Battlewatch Work the Guns is now a
+// separate station action and does not use this 1 AP reload primitive.
+export function workTheGuns(state, weaponKey, round) {
+  return reloadWeapon(state, weaponKey, round);
 }
 
 export function beginCombatantTurn(state, round) {
