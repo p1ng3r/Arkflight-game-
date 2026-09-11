@@ -2,7 +2,7 @@ import { COMBAT_POINT_TYPES, effectiveMobility, hullCombatProfile, normalizeHexH
 import { normalizeWeaponUpgrades } from "./weapon-combat.js";
 import { weaponConditionModifiers } from "../ship/ship-conditions.js";
 
-export const COMBATANT_STATE_VERSION = 4;
+export const COMBATANT_STATE_VERSION = 5;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -48,7 +48,7 @@ function installedWeaponStates(ship, catalogs = {}) {
       fireAP: 1,
       reloadRounds: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0) + weaponCondition.reloadPenalty),
       reloadPenalty: weaponCondition.reloadPenalty,
-      readyRound: 1,
+      reloadRemaining: 0,
       lastFiredRound: null
     });
   }
@@ -168,17 +168,17 @@ export function recordFacingChange(state, steps, heading) {
   });
 }
 
-export function weaponReloadRemaining(weaponState, round) {
-  return Math.max(0, Math.trunc(Number(weaponState?.readyRound) || 0) - Math.trunc(Number(round) || 0));
+export function weaponReloadRemaining(weaponState, _round = null) {
+  return Math.max(0, Math.trunc(Number(weaponState?.reloadRemaining) || 0));
 }
 
-export function reduceWeaponReload(state, weaponKey, round, amount = 1) {
+export function reduceWeaponReload(state, weaponKey, _round = null, amount = 1) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const reduction = Math.max(0, Math.trunc(Number(amount) || 0));
   if (reduction <= 0) return state;
-  const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
-  const updated = Object.freeze({ ...weapon, readyRound: Math.max(combatRound, Number(weapon.readyRound ?? combatRound) - reduction) });
+  const remaining = weaponReloadRemaining(weapon);
+  const updated = Object.freeze({ ...weapon, reloadRemaining: Math.max(0, remaining - reduction) });
   return Object.freeze({
     ...state,
     weapons: Object.freeze({ ...state.weapons, [weaponKey]: updated })
@@ -189,14 +189,14 @@ export function fireWeapon(state, weaponKey, round) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
-  if (weaponReloadRemaining(weapon, combatRound) > 0) throw new Error(`${weapon.name} is still reloading.`);
+  if (weaponReloadRemaining(weapon) > 0) throw new Error(`${weapon.name} is still reloading.`);
   let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
-  const readyRound = combatRound + weapon.reloadRounds + 1;
-  const updated = Object.freeze({ ...weapon, readyRound, lastFiredRound: combatRound });
+  const reloadRemaining = Math.max(0, Math.trunc(Number(weapon.reloadRounds) || 0));
+  const updated = Object.freeze({ ...weapon, reloadRemaining, lastFiredRound: combatRound });
   return Object.freeze({
     ...next,
     weapons: Object.freeze({ ...next.weapons, [weaponKey]: updated }),
-    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "fire-weapon", weaponKey, ap: 1, readyRound })])
+    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "fire-weapon", weaponKey, ap: 1, reloadRemaining })])
   });
 }
 
@@ -204,13 +204,13 @@ export function reloadWeapon(state, weaponKey, round) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
-  if (weaponReloadRemaining(weapon, combatRound) <= 0) throw new Error(`${weapon.name} is already ready.`);
+  if (weaponReloadRemaining(weapon) <= 0) throw new Error(`${weapon.name} is already ready.`);
   let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
   next = reduceWeaponReload(next, weaponKey, combatRound, 1);
   const updated = next.weapons[weaponKey];
   return Object.freeze({
     ...next,
-    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "reload-weapon", weaponKey, ap: 1, readyRound: updated.readyRound })])
+    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "reload-weapon", weaponKey, ap: 1, reloadRemaining: updated.reloadRemaining })])
   });
 }
 
