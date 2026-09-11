@@ -55,7 +55,7 @@ test("Command HUD exposes all five permanent combat stations with upward station
 });
 
 test("Command HUD permanently exposes core combat state and all five ship vitals", () => {
-  for (const label of ["Round", "Action Points", "Reaction Points", "Strain", "Heading", "Target"]) {
+  for (const label of ["Round", "Action Points", "Reaction Points", "Strain", "Heading", "Facing", "Target"]) {
     assert.match(template, new RegExp(label));
   }
   for (const vital of ["hull", "lifeveil", "morale", "strain", "supplies"]) {
@@ -129,16 +129,22 @@ test("Command HUD can undo turn movement and facing and refund only Helm-purchas
   assert.match(css, /afch-undo-controls/);
 });
 
-test("Command HUD End Turn advances Foundry initiative and follows the active Arkflight ship", () => {
+test("Command HUD End Turn routes through facing reconciliation before advancing initiative", () => {
   assert.match(template, /data-end-turn/);
-  assert.match(commandHud, /combat\.nextTurn\(\)/);
-  assert.match(commandHud, /waitForCombatAdvance/);
-  assert.match(commandHud, /nextTurnCoordinates/);
-  assert.match(commandHud, /combat\.update\(\{ round: fallback\.round, turn: fallback\.turn \}\)/);
+  assert.match(template, /resources\.facingUsed/);
+  assert.match(template, /resources\.facingFree/);
+  assert.match(template, /resources\.facingCostLabel/);
+  assert.match(source, /api\?\.facingStatus\?\.\(combatant\)/);
+  assert.match(commandHud, /await api\.endTurn\(combatant\)/);
+  assert.doesNotMatch(commandHud, /advanceCombatTurn/);
+  assert.doesNotMatch(commandHud, /combat\.nextTurn\(\)/);
   assert.match(commandHud, /stopImmediatePropagation/);
-  assert.match(commandHud, /app\.setReference\?\.\(next\.actor\)/);
   assert.match(commandHud, /arkflightCombatTurnChanged/);
   assert.match(commandHud, /followActiveShip/);
+  assert.match(combatApi, /confirmFacingSettlement/);
+  assert.match(combatApi, /applyFacingSettlement/);
+  assert.match(combatApi, /facingStatus\(reference = null\)/);
+  assert.match(combatApi, /preUpdateCombat/);
 });
 
 
