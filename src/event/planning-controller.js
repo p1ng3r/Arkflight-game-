@@ -56,11 +56,13 @@ function finalMasteryWindows(event, state) {
   if (masteryIsReady(state, "captain", "captain-not-like-this") && ["failure", "criticalFailure"].includes(last?.degreeKey)) windows.push({ id: `captain-not-like-this:${state.roundIndex}:${lastId}`, stationId: "captain", masteryId: "captain-not-like-this", sourceStationId: lastId });
   const round = event?.rounds?.[state.roundIndex ?? 0];
   const outcome = round?.outcomes?.[state.roundResult.bandId];
-  const threatAreas = (outcome?.effects ?? []).filter((effect) => (effect?.kind === "gain-strain" || effect?.kind === "pressure") && Number(effect.value ?? 0) > 0).map((effect) => effect.area ?? effect.system).filter(Boolean);
+  const positiveStrainIncoming = (outcome?.effects ?? []).some((effect) =>
+    (effect?.kind === "gain-strain" || effect?.kind === "pressure") && Number(effect.value ?? 0) > 0
+  );
   const hazardIncoming = (outcome?.effects ?? []).some((effect) => effect?.kind === "hazard");
-  if (threatAreas.length && masteryIsReady(state, "engineer", "engineer-crosswire-the-systems")) windows.push({ id: `engineer-crosswire:${state.roundIndex}`, stationId: "engineer", masteryId: "engineer-crosswire-the-systems", areas: [...new Set(threatAreas)] });
-  const veilAreas = threatAreas.filter((area) => ["hull", "arkengine", "rigging"].includes(area));
-  if (veilAreas.length && masteryIsReady(state, "veilwarden", "veilwarden-stand-between")) windows.push({ id: `veilwarden-stand-between:${state.roundIndex}`, stationId: "veilwarden", masteryId: "veilwarden-stand-between", areas: [...new Set(veilAreas)] });
+  if (positiveStrainIncoming && masteryIsReady(state, "engineer", "engineer-crosswire-the-systems")) windows.push({ id: `engineer-crosswire:${state.roundIndex}`, stationId: "engineer", masteryId: "engineer-crosswire-the-systems" });
+  if (positiveStrainIncoming && masteryIsReady(state, "engineer", "engineer-keep-her-breathing")) windows.push({ id: `engineer-keep-breathing:${state.roundIndex}`, stationId: "engineer", masteryId: "engineer-keep-her-breathing" });
+  if (positiveStrainIncoming && masteryIsReady(state, "veilwarden", "veilwarden-stand-between")) windows.push({ id: `veilwarden-stand-between:${state.roundIndex}`, stationId: "veilwarden", masteryId: "veilwarden-stand-between" });
   if (hazardIncoming && masteryIsReady(state, "veilwarden", "veilwarden-seal-the-impossible")) windows.push({ id: `veilwarden-seal:${state.roundIndex}`, stationId: "veilwarden", masteryId: "veilwarden-seal-the-impossible" });
   return windows;
 }
