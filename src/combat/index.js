@@ -4,6 +4,7 @@ export * from "./combat-schema.js";
 export * from "./combatant-state.js";
 export * from "./helm-rules.js";
 export * from "./salvo-rules.js";
+export * from "./ship-defense.js";
 export * from "./station-action-state.js";
 export * from "./station-action-economy.js";
 export * from "./station-effect-rules.js";
