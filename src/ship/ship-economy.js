@@ -1,5 +1,6 @@
 export const SHIP_ECONOMY = Object.freeze({
   crewPerDailySupply: 10,
+  supplyGpValue: 1,
   suppliesPerCargo: 10,
   salvagePartsPerCargo: 10,
   zeroSupplyMoraleLossPerDay: 1,
@@ -22,6 +23,11 @@ export function dailySupplyConsumption(crewAboard) {
 
 export function supplyCargoUsage(quantity) {
   return nonnegative(quantity) / SHIP_ECONOMY.suppliesPerCargo;
+}
+
+/** Base PF2e-facing purchase value of ship Supplies. */
+export function supplyGoldValue(quantity) {
+  return nonnegative(quantity) * SHIP_ECONOMY.supplyGpValue;
 }
 
 export function salvageCargoUsage(quantity) {
