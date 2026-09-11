@@ -2,6 +2,8 @@
 
 Status: Working design direction
 
+> **2026-09-11 RULES UPDATE:** Where this document conflicts with `docs/SHIP-CONDITION-STRAIN-CONTRACT.md`, the Condition & Strain Contract is authoritative. Strain now uses 50/75/90% flat-check danger bands; Lifeveil and Morale are fixed 0-100% resources. Arkengine/Rigging general damage is moving toward the merged Drive track.
+
 This document captures the current agreed gameplay direction for unifying persistent ship state across Voyage/Event gameplay and future Ship Combat without making those modes play the same way.
 
 ## Core Design Principle
