@@ -1,4 +1,10 @@
-import { SHIP_AREA_KEYS, STATION_KEYS, AREA_STATES } from "../ship/ship-schema.js";
+import { STATION_KEYS } from "../ship/ship-schema.js";
+import {
+  SHIP_CONDITION_SYSTEMS,
+  lifeveilCondition,
+  moraleCondition,
+  shipConditionProfile
+} from "../ship/ship-conditions.js";
 import {
   DERIVED_STAT_PRESENTATION,
   derivedStatsByPresentation
@@ -6,29 +12,83 @@ import {
 
 export const SHIP_SHEET_TABS = Object.freeze(["overview", "hold", "combat", "weapons"]);
 
-export const AREA_PRESENTATION = Object.freeze({
-  hull: Object.freeze({ label: "Hull", station: "battlewatch", icon: "fa-shield-halved" }),
-  arkengine: Object.freeze({ label: "Arkengine", station: "engineer", icon: "fa-gears" }),
-  rigging: Object.freeze({ label: "Rigging", station: "navigator", icon: "fa-sailboat" }),
-  lifeveil: Object.freeze({ label: "Lifeveil", station: "veilwarden", icon: "fa-sparkles" }),
-  morale: Object.freeze({ label: "Morale", station: "captain", icon: "fa-flag" })
+export const STATION_PRESENTATION = Object.freeze({
+  captain: "Captain",
+  engineer: "Engineer",
+  navigator: "Navigator",
+  battlewatch: "Battlewatch",
+  veilwarden: "Veilwarden"
 });
 
-export const STATION_PRESENTATION = Object.freeze({ captain: "Captain", engineer: "Engineer", navigator: "Navigator", battlewatch: "Battlewatch", veilwarden: "Veilwarden" });
+// Deprecated export retained for old UI consumers. Ship Conditions no longer
+// impose a universal station penalty ladder.
 export const AREA_STATION_PENALTIES = Object.freeze({
-  [AREA_STATES.STABLE]: 0,
-  [AREA_STATES.STRESSED]: -1,
-  [AREA_STATES.DAMAGED]: -3,
-  [AREA_STATES.CRITICAL]: -5,
-  [AREA_STATES.DISABLED]: -10
+  stable: 0, stressed: 0, damaged: 0, critical: 0, disabled: 0
 });
-export const AREA_CONSEQUENCES = Object.freeze({
-  hull: Object.freeze({ stable: "Hull structure is fully operational.", stressed: "Battlewatch operates at -1 from Hull stress.", damaged: "Battlewatch operates at -3 and ship attacks suffer the Hull-area penalty.", critical: "Battlewatch operates at -5 and the hull is near structural failure.", disabled: "Battlewatch normal Hull functions are unavailable; the vessel is structurally disabled." }),
-  arkengine: Object.freeze({ stable: "Arkengine is fully operational.", stressed: "Engineer operates at -1 from Arkengine stress.", damaged: "Engineer operates at -3 and powered performance is degraded.", critical: "Engineer operates at -5 and powered movement is severely limited.", disabled: "Normal powered Arkengine function is unavailable." }),
-  rigging: Object.freeze({ stable: "Rigging and facing control are fully operational.", stressed: "Navigator operates at -1 from Rigging stress.", damaged: "Navigator operates at -3 and facing control is degraded.", critical: "Navigator operates at -5 and Rigging control is severely limited.", disabled: "Normal Rigging and facing-control functions are unavailable." }),
-  lifeveil: Object.freeze({ stable: "Lifeveil systems are fully operational.", stressed: "Veilwarden operates at -1 from Lifeveil stress.", damaged: "Veilwarden operates at -3 and Lifeveil integrity is reduced.", critical: "Veilwarden operates at -5 and Lifeveil integrity is critically reduced.", disabled: "Normal Lifeveil-area function is unavailable; environmental protection may be offline." }),
-  morale: Object.freeze({ stable: "Command cohesion is fully operational.", stressed: "Captain operates at -1 from Morale-area stress.", damaged: "Captain operates at -3 as command cohesion deteriorates.", critical: "Captain operates at -5 as command cohesion nears collapse.", disabled: "Normal Morale-area command functions are unavailable." })
-});
+
+function conditionConsequence(system, profile) {
+  if (system === "hull") {
+    const pct = Math.round(Number(profile.hardnessMultiplier ?? 1) * 100);
+    return profile.severity === 0 ? "Full Hardness." : `Hardness reduced to ${pct}% of base (round down).`;
+  }
+  if (system === "drive") {
+    return profile.severity === 0
+      ? "Normal Speed and Maneuverability."
+      : `Speed −${profile.speedPenalty}; Maneuverability −${profile.maneuverPenalty}.`;
+  }
+  if (system === "weapons") {
+    return profile.severity === 0
+      ? "Normal weapon attacks and Reload."
+      : `Ship weapon attacks −${profile.attackPenalty}; Reload +${profile.reloadPenalty}.`;
+  }
+  return "";
+}
+
+export function areaPenalty(_state) { return 0; }
+
+export function buildAreaViews(ship = {}) {
+  const fixed = SHIP_CONDITION_SYSTEMS.map((system) => {
+    const profile = shipConditionProfile(ship, system);
+    const presentation = {
+      hull: { label: "Hull", icon: "fa-shield-halved", station: "battlewatch", stationLabel: "Battlewatch" },
+      drive: { label: "Drive", icon: "fa-gears", station: "engineer", stationLabel: "Engineer / Navigator" },
+      weapons: { label: "Weapons", icon: "fa-crosshairs", station: "battlewatch", stationLabel: "Battlewatch" }
+    }[system];
+    return Object.freeze({
+      key: system,
+      label: presentation.label,
+      icon: presentation.icon,
+      state: profile.id,
+      stateLabel: profile.label,
+      stateClass: `is-${profile.id}`,
+      station: presentation.station,
+      stationLabel: presentation.stationLabel,
+      penalty: 0,
+      penaltyLabel: "System-specific condition",
+      consequence: conditionConsequence(system, profile),
+      severity: profile.severity
+    });
+  });
+
+  const lifeveil = lifeveilCondition(ship.resources?.lifeveil?.value ?? 0);
+  const morale = moraleCondition(ship.resources?.morale?.value ?? 0);
+  fixed.push(Object.freeze({
+    key: "lifeveil", label: "Lifeveil", icon: "fa-sparkles",
+    state: lifeveil.id, stateLabel: lifeveil.label, stateClass: `is-${lifeveil.id}`,
+    station: "veilwarden", stationLabel: "Veilwarden", penalty: 0,
+    penaltyLabel: "Percentage-derived condition",
+    consequence: `Lifeveil ${lifeveil.value}%.`, severity: lifeveil.severity
+  }));
+  fixed.push(Object.freeze({
+    key: "morale", label: "Morale", icon: "fa-flag",
+    state: morale.id, stateLabel: morale.label, stateClass: `is-${morale.id}`,
+    station: "captain", stationLabel: "Captain", penalty: 0,
+    penaltyLabel: "Percentage-derived condition",
+    consequence: `Morale ${morale.value}%.`, severity: morale.severity
+  }));
+  return Object.freeze(fixed);
+}
+
 export const REFIT_BLUEPRINT_ICONS = Object.freeze({
   shipMod: "modules/arkflight-game/assets/icons/ship-mods/blueprint_ship_mods.webp",
   arkengineMod: "modules/arkflight-game/assets/icons/arkengine-mods/blueprint_engine_mods.webp",
@@ -72,15 +132,6 @@ function workOrderView(entry, catalogs) {
   return Object.freeze({ ...entry, componentName: catalog?.[entry?.componentId]?.name ?? entry?.componentId ?? "Ship work", statusLabel: titleCase(entry?.status), typeLabel: titleCase(entry?.type), methodLabel: titleCase(entry?.method), canStart: entry?.status === "planned", active: ["planned", "working", "complication"].includes(entry?.status) });
 }
 
-export function areaPenalty(state) { return AREA_STATION_PENALTIES[state] ?? 0; }
-export function buildAreaViews(ship = {}) {
-  return Object.freeze(SHIP_AREA_KEYS.map((area) => {
-    const presentation = AREA_PRESENTATION[area];
-    const state = ship.areas?.[area]?.state ?? AREA_STATES.STABLE;
-    const penalty = areaPenalty(state);
-    return Object.freeze({ key: area, label: presentation.label, icon: presentation.icon, state, stateLabel: titleCase(state), stateClass: `is-${state}`, station: presentation.station, stationLabel: STATION_PRESENTATION[presentation.station], penalty, penaltyLabel: penalty === 0 ? "No penalty" : `${penalty} station penalty`, consequence: AREA_CONSEQUENCES[area]?.[state] ?? "" });
-  }));
-}
 export function buildStationViews(ship = {}, resolveAssignment = (value) => value ?? "Unassigned") {
   return Object.freeze(STATION_KEYS.map((station) => Object.freeze({ key: station, label: STATION_PRESENTATION[station], assignment: resolveAssignment(ship.crew?.stations?.[station]) || "Unassigned" })));
 }
