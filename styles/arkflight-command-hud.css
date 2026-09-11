@@ -138,7 +138,7 @@
   grid-area: status;
   min-width: 0;
   display: grid;
-  grid-template-columns: 66px 118px 105px 135px 80px;
+  grid-template-columns: 58px 108px 96px 116px 70px 128px;
   gap: 7px;
   align-items: stretch;
 }
@@ -173,6 +173,22 @@
 .afch-stat.ap strong { color: #72d7f4; }
 .afch-stat.rp strong { color: #c4a2ff; }
 .afch-stat.strain strong { color: #ff9a8f; }
+.afch-stat.facing strong { font-size: 11px; }
+.afch-stat.facing small {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #78c8dd;
+  font-size: 7.5px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.afch-stat.facing.is-warning {
+  border-color: rgba(222, 155, 63, .7);
+  background: rgba(65, 40, 9, .72);
+}
+.afch-stat.facing.is-warning strong,
+.afch-stat.facing.is-warning small { color: #ffd184; }
 
 .afch-target {
   grid-area: target;
