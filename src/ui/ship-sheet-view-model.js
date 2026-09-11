@@ -46,7 +46,7 @@ function conditionConsequence(system, profile) {
 
 export function areaPenalty(_state) { return 0; }
 
-export function buildAreaViews(ship = {}) {
+export function buildConditionViews(ship = {}) {
   const fixed = SHIP_CONDITION_SYSTEMS.map((system) => {
     const profile = shipConditionProfile(ship, system);
     const presentation = {
@@ -171,7 +171,20 @@ export function buildRefitInventory(ship = {}, catalogs = {}) {
   });
 }
 
+// Compatibility alias for older UI/tests while player-facing terminology is Ship Conditions.
+export function buildAreaViews(ship = {}) { return buildConditionViews(ship); }
+
 export function buildShipSheetView({ ship, derived, catalogs, resolveAssignment } = {}) {
   const stats = derived?.stats ?? {};
-  return Object.freeze({ tabs: SHIP_SHEET_TABS, areas: buildAreaViews(ship), stations: buildStationViews(ship, resolveAssignment), stats: buildStatPresentation(stats), fittings: buildInstalledFittings(ship, catalogs), refit: buildRefitInventory(ship, catalogs), compendiums: SHIP_COMPENDIUM_PACKS });
+  const conditions = buildConditionViews(ship);
+  return Object.freeze({
+    tabs: SHIP_SHEET_TABS,
+    conditions,
+    areas: conditions,
+    stations: buildStationViews(ship, resolveAssignment),
+    stats: buildStatPresentation(stats),
+    fittings: buildInstalledFittings(ship, catalogs),
+    refit: buildRefitInventory(ship, catalogs),
+    compendiums: SHIP_COMPENDIUM_PACKS
+  });
 }
