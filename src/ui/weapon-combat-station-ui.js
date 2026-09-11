@@ -41,6 +41,10 @@ function stationActionBlockerLabel(reason) {
     "not-this-ships-turn": "Not this ship's turn",
     "insufficient-ap": "Need 1 AP",
     "insufficient-supplies": "Need 1 Supply",
+    "insufficient-morale": "Need 1 Morale",
+    "once-per-round": "Used this round",
+    "crew-unassigned": "No crew assigned",
+    "not-assigned-crew": "Assigned crew only",
     "station-unassigned": "Battlewatch unassigned",
     "not-your-station": "Battlewatch only",
     "missing-state-or-action": "Combat state unavailable"
@@ -347,25 +351,47 @@ function buildShipWeaponStation(app, actor) {
     actions.append(fireButton);
 
     if (remaining > 0) {
-      const workButton = document.createElement("button");
-      workButton.type = "button";
-      const reloadControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
-      const reloadAvailability = api.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: true, reason: null };
-      const blocker = !reloadControl.ok ? reloadControl.reason : !reloadAvailability.ok ? reloadAvailability.reason : null;
-      workButton.disabled = Boolean(blocker);
-      workButton.innerHTML = blocker
-        ? `<i class="fa-solid fa-lock"></i> ${esc(stationActionBlockerLabel(blocker))}`
-        : '<i class="fa-solid fa-rotate"></i> Reload · 1 AP · 1 Supply';
-      workButton.title = blocker
-        ? `Reload unavailable: ${stationActionBlockerLabel(blocker)}.`
-        : "Spend 1 AP and 1 Supply to reduce this weapon's remaining reload time.";
-      workButton.addEventListener("click", async () => {
+      const reloadButton = document.createElement("button");
+      reloadButton.type = "button";
+      const reloadControl = api.stationActionControl?.("common-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
+      const reloadAvailability = api.stationActionAvailability?.("common-reload-weapon", combatant) ?? { ok: true, reason: null };
+      const reloadBlocker = !reloadControl.ok ? reloadControl.reason : !reloadAvailability.ok ? reloadAvailability.reason : null;
+      reloadButton.disabled = Boolean(reloadBlocker);
+      reloadButton.innerHTML = reloadBlocker
+        ? `<i class="fa-solid fa-lock"></i> ${esc(stationActionBlockerLabel(reloadBlocker))}`
+        : '<i class="fa-solid fa-rotate"></i> Reload · 1 AP';
+      reloadButton.title = reloadBlocker
+        ? `Reload unavailable: ${stationActionBlockerLabel(reloadBlocker)}.`
+        : "Common action: spend 1 AP to reduce this weapon's remaining Reload by 1 round.";
+      reloadButton.addEventListener("click", async () => {
         try {
-          const result = await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
+          const result = await api.stationAction("common-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
           if (!result?.requested) app.render(false);
         } catch (error) { ui.notifications?.error(error?.message ?? "Reload failed."); }
       });
-      actions.append(workButton);
+      actions.append(reloadButton);
+
+      if (remaining <= 2) {
+        const workButton = document.createElement("button");
+        workButton.type = "button";
+        const workControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
+        const workAvailability = api.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: true, reason: null };
+        const workBlocker = !workControl.ok ? workControl.reason : !workAvailability.ok ? workAvailability.reason : null;
+        workButton.disabled = Boolean(workBlocker);
+        workButton.innerHTML = workBlocker
+          ? `<i class="fa-solid fa-lock"></i> Work the Guns · ${esc(stationActionBlockerLabel(workBlocker))}`
+          : '<i class="fa-solid fa-burst"></i> Work the Guns · 1 Morale · +1 Strain';
+        workButton.title = workBlocker
+          ? `Work the Guns unavailable: ${stationActionBlockerLabel(workBlocker)}.`
+          : "Battlewatch, once per round: spend 1 Morale and gain 1 Strain to immediately ready this weapon for 0 AP.";
+        workButton.addEventListener("click", async () => {
+          try {
+            const result = await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
+            if (!result?.requested) app.render(false);
+          } catch (error) { ui.notifications?.error(error?.message ?? "Work the Guns failed."); }
+        });
+        actions.append(workButton);
+      }
     }
 
     const update = () => {
@@ -440,7 +466,7 @@ function buildShipWeaponStation(app, actor) {
   section.append(list);
   updateAll();
   const battlewatchControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
-  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> View only — only the assigned Battlewatch player or GM may fire and reload weapons.</p>');
+  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Fire control is Battlewatch-only. Reload is a common action available to assigned crew.</p>');
   return section;
 }
 
@@ -522,7 +548,7 @@ Hooks.on("updateToken", () => setTimeout(refreshVisibleFiringArcs, 0));
 Hooks.on("updateCombatant", () => setTimeout(refreshVisibleFiringArcs, 0));
 Hooks.on("updateCombat", () => setTimeout(refreshVisibleFiringArcs, 0));
 Hooks.on("arkflightStationActionRemoteResult", (payload) => {
-  if (payload?.actionId !== "battlewatch-reload-weapon") return;
+  if (!["common-reload-weapon", "battlewatch-reload-weapon"].includes(payload?.actionId)) return;
   for (const app of Object.values(ui.windows ?? {})) {
     const actor = app?.actor ?? app?.document?.actor ?? (app?.document?.documentName === "Actor" ? app.document : null);
     const combatant = actor ? combatantForActor(actor) : null;
