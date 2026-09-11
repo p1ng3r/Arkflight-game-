@@ -29,24 +29,42 @@ function validMobility(mobility) {
   );
 }
 
-function preserveWeaponRuntime(freshWeapon, currentWeapon) {
+function migrationRound(currentState, explicitRound = null) {
+  const supplied = finiteNumber(explicitRound);
+  if (supplied != null && supplied > 0) return Math.max(1, Math.trunc(supplied));
+  const match = /^round:(\d+)$/.exec(String(currentState?.turnKey ?? ""));
+  if (match) return Math.max(1, Math.trunc(Number(match[1]) || 1));
+  return 1;
+}
+
+function preserveWeaponRuntime(freshWeapon, currentWeapon, round) {
   if (!currentWeapon || currentWeapon.id !== freshWeapon.id) return freshWeapon;
-  const readyRound = finiteNumber(currentWeapon.readyRound);
+  const explicitRemaining = finiteNumber(currentWeapon.reloadRemaining);
+  const legacyReadyRound = finiteNumber(currentWeapon.readyRound);
   const lastFiredRound = currentWeapon.lastFiredRound == null ? null : finiteNumber(currentWeapon.lastFiredRound);
+
+  let reloadRemaining = explicitRemaining == null ? null : Math.max(0, Math.trunc(explicitRemaining));
+  if (reloadRemaining == null && legacyReadyRound != null) {
+    const legacyRemaining = Math.max(0, Math.trunc(legacyReadyRound) - Math.max(1, Math.trunc(Number(round) || 1)));
+    // Legacy readyRound included passive time. During migration, never require
+    // more active Reload actions than the weapon's authored Reload value.
+    reloadRemaining = Math.min(Math.max(0, Math.trunc(Number(freshWeapon.reloadRounds) || 0)), legacyRemaining);
+  }
+
   return Object.freeze({
     ...freshWeapon,
-    readyRound: readyRound == null ? freshWeapon.readyRound : Math.max(1, Math.trunc(readyRound)),
+    reloadRemaining: reloadRemaining ?? freshWeapon.reloadRemaining,
     lastFiredRound: currentWeapon.lastFiredRound == null
       ? null
       : (lastFiredRound == null ? freshWeapon.lastFiredRound : Math.max(1, Math.trunc(lastFiredRound)))
   });
 }
 
-function reconciledWeapons(freshWeapons, currentWeapons = {}) {
+function reconciledWeapons(freshWeapons, currentWeapons = {}, round = 1) {
   return Object.freeze(Object.fromEntries(
     Object.entries(freshWeapons ?? {}).map(([key, freshWeapon]) => [
       key,
-      preserveWeaponRuntime(freshWeapon, currentWeapons?.[key])
+      preserveWeaponRuntime(freshWeapon, currentWeapons?.[key], round)
     ])
   ));
 }
@@ -89,15 +107,15 @@ function reconcileStrain(fresh, current) {
 /**
  * Reconcile transient Foundry combat state against the ship Actor's authoritative
  * derived build. Shipwright/refit owns physical installation and build facts;
- * combat state owns only transient facts such as spent points, heading, reload
- * timing, movement already taken this turn, and combat history.
+ * combat state owns only transient facts such as spent points, heading, reload progress, movement already taken this turn, and combat history.
  */
 export function reconcileCombatantState(ship, currentState, {
   derived = null,
   catalogs = {},
   rotation = 0,
   speedPenalty = 0,
-  maneuverPenalty = 0
+  maneuverPenalty = 0,
+  round = null
 } = {}) {
   const fresh = createCombatantState(ship, {
     derived,
@@ -113,7 +131,7 @@ export function reconcileCombatantState(ship, currentState, {
     turnKey: typeof currentState.turnKey === "string" ? currentState.turnKey : fresh.turnKey,
     economy: reconcileEconomy(fresh.economy, currentState.economy),
     mobility: reconcileMobility(fresh.mobility, currentState.mobility),
-    weapons: reconciledWeapons(fresh.weapons, currentState.weapons),
+    weapons: reconciledWeapons(fresh.weapons, currentState.weapons, migrationRound(currentState, round)),
     strain: reconcileStrain(fresh.strain, currentState.strain),
     log: Array.isArray(currentState.log) ? Object.freeze([...currentState.log]) : fresh.log
   });
