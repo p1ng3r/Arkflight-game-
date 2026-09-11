@@ -13,6 +13,7 @@ import {
   stationActionRulesText,
   stationActionStrainArea,
   stationEffectMagnitude,
+  reloadWeapon,
   reduceWeaponReload,
   stationEffectProfile
 } from "../combat/index.js";
@@ -67,8 +68,9 @@ function assignedCrewActors(shipActor) {
 function actionCrewActor(shipActor, action, user = null) {
   if (action?.station !== "common") return stationActor(shipActor, action?.station);
   const assigned = assignedCrewActors(shipActor);
-  if (!user || user?.isGM) return assigned[0] ?? null;
-  return assigned.find((actor) => userOwnsActor(user, actor)) ?? null;
+  if (!user || user?.isGM) return assigned[0] ?? shipActor ?? null;
+  return assigned.find((actor) => userOwnsActor(user, actor))
+    ?? (userOwnsActor(user, shipActor) ? shipActor : null);
 }
 
 function activePrimaryGM() {
@@ -84,6 +86,29 @@ function userOwnsActor(user, actor) {
   catch (_error) { return false; }
 }
 
+function userCanUpdateDocument(user, document) {
+  if (!user || !document) return false;
+  if (user.isGM) return true;
+  try {
+    if (typeof document.canUserModify === "function") return document.canUserModify(user, "update") === true;
+    return document.testUserPermission?.(user, "OWNER") === true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function userOwnsShip(user, combatant) {
+  return Boolean(combatant?.actor && userOwnsActor(user, combatant.actor));
+}
+
+function userCanResolveShipState(user, combatant) {
+  return Boolean(
+    userOwnsShip(user, combatant)
+    && userCanUpdateDocument(user, combatant?.actor)
+    && userCanUpdateDocument(user, combatant)
+  );
+}
+
 function stationControl(base, actionId, reference = null, user = game.user) {
   const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
   const action = base.actions?.[actionId] ?? null;
@@ -97,11 +122,12 @@ function stationControl(base, actionId, reference = null, user = game.user) {
     });
   }
 
+  if (!userOwnsShip(user, combatant)) {
+    return Object.freeze({ ok: false, reason: "not-ship-owner", combatant, action, crewActor: null });
+  }
+
   if (action.station === "common") {
-    const assigned = assignedCrewActors(combatant.actor);
-    if (!assigned.length) return Object.freeze({ ok: false, reason: "crew-unassigned", combatant, action, crewActor: null });
-    const crewActor = actionCrewActor(combatant.actor, action, user);
-    if (!crewActor) return Object.freeze({ ok: false, reason: "not-assigned-crew", combatant, action, crewActor: null });
+    const crewActor = actionCrewActor(combatant.actor, action, user) ?? combatant.actor;
     return Object.freeze({ ok: true, reason: null, combatant, action, crewActor });
   }
 
@@ -295,7 +321,7 @@ function actionCostLabel(action, actor) {
   return parts.join(" · ") || "No cost";
 }
 
-async function postActionChat({ actor, crewActor, action, selection, notes = [] }) {
+async function postActionChat({ actor, crewActor, action, selection, notes = [], userId = game.user?.id ?? null }) {
   const esc = foundry.utils.escapeHTML;
   const selectionLine = selection == null || selection === ""
     ? ""
@@ -303,6 +329,7 @@ async function postActionChat({ actor, crewActor, action, selection, notes = [] 
   const notesLine = notes.length ? `<br><strong>Effect:</strong> ${notes.map((entry) => esc(entry)).join(" · ")}` : "";
   const profile = stationEffectProfile(shipLevel(actor));
   await ChatMessage.create({
+    user: userId,
     speaker: ChatMessage.getSpeaker({ actor: crewActor ?? actor }),
     content: `<div class="arkflight-chat-card arkflight-station-action-chat"><strong>${esc(actor.name)} — ${esc(action.name)}</strong><br><em>${esc(action.station)} ${action.timing}</em> · ${esc(actionCostLabel(action, actor))} · Station Bonus +${profile.bonus}${selectionLine}${notesLine}<hr><p>${esc(stationActionRulesText(action))}</p></div>`
   });
@@ -312,8 +339,9 @@ function runtimeAvailability(base, actionId, reference = null) {
   const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
   const action = base.actions?.[actionId] ?? null;
   if (!combatant || !action) return Object.freeze({ ok: false, reason: !combatant ? "combatant-required" : "unknown-action" });
-  const crew = actionCrewActor(combatant.actor, action);
-  if (!crew) return Object.freeze({ ok: false, reason: action.station === "common" ? "crew-unassigned" : "station-unassigned" });
+  if (action.station !== "common" && !stationActor(combatant.actor, action.station)) {
+    return Object.freeze({ ok: false, reason: "station-unassigned" });
+  }
   if (action.timing === COMBAT_ACTION_TIMING.ACTION && game.combat?.combatant?.id !== combatant.id) {
     return Object.freeze({ ok: false, reason: "not-this-ships-turn" });
   }
@@ -322,13 +350,21 @@ function runtimeAvailability(base, actionId, reference = null) {
   return persistentCostAvailability(combatant.actor, action);
 }
 
-async function executeAuthoritative(base, actionId, options = {}, reference = null, { crewActorOverride = null } = {}) {
-  requireGM();
+async function executeStationAction(base, actionId, options = {}, reference = null, {
+  crewActorOverride = null,
+  requesterUser = game.user,
+  requesterUserId = requesterUser?.id ?? null
+} = {}) {
   const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
   if (!combatant) throw new Error("Choose an Arkflight ship Combatant.");
   const action = base.actions?.[actionId] ?? null;
   if (!action) throw new Error(`Unknown Arkflight combat action: ${actionId}`);
-  const crewActor = crewActorOverride ?? actionCrewActor(combatant.actor, action);
+  const control = stationControl(base, actionId, combatant, requesterUser);
+  if (!control.ok) throw new Error(`Station action unavailable: ${control.reason}.`);
+  if (!userCanResolveShipState(game.user, combatant)) {
+    throw new Error(`You do not have permission to update ${combatant.name}'s shared ship combat state.`);
+  }
+  const crewActor = crewActorOverride ?? control.crewActor ?? actionCrewActor(combatant.actor, action, requesterUser);
   if (!crewActor) {
     const label = action.station === "common" ? "assigned crew" : `${action.station} assigned`;
     throw new Error(`${combatant.name} has no ${label}.`);
@@ -343,19 +379,19 @@ async function executeAuthoritative(base, actionId, options = {}, reference = nu
   if (resolver === "fireAtTarget") {
     if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
     const fire = game.arkflight?.combat?.fireAtTarget ?? base.fireAtTarget;
-    return fire(options.weaponKey, options.targetId, combatant);
+    return fire(options.weaponKey, options.targetId, combatant, { requesterUserId });
   }
   if (resolver === "reloadWeapon") {
     if (!options.weaponKey) throw new Error("Reload requires an installed weapon.");
     const before = base.state(combatant);
     const round = Math.max(1, Number(game.combat?.round ?? 1));
-    const reload = base.reloadWeapon ?? base.workTheGuns;
-    const state = await reload.call(base, options.weaponKey, combatant);
+    const state = reloadWeapon(before, options.weaponKey, round);
+    await combatant.update({ [STATE_PATH]: state });
     const weapon = state.weapons?.[options.weaponKey];
     const remaining = Math.max(0, Number(weapon?.readyRound ?? round) - round);
     const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, state);
     notes.push(`Reload reduced by 1 round; ${remaining} remaining.`);
-    await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes });
+    await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes, userId: requesterUserId });
     Hooks.callAll("arkflightStationActionResolved", {
       combat: game.combat,
       combatant,
@@ -425,7 +461,7 @@ async function executeAuthoritative(base, actionId, options = {}, reference = nu
     Hooks.callAll("arkflightShipDamageStateChanged", { actor: combatant.actor, combatant, action, strainThreshold: strainResolution.threshold, notes });
   }
 
-  await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes });
+  await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes, userId: requesterUserId });
   Hooks.callAll("arkflightStationActionResolved", {
     combat: game.combat,
     combatant,
@@ -443,17 +479,25 @@ async function requestStationAction(base, actionId, options = {}, reference = nu
   const control = stationControl(base, actionId, reference);
   if (!control.ok) {
     if (control.reason === "not-your-station") throw new Error(`Only the player assigned to ${control.action?.station ?? "that"} station may use this action.`);
-    if (control.reason === "not-assigned-crew") throw new Error("Only a player who owns an assigned crew member on this ship may use this common action.");
+    if (control.reason === "not-ship-owner") throw new Error("Only an Owner of this Arkflight ship may use its actions.");
     throw new Error(`Station action unavailable: ${control.reason}.`);
   }
 
   const availability = runtimeAvailability(base, actionId, control.combatant);
   if (!availability.ok) throw new Error(`Station action unavailable: ${availability.reason}.`);
 
-  if (game.user?.isGM) return executeAuthoritative(base, actionId, options, control.combatant);
+  if (userCanResolveShipState(game.user, control.combatant)) {
+    return executeStationAction(base, actionId, options, control.combatant, {
+      crewActorOverride: control.crewActor,
+      requesterUser: game.user,
+      requesterUserId: game.user?.id ?? null
+    });
+  }
 
   const primary = activePrimaryGM();
-  if (!primary) throw new Error("An active GM is required to resolve Arkflight combat actions.");
+  if (!primary) {
+    throw new Error("An active GM is required only because Foundry denied direct update permission for this ship combat state.");
+  }
 
   game.socket?.emit?.(COMBAT_SOCKET, {
     type: STATION_ACTION_REQUEST,
@@ -524,7 +568,11 @@ async function handleStationActionSocket(base, payload = {}) {
   }
 
   try {
-    await executeAuthoritative(base, payload.actionId, payload.options ?? {}, combatant, { crewActorOverride: control.crewActor });
+    await executeStationAction(base, payload.actionId, payload.options ?? {}, combatant, {
+      crewActorOverride: control.crewActor,
+      requesterUser: requester,
+      requesterUserId: requester.id
+    });
     reply(true, `${control.action?.name ?? "Station action"} resolved.`);
   } catch (error) {
     console.error("Arkflight | Player station action request failed", error);
