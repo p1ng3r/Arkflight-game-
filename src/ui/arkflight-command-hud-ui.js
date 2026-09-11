@@ -143,7 +143,6 @@ function actionRuleChips(action, actor) {
   const chips = [];
 
   if (action.id === "captain-drive-the-crew") chips.push({ label: "+1 AP", tone: "free" });
-  else if (rules.costSource === "weapon.fireAP") chips.push({ label: "Weapon AP", tone: "cost" });
   else {
     if (cost.ap > 0) chips.push({ label: `${cost.ap} AP`, tone: "cost" });
     if (cost.rp > 0) chips.push({ label: `${cost.rp} RP`, tone: "reaction" });
@@ -225,7 +224,6 @@ function decorateActionCards(app, root) {
       const cost = stationActionEconomy(action, shipLevel(actor));
       const parts = [];
       if (action.id === "captain-drive-the-crew") parts.push("+1 AP");
-      else if (action.rules?.costSource === "weapon.fireAP") parts.push("Weapon AP");
       else {
         if (cost.ap) parts.push(`${cost.ap} AP`);
         if (cost.rp) parts.push(`${cost.rp} RP`);
