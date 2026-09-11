@@ -10,6 +10,7 @@ const visualBoardsCss = readFileSync(new URL("../styles/ship-sheet-visual-boards
 const armory = readFileSync(new URL("../src/ui/armory-ux.js", import.meta.url), "utf8");
 const armoryCss = readFileSync(new URL("../styles/armory-ux.css", import.meta.url), "utf8");
 const bayCss = readFileSync(new URL("../styles/shipwright-bay.css", import.meta.url), "utf8");
+const refitApi = readFileSync(new URL("../src/foundry/refit-api.js", import.meta.url), "utf8");
 
 test("Shipwright weapon sockets expose facing-specific art and mount rules", () => {
   for (const type of ["prow", "broadside", "stern", "deck", "flexible"]) assert.match(workspace, new RegExp(`socket_weapon_${type}\\.webp`));
@@ -132,4 +133,12 @@ test("Shipwright exposes specialized Explorer Expedition and Raider socket rules
   assert.match(template, /RAIDER — PURSUIT WEAPON INTEGRATION/);
   assert.match(template, /data-raider-pursuit-mount/);
   assert.match(template, /Shipyard to configure/);
+});
+
+
+test("Raider pursuit mount is a shipyard-only refit configuration", () => {
+  assert.match(refitApi, /configureRaiderPursuitMount/);
+  assert.match(refitApi, /mode !== "shipyard"/);
+  assert.match(refitApi, /SHIP_SPECIALIZATIONS\.RAIDER/);
+  assert.match(workspace, /configureRaiderPursuitMount/);
 });
