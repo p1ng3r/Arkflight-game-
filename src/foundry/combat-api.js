@@ -17,7 +17,7 @@ import {
   weaponDamageProfile,
   weaponReloadRemaining,
   weaponTargetingSolution,
-  workTheGuns
+  reloadWeapon
 } from "../combat/index.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
@@ -572,11 +572,15 @@ Hooks.once("ready", () => {
       return targetSolution(attacker, target, weaponKey);
     },
     fireAtTarget,
-    async workTheGuns(weaponKey, reference = null) {
+    async reloadWeapon(weaponKey, reference = null) {
       requireGM();
       const combatant = await requireCombatant(reference);
-      const next = workTheGuns(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
+      const next = reloadWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
+    },
+    async workTheGuns(weaponKey, reference = null) {
+      // Legacy API alias. Player-facing Work the Guns is the Battlewatch station action.
+      return this.reloadWeapon(weaponKey, reference);
     },
     reloadRemaining(weaponKey, reference = null) {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
