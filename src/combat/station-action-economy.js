@@ -8,7 +8,7 @@ const SECONDARY_SPENDS = Object.freeze({
   "captain-rally-crew": Object.freeze({ supplies: 1 }),
   "captain-drive-the-crew": Object.freeze({ morale: 1 }),
   "engineer-emergency-repair": Object.freeze({ supplies: 2 }),
-  "battlewatch-reload-weapon": Object.freeze({ supplies: 1 }),
+  "battlewatch-reload-weapon": Object.freeze({ morale: 1 }),
   "battlewatch-ready-broadside": Object.freeze({ supplies: 1 }),
   "veilwarden-reinforce-lifeveil": Object.freeze({ lifeveil: 5 }),
   "veilwarden-focus-ward": Object.freeze({ lifeveil: 10 }),
@@ -20,7 +20,8 @@ const STRAIN_AREAS = Object.freeze({
   "engineer-overcharge-arkengine": "arkengine",
   "engineer-redistribute-power": "arkengine",
   "navigator-hard-turn": "rigging",
-  "navigator-evasive-maneuver": "rigging"
+  "navigator-evasive-maneuver": "rigging",
+  "battlewatch-reload-weapon": "morale"
 });
 
 export function stationActionEconomy(action, shipLevel = 1) {
@@ -59,7 +60,8 @@ export function stationActionRulesText(action) {
     "engineer-overcharge-arkengine": "Spend 1 AP and gain 2 Strain. Gain one additional full Helm block this turn: movement equal to Combat Speed and facing steps equal to Maneuverability. Once per round. This Strain threatens the Arkengine.",
     "engineer-emergency-repair": "Spend 2 AP and 2 Supplies. Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by one step. At ship level 15+, improve it by two steps instead.",
     "engineer-redistribute-power": "Spend 1 AP and gain 1 Strain. Route power to Propulsion, Weapons, or Lifeveil. Propulsion immediately grants Station Bonus movement and 1 maneuver step. Weapons gives the next weapon attack(s) +Station Bonus damage. Lifeveil reduces the next wardable hit(s) by 2 × Station Bonus. From ship level 5, Weapons and Lifeveil each cover two qualifying uses. This Strain threatens the Arkengine.",
-    "battlewatch-reload-weapon": "Spend 1 AP and 1 Supply. Reduce one installed weapon's remaining reload time by the Station Bonus in rounds, to a minimum of 0.",
+    "common-reload-weapon": "Spend 1 AP to reduce one installed weapon's remaining Reload by 1 round. Any assigned crew member may perform this action.",
+    "battlewatch-reload-weapon": "Once per round, spend 1 Morale and gain 1 Strain. Choose one installed weapon with 2 or fewer rounds of Reload remaining; it immediately becomes Ready. This action costs 0 AP. This Strain threatens Morale.",
     "battlewatch-ready-broadside": "Spend 1 AP and 1 Supply. Choose Port or Starboard. The next shot from that facing gains +2 × Station Bonus damage. At ship level 15+, that shot also reduces its resulting reload by 1 round.",
     "veilwarden-reinforce-lifeveil": "Spend 1 AP and 5 Lifeveil. The next wardable hit reduces incoming damage by 2 × Station Bonus before Hardness. From ship level 5, this protects against the next two qualifying hits before the ship's next turn.",
     "veilwarden-focus-ward": "Spend 1 AP and 10 Lifeveil. Choose a ship area or energy type. The next matching hit reduces incoming damage by 3 × Station Bonus before Hardness. From ship level 5, this protects against the next two matching hits before the ship's next turn.",
