@@ -50,22 +50,23 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
     case "engineer-redline-the-arkengine":
       assertTarget(state, options.targetStationId); if (!["engineer", "navigator"].includes(options.targetStationId)) throw new Error("Redline the Arkengine may only affect Engineer or Navigator.");
       addDegreeLift(encounter, options.targetStationId, 1, `${source}: improve the final degree by one step`);
-      next = { ...next, masteryPostCheckShipEffects: { ...(state.masteryPostCheckShipEffects ?? {}), [options.targetStationId]: [{ kind: "gain-strain", value: 1, area: "arkengine", source }] } };
+      next = { ...next, masteryPostCheckShipEffects: { ...(state.masteryPostCheckShipEffects ?? {}), [options.targetStationId]: [{ kind: "gain-strain", value: 1, source }] } };
       break;
     case "engineer-keep-her-breathing": {
       const area = options.area ?? options.system; if (!area) throw new Error("Choose the ship Area being kept operational.");
       next = { ...next, masteryAreaDisableGuards: { ...(state.masteryAreaDisableGuards ?? {}), [area]: 1 } }; encounter.notes.push(`${source} keeps ${area} operational through the next station resolution.`); break;
     }
     case "engineer-crosswire-the-systems": {
-      const fromArea = options.fromArea ?? options.fromSystem; const toArea = options.toArea ?? options.toSystem;
-      if (!fromArea || !toArea || fromArea === toArea) throw new Error("Choose two different ship Areas for Crosswire the Systems.");
-      next = { ...next, masteryAreaRedirects: { ...(state.masteryAreaRedirects ?? {}), [fromArea]: { destination: toArea, source } } }; break;
+      const target = options.toSystem ?? options.toArea ?? options.system;
+      if (!["hull", "drive", "weapons", "lifeveil", "morale"].includes(target)) throw new Error("Choose Hull, Drive, Weapons, Lifeveil, or Morale for Crosswire the Systems.");
+      next = { ...next, masteryStrainDegradationOverride: { target, source } };
+      break;
     }
     case "engineer-run-her-hot":
       assertTarget(state, options.targetStationId); if (!["engineer", "navigator"].includes(options.targetStationId)) throw new Error("Run Her Hot may only affect Engineer or Navigator.");
       addCheckBonus(encounter, options.targetStationId, 4, source);
       next = { ...next, masteryPostCheckShipEffects: { ...(state.masteryPostCheckShipEffects ?? {}), [options.targetStationId]: [{ kind: "gain-strain", value: 1, area: "arkengine", source }] } };
-      encounter.notes.push(`${source} grants ${options.targetStationId} +4, then threatens Arkengine with 1 Strain.`); break;
+      encounter.notes.push(`${source} grants ${options.targetStationId} +4, then adds 1 ship-wide Strain.`); break;
     case "engineer-heart-without-rest": encounter.generalStrainGuard = Number(encounter.generalStrainGuard ?? 0) + 2; encounter.notes.push(`${source} guards the next 2 points of Strain.`); break;
 
     case "navigator-impossible-passage": assertTarget(state, options.targetStationId); encounter.riskOverrides[options.targetStationId] = true; encounter.notes.push(`${source} lets ${options.targetStationId} ignore one authored restriction this round.`); break;
@@ -81,8 +82,8 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
     case "battlewatch-kill-line": assertTarget(state, options.targetStationId); addDegreeLift(encounter, options.targetStationId, 1, `${source}: improve the final degree by one step`); encounter.notes.push(`${source} improves ${options.targetStationId}'s final degree by one step.`); break;
 
     case "veilwarden-stand-between": {
-      const fromArea = options.fromArea ?? options.fromSystem; if (!["hull", "arkengine", "rigging"].includes(fromArea)) throw new Error("Stand Between may redirect Hull, Arkengine, or Rigging Strain threat.");
-      next = { ...next, masteryAreaRedirects: { ...(state.masteryAreaRedirects ?? {}), [fromArea]: { destination: "lifeveil", source } } }; break;
+      next = { ...next, masteryStrainDegradationOverride: { target: "lifeveil", source } };
+      break;
     }
     case "veilwarden-seal-the-impossible": encounter.hazardGuard = Math.max(Number(encounter.hazardGuard ?? 0), 1); break;
     case "veilwarden-sanctuary": assertTarget(state, options.targetStationId); encounter.hazardShelters[options.targetStationId] = true; encounter.riskOverrides[options.targetStationId] = true; encounter.notes.push(`${source} creates a protected sanctuary around ${options.targetStationId}'s next check.`); break;
@@ -95,19 +96,17 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
 }
 
 export function applyMasteryConsequenceRedirects(_event, beforeState, finalizedState) {
-  const redirects = beforeState?.masteryAreaRedirects ?? {};
-  if (!Object.keys(redirects).length) return finalizedState;
+  const override = beforeState?.masteryStrainDegradationOverride ?? null;
+  if (!override?.target) return finalizedState;
   const priorCount = (beforeState?.pendingShipEffects ?? []).length;
   const effects = [...(finalizedState?.pendingShipEffects ?? [])];
   const notes = [...(finalizedState.encounter?.notes ?? [])];
-  const remainingRedirects = { ...redirects };
   for (let index = priorCount; index < effects.length; index += 1) {
     const effect = effects[index];
-    if (effect?.kind !== "gain-strain" || Number(effect.value ?? 0) <= 0 || !effect.area) continue;
-    const redirect = remainingRedirects[effect.area]; if (!redirect) continue;
-    const from = effect.area; effects[index] = { ...effect, area: redirect.destination, redirectedFrom: from, redirectSource: redirect.source };
-    notes.push(`${redirect.source}: redirected the Strain threat from ${from} to ${redirect.destination}.`);
-    delete remainingRedirects[from];
+    if (effect?.kind !== "gain-strain" || Number(effect.value ?? 0) <= 0) continue;
+    effects[index] = { ...effect, degradationOverride: override.target, redirectSource: override.source };
+    notes.push(`${override.source}: if this Strain causes degradation, redirect it to ${override.target}.`);
+    return { ...finalizedState, pendingShipEffects: effects, encounter: { ...finalizedState.encounter, notes }, masteryStrainDegradationOverride: null };
   }
-  return { ...finalizedState, pendingShipEffects: effects, encounter: { ...finalizedState.encounter, notes }, masteryAreaRedirects: remainingRedirects };
+  return finalizedState;
 }
