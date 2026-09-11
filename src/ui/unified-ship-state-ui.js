@@ -1,10 +1,14 @@
 import { getMasteryTechnique } from "../content/base-mastery.js";
+import {
+  SHIP_CONDITION_SYSTEMS,
+  activeShipConditionViews,
+  conditionProfileById,
+  setShipCondition
+} from "../ship/ship-conditions.js";
 
 const MODULE_ID = "arkflight-game";
-const AREA_ORDER = Object.freeze(["hull", "arkengine", "rigging", "lifeveil", "morale"]);
-const AREA_LABELS = Object.freeze({ hull: "Hull", arkengine: "Arkengine", rigging: "Rigging", lifeveil: "Lifeveil", morale: "Morale" });
-const AREA_STATES = Object.freeze(["stable", "stressed", "damaged", "critical", "disabled"]);
-const STATION_AREAS = Object.freeze({ captain: "morale", engineer: "arkengine", navigator: "rigging", battlewatch: "hull", veilwarden: "lifeveil" });
+const CONDITION_LABELS = Object.freeze({ hull: "Hull", drive: "Drive", weapons: "Weapons", lifeveil: "Lifeveil", morale: "Morale" });
+const STATION_SYSTEMS = Object.freeze({ captain: "morale", engineer: "drive", navigator: "drive", battlewatch: "weapons", veilwarden: "lifeveil" });
 
 function rootElement(element, app = null) {
   if (element instanceof HTMLElement) return element;
@@ -16,7 +20,7 @@ function rootElement(element, app = null) {
 
 function shipFromActor(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 function activeShipActor() { return game?.arkflight?.activeShip ?? null; }
-function titleCase(value) { const text = String(value ?? ""); return text ? `${text[0].toUpperCase()}${text.slice(1)}` : ""; }
+function titleCase(value) { return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (m) => m.toUpperCase()); }
 
 function reorderResourceStrip(root) {
   const strip = root.querySelector(".arkflight-resource-strip");
@@ -29,8 +33,14 @@ function reorderResourceStrip(root) {
   }
 }
 
-function areaConditions(ship, area) {
-  return (ship?.conditions ?? []).filter((condition) => (condition?.area ?? condition?.system) === area);
+function nextConditionId(system, currentId) {
+  const rows = {
+    hull: ["sound", "battered", "breached", "shattered"],
+    drive: ["responsive", "sluggish", "faltering", "unresponsive"],
+    weapons: ["ready", "fouled", "malfunctioning", "barely-operable"]
+  }[system] ?? [];
+  const index = Math.max(0, rows.indexOf(currentId));
+  return rows[(index + 1) % rows.length] ?? rows[0];
 }
 
 function decorateShipReadiness(app, root) {
@@ -44,40 +54,30 @@ function decorateShipReadiness(app, root) {
   const panel = root.querySelector(".arkflight-systems-panel");
   if (panel) {
     const heading = panel.querySelector(".arkflight-panel-heading h2");
-    if (heading) heading.textContent = "Ship Readiness";
+    if (heading) heading.textContent = "Ship Conditions";
     const kicker = panel.querySelector(".arkflight-panel-heading .arkflight-ship-kicker");
-    if (kicker) kicker.textContent = "PERSISTENT AREAS";
+    if (kicker) kicker.textContent = "PERSISTENT SHIP CONDITIONS";
     const help = panel.querySelector(".arkflight-panel-heading small");
-    if (help) help.textContent = "Click an Area in Shipwright Mode to cycle readiness.";
+    if (help) help.textContent = "Hull, Drive, and Weapons can be cycled in Shipwright Mode. Lifeveil and Morale are derived from their percentages.";
 
     const list = panel.querySelector(".arkflight-system-list");
     if (list) {
       list.innerHTML = "";
-      for (const area of AREA_ORDER) {
-        const state = ship.areas?.[area]?.state ?? "stable";
-        const conditions = areaConditions(ship, area);
+      for (const condition of activeShipConditionViews(ship)) {
         const row = document.createElement("button");
         row.type = "button";
-        row.className = `arkflight-system-row arkflight-area-row is-${state}`;
-        row.dataset.arkflightArea = area;
-        row.disabled = !(game.user?.isGM && app?.shipwrightMode);
-        row.innerHTML = `<span class="arkflight-system-name">${AREA_LABELS[area]}</span><span class="arkflight-system-state">${titleCase(state)}</span>${conditions.length ? `<span class="arkflight-condition-count">${conditions.length}</span>` : ""}`;
+        row.className = `arkflight-system-row arkflight-area-row is-${condition.id}`;
+        row.dataset.arkflightArea = condition.system;
+        row.disabled = !(game.user?.isGM && app?.shipwrightMode && SHIP_CONDITION_SYSTEMS.includes(condition.system));
+        row.innerHTML = `<span class="arkflight-system-name">${CONDITION_LABELS[condition.system]}</span><span class="arkflight-system-state">${condition.label}</span>`;
         row.addEventListener("click", async () => {
-          if (!game.user?.isGM || !app?.shipwrightMode) return;
-          const current = shipFromActor(actor)?.areas?.[area]?.state ?? "stable";
-          const index = Math.max(0, AREA_STATES.indexOf(current));
-          const next = AREA_STATES[(index + 1) % AREA_STATES.length];
-          await actor.update({ [`flags.${MODULE_ID}.ship.areas.${area}.state`]: next });
+          if (!game.user?.isGM || !app?.shipwrightMode || !SHIP_CONDITION_SYSTEMS.includes(condition.system)) return;
+          const currentShip = shipFromActor(actor);
+          const current = conditionProfileById(condition.system, currentShip?.shipConditions?.[condition.system]);
+          const next = setShipCondition(currentShip, condition.system, nextConditionId(condition.system, current.id));
+          await actor.update({ [`flags.${MODULE_ID}.ship.shipConditions`]: next.shipConditions });
         });
         list.append(row);
-      }
-    }
-
-    const conditionBox = panel.querySelector(".arkflight-condition-box");
-    if (conditionBox) {
-      for (const line of conditionBox.querySelectorAll(".arkflight-condition-line")) {
-        const span = line.querySelector("span");
-        if (span) span.textContent = span.textContent.replace(/\bsystem\b/gi, "area");
       }
     }
   }
@@ -86,7 +86,7 @@ function decorateShipReadiness(app, root) {
     const strong = card.querySelector("strong");
     const raw = strong?.textContent?.trim()?.toLowerCase();
     const station = raw === "watchmaster" ? "battlewatch" : raw;
-    if (!station || !STATION_AREAS[station]) continue;
+    if (!station || !STATION_SYSTEMS[station]) continue;
     if (strong && raw === "watchmaster") strong.textContent = "Battlewatch";
     let responsibility = card.querySelector(".arkflight-station-responsibility");
     if (!responsibility) {
@@ -94,7 +94,8 @@ function decorateShipReadiness(app, root) {
       responsibility.className = "arkflight-station-responsibility";
       card.querySelector("div:last-child")?.append(responsibility);
     }
-    responsibility.textContent = `Readiness: ${AREA_LABELS[STATION_AREAS[station]]}`;
+    const label = station === "battlewatch" ? "Weapons / Hull" : CONDITION_LABELS[STATION_SYSTEMS[station]];
+    responsibility.textContent = `Condition: ${label}`;
   }
 }
 
@@ -105,7 +106,7 @@ function shipStatusSnapshot() {
   return {
     name: actor.name,
     strain: ship.resources?.strain ?? { value: 0, max: 0 },
-    areas: AREA_ORDER.map((area) => ({ area, label: AREA_LABELS[area], state: ship.areas?.[area]?.state ?? "stable" }))
+    conditions: activeShipConditionViews(ship)
   };
 }
 
@@ -125,7 +126,7 @@ function decorateEventStatus(root) {
   if (status && !status.querySelector(".arkflight-persistent-status")) {
     const restart = status.querySelector("button");
     addStatusBox(status, "Strain", `${snapshot.strain.value} / ${snapshot.strain.max}`, "is-strain");
-    for (const row of snapshot.areas) addStatusBox(status, row.label, titleCase(row.state), `is-${row.state}`);
+    for (const row of snapshot.conditions) addStatusBox(status, CONDITION_LABELS[row.system], row.label, `is-${row.id}`);
     if (restart) status.append(restart);
   }
 
@@ -135,10 +136,10 @@ function decorateEventStatus(root) {
     strain.className = "arkflight-persistent-state-inline";
     strain.innerHTML = `Strain <strong>${snapshot.strain.value} / ${snapshot.strain.max}</strong>`;
     summary.append(strain);
-    for (const row of snapshot.areas) {
+    for (const row of snapshot.conditions) {
       const item = document.createElement(summary.classList.contains("arkflight-round-state-summary") ? "div" : "span");
-      item.className = `arkflight-persistent-state-inline is-${row.state}`;
-      item.innerHTML = `<span>${row.label}</span> <strong>${titleCase(row.state)}</strong>`;
+      item.className = `arkflight-persistent-state-inline is-${row.id}`;
+      item.innerHTML = `<span>${CONDITION_LABELS[row.system]}</span> <strong>${row.label}</strong>`;
       summary.append(item);
     }
   }
@@ -175,12 +176,16 @@ function decorateShipDerivedMasteries(root) {
 
 function replaceLegacyPlayerText(root) {
   const replacements = [
-    [/Hull Pressure/gi, "Strain threatening Hull"],
-    [/Arkengine Pressure/gi, "Strain threatening Arkengine"],
-    [/Rigging Pressure/gi, "Strain threatening Rigging"],
-    [/Lifeveil Pressure/gi, "Strain threatening Lifeveil"],
+    [/Hull Pressure/gi, "Hull Strain"],
+    [/Arkengine Pressure/gi, "ship Strain"],
+    [/Rigging Pressure/gi, "ship Strain"],
+    [/Lifeveil Pressure/gi, "Lifeveil Strain"],
+    [/threatening Arkengine/gi, "stressing the ship"],
+    [/threatening Rigging/gi, "stressing the ship"],
     [/system Pressure/gi, "ship Strain"],
-    [/\bPressure\b/g, "Strain"]
+    [/\bPressure\b/g, "Strain"],
+    [/\bArea readiness\b/gi, "Ship Conditions"],
+    [/\bAreas\b/g, "Ship Conditions"]
   ];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const nodes = [];
@@ -202,7 +207,7 @@ function decorateEventBoard(app, element) {
     decorateShipDerivedMasteries(root);
     replaceLegacyPlayerText(root);
     const complete = root.querySelector(".arkflight-event-complete-copy");
-    if (complete) complete.textContent = "The Event has reached its conclusion. The bound ship already carries persistent Hull, Lifeveil, Strain, Morale, Conditions, and Area readiness forward; Momentum and Hazards remain Event state only.";
+    if (complete) complete.textContent = "The Event has reached its conclusion. The bound ship carries Hull, Lifeveil, Strain, Morale, Ship Conditions, and other persistent Conditions forward; Momentum and Hazards remain Event state only.";
   }, 0);
 }
 
