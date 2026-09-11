@@ -1,3 +1,5 @@
+import { purchaseManeuver } from "./combatant-state.js";
+
 function nonnegativeInt(value) {
   return Math.max(0, Math.trunc(Number(value) || 0));
 }
@@ -14,7 +16,7 @@ function freezeTrack(track, allowance) {
 export function applyFreeHelmAllowance(state) {
   if (!state?.mobility) return state;
   const speed = Math.max(1, nonnegativeInt(state.mobility.speed));
-  const maneuverability = Math.max(1, nonnegativeInt(state.mobility.maneuverability));
+  const maneuverability = nonnegativeInt(state.mobility.maneuverability);
   const movement = state.mobility.movement ?? {};
   const maneuver = state.mobility.maneuver ?? {};
   const minimumMovement = speed * (1 + nonnegativeInt(movement.purchases));
@@ -37,7 +39,7 @@ export function helmRemaining(state) {
   const maneuver = state?.mobility?.maneuver ?? {};
   return Object.freeze({
     speed: Math.max(1, nonnegativeInt(state?.mobility?.speed)),
-    maneuverability: Math.max(1, nonnegativeInt(state?.mobility?.maneuverability)),
+    maneuverability: nonnegativeInt(state?.mobility?.maneuverability),
     movementRemaining: Math.max(0, nonnegativeInt(movement.allowance) - nonnegativeInt(movement.used)),
     maneuverRemaining: Math.max(0, nonnegativeInt(maneuver.allowance) - nonnegativeInt(maneuver.used)),
     movementUsed: nonnegativeInt(movement.used),
@@ -47,13 +49,60 @@ export function helmRemaining(state) {
   });
 }
 
-export function canChangeFacingNow(state, round = 1) {
-  const remaining = helmRemaining(state);
-  if (remaining.movementUsed > 0 || remaining.maneuverPurchases > 0) return true;
-  const baseline = remaining.maneuverability * (1 + remaining.maneuverPurchases);
-  if (nonnegativeInt(state?.mobility?.maneuver?.allowance) > baseline) return true;
-  const used = state?.stationRuntime?.used ?? {};
-  const combatRound = Math.max(1, nonnegativeInt(round));
-  if (Number(used["navigator-hard-turn"] ?? 0) === combatRound) return true;
-  return (state?.stationRuntime?.effects ?? []).some((entry) => entry?.actionId === "navigator-hard-turn");
+export function canChangeFacingNow(state, _round = 1) {
+  const normalized = applyFreeHelmAllowance(state);
+  const remaining = helmRemaining(normalized);
+  if (remaining.maneuverability > 0) return true;
+  return nonnegativeInt(normalized?.mobility?.maneuver?.allowance) > nonnegativeInt(normalized?.mobility?.maneuver?.used);
+}
+
+export function facingReconciliation(state) {
+  const normalized = applyFreeHelmAllowance(state);
+  const maneuver = normalized?.mobility?.maneuver ?? {};
+  const maneuverability = nonnegativeInt(normalized?.mobility?.maneuverability);
+  const used = nonnegativeInt(maneuver.used);
+  const allowance = nonnegativeInt(maneuver.allowance);
+  const purchases = nonnegativeInt(maneuver.purchases);
+  const free = maneuverability;
+  const purchasedAllowance = maneuverability * purchases;
+  const bonusAllowance = Math.max(0, allowance - free - purchasedAllowance);
+  const uncovered = Math.max(0, used - allowance);
+  const impossible = uncovered > 0 && maneuverability <= 0;
+  const apRequired = impossible ? null : (uncovered > 0 ? Math.ceil(uncovered / maneuverability) : 0);
+  const apRemaining = nonnegativeInt(normalized?.economy?.ap?.value);
+
+  return Object.freeze({
+    state: normalized,
+    used,
+    free,
+    allowance,
+    purchases,
+    purchasedAllowance,
+    bonusAllowance,
+    uncovered,
+    apRequired,
+    apRemaining,
+    impossible,
+    affordable: !impossible && Number(apRequired ?? 0) <= apRemaining
+  });
+}
+
+export function settleFacingCost(state) {
+  const before = facingReconciliation(state);
+  if (before.impossible) {
+    throw new Error("This ship has Maneuverability 0 and cannot pay for additional normal facing changes.");
+  }
+  if (!before.affordable) {
+    throw new Error(`Facing requires ${before.apRequired} AP, but only ${before.apRemaining} AP remain.`);
+  }
+
+  let next = before.state;
+  for (let index = 0; index < before.apRequired; index += 1) next = purchaseManeuver(next);
+  const after = facingReconciliation(next);
+  return Object.freeze({
+    state: next,
+    apSpent: before.apRequired,
+    before,
+    after
+  });
 }
