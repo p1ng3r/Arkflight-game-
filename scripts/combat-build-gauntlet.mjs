@@ -3,7 +3,6 @@
 import { BENCHMARK_BUILD_SPECS, auditBuild, deriveBuild } from "./combat-build-lab.mjs";
 import {
   applyHardnessToDamage,
-  applyWeaponSystemThreat,
   degreeOfSuccess,
   fireWeapon,
   reduceWeaponReload,
@@ -11,6 +10,7 @@ import {
   weaponReloadRemaining,
   workTheGuns
 } from "../src/combat/index.js";
+import { driveConditionPenalties } from "../src/ship/ship-conditions.js";
 
 export const POLICIES = Object.freeze(["balanced", "aggressive", "defensive"]);
 export const SCENARIOS = Object.freeze(["broadside", "open-duel", "pursuit-objective"]);
@@ -72,14 +72,6 @@ export const BENCHMARK_SHIPS = Object.freeze({
   ironSpear: profile("iron-stock-l5")
 });
 
-function areaIndexes(ship) {
-  const order = ["stable", "stressed", "degraded", "critical", "disabled"];
-  return Object.freeze(Object.fromEntries(["hull", "arkengine", "rigging", "lifeveil", "morale"].map((area) => [
-    area,
-    Math.max(0, order.indexOf(String(ship?.areas?.[area]?.state ?? "stable")))
-  ])));
-}
-
 function initialState(build, policy) {
   const ship = build.profile;
   const combatState = structuredClone(build.combatState);
@@ -94,14 +86,12 @@ function initialState(build, policy) {
     lifeveil: ship.lifeveilMax,
     strain: 0,
     round: 1,
-    areas: { ...areaIndexes(build.ship) },
     stats: {
       damage: 0,
       shots: 0,
       hits: 0,
       crits: 0,
       salvos: 0,
-      systemHits: 0,
       ap: { captain: 0, battlewatch: 0, navigator: 0, engineer: 0, veilwarden: 0 },
       rp: 0,
       peakStrain: 0,
@@ -130,12 +120,12 @@ function resetTurnState(state, round) {
   state.damageBuff = 0;
 }
 function effectiveSpeed(state) {
-  const penalty = applyWeaponSystemThreat(state.systemShip, { threat: "hull", degree: -1, hullDamage: 0 }).mobilityPenalties;
-  return Math.max(1, state.ship.combatSpeed - Number(penalty?.speedPenalty ?? 0));
+  const penalty = driveConditionPenalties(state.systemShip);
+  return Math.max(1, state.ship.combatSpeed - Number(penalty.speedPenalty ?? 0));
 }
 function effectiveManeuver(state) {
-  const penalty = applyWeaponSystemThreat(state.systemShip, { threat: "hull", degree: -1, hullDamage: 0 }).mobilityPenalties;
-  return Math.max(1, state.ship.maneuverability - Number(penalty?.maneuverPenalty ?? 0));
+  const penalty = driveConditionPenalties(state.systemShip);
+  return Math.max(1, state.ship.maneuverability - Number(penalty.maneuverPenalty ?? 0));
 }
 function spendAP(state, station, amount) {
   const cost = Math.max(0, Math.trunc(Number(amount) || 0));
@@ -167,18 +157,6 @@ function chooseReaction(state) {
     return { ac: bonus, brace: 0 };
   }
   return { ac: bonus, brace: 0 };
-}
-
-function applySystemDamage(state, threat, degree, hullDamage) {
-  const before = areaIndexes(state.systemShip);
-  const outcome = applyWeaponSystemThreat(state.systemShip, { threat, degree, hullDamage });
-  if (!outcome.triggered || !outcome.degraded) return;
-  state.systemShip = structuredClone(outcome.ship);
-  state.areas = { ...areaIndexes(state.systemShip) };
-  state.hullMax = Number(state.systemShip.resources?.hull?.max ?? state.hullMax);
-  state.hull = Math.min(state.hull, state.hullMax);
-  state.lifeveil = Math.min(state.lifeveil, Number(state.systemShip.resources?.lifeveil?.max ?? state.lifeveil));
-  if (JSON.stringify(before) !== JSON.stringify(state.areas)) state.stats.systemHits += 1;
 }
 
 function salvoKey(weapon) { return `${weapon.mount}|${weapon.family}|${weapon.type}|${weapon.threat}|${weapon.arcTemplate}`; }
@@ -265,7 +243,6 @@ function attackPacket(attacker, defender, weapons, rng, { salvo = false } = {}) 
   defender.hull = Math.max(0, defender.hull - hullDamage);
   defender.systemShip.resources.hull.value = defender.hull;
   attacker.stats.damage += hullDamage;
-  applySystemDamage(defender, weapons[0]?.threat ?? "hull", degree, hullDamage);
   return true;
 }
 
@@ -372,7 +349,6 @@ function aggregate(results, key) {
     damagePerRound: sum((state) => state.stats.damage) / rounds,
     shotsPerBattle: sum((state) => state.stats.shots) / results.length,
     salvosPerBattle: sum((state) => state.stats.salvos) / results.length,
-    systemHitsPerBattle: sum((state) => state.stats.systemHits) / results.length,
     hitRate: sum((state) => state.stats.hits) / Math.max(1, sum((state) => state.stats.shots)),
     critRate: sum((state) => state.stats.crits) / Math.max(1, sum((state) => state.stats.shots)),
     averagePeakStrain: sum((state) => state.stats.peakStrain) / results.length,
@@ -453,7 +429,7 @@ function printReport(report) {
   console.log(`               Iron AC ${report.profiles.iron.ac} Hull ${report.profiles.iron.hullMax} Hard ${report.profiles.iron.hardness} Speed ${report.profiles.iron.combatSpeed} Man ${report.profiles.iron.maneuverability} AP/RP ${report.profiles.iron.apMax}/${report.profiles.iron.rpMax}`);
   for (const scenario of SCENARIOS) {
     console.log(`\n${scenario}`);
-    for (const row of report.matchups.filter((entry) => entry.scenario === scenario)) console.log(`${row.rumPolicy.padEnd(10)} vs ${row.ironPolicy.padEnd(10)} Rum ${pct(row.rumWinRate).padStart(6)} · ${row.avgRounds.toFixed(2)} rnd · DPR ${row.rum.damagePerRound.toFixed(1)}/${row.iron.damagePerRound.toFixed(1)} · salvos ${row.rum.salvosPerBattle.toFixed(1)}/${row.iron.salvosPerBattle.toFixed(1)} · sys ${row.rum.systemHitsPerBattle.toFixed(2)}/${row.iron.systemHitsPerBattle.toFixed(2)}`);
+    for (const row of report.matchups.filter((entry) => entry.scenario === scenario)) console.log(`${row.rumPolicy.padEnd(10)} vs ${row.ironPolicy.padEnd(10)} Rum ${pct(row.rumWinRate).padStart(6)} · ${row.avgRounds.toFixed(2)} rnd · DPR ${row.rum.damagePerRound.toFixed(1)}/${row.iron.damagePerRound.toFixed(1)} · salvos ${row.rum.salvosPerBattle.toFixed(1)}/${row.iron.salvosPerBattle.toFixed(1)}`);
   }
   console.log("\nRum Runner build weaknesses:", report.audits.rum.weaknesses.map((row) => row.label).join(", ") || "none at/below fleet 25th percentile");
   console.log("Top strengthening options:", report.audits.rum.recommendations.slice(0, 5).map((row) => row.name).join(" · ") || "none from direct-stat candidates");
