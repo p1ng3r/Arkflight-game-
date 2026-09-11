@@ -467,7 +467,7 @@ function buildShipWeaponStation(app, actor) {
   section.append(list);
   updateAll();
   const battlewatchControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
-  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Fire control is Battlewatch-only. Reload is a common action available to assigned crew.</p>');
+  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Fire control is Battlewatch-only. Reload is a common action available to ship Owners.</p>');
   return section;
 }
 
