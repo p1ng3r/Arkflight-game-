@@ -89,7 +89,7 @@
     "src/foundry/native-station-combat-effects.js",
     "src/foundry/combat-flow-usability.js",
     "src/foundry/combat-salvo-runtime.js",
-    "src/foundry/combat-area-consequences.js",
+    "src/foundry/combat-condition-consequences.js",
     "src/foundry/generated-crew-folders.js",
     "src/foundry/generated-package-commit-api.js",
     "src/ui/mastery-clarity-ui.js",
