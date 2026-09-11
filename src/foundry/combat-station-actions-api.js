@@ -98,14 +98,13 @@ function userOwnsShip(user, combatant) {
 }
 
 function userCanResolveShipState(user, combatant) {
-  return Boolean(
-    userOwnsShip(user, combatant)
-    && userCanUpdateDocument(user, combatant?.actor)
-  );
-}
-
-function isDocumentPermissionError(error) {
-  return /permission|ownership|not allowed|forbidden|may not update/i.test(String(error?.message ?? error ?? ""));
+  if (!userOwnsShip(user, combatant) || !userCanUpdateDocument(user, combatant?.actor)) return false;
+  try {
+    return typeof combatant?.canUserModify !== "function"
+      || combatant.canUserModify(user, "update") === true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 function stationControl(base, actionId, reference = null, user = game.user) {
@@ -485,16 +484,11 @@ async function requestStationAction(base, actionId, options = {}, reference = nu
   if (!availability.ok) throw new Error(`Station action unavailable: ${availability.reason}.`);
 
   if (userCanResolveShipState(game.user, control.combatant)) {
-    try {
-      return await executeStationAction(base, actionId, options, control.combatant, {
-        crewActorOverride: control.crewActor,
-        requesterUser: game.user,
-        requesterUserId: game.user?.id ?? null
-      });
-    } catch (error) {
-      if (!isDocumentPermissionError(error) || game.user?.isGM) throw error;
-      console.warn("Arkflight | Direct owner update denied by Foundry; falling back to GM relay.", error);
-    }
+    return executeStationAction(base, actionId, options, control.combatant, {
+      crewActorOverride: control.crewActor,
+      requesterUser: game.user,
+      requesterUserId: game.user?.id ?? null
+    });
   }
 
   const primary = activePrimaryGM();
