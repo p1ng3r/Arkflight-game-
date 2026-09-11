@@ -619,3 +619,19 @@ The following are intentionally still design work, not accidental omissions:
 10. Exact rules for authored emergency behavior of Disabled Areas beyond the baseline 'normal function unavailable' rule.
 
 Everything else in this document is the current agreed backbone and should be treated as the basis for implementation and cleanup.
+
+---
+
+## 13. Supply Economy
+
+**Supply** is Arkflight's standardized abstraction for ship provisions, routine maintenance stock, and ordinary consumables.
+
+Locked baseline rules:
+
+- **Base value:** 1 gp per Supply.
+- **Cargo:** 10 Supply occupy 1 Cargo Space; therefore 1 Supply occupies 0.1 Cargo Space.
+- **Daily consumption:** a crewed ship consumes 1 Supply per 10 crew aboard per day, rounded up.
+- Supply may also be consumed by repairs, emergency maintenance, and explicitly authored ship abilities.
+- Supply competes with salvage, spare components, weapons, trade goods, and other carried material for the ship's normal Cargo capacity.
+
+The 1 gp value is a normal-port baseline. Scarcity, blockade, remoteness, faction pricing, or authored Events may change the purchase price without changing the underlying Supply unit.
