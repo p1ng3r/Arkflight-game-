@@ -2,7 +2,6 @@ import { applyFreeHelmAllowance, canChangeFacingNow, helmRemaining } from "../co
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
-const AREAS = ["stable", "stressed", "damaged", "critical", "disabled"];
 const ATTACK_REACTIONS = ["navigator-evasive-maneuver", "battlewatch-spoil-their-aim"];
 const DAMAGE_REACTIONS = ["captain-brace-for-impact", "veilwarden-emergency-ward"];
 const ENERGY = new Set(["fire", "cold", "electricity", "acid", "sonic", "force"]);
@@ -130,43 +129,8 @@ async function maybePromptEngineerBypass(base, actionId, options, reference) {
   if (id === bypassId) await base.stationAction(bypassId, {}, combatant);
 }
 
-function idx(value) { const i = AREAS.indexOf(String(value ?? "stable")); return i < 0 ? 0 : i; }
-function worse(current, desired) { return AREAS[Math.max(idx(current), idx(desired))]; }
-function degrade(current) { return AREAS[Math.min(AREAS.length - 1, idx(current) + 1)]; }
-function hullState(value, max) {
-  const pct = Math.max(0, Math.min(1, Number(value) / Math.max(1, Number(max) || 1)));
-  return pct <= 0 ? "disabled" : pct <= .25 ? "critical" : pct <= .5 ? "damaged" : pct <= .75 ? "stressed" : "stable";
-}
-
-async function damageConsequences({ target, solution, degree, damage }) {
-  if (!game.user?.isGM || !target?.actor || !damage || Number(damage.hullDamage) <= 0) return;
-  const actor = target.actor;
-  const data = ship(actor);
-  if (!data) return;
-  const patches = {};
-  const notes = [];
-  const hullNow = data.areas?.hull?.state ?? "stable";
-  const hullNext = worse(hullNow, hullState(damage.after, data.resources?.hull?.max ?? damage.before));
-  if (hullNext !== hullNow) { patches[`flags.${MODULE_ID}.ship.areas.hull.state`] = hullNext; notes.push(`Hull ${hullNow} → ${hullNext}`); }
-  if (Number(degree) === 2) {
-    const threat = String(solution?.weapon?.data?.systemThreat ?? "hull").toLowerCase();
-    if (["arkengine", "rigging", "lifeveil"].includes(threat)) {
-      const current = data.areas?.[threat]?.state ?? "stable";
-      const next = degrade(current);
-      if (next !== current) { patches[`flags.${MODULE_ID}.ship.areas.${threat}.state`] = next; notes.push(`${threat} ${current} → ${next}`); }
-    }
-    const morale = Math.max(0, Number(data.resources?.morale?.value) || 0);
-    if (morale > 0) { patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = morale - 1; notes.push(`Morale ${morale} → ${morale - 1}`); }
-  }
-  if (!Object.keys(patches).length) return;
-  await actor.update(patches);
-  ui.notifications?.warn(`${actor.name}: ${notes.join(" · ")}`);
-  Hooks.callAll("arkflightShipDamageStateChanged", { actor, target, solution, degree, damage, notes });
-}
-
 Hooks.on("arkflightCombatTurnChanged", queueHelm);
 Hooks.on("updateCombat", (_combat, changes) => { if (Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn")) queueHelm(); });
-Hooks.on("arkflightNativeShipAttackResolved", damageConsequences);
 Hooks.on("preUpdateToken", (token, changes, options) => {
   if (changes?.rotation == null || options?.arkflightCombatFacing || !game.combat) return;
   const c = combatantFor(token);
