@@ -16,6 +16,7 @@ function runtime(state) {
   return {
     round: Math.max(0, Math.trunc(Number(value.round) || 0)),
     used: { ...(value.used ?? {}) },
+    battleUsed: { ...(value.battleUsed ?? {}) },
     effects: [...(value.effects ?? [])],
     temporaryApMaxBonus: Math.max(0, Math.trunc(Number(value.temporaryApMaxBonus) || 0))
   };
@@ -25,6 +26,7 @@ function freezeRuntime(value) {
   return Object.freeze({
     round: value.round,
     used: Object.freeze({ ...value.used }),
+    battleUsed: Object.freeze({ ...value.battleUsed }),
     effects: Object.freeze(value.effects.map((entry) => Object.freeze({ ...entry }))),
     temporaryApMaxBonus: Math.max(0, Math.trunc(Number(value.temporaryApMaxBonus) || 0))
   });
@@ -110,6 +112,12 @@ function markUsed(state, action, round) {
   return withRuntime(state, nextRuntime);
 }
 
+function markBattleUsed(state, action) {
+  const nextRuntime = runtime(state);
+  nextRuntime.battleUsed[action.id] = true;
+  return withRuntime(state, nextRuntime);
+}
+
 function addTemporaryAP(state, amount) {
   const add = Math.max(0, Math.trunc(Number(amount) || 0));
   if (!add) return state;
@@ -181,6 +189,9 @@ export function stationActionAvailability(state, action, { round = 1, shipLevel 
   if (action.rules?.oncePerRound && rt.used[action.id] === combatRound) {
     return Object.freeze({ ok: false, reason: "once-per-round" });
   }
+  if (action.rules?.oncePerBattle && rt.battleUsed[action.id]) {
+    return Object.freeze({ ok: false, reason: "once-per-battle" });
+  }
   if (action.timing === COMBAT_ACTION_TIMING.REACTION && rt.effects.some((entry) => entry.actionId === action.id)) {
     return Object.freeze({ ok: false, reason: "reaction-readied" });
   }
@@ -239,6 +250,12 @@ export function executeStationStateAction(state, action, {
     next = addAllowance(next, "movement", scaledBonus);
     next = addAllowance(next, "maneuver", 1);
   }
+  if (resolver === "impossibleBurn") {
+    next = addAllowance(next, "movement", Math.max(1, Math.ceil(Number(state?.mobility?.speed ?? 1) * 0.5)));
+  }
+  if (resolver === "turnBetweenHeartbeats") {
+    next = addAllowance(next, "maneuver", Math.max(1, Math.trunc(Number(action.rules?.extraFacingSteps) || 2)));
+  }
 
   const strainToAdd = cost.strain;
   if (strainToAdd > 0) next = withStrain(next, strainToAdd);
@@ -250,6 +267,7 @@ export function executeStationStateAction(state, action, {
 
   if (effectBearingAction(action, selection)) next = markEffect(next, action, selection, combatRound, { shipLevel });
   if (action.rules?.oncePerRound) next = markUsed(next, action, combatRound);
+  if (action.rules?.oncePerBattle) next = markBattleUsed(next, action);
 
   return withLog(next, {
     round: combatRound,
@@ -282,5 +300,5 @@ export function beginStationActionTurn(state, round = 1) {
       })
     });
   }
-  return withRuntime(next, { round: combatRound, used: {}, effects: [], temporaryApMaxBonus: 0 });
+  return withRuntime(next, { round: combatRound, used: {}, battleUsed: rt.battleUsed, effects: [], temporaryApMaxBonus: 0 });
 }
