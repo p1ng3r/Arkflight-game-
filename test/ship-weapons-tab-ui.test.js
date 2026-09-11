@@ -125,14 +125,14 @@ test("ship damage is not automatically written to the target during fire resolut
 test("all target-side ship damage consequences wait for chat Apply Damage", () => {
   const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
   const flow = readFileSync(new URL("../src/foundry/combat-flow-usability.js", import.meta.url), "utf8");
-  const areas = readFileSync(new URL("../src/foundry/combat-area-consequences.js", import.meta.url), "utf8");
+  const conditions = readFileSync(new URL("../src/foundry/combat-condition-consequences.js", import.meta.url), "utf8");
   assert.match(effects, /resolveDeferredDamageConsequences/);
   assert.match(effects, /resolveShipStrainGain/);
   assert.match(effects, /Critical hit: \+1 Strain/);
   assert.doesNotMatch(effects, /applyWeaponSystemThreat/);
   assert.match(effects, /arkflightShipDamageStateChanged/);
   assert.doesNotMatch(flow, /Hooks\.on\("arkflightNativeShipAttackResolved", damageConsequences\)/);
-  assert.doesNotMatch(areas, /Hooks\.on\("arkflightNativeShipAttackResolved"/);
+  assert.doesNotMatch(conditions, /Hooks\.on\("arkflightNativeShipAttackResolved"/);
 });
 
 test("GM Operations uses the same fixed-fire Reload and Work the Guns rules as players", () => {
