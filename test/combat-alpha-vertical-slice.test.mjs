@@ -125,7 +125,7 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
   assert.equal(victory.ended, true);
   assert.equal(victory.winnerId, "rum-runner");
 
-  const destroyedIron = structuredClone(ironShip);
-  destroyedIron.resources.hull.value = 0;
-  assert.equal(shipCombatOutcome(destroyedIron).status, "destroyed");
+  const wreckedIron = structuredClone(ironShip);
+  wreckedIron.resources.hull.value = 0;
+  assert.equal(shipCombatOutcome(wreckedIron).status, "wrecked");
 });
