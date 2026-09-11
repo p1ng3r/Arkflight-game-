@@ -558,7 +558,9 @@ async function handleStationActionSocket(base, payload = {}) {
   if (!control.ok) {
     const message = control.reason === "not-your-station"
       ? `Only the player assigned to ${control.action?.station ?? "that"} station may use this action.`
-      : `Station action unavailable: ${control.reason}.`;
+      : control.reason === "not-ship-owner"
+        ? "Only an Owner of this Arkflight ship may use its actions."
+        : `Station action unavailable: ${control.reason}.`;
     console.warn("Arkflight | Rejected station action request", { reason: control.reason, userId: requester.id, actionId: payload.actionId });
     reply(false, message);
     return;
