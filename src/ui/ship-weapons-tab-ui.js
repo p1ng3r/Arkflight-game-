@@ -140,7 +140,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
   shell.innerHTML = `<section class="arkflight-weapon-station arkflight-weapon-station-sheet">
     <div class="arkflight-weapon-station-head">
       <div><span>BATTLEWATCH FIRE CONTROL</span><h3>Weapons</h3></div>
-      <small>Assigned crew may Reload for 1 AP. Battlewatch controls firing and may use Work the Guns as a once-per-round special action.</small>
+      <small>Ship Owners may Reload for 1 AP. Battlewatch controls firing and may use Work the Guns as a once-per-round special action.</small>
     </div>
   </section>`;
   const station = shell.querySelector(".arkflight-weapon-station");
@@ -312,7 +312,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
 
       if (reloadButton) {
         reloadButton.disabled = !reloadControl.ok || !reloadAvailability.ok || Number(state?.economy?.ap?.value ?? 0) < 1;
-        if (!reloadControl.ok) reloadButton.title = "Reload is available to players who own an assigned crew member on this ship.";
+        if (!reloadControl.ok) reloadButton.title = "Reload is available to Users with OWNER permission on this ship.";
         else if (!reloadAvailability.ok) reloadButton.title = `Reload unavailable: ${reloadAvailability.reason ?? "unavailable"}.`;
       }
       if (workGunsButton) {
