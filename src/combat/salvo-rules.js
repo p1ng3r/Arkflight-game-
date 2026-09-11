@@ -29,8 +29,8 @@ export function fireCoordinatedSalvo(state, weaponKeys, round = 1) {
   const updatedWeapons = { ...next.weapons };
   for (const key of plan.keys) {
     const weapon = updatedWeapons[key];
-    const readyRound = plan.round + Math.max(0, Math.trunc(Number(weapon.reloadRounds) || 0)) + 1;
-    updatedWeapons[key] = Object.freeze({ ...weapon, readyRound, lastFiredRound: plan.round });
+    const reloadRemaining = Math.max(0, Math.trunc(Number(weapon.reloadRounds) || 0));
+    updatedWeapons[key] = Object.freeze({ ...weapon, reloadRemaining, lastFiredRound: plan.round });
   }
   return Object.freeze({
     ...next,
