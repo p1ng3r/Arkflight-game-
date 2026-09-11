@@ -123,3 +123,13 @@ test("Shipwright category windows show an explicit vertical scrollbar", () => {
   assert.match(workspaceCss, /arkflight-workspace-board-layout::\-webkit-scrollbar[\s\S]*?width:\s*12px/);
   assert.match(workspaceCss, /arkflight-workspace-board-layout::\-webkit-scrollbar-thumb/);
 });
+
+
+test("Shipwright exposes specialized Explorer Expedition and Raider socket rules", () => {
+  assert.match(workspace, /socketType/);
+  assert.match(workspace, /shipModFitsSocketType/);
+  assert.match(workspace, /raiderPursuitWeapon/);
+  assert.match(template, /RAIDER — PURSUIT WEAPON INTEGRATION/);
+  assert.match(template, /data-raider-pursuit-mount/);
+  assert.match(template, /Shipyard to configure/);
+});
