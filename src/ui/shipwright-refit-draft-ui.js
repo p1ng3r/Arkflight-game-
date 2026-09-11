@@ -1,4 +1,5 @@
 import { SHIP_CATALOGS } from "../content/index.js";
+import { shipModFitsSocketType } from "../ship/ship-mod-slots.js";
 import {
   createRefitDraft,
   stageRefitComponent,
@@ -69,8 +70,9 @@ function catalogForFamily(family) {
 
 function slotCompatible(socket, item) {
   const socketType = String(socket?.dataset?.socketType ?? "generic");
+  if (["generic", "flexible"].includes(socketType)) return true;
   const required = String(item?.data?.refit?.slotClass ?? "utility");
-  return ["generic", "flexible"].includes(socketType) || socketType === required;
+  return socketType === required || shipModFitsSocketType(item, socketType);
 }
 
 function dragPayload(event) {
