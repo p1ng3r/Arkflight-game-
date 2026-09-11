@@ -83,6 +83,7 @@
     "src/foundry/combat-api.js",
     "src/foundry/combat-loadout-sync.js",
     "src/foundry/combat-station-actions-api.js",
+    "src/foundry/combat-engagement-api.js",
     "src/foundry/native-station-combat-effects.js",
     "src/foundry/combat-flow-usability.js",
     "src/foundry/combat-salvo-runtime.js",
