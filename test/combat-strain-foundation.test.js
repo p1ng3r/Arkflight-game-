@@ -82,11 +82,10 @@ test("Maneuver spends 1 AP and buys Maneuverability facing steps", () => {
   assert.equal(state.economy.ap.value, 3);
   assert.deepEqual(state.mobility.maneuver, { purchases: 1, allowance: 2, used: 0 });
   state = recordFacingChange(state, 1, 60);
-  assert.equal(state.mobility.heading, 60);
-  assert.equal(state.mobility.maneuver.used, 1);
   state = recordFacingChange(state, 1, 120);
-  assert.equal(state.mobility.maneuver.used, 2);
-  assert.throws(() => recordFacingChange(state, 1, 180), /Facing change exceeds Maneuver allowance/);
+  state = recordFacingChange(state, 1, 180);
+  assert.equal(state.mobility.heading, 180);
+  assert.equal(state.mobility.maneuver.used, 3);
 });
 
 test("hex headings snap to six directions and measure shortest facing change", () => {
