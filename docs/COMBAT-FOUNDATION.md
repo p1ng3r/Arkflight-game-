@@ -44,7 +44,7 @@ The old Pilot/Helm and Gunnery stations are not restored. Their useful responsib
 | Battlewatch | Hull | threats, target acquisition, weapon arcs, firing |
 | Veilwarden | Lifeveil | environmental/energy defense and Lifeveil overdrive |
 
-`watchmaster` is accepted as a temporary compatibility alias for `battlewatch` inside the combat domain while the wider Event/UI migration remains unfinished.
+`battlewatch` is accepted as a temporary compatibility alias for `battlewatch` inside the combat domain while the wider Event/UI migration remains unfinished.
 
 ## Shared Ship Action Economy
 
