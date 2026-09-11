@@ -106,14 +106,13 @@ export function degradeAreaOneStep(ship, area) {
 }
 
 /**
- * Apply the persistent Area integrity caps to numerical integrity resources.
+ * Apply legacy Area integrity caps where they still exist.
  *
- * Hull and Lifeveil are capped by their corresponding Area states. Raising an
- * Area cap never restores Current; it only increases the ceiling available to
- * later repair/recovery. Morale is intentionally excluded because its compact
- * 0-5 resource-band mechanics are resolved separately in Part 5.
+ * Hull still uses the older Area-cap behavior during this transition.
+ * Lifeveil no longer has a hull-specific effective maximum: it is always a
+ * 0-100% integrity resource and its percentage is authoritative.
  */
-export function applyAreaIntegrityCaps(ship, { hullBaseMax, lifeveilBaseMax } = {}) {
+export function applyAreaIntegrityCaps(ship, { hullBaseMax } = {}) {
   const next = normalizeShip(structuredClone(ship));
 
   const hullBase = Math.max(0, Number(hullBaseMax ?? next.resources?.hull?.max ?? 0));
@@ -126,14 +125,11 @@ export function applyAreaIntegrityCaps(ship, { hullBaseMax, lifeveilBaseMax } = 
     value: clamp(next.resources?.hull?.value ?? 0, 0, hullEffectiveMax)
   };
 
-  const lifeveilBase = Math.max(0, Number(lifeveilBaseMax ?? next.resources?.lifeveil?.max ?? 0));
-  const lifeveilState = next.areas?.lifeveil?.state ?? AREA_STATES.STABLE;
-  const lifeveilEffectiveMax = effectiveIntegrityMax(lifeveilBase, lifeveilState);
   next.resources.lifeveil = {
     ...(next.resources.lifeveil ?? {}),
-    baseMax: lifeveilBase,
-    max: lifeveilEffectiveMax,
-    value: clamp(next.resources?.lifeveil?.value ?? 0, 0, lifeveilEffectiveMax)
+    baseMax: 100,
+    max: 100,
+    value: clamp(next.resources?.lifeveil?.value ?? 0, 0, 100)
   };
 
   return next;
