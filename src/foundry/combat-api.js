@@ -225,9 +225,6 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
   const attacker = await requireOwnedCombatant(attackerReference);
   const target = findCombatant(targetReference);
   if (!target) throw new Error("Choose a target ship in the current combat.");
-  if (!game.user?.isGM && !canUserOperateCombatant(target)) {
-    throw new Error("Protected target mutation requires the Arkflight station combat-effects runtime.");
-  }
   const solution = targetSolution(attacker, target, weaponKey);
   if (!solution.range.legal) throw new Error(`${solution.weapon.name}: target is ${solution.range.label.toLowerCase()} (${solution.distanceHexes.toFixed(1)} hex).`);
   if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
@@ -256,7 +253,6 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
     damage = Object.freeze({ ...reduced, roll: damageRoll, before, after, type: profile.type ?? "damage" });
   }
   await updateCombatantState(attacker, next);
-  if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
   const esc = foundry.utils.escapeHTML;
   const damageLine = damage ? `<br><strong>Damage:</strong> ${damage.incoming} ${esc(damage.type)} − ${damage.absorbed} Hardness = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})` : "";
   await attack.toMessage({
@@ -264,6 +260,28 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
     speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
     flavor: `<strong>${esc(attacker.name)} fires ${esc(solution.weapon.name)} at ${esc(target.name)}</strong><br>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)} · ${esc(solution.weaponState.mount ?? "fore")} ${esc(solution.arc.arcTemplate)} arc<br>Attack ${attack.total} vs AC ${ac}: <strong>${DEGREE_LABEL[degree]}</strong>${damageLine}`
   });
+  if (damage) {
+    await damage.roll.toMessage({
+      user: game.user?.id ?? null,
+      speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
+      flavor: `<strong>${esc(solution.weapon.name)} Damage — ${esc(target.name)}</strong><br>${damage.incoming} ${esc(damage.type)} − ${damage.absorbed} Hardness = <strong>${damage.hullDamage} Hull</strong>`,
+      flags: {
+        [MODULE_ID]: {
+          shipDamage: {
+            combatId: game.combat?.id ?? null,
+            attackerId: attacker.id,
+            targetId: target.id,
+            targetActorId: target.actor?.id ?? null,
+            targetName: target.name,
+            weaponName: solution.weapon.name,
+            hullDamage: damage.hullDamage,
+            effectIds: [],
+            effectSnapshots: []
+          }
+        }
+      }
+    });
+  }
   return Object.freeze({ state: next, attack, attackBonus, ac, degree, solution, damage });
 }
 
