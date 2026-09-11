@@ -67,3 +67,12 @@ test("legacy gunnery runtime cannot bypass the shared-owner reload action layer"
   assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
   assert.match(stationApi, /updatePersistentShipForAction/);
 });
+
+
+test("player-owned station actions preserve the initiating user in chat", () => {
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(stationApi, /user: userId/);
+  assert.match(stationApi, /requesterUserId: game\.user\?\.id/);
+  assert.match(effects, /user: requester\?\.id \?\? requesterUserId/);
+});
