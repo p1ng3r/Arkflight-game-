@@ -64,10 +64,10 @@ test("station action economy gives powerful actions meaningful secondary costs",
   assert.equal(stationActionEconomy(getCombatAction("veilwarden-emergency-ward"), 1).lifeveil, 5);
   assert.equal(stationActionEconomy(getCombatAction("engineer-overcharge-arkengine"), 1).strain, 2);
   assert.equal(stationActionEconomy(getCombatAction("engineer-redistribute-power"), 1).strain, 1);
-  assert.equal(stationActionStrainArea(getCombatAction("captain-drive-the-crew")), "morale");
-  assert.equal(stationActionStrainArea(getCombatAction("engineer-overcharge-arkengine")), "arkengine");
-  assert.equal(stationActionStrainArea(getCombatAction("navigator-hard-turn")), "rigging");
-  assert.equal(stationActionStrainArea(getCombatAction("battlewatch-reload-weapon")), "morale");
+  assert.equal(stationActionStrainArea(getCombatAction("captain-drive-the-crew")), null);
+  assert.equal(stationActionStrainArea(getCombatAction("engineer-overcharge-arkengine")), null);
+  assert.equal(stationActionStrainArea(getCombatAction("navigator-hard-turn")), null);
+  assert.equal(stationActionStrainArea(getCombatAction("battlewatch-reload-weapon")), null);
 });
 
 test("Drive the Crew spends no AP up front and grants exactly one temporary AP", () => {
