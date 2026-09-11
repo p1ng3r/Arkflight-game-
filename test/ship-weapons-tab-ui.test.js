@@ -36,7 +36,7 @@ test("Weapons tab is native and no longer injects or hides vessel-sheet sections
   assert.doesNotMatch(ui, /Hooks\.on\("renderActorSheet"/);
 });
 
-test("assigned crew can Reload while Battlewatch retains firing and Work the Guns", () => {
+test("shared ship owners can Reload while Battlewatch retains firing and Work the Guns", () => {
   assert.match(ui, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
   assert.match(ui, /stationActionControl\?\.\("common-reload-weapon"/);
   assert.match(ui, /stationActionControl\?\.\("battlewatch-reload-weapon"/);
