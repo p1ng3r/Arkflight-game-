@@ -224,11 +224,11 @@ function stationOverviewHtml(station, actions) {
   const common = station === "common";
   return codexPage({
     title: common ? "Common Actions" : `${labelize(station)} Station`,
-    subtitle: common ? "Baseline ship actions available to any assigned crew member" : "Combat actions, duties, and tactical reference",
+    subtitle: common ? "Baseline ship actions available to any ship Owner" : "Combat actions, duties, and tactical reference",
     station,
     body: [
       section(common ? "Common Action Role" : "Station Role", common
-        ? "<p>Common actions may be used by any player who owns an assigned crew member on this ship. They spend the ship's shared combat economy normally and do not require a specific station.</p>"
+        ? "<p>Common actions may be used by any User with OWNER permission on this ship. They spend the ship's shared combat economy normally and do not require a specific station.</p>"
         : `<p>This journal is the full rules reference for the <strong>${escapeHtml(labelize(station))}</strong> station. During combat, the Command HUD resolves the ship's current level-scaled values; use these pages for the complete authored rules.</p>`, "callout"),
       ...(common ? [] : [section("Station Bonus", `<p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>`, "rules")]),
       section(common ? "Common Actions" : "Station Actions", `<div class="afcr-action-list">${cards}</div>`, "actions")
