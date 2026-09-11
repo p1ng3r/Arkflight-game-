@@ -1,3 +1,5 @@
+import { deriveShip } from "../ship/derive-ship.js";
+import { SHIP_CATALOGS } from "../content/index.js";
 import {
   AREA_STATES,
   SHIP_AREA_KEYS
@@ -37,6 +39,15 @@ function shipPayload(actor) {
 
 function shipLevel(actor) {
   return Math.max(1, Math.min(20, Math.trunc(Number(shipPayload(actor)?.progression?.level) || 1)));
+}
+
+function actionCapabilityAvailable(actor, action) {
+  const required = action?.rules?.requiresCapability;
+  if (!required) return true;
+  const ship = shipPayload(actor);
+  if (!ship) return false;
+  try { return deriveShip(ship, SHIP_CATALOGS).capabilities.includes(required); }
+  catch (_error) { return false; }
 }
 
 function assignedStationReference(actor, station) {
@@ -339,6 +350,9 @@ function runtimeAvailability(base, actionId, reference = null) {
   if (action.station !== "common" && !stationActor(combatant.actor, action.station)) {
     return Object.freeze({ ok: false, reason: "station-unassigned" });
   }
+  if (!actionCapabilityAvailable(combatant.actor, action)) {
+    return Object.freeze({ ok: false, reason: "capability-required" });
+  }
   if (action.timing === COMBAT_ACTION_TIMING.ACTION && game.combat?.combatant?.id !== combatant.id) {
     return Object.freeze({ ok: false, reason: "not-this-ships-turn" });
   }
@@ -442,6 +456,8 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 1 Morale; +${stationActionEconomy(action, level).strain} Strain.`);
   if (resolver === "ventStrain") notes.push(`Vents up to ${1 + profile.bonus} Strain.`);
   if (resolver === "hardTurn") notes.push(`+${Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus} maneuver allowance; pivot permitted.`);
+  if (resolver === "impossibleBurn") notes.push(`Once per battle: +${Math.max(1, Math.ceil(Number(before?.mobility?.speed ?? 1) * 0.5))} movement allowance; +2 Arkengine Strain.`);
+  if (resolver === "turnBetweenHeartbeats") notes.push("Once per battle: +2 extraordinary 60° facing steps this turn.");
   if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${before?.mobility?.maneuverability ?? 0} maneuver allowance; +2 Strain.`);
   if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +1 maneuver allowance; +1 Strain.`);
   if (resolver === "redistributePower" && selection === "weapons") notes.push(`Next ${profile.advanced ? 2 : 1} weapon attack${profile.advanced ? "s" : ""} gain +${profile.bonus} damage; +1 Strain.`);
@@ -584,8 +600,12 @@ Hooks.once("ready", () => {
   if (!base) return;
   game.arkflight.combat = Object.freeze({
     ...base,
-    stationActions(station) {
-      return getCoreCombatActionDefinitionsForStation(station);
+    stationActions(station, reference = null) {
+      const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
+      const actor = combatant?.actor ?? null;
+      return Object.freeze(Object.values(base.actions ?? {})
+        .filter((action) => action.station === station)
+        .filter((action) => !action.rules?.requiresCapability || actionCapabilityAvailable(actor, action)));
     },
     stationActor(reference, station) {
       const combatant = base.findCombatant(reference);
