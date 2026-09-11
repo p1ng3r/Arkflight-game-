@@ -16,7 +16,7 @@ import {
   systemDamageThreshold,
   weaponReloadRemaining,
   weaponTargetingSolution,
-  workTheGuns
+  reloadWeapon
 } from "../src/combat/index.js";
 import { deriveBuild } from "../scripts/combat-build-lab.mjs";
 
@@ -89,11 +89,11 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
   assert.ok(weaponReloadRemaining(state.weapons[portGun.key], 1) > 0);
   assert.throws(() => fireWeapon(state, portGun.key, 1), /still reloading/);
 
-  // A later turn refreshes AP but keeps reload history; Work the Guns advances it.
+  // A later turn refreshes AP but keeps reload history; the common Reload action advances it.
   state = beginCombatantTurn(state, 2);
   const reloadBeforeWork = weaponReloadRemaining(state.weapons[portGun.key], 2);
   if (reloadBeforeWork > 0) {
-    state = workTheGuns(state, portGun.key, 2);
+    state = reloadWeapon(state, portGun.key, 2);
     assert.ok(weaponReloadRemaining(state.weapons[portGun.key], 2) < reloadBeforeWork);
   }
 
