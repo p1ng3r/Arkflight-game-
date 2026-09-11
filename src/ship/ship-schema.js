@@ -1,12 +1,7 @@
-export const SHIP_SCHEMA_VERSION = 7;
+import { normalizeShipConditions } from "./ship-conditions.js";
+export const SHIP_SCHEMA_VERSION = 8;
 
-export const SHIP_AREA_KEYS = Object.freeze([
-  "hull",
-  "arkengine",
-  "rigging",
-  "lifeveil",
-  "morale"
-]);
+export const SHIP_AREA_KEYS = Object.freeze(["hull", "drive", "lifeveil", "morale", "weapons"]);
 
 export const AREA_STATES = Object.freeze({
   STABLE: "stable",
@@ -17,15 +12,7 @@ export const AREA_STATES = Object.freeze({
 });
 
 // Deprecated compatibility exports. New code should use SHIP_AREA_KEYS / AREA_STATES.
-export const SHIP_SYSTEM_KEYS = Object.freeze([
-  "hull",
-  "arkengine",
-  "lifeveil",
-  "helm",
-  "rigging",
-  "command",
-  "weapons"
-]);
+export const SHIP_SYSTEM_KEYS = Object.freeze(["hull", "drive", "lifeveil", "morale", "weapons"]);
 export const SYSTEM_STATES = Object.freeze({
   FUNCTIONAL: "functional",
   DAMAGED: "damaged",
@@ -67,17 +54,7 @@ function legacySystemToAreaState(value) {
   return AREA_STATES.STABLE;
 }
 
-function migrateAreas(ship = {}) {
-  const existing = ship.areas ?? {};
-  const systems = ship.systems ?? {};
-  return {
-    hull: { ...area(), ...(existing.hull ?? {}), state: existing.hull?.state ?? legacySystemToAreaState(systems.hull) },
-    arkengine: { ...area(), ...(existing.arkengine ?? {}), state: existing.arkengine?.state ?? legacySystemToAreaState(systems.arkengine) },
-    rigging: { ...area(), ...(existing.rigging ?? {}), state: existing.rigging?.state ?? legacySystemToAreaState(systems.rigging ?? systems.helm) },
-    lifeveil: { ...area(), ...(existing.lifeveil ?? {}), state: existing.lifeveil?.state ?? legacySystemToAreaState(systems.lifeveil) },
-    morale: { ...area(), ...(existing.morale ?? {}), state: existing.morale?.state ?? legacySystemToAreaState(systems.command) }
-  };
-}
+function migrateAreas(_ship = {}) { return {}; }
 
 function migrateStations(stations = {}) {
   const next = { ...stations };
@@ -173,7 +150,7 @@ export function createShip(overrides = {}) {
     inventory: { shipMods: {}, arkengineMods: {}, weapons: {} },
     refit: { workOrders: [] },
     rewards: { pendingShip: [] },
-    areas: Object.fromEntries(SHIP_AREA_KEYS.map((key) => [key, area()])),
+    shipConditions: normalizeShipConditions(),
     progression: normalizeProgression(),
     conditions: []
   };
@@ -190,11 +167,12 @@ export function normalizeShip(ship = {}) {
     inventory: normalizeInventory(ship.inventory),
     refit: normalizeRefit(ship.refit),
     rewards: normalizeRewardState(ship.rewards),
-    areas: migrateAreas(ship),
+    shipConditions: normalizeShipConditions(ship),
     progression: normalizeProgression(ship.progression),
     conditions: [...(ship.conditions ?? [])]
   };
   delete base.systems;
+  delete base.areas;
   return base;
 }
 
@@ -224,7 +202,7 @@ function mergeShip(base, overrides) {
     },
     refit: { ...base.refit, ...(overrides.refit ?? {}), workOrders: [...(overrides.refit?.workOrders ?? base.refit.workOrders)] },
     rewards: { ...base.rewards, ...(overrides.rewards ?? {}), pendingShip: [...(overrides.rewards?.pendingShip ?? base.rewards.pendingShip)] },
-    areas: { ...base.areas, ...(overrides.areas ?? {}) },
+    shipConditions: normalizeShipConditions({ ...base, ...overrides, shipConditions: { ...(base.shipConditions ?? {}), ...(overrides.shipConditions ?? {}) } }),
     progression: {
       ...base.progression,
       ...(overrides.progression ?? {}),
