@@ -29,7 +29,7 @@ export function buildExampleBrigantine() {
     },
     resources: {
       supplies: { value: 8, max: 10 },
-      morale: { value: 3, max: 5 }
+      morale: { value: 60, max: 100 }
     }
   });
 
