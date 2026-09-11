@@ -41,7 +41,7 @@ test("shared ship owners can Reload while Battlewatch retains firing and Work th
   assert.match(ui, /stationActionControl\?\.\("common-reload-weapon"/);
   assert.match(ui, /stationActionControl\?\.\("battlewatch-reload-weapon"/);
   assert.match(ui, /Reload · 1 AP/);
-  assert.match(ui, /Work the Guns · 1 Morale · \+1 Strain/);
+  assert.match(ui, /Work the Guns · 20% Morale · \+1 Strain/);
   assert.match(ui, /Battlewatch Only/);
 });
 
@@ -127,8 +127,9 @@ test("all target-side ship damage consequences wait for chat Apply Damage", () =
   const flow = readFileSync(new URL("../src/foundry/combat-flow-usability.js", import.meta.url), "utf8");
   const areas = readFileSync(new URL("../src/foundry/combat-area-consequences.js", import.meta.url), "utf8");
   assert.match(effects, /resolveDeferredDamageConsequences/);
-  assert.match(effects, /applyWeaponSystemThreat/);
-  assert.match(effects, /systemThreat: solution\.weapon\.data\?\.systemThreat/);
+  assert.match(effects, /resolveShipStrainGain/);
+  assert.match(effects, /Critical hit: \+1 Strain/);
+  assert.doesNotMatch(effects, /applyWeaponSystemThreat/);
   assert.match(effects, /arkflightShipDamageStateChanged/);
   assert.doesNotMatch(flow, /Hooks\.on\("arkflightNativeShipAttackResolved", damageConsequences\)/);
   assert.doesNotMatch(areas, /Hooks\.on\("arkflightNativeShipAttackResolved"/);
@@ -138,7 +139,7 @@ test("GM Operations uses the same fixed-fire Reload and Work the Guns rules as p
   const gm = readFileSync(new URL("../src/ui/gm-operations-combat-ui.js", import.meta.url), "utf8");
   assert.match(gm, /1 AP fire/);
   assert.match(gm, /Reload · 1 AP/);
-  assert.match(gm, /Work the Guns · 1 Morale · \+1 Strain/);
+  assert.match(gm, /Work the Guns · 20% Morale · \+1 Strain/);
   assert.match(gm, /stationAction\("common-reload-weapon"/);
   assert.match(gm, /stationAction\("battlewatch-reload-weapon"/);
   assert.doesNotMatch(gm, /combat\.workTheGuns\(/);
