@@ -32,6 +32,8 @@ const AREA_ORDER = Object.freeze([
   AREA_STATES.CRITICAL,
   AREA_STATES.DISABLED
 ]);
+const ENGAGEMENT_RESOLVERS = new Set(["ramShip", "grappleShip", "breakGrapple", "boardShip"]);
+const MOORED_BLOCKED_RESOLVERS = new Set(["buyMovement", "buyManeuver", "hardTurn", "overchargeArkengine", "impossibleBurn", "turnBetweenHeartbeats"]);
 
 function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
@@ -356,6 +358,9 @@ function runtimeAvailability(base, actionId, reference = null) {
   if (action.timing === COMBAT_ACTION_TIMING.ACTION && game.combat?.combatant?.id !== combatant.id) {
     return Object.freeze({ ok: false, reason: "not-this-ships-turn" });
   }
+  if (game.arkflight?.combatEngagement?.isMoored?.(combatant) && MOORED_BLOCKED_RESOLVERS.has(action.rules?.resolver)) {
+    return Object.freeze({ ok: false, reason: "moored" });
+  }
   const stateAvailability = stationActionAvailability(base.state(combatant), action, { round: game.combat?.round ?? 1, shipLevel: shipLevel(combatant.actor) });
   if (!stateAvailability.ok) return stateAvailability;
   return persistentCostAvailability(combatant.actor, action);
@@ -387,6 +392,16 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (!costCheck.ok) throw new Error(`${action.name} is unavailable: ${costCheck.reason}.`);
 
   const resolver = action.rules?.resolver;
+  let engagementTarget = null;
+  if (ENGAGEMENT_RESOLVERS.has(resolver)) {
+    const targetId = options.targetId ?? options.selection ?? null;
+    if (!targetId) throw new Error(`${action.name} requires a target ship.`);
+    const engagement = game.arkflight?.combatEngagement;
+    if (!engagement?.preflight || !engagement?.resolve) throw new Error("Arkflight engagement runtime is unavailable.");
+    const check = engagement.preflight(resolver, combatant, targetId);
+    if (!check.ok) throw new Error(check.reason);
+    engagementTarget = check.target;
+  }
   if (resolver === "fireAtTarget") {
     if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
     const fire = game.arkflight?.combat?.fireAtTarget ?? base.fireAtTarget;
@@ -450,6 +465,11 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   const after = strainResolution.state;
   await combatant.update({ [STATE_PATH]: after });
   const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, after, strainResolution.threshold);
+
+  if (ENGAGEMENT_RESOLVERS.has(resolver)) {
+    const result = await game.arkflight.combatEngagement.resolve(resolver, combatant, engagementTarget, { requesterUserId });
+    notes.push(...(result?.notes ?? []));
+  }
 
   if (resolver === "issueOrder") notes.push("Applies only to the chosen station's next qualifying roll; fixed effects are not inflated.");
   if (resolver === "coordinateAssault") notes.push(`Target Hardness reduced by ${profile.bonus} for ${profile.advanced ? 2 : 1} qualifying attack${profile.advanced ? "s" : ""}.`);
