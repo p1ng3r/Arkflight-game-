@@ -9,7 +9,7 @@ import {
 } from "../src/combat/index.js";
 
 test("every Arkflight combat station has four core Actions and one core Reaction", () => {
-  assert.equal(Object.keys(COMBAT_ACTIONS).length, 25);
+  assert.equal(Object.keys(COMBAT_ACTIONS).length, 26);
 
   for (const station of COMBAT_STATIONS) {
     const entries = getCoreCombatActionDefinitionsForStation(station);
@@ -36,6 +36,11 @@ test("core combat Actions consume shared AP and Reactions consume shared RP", ()
     } else if (entry.rules?.costSource) {
       assert.equal(entry.id, "battlewatch-fire-weapon");
       assert.equal(entry.rules.costSource, "weapon.fireAP");
+    } else if (entry.id === "battlewatch-reload-weapon") {
+      assert.equal(entry.cost.ap, 0, "Work the Guns costs 0 AP");
+      assert.equal(entry.rules.oncePerRound, true, "Work the Guns is once per round");
+      assert.equal(entry.rules.maxReloadRemaining, 2, "Work the Guns requires Reload 2 or less");
+      assert.equal(entry.rules.strain, 1, "Work the Guns gains 1 Strain");
     } else {
       assert.ok(entry.cost.ap >= 1, `${entry.id} spends AP`);
       assert.equal(entry.cost.rp, 0, `${entry.id} does not spend RP`);
@@ -67,4 +72,19 @@ test("station roles use different tactical levers instead of five copies of atta
   assert.equal(COMBAT_ACTIONS["battlewatch-acquire-target"].rules.effect, "attack-bonus");
   assert.equal(COMBAT_ACTIONS["engineer-redistribute-power"].rules.effect, "power-routing");
   assert.equal(COMBAT_ACTIONS["veilwarden-focus-ward"].rules.effect, "focused-ward-mitigation");
+});
+
+
+test("Reload is a common 1 AP action separate from Battlewatch Work the Guns", () => {
+  const reload = COMBAT_ACTIONS["common-reload-weapon"];
+  const work = COMBAT_ACTIONS["battlewatch-reload-weapon"];
+  assert.equal(reload.station, "common");
+  assert.equal(reload.name, "Reload");
+  assert.equal(reload.cost.ap, 1);
+  assert.equal(reload.rules.resolver, "reloadWeapon");
+  assert.equal(work.station, "battlewatch");
+  assert.equal(work.name, "Work the Guns");
+  assert.equal(work.cost.ap, 0);
+  assert.equal(work.rules.oncePerRound, true);
+  assert.equal(work.rules.maxReloadRemaining, 2);
 });
