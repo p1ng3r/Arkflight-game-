@@ -53,7 +53,7 @@ test("eight hours safe rest restores twenty percent only up to Steady 60 percent
   assert.deepEqual(recoverMoraleFromSafeRest(20, { safeRest: true, hours: 8 }), { morale: 40, recovered: 20 });
   assert.deepEqual(recoverMoraleFromSafeRest(40, { safeRest: true, hours: 8 }), { morale: 60, recovered: 20 });
   assert.deepEqual(recoverMoraleFromSafeRest(60, { safeRest: true, hours: 8 }), { morale: 60, recovered: 0 });
-  assert.deepEqual(recoverMoraleFromSafeRest(80, { safeRest: true, hours: 8 }), { morale: 60, recovered: 0 });
+  assert.deepEqual(recoverMoraleFromSafeRest(80, { safeRest: true, hours: 8 }), { morale: 80, recovered: 0 });
 });
 
 test("unsafe or too-short rest provides no Morale recovery", () => {
