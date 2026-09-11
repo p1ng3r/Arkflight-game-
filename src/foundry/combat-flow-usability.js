@@ -96,7 +96,7 @@ async function promptAttackReaction(base, weaponKey, targetRef, attackerRef = nu
   const esc = foundry.utils.escapeHTML;
   const content = `<div class="arkflight-reaction-prompt"><p><strong>${esc(attacker.name)}</strong> declares fire with <strong>${esc(solution.weapon.name)}</strong> against <strong>${esc(target.name)}</strong>.</p><p>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)}</p><hr>${choices.map((c) => `<p><strong>${esc(c.action.name)}</strong> — ${esc(c.action.summary ?? c.action.description)}</p>`).join("")}</div>`;
   const id = await chooseReaction(`Attack Reaction — ${target.name}`, content, choices);
-  if (id && choices.some((c) => c.id === id)) await base.stationAction(id, {}, target);
+  if (id && choices.some((c) => c.id === id)) await base.stationAction(id, { suppressChat: true, reactionContext: "ship-attack" }, target);
   return id;
 }
 
@@ -126,7 +126,7 @@ async function maybePromptEngineerBypass(base, actionId, options, reference) {
   const esc = foundry.utils.escapeHTML;
   const content = `<div class="arkflight-reaction-prompt"><p><strong>${esc(action.name)}</strong> will add Strain to <strong>${esc(combatant.name)}</strong>.</p><p><strong>${esc(choices[0].action.name)}</strong> — ${esc(choices[0].action.summary ?? choices[0].action.description)}</p></div>`;
   const id = await chooseReaction(`Engineer Reaction — ${combatant.name}`, content, choices);
-  if (id === bypassId) await base.stationAction(bypassId, {}, combatant);
+  if (id === bypassId) await base.stationAction(bypassId, { suppressChat: true, reactionContext: "engineer-bypass" }, combatant);
 }
 
 Hooks.on("arkflightCombatTurnChanged", queueHelm);
