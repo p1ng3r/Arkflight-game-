@@ -242,7 +242,7 @@ function compactSummary(action) {
 function buildStationActions(api, combatant, actor, station, targets, weapons, selectedWeaponKey, selectedTargetId) {
   const state = api?.state?.(combatant) ?? null;
   const selectedWeapon = weapons.find((entry) => entry.key === selectedWeaponKey) ?? null;
-  return [...(api?.stationActions?.(station) ?? [])].map((action) => {
+  return [...(api?.stationActions?.(station, combatant) ?? [])].map((action) => {
     const choices = choiceOptions(action, api, combatant, actor, targets, weapons);
     const availability = api.stationActionAvailability?.(action.id, combatant)
       ?? { ok: false, reason: "combatant-required" };
@@ -676,7 +676,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     for (const button of root.querySelectorAll("[data-station-action]")) {
       button.addEventListener("click", async () => {
         const actionId = button.dataset.stationAction;
-        const action = api?.actions?.[actionId] ?? [...(api?.stationActions?.(this.selectedStation) ?? [])].find((entry) => entry.id === actionId);
+        const action = api?.actions?.[actionId] ?? [...(api?.stationActions?.(this.selectedStation, combatant) ?? [])].find((entry) => entry.id === actionId);
         if (!action) return;
         const card = button.closest("[data-action-card]");
         const selection = card?.querySelector("[data-action-choice]")?.value ?? null;
