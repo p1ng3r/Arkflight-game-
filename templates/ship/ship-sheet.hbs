@@ -46,7 +46,7 @@
     <section class="arkflight-resource-strip">{{#each arkflight.resources as |resource|}}<div class="arkflight-resource-card"><div class="arkflight-resource-label"><i class="fa-solid {{resource.icon}}"></i> {{resource.label}}</div><div class="arkflight-resource-values">{{#if ../arkflight.canOperate}}<input type="number" min="0" max="{{resource.max}}" value="{{resource.value}}" data-resource="{{resource.key}}">{{else}}<strong>{{resource.value}}</strong>{{/if}}<span>/</span><strong>{{resource.max}}</strong></div></div>{{/each}}</section>
     <section class="arkflight-primary-stat-grid">{{#each arkflight.view.stats.primary as |stat|}}<div class="arkflight-stat-card"><span>{{stat.label}}</span><strong>{{stat.value}}</strong></div>{{/each}}</section>
     <section class="arkflight-overview-section">
-      <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">OPERATIONAL CORE</span><h2>Ship Areas</h2></div><small>Area state drives its station penalty and immediate consequences.</small></div>
+      <div class="arkflight-panel-heading"><div><span class="arkflight-ship-kicker">OPERATIONAL CORE</span><h2>Ship Conditions</h2></div><small>Persistent conditions change each ship system in its own specific way.</small></div>
       <div class="arkflight-area-grid">{{#each arkflight.view.areas as |area|}}<article class="arkflight-area-card {{area.stateClass}}"><div class="arkflight-area-heading"><i class="fa-solid {{area.icon}}"></i><strong>{{area.label}}</strong><span>{{area.stateLabel}}</span></div><div class="arkflight-area-station"><span>{{area.stationLabel}}</span><strong>{{area.penaltyLabel}}</strong></div><p>{{area.consequence}}</p></article>{{/each}}</div>
     </section>
     <main class="arkflight-overview-lower-grid">
