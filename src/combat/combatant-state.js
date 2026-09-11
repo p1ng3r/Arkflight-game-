@@ -43,7 +43,7 @@ function installedWeaponStates(ship, catalogs = {}) {
       mount: typeof install === "object" ? (install?.mount ?? install?.arc ?? null) : null,
       mountIndex: typeof install === "object" ? Number(install?.mountIndex) || 0 : null,
       upgrades: normalizeWeaponUpgrades(install),
-      fireAP: Math.max(1, Math.trunc(Number(combat.fireAP) || 1)),
+      fireAP: 1,
       reloadRounds: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0)),
       readyRound: 1,
       lastFiredRound: null
@@ -187,13 +187,13 @@ export function fireWeapon(state, weaponKey, round) {
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
   if (weaponReloadRemaining(weapon, combatRound) > 0) throw new Error(`${weapon.name} is still reloading.`);
-  let next = spendPoints(state, COMBAT_POINT_TYPES.AP, weapon.fireAP);
+  let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
   const readyRound = combatRound + weapon.reloadRounds + 1;
   const updated = Object.freeze({ ...weapon, readyRound, lastFiredRound: combatRound });
   return Object.freeze({
     ...next,
     weapons: Object.freeze({ ...next.weapons, [weaponKey]: updated }),
-    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "fire-weapon", weaponKey, ap: weapon.fireAP, readyRound })])
+    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "fire-weapon", weaponKey, ap: 1, readyRound })])
   });
 }
 
