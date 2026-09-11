@@ -38,11 +38,11 @@ test("Mythic Arkengine upgrades replace Legendary predecessors and inherit their
   }
 });
 
-test("Mythic Arkengine exceptions cover the approved campaign-defining engine behaviors", () => {
-  assert.equal(ARKENGINE_MODS["godspark-emergency-nexus"].data.coreRuleException.rule, "operate-disabled-arkengine");
+test("Mythic Arkengine exceptions use the current Drive-condition rule language", () => {
+  assert.equal(ARKENGINE_MODS["godspark-emergency-nexus"].data.coreRuleException.rule, "operate-unresponsive-drive");
   assert.equal(ARKENGINE_MODS["crown-of-the-first-burn"].data.coreRuleException.rule, "hard-burn-without-base-strain-cost");
-  assert.equal(ARKENGINE_MODS["singularity-worldheart-dynamo"].data.coreRuleException.rule, "suppress-one-arkengine-area-threshold-degradation");
-  assert.equal(ARKENGINE_MODS["firmament-veil-heart"].data.coreRuleException.rule, "sustain-lifeveil-with-disabled-arkengine");
+  assert.equal(ARKENGINE_MODS["singularity-worldheart-dynamo"].data.coreRuleException.rule, "suppress-one-drive-condition-degradation");
+  assert.equal(ARKENGINE_MODS["firmament-veil-heart"].data.coreRuleException.rule, "sustain-lifeveil-with-unresponsive-drive");
   assert.equal(ARKENGINE_MODS["saintfire-eternity-reliquary"].data.coreRuleException.rule, "waive-one-authored-engine-fuel-requirement");
 });
 
