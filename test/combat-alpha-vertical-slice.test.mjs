@@ -85,7 +85,8 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
   // until its reload state is satisfied.
   const beforeFireAP = state.economy.ap.value;
   state = fireWeapon(state, portGun.key, 1);
-  assert.equal(state.economy.ap.value, beforeFireAP - portGun.fireAP);
+  assert.equal(portGun.fireAP, 1);
+  assert.equal(state.economy.ap.value, beforeFireAP - 1);
   assert.ok(weaponReloadRemaining(state.weapons[portGun.key], 1) > 0);
   assert.throws(() => fireWeapon(state, portGun.key, 1), /still reloading/);
 
