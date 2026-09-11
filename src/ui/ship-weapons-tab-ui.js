@@ -1,6 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
-import { shipWeaponAttackBonus, weaponDamageProfile } from "../combat/index.js";
+import { shipWeaponAttackBonus, weaponDamageProfile, weaponReloadRemaining } from "../combat/index.js";
 import { firingArcsVisible, redrawFiringArcs, toggleFiringArcs } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
@@ -230,7 +230,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
     const combat = weapon.data?.combat ?? {};
     const damage = weaponDamageProfile(weapon, { upgrades: weaponState.upgrades });
     const attack = attackProfile(actor, weaponState);
-    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const remaining = weaponReloadRemaining(weaponState);
     const row = document.createElement("article");
     row.className = "arkflight-weapon-control-row";
     row.innerHTML = `<div class="arkflight-weapon-identity"><strong>${esc(weaponState.name)}</strong><span>${titleCase(weaponState.mount ?? "fore")} Mount ${Number(weaponState.mountIndex ?? 0) + 1} · ${titleCase(combat.arcTemplate ?? "wide")} arc</span></div>
@@ -251,7 +251,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
       reloadButton = document.createElement("button");
       reloadButton.type = "button";
       reloadButton.innerHTML = '<i class="fa-solid fa-rotate"></i> Reload · 1 AP';
-      reloadButton.title = "Common action: reduce this weapon's remaining Reload by 1 round.";
+      reloadButton.title = "Common action: reduce this weapon's remaining Reload by 1.";
       reloadButton.addEventListener("click", async () => {
         try {
           reloadButton.disabled = true;
