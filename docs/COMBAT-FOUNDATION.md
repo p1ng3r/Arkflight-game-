@@ -123,7 +123,7 @@ These are tactical combat state, not persistent ship state.
 
 `Adjust Facing` changes facing one step. `Hard Turn` changes facing two steps and generates Strain against Rigging.
 
-Range movement and weapon range validation are scaffolded but are not yet connected to a complete movement or firing resolver.
+Range movement, facing, weapon range, and firing-arc validation are connected to the Foundry combat resolver.
 
 ## Initial Combat Actions
 
@@ -155,7 +155,7 @@ Range movement and weapon range validation are scaffolded but are not yet connec
 - Reinforce Lifeveil — Action.
 - Overdrive Lifeveil — Reaction; generates Strain against Lifeveil.
 
-Several actions currently expose effect descriptors rather than finished attack/repair resolution. This is intentional: the action economy and persistent-state boundary are being established before weapon math and system-degradation math are locked.
+Core combat actions now resolve through the shared station-action layer; later specialization and campaign features may add or modify those choices.
 
 ## Foundry API
 
