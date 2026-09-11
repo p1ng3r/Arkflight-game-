@@ -351,7 +351,32 @@ const CORE_ACTIONS = [
   })
 ];
 
-export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries(CORE_ACTIONS.map((entry) => [entry.id, entry])));
+const PROGRESSION_ACTIONS = [
+  action({
+    id: "navigator-impossible-burn",
+    station: "navigator",
+    name: "Impossible Burn",
+    description: "Once per battle, overburn the Arkengine to add 50% of current Combat Speed to this turn's movement allowance. Gain 2 Strain against the Arkengine.",
+    summary: "Once/battle: +50% Speed movement this turn; +2 Arkengine Strain.",
+    ap: 0,
+    category: COMBAT_ACTION_CATEGORIES.MOVEMENT,
+    tags: ["progression", "mythic", "movement", "strain", "interleavable"],
+    rules: { resolver: "impossibleBurn", oncePerBattle: true, requiresCapability: "impossible-burn", strain: 2, strainArea: "arkengine", interleavable: true }
+  }),
+  action({
+    id: "navigator-turn-between-heartbeats",
+    station: "navigator",
+    name: "Turn Between Heartbeats",
+    description: "Once per battle, gain 2 extraordinary 60-degree facing steps this turn. These steps do not consume the ship's normal Maneuverability allowance.",
+    summary: "Once/battle: gain 2 extraordinary facing steps this turn.",
+    ap: 0,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["progression", "mythic", "maneuver", "facing", "interleavable"],
+    rules: { resolver: "turnBetweenHeartbeats", oncePerBattle: true, requiresCapability: "turn-between-heartbeats", extraFacingSteps: 2, interleavable: true, permitsPivot: true }
+  })
+];
+
+export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries([...CORE_ACTIONS, ...PROGRESSION_ACTIONS].map((entry) => [entry.id, entry])));
 
 export const CORE_COMBAT_ACTIONS_BY_STATION = Object.freeze(
   Object.fromEntries(
