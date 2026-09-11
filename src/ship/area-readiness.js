@@ -1,21 +1,15 @@
-import { AREA_STATES, SHIP_AREA_KEYS, normalizeShip } from "./ship-schema.js";
+import { applyShipSystemDegradation } from "./ship-conditions.js";
+import { normalizeShip } from "./ship-schema.js";
 
-export const AREA_STATE_ORDER = Object.freeze([
-  AREA_STATES.STABLE,
-  AREA_STATES.STRESSED,
-  AREA_STATES.DAMAGED,
-  AREA_STATES.CRITICAL,
-  AREA_STATES.DISABLED
-]);
-
+// Deprecated compatibility exports. Ship Conditions are authoritative.
+export const AREA_STATE_ORDER = Object.freeze(["stable", "stressed", "damaged", "critical", "disabled"]);
 export const AREA_INTEGRITY_FRACTIONS = Object.freeze({
-  [AREA_STATES.STABLE]: 1,
-  [AREA_STATES.STRESSED]: 0.90,
-  [AREA_STATES.DAMAGED]: 0.65,
-  [AREA_STATES.CRITICAL]: 0.25,
-  [AREA_STATES.DISABLED]: 0
+  stable: 1,
+  stressed: 1,
+  damaged: 1,
+  critical: 1,
+  disabled: 1
 });
-
 
 export const STRAIN_FLAT_CHECK_BANDS = Object.freeze([
   Object.freeze({ minimumPercent: 90, maximumPercent: 99.999, dc: 15, id: "critical" }),
@@ -41,6 +35,10 @@ export const PUSHED_ABILITY_STRAIN = Object.freeze({
   criticalFailure: Object.freeze({ strain: 2, directDegradation: true, flatCheckEligible: false })
 });
 
+export function areaIntegrityFraction(_state) { return 1; }
+export function effectiveIntegrityMax(baseMax, _state) { return Math.max(0, Number(baseMax) || 0); }
+export function applyAreaIntegrityCaps(ship) { return normalizeShip(structuredClone(ship)); }
+
 export function strainPercent(value, maximum) {
   const max = Math.max(0, Number(maximum) || 0);
   if (max <= 0) return 0;
@@ -50,8 +48,7 @@ export function strainPercent(value, maximum) {
 export function strainFlatCheckDC(value, maximum) {
   const percent = strainPercent(value, maximum);
   if (percent >= 100) return null;
-  const band = STRAIN_FLAT_CHECK_BANDS.find((entry) => percent >= entry.minimumPercent);
-  return band?.dc ?? null;
+  return STRAIN_FLAT_CHECK_BANDS.find((entry) => percent >= entry.minimumPercent)?.dc ?? null;
 }
 
 export function strainRiskState(value, maximum) {
@@ -77,119 +74,84 @@ export function pushedAbilityStrainOutcome(degree) {
   return result;
 }
 
-function assertArea(area) {
-  if (!SHIP_AREA_KEYS.includes(area)) throw new Error(`Unknown Arkflight area: ${area}`);
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, Number(value) || 0));
-}
-
-export function areaIntegrityFraction(state) {
-  return AREA_INTEGRITY_FRACTIONS[state] ?? AREA_INTEGRITY_FRACTIONS[AREA_STATES.STABLE];
-}
-
-export function effectiveIntegrityMax(baseMax, state) {
-  const base = Math.max(0, Number(baseMax) || 0);
-  return Math.floor(base * areaIntegrityFraction(state));
-}
-
-export function degradeAreaOneStep(ship, area) {
-  assertArea(area);
-  const next = normalizeShip(structuredClone(ship));
-  const current = next.areas?.[area]?.state ?? AREA_STATES.STABLE;
-  const index = Math.max(0, AREA_STATE_ORDER.indexOf(current));
-  const targetIndex = Math.min(index + 1, AREA_STATE_ORDER.length - 1);
-  const target = AREA_STATE_ORDER[targetIndex];
-  next.areas[area] = { ...(next.areas[area] ?? {}), state: target };
-  return Object.freeze({ ship: next, previousState: current, state: target, degraded: target !== current });
+export function applyStrainDegradation(ship, d8, { chosenTarget = null } = {}) {
+  const target = strainDegradationTarget(d8);
+  return applyShipSystemDegradation(ship, target, { chosenTarget });
 }
 
 /**
- * Apply legacy Area integrity caps where they still exist.
+ * Add one discrete source of Strain.
  *
- * Hull still uses the older Area-cap behavior during this transition.
- * Lifeveil no longer has a hull-specific effective maximum: it is always a
- * 0-100% integrity resource and its percentage is authoritative.
- */
-export function applyAreaIntegrityCaps(ship, { hullBaseMax } = {}) {
-  const next = normalizeShip(structuredClone(ship));
-
-  const hullBase = Math.max(0, Number(hullBaseMax ?? next.resources?.hull?.max ?? 0));
-  const hullState = next.areas?.hull?.state ?? AREA_STATES.STABLE;
-  const hullEffectiveMax = effectiveIntegrityMax(hullBase, hullState);
-  next.resources.hull = {
-    ...(next.resources.hull ?? {}),
-    baseMax: hullBase,
-    max: hullEffectiveMax,
-    value: clamp(next.resources?.hull?.value ?? 0, 0, hullEffectiveMax)
-  };
-
-  next.resources.lifeveil = {
-    ...(next.resources.lifeveil ?? {}),
-    baseMax: 100,
-    max: 100,
-    value: clamp(next.resources?.lifeveil?.value ?? 0, 0, 100)
-  };
-
-  return next;
-}
-
-/**
- * Resolve one discrete Strain contribution.
+ * The resolver never chooses what breaks. It reports whether the resulting
+ * Strain requires a flat check or an automatic degradation roll. Foundry (or
+ * another caller) performs the d20/d8 rolls and then calls applyStrainDegradation.
  *
- * A single call may degrade at most one Area. If the resulting Strain reaches
- * the vessel's Strain Limit, exactly one full limit is subtracted and overflow
- * remains for a later discrete resolution. Direct resource depletion does not
- * route through this function and therefore does not automatically degrade an
- * Area.
+ * A resolution that already caused a Ship Condition to worsen may pass
+ * alreadyDegraded=true. That suppresses the extra flat-check/degradation while
+ * still applying Strain and Strain-limit overflow.
  */
 export function resolveStrainContribution(ship, {
   amount = 0,
-  threatenedArea,
   strainLimit = ship?.resources?.strain?.max ?? 0,
-  suppressFlatCheck = false
+  suppressFlatCheck = false,
+  alreadyDegraded = false
 } = {}) {
-  assertArea(threatenedArea);
   const next = normalizeShip(structuredClone(ship));
   const limit = Math.max(0, Number(strainLimit) || 0);
   const current = Math.max(0, Number(next.resources?.strain?.value ?? 0));
   const gained = Math.max(0, Number(amount) || 0);
   const total = current + gained;
 
-  if (limit <= 0 || total < limit) {
+  if (limit <= 0) {
     next.resources.strain = { ...(next.resources.strain ?? {}), value: total, max: limit };
-    const flatCheckDC = (!suppressFlatCheck && gained > 0) ? strainFlatCheckDC(total, limit) : null;
     return Object.freeze({
-      ship: next,
-      thresholdCrossed: false,
-      areaDegraded: false,
-      threatenedArea,
-      strainBefore: current,
-      strainAdded: gained,
-      strainAfter: total,
-      strainPercent: strainPercent(total, limit),
-      flatCheckRequired: flatCheckDC !== null,
-      flatCheckDC
+      ship: next, thresholdCrossed: false, degradationRequired: false,
+      strainBefore: current, strainAdded: gained, strainAfter: total,
+      strainPercent: 0, flatCheckRequired: false, flatCheckDC: null
     });
   }
 
-  const degraded = degradeAreaOneStep(next, threatenedArea);
-  const overflow = total - limit;
-  degraded.ship.resources.strain = { ...(degraded.ship.resources.strain ?? {}), value: overflow, max: limit };
+  if (total >= limit) {
+    const overflow = total - limit;
+    next.resources.strain = { ...(next.resources.strain ?? {}), value: overflow, max: limit };
+    return Object.freeze({
+      ship: next,
+      thresholdCrossed: true,
+      degradationRequired: gained > 0 && !alreadyDegraded,
+      strainBefore: current,
+      strainAdded: gained,
+      strainAfter: overflow,
+      strainPercent: strainPercent(overflow, limit),
+      flatCheckRequired: false,
+      flatCheckDC: null
+    });
+  }
 
+  next.resources.strain = { ...(next.resources.strain ?? {}), value: total, max: limit };
+  const flatCheckDC = (!suppressFlatCheck && !alreadyDegraded && gained > 0)
+    ? strainFlatCheckDC(total, limit)
+    : null;
   return Object.freeze({
-    ship: degraded.ship,
-    thresholdCrossed: true,
-    areaDegraded: degraded.degraded,
-    threatenedArea,
-    previousAreaState: degraded.previousState,
-    areaState: degraded.state,
+    ship: next,
+    thresholdCrossed: false,
+    degradationRequired: false,
     strainBefore: current,
     strainAdded: gained,
-    strainAfter: overflow,
-    strainPercent: strainPercent(overflow, limit),
-    flatCheckRequired: false,
-    flatCheckDC: null
+    strainAfter: total,
+    strainPercent: strainPercent(total, limit),
+    flatCheckRequired: flatCheckDC !== null,
+    flatCheckDC
+  });
+}
+
+// Legacy helper kept only so older callers fail softly during migration.
+export function degradeAreaOneStep(ship, area) {
+  const target = ["arkengine", "rigging"].includes(String(area)) ? "drive" : String(area);
+  const result = applyShipSystemDegradation(ship, target);
+  return Object.freeze({
+    ship: result.ship,
+    previousState: result.previous?.id ?? null,
+    state: result.condition?.id ?? null,
+    degraded: result.changed
   });
 }
