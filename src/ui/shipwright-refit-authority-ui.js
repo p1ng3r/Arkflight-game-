@@ -101,7 +101,7 @@ function socketLabel(placement) {
 }
 
 async function beginRemoval(actor, family, placement, button) {
-  if (!actor || !game.user?.isGM || button.disabled) return;
+  if (!actor || (!game.user?.isGM && !actor.isOwner) || button.disabled) return;
   button.disabled = true;
   try {
     const queued = await game.arkflight?.refit?.queueRemove?.(actor, family, placement.componentId, {
