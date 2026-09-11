@@ -51,8 +51,14 @@
               {{#if hasAetherScrapReward}}
                 <div class="arkflight-reward-scrap-target"><strong>Aether Scrap → {{#if activeShipName}}{{activeShipName}}{{else}}No active ship bound{{/if}}</strong></div>
               {{/if}}
+              {{#if hasShipRewards}}
+                <div class="arkflight-reward-scrap-target"><strong>Blueprints / ship components → {{#if activeShipName}}{{activeShipName}}{{else}}No active ship bound{{/if}}</strong></div>
+              {{/if}}
+              {{#if hasCampaignRewards}}
+                <div class="arkflight-reward-scrap-target"><strong>Route knowledge / faction favor / boons → Campaign Ledger</strong></div>
+              {{/if}}
               <button type="button" class="arkflight-primary" data-ark-action="grant-pf2e-rewards"><i class="fa-solid fa-box-open"></i> Grant Event Rewards</button>
-              <small>Gold and authored PF2e items go to the selected PF2e recipient. Aether Scrap is added directly to the active Arkflight ship's refit currency.</small>
+              <small>PF2e treasure goes to the selected recipient. Aether Scrap, direct blueprints, and physical ship components go to the active ship. Route knowledge, faction rewards, and boons persist to the world campaign ledger. Unresolved ship reward tables/choices are queued for Recovery.</small>
             </div>
           {{/if}}
         {{/if}}
@@ -77,7 +83,7 @@
     </section>
 
     <footer class="arkflight-reward-note">
-      Character treasure is granted through PF2e Item documents. Aether Scrap is ship refit currency and is added directly to the active Arkflight ship. Ship components, faction rewards, route knowledge, boons, and Crew Tactics remain in their own Arkflight campaign layers.
+      Character treasure is granted through PF2e Item documents. Aether Scrap, direct blueprints, and physical components belong to the active Arkflight ship. Route knowledge, faction rewards, and boons belong to the Arkflight campaign ledger. Crew Tactics remain in the shared Crew Tactics pool.
     </footer>
   {{/if}}
 </section>
