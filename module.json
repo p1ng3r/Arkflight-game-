@@ -78,6 +78,7 @@
     "src/foundry/refit-api.js",
     "src/foundry/repair-api-extension.js",
     "src/foundry/refit-time.js",
+    "src/foundry/voyage-travel-api.js",
     "src/foundry/refit-diagnostics.js",
     "src/foundry/ship-facing-snap.js",
     "src/foundry/combat-api.js",
