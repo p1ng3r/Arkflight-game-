@@ -2,7 +2,7 @@ import { stationEffectProfile } from "./station-effect-rules.js";
 
 export const STATION_BONUS_DEFINITION = "Station Bonus is the ship-level scaling value used by station actions: +1 at ship levels 1–9, +2 at levels 10–19, and +3 at level 20. It applies only where an action specifically says Station Bonus; it is not a universal bonus to every roll.";
 
-export const STRAIN_THRESHOLD_DEFINITION = "When Strain reaches or exceeds the ship's Strain Limit, the ship area threatened by the action that caused the crossing degrades one step: Stable → Stressed → Damaged → Critical → Disabled. Subtract one Strain Limit and keep any overflow. A single station-action resolution degrades at most one area.";
+export const STRAIN_THRESHOLD_DEFINITION = "Strain below 50% is safe. When an effect adds Strain and leaves the ship at 50-74%, make a DC 5 flat check; at 75-89%, DC 10; at 90-99%, DC 15. A failed flat check causes one d8 system degradation. At 100%+, resolve the Strain Limit consequence instead, subtract one Strain Limit, and keep overflow.";
 
 const SECONDARY_SPENDS = Object.freeze({
   "captain-rally-crew": Object.freeze({ supplies: 1 }),
@@ -80,7 +80,7 @@ export function stationResourceIdentity() {
   return Object.freeze({
     ap: "Action Points: what the ship can do during its turn.",
     rp: "Reaction Points: shared emergency capacity used for reactions.",
-    strain: "Strain: pressure from pushing the ship beyond safe operation. Reaching the Strain Limit degrades the area threatened by the action, then one Strain Limit is removed and overflow remains.",
+    strain: "Strain: push-your-luck stress. 50-74% triggers DC 5, 75-89% DC 10, and 90-99% DC 15 flat checks when Strain is added. At the Strain Limit, resolve the threshold consequence and retain overflow.",
     morale: "Morale: crew resolve tracked from 0-100%. A former 1-point Morale cost is now 20%.",
     lifeveil: "Lifeveil: a 0-100% magical/environmental envelope. Abilities spend percentage points directly.",
     supplies: "Supplies: ammunition, spare parts, sealant, powder, reagents, replacement rigging, and other consumables."
