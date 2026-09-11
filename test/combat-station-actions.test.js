@@ -9,7 +9,7 @@ import {
 } from "../src/combat/index.js";
 
 test("every Arkflight combat station has four core Actions and one core Reaction", () => {
-  assert.equal(Object.keys(COMBAT_ACTIONS).length, 26);
+  assert.equal(Object.keys(COMBAT_ACTIONS).length, 28);
 
   for (const station of COMBAT_STATIONS) {
     const entries = getCoreCombatActionDefinitionsForStation(station);
@@ -38,6 +38,8 @@ test("core combat Actions consume shared AP and Reactions consume shared RP", ()
       assert.equal(entry.rules.oncePerRound, true, "Work the Guns is once per round");
       assert.equal(entry.rules.maxReloadRemaining, 2, "Work the Guns requires Reload 2 or less");
       assert.equal(entry.rules.strain, 1, "Work the Guns gains 1 Strain");
+    } else if (entry.rules?.oncePerBattle && entry.rules?.requiresCapability) {
+      assert.equal(entry.cost.ap, 0, `${entry.id} is an activated progression ability, not a normal AP action`);
     } else {
       assert.ok(entry.cost.ap >= 1, `${entry.id} spends AP`);
       assert.equal(entry.cost.rp, 0, `${entry.id} does not spend RP`);
@@ -91,4 +93,16 @@ test("Fire Weapon has a fixed 1 AP cost independent of weapon definition", () =>
   const fire = COMBAT_ACTIONS["battlewatch-fire-weapon"];
   assert.equal(fire.cost.ap, 1);
   assert.equal(fire.rules.costSource, undefined);
+});
+
+
+test("Mythic Navigator abilities are progression actions, not extra core menu entries", () => {
+  const burn = COMBAT_ACTIONS["navigator-impossible-burn"];
+  const turn = COMBAT_ACTIONS["navigator-turn-between-heartbeats"];
+  assert.equal(burn.rules.requiresCapability, "impossible-burn");
+  assert.equal(burn.rules.oncePerBattle, true);
+  assert.equal(burn.rules.strain, 2);
+  assert.equal(turn.rules.requiresCapability, "turn-between-heartbeats");
+  assert.equal(turn.rules.oncePerBattle, true);
+  assert.equal(getCoreCombatActionDefinitionsForStation("navigator").length, 5);
 });
