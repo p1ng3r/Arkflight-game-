@@ -235,8 +235,8 @@ async function installStagedModAtShipyard(actor, draft) {
 
 Hooks.on("arkflightRefitInstallRequested", async ({ actor, draft, method = "crew" }) => {
   if (!actor || !draft?.assignments?.length) return;
-  if (!game.user?.isGM) {
-    ui.notifications?.warn?.("Only the GM can resolve Refit installations during Refit Alpha.");
+  if (!game.user?.isGM && !actor.isOwner) {
+    ui.notifications?.warn?.("You must own this Arkflight ship to resolve its Refit installations.");
     return;
   }
   try {
