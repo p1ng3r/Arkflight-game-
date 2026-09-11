@@ -4,9 +4,8 @@ import { createShip } from "../src/ship/ship-schema.js";
 import { SHIP_CATALOGS } from "../src/content/index.js";
 import { deriveShip } from "../src/ship/derive-ship.js";
 import {
-  AREA_STATION_PENALTIES,
   SHIP_SHEET_TABS,
-  buildAreaViews,
+  buildConditionViews,
   buildInstalledFittings,
   buildRefitInventory,
   buildShipSheetView
@@ -17,18 +16,11 @@ test("vessel sheet uses native Overview Hold Combat and Weapons tabs", () => {
 });
 
 test("sheet exposes five named Ship Conditions without a universal station penalty ladder", () => {
-  assert.deepEqual(AREA_STATION_PENALTIES, {
-    stable: 0,
-    stressed: 0,
-    damaged: 0,
-    critical: 0,
-    disabled: 0
-  });
   const ship = createShip({
     shipConditions: { hull: "battered", drive: "faltering", weapons: "malfunctioning" },
     resources: { lifeveil: { value: 70, max: 100 }, morale: { value: 45, max: 100 } }
   });
-  const rows = buildAreaViews(ship);
+  const rows = buildConditionViews(ship);
   assert.deepEqual(rows.map((row) => row.key), ["hull", "drive", "weapons", "lifeveil", "morale"]);
   assert.deepEqual(rows.map((row) => row.stateLabel), ["Battered", "Faltering", "Malfunctioning", "Degraded", "Shaken"]);
   assert.deepEqual(rows.map((row) => row.effectLabel), ["Hardness", "Speed / Maneuverability", "Attack / Reload", "Integrity %", "Crew Resolve %"]);
