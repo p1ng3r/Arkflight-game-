@@ -13,7 +13,7 @@ const PACK_ID = `world.${PACK_NAME}`;
 const FOLDER_NAME = "Arkflight";
 const FLAG_SCOPE = "arkflight";
 const FLAG_KEY = "combatReference";
-const STATIONS = Object.freeze(["captain", "battlewatch", "navigator", "engineer", "veilwarden"]);
+const STATIONS = Object.freeze(["common", "captain", "battlewatch", "navigator", "engineer", "veilwarden"]);
 const FUNDAMENTALS_KEY = "fundamentals";
 
 function clone(value) {
@@ -119,7 +119,7 @@ function actionPageHtml(action) {
 
   return codexPage({
     title: action.name,
-    subtitle: `${labelize(action.station)} Station Action`,
+    subtitle: action.station === "common" ? "Common Ship Action" : `${labelize(action.station)} Station Action`,
     station: action.station,
     chips: actionChips(action),
     body: [
@@ -167,7 +167,8 @@ function fundamentalsStrainHtml() {
     ["Overcharge Arkengine", "Arkengine"],
     ["Redistribute Power", "Arkengine"],
     ["Hard Turn", "Rigging"],
-    ["Evasive Maneuver", "Rigging"]
+    ["Evasive Maneuver", "Rigging"],
+    ["Work the Guns", "Morale"]
   ];
   return codexPage({
     kicker: "Arkflight Combat Fundamentals",
@@ -220,14 +221,17 @@ function stationOverviewHtml(station, actions) {
     <div class="afcr-chip-row is-compact">${actionChips(action)}</div>
   </article>`).join("");
 
+  const common = station === "common";
   return codexPage({
-    title: `${labelize(station)} Station`,
-    subtitle: "Combat actions, duties, and tactical reference",
+    title: common ? "Common Actions" : `${labelize(station)} Station`,
+    subtitle: common ? "Baseline ship actions available to any assigned crew member" : "Combat actions, duties, and tactical reference",
     station,
     body: [
-      section("Station Role", `<p>This journal is the full rules reference for the <strong>${escapeHtml(labelize(station))}</strong> station. During combat, the Command HUD resolves the ship's current level-scaled values; use these pages for the complete authored rules.</p>`, "callout"),
-      section("Station Bonus", `<p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>`, "rules"),
-      section("Station Actions", `<div class="afcr-action-list">${cards}</div>`, "actions")
+      section(common ? "Common Action Role" : "Station Role", common
+        ? "<p>Common actions may be used by any player who owns an assigned crew member on this ship. They spend the ship's shared combat economy normally and do not require a specific station.</p>"
+        : `<p>This journal is the full rules reference for the <strong>${escapeHtml(labelize(station))}</strong> station. During combat, the Command HUD resolves the ship's current level-scaled values; use these pages for the complete authored rules.</p>`, "callout"),
+      ...(common ? [] : [section("Station Bonus", `<p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>`, "rules")]),
+      section(common ? "Common Actions" : "Station Actions", `<div class="afcr-action-list">${cards}</div>`, "actions")
     ].join("")
   });
 }
@@ -238,7 +242,7 @@ function stationJournal(station) {
   const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText), style: "arkflight-codex-v3" };
   const sourceHash = stableHash(source);
   return {
-    name: `Arkflight Combat — ${labelize(station)}`,
+    name: station === "common" ? "Arkflight Combat — Common Actions" : `Arkflight Combat — ${labelize(station)}`,
     pages: [
       {
         name: "Overview",
