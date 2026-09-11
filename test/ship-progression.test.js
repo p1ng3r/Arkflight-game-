@@ -184,3 +184,22 @@ test("typed progression mod slot rejects nonmatching overflow", () => {
   assert.equal(check.ok, false);
   assert.match(check.errors.join(" "), /typed Ship Mod slots/);
 });
+
+
+test("talent upgrade chains apply only the strongest owned effect", () => {
+  const hullLine = sloop({ progression: { level: 14, talentIds: ["toughness", "greater-frame", "iron-legend"], arkcraftUpgrades: {} } });
+  const hullDerived = deriveShip(hullLine, SHIP_CATALOGS);
+  assert.equal(hullDerived.stats.hullIntegrity, Math.round(SHIP_CATALOGS.hulls.sloop.data.baseStats.hullIntegrity * 1.30));
+
+  const voyageLine = sloop({ progression: { level: 10, talentIds: ["voyage-trained", "specialist-voyage-systems"], arkcraftUpgrades: {} } });
+  const voyageDerived = deriveShip(voyageLine, SHIP_CATALOGS);
+  assert.equal(voyageDerived.stats.pillarBonuses.voyage, 2);
+});
+
+test("progression cannot grant more than one permanent bonus AP or RP", () => {
+  const ship = sloop({ progression: { level: 20, talentIds: ["expanded-action-economy", "expanded-reaction-economy", "legendary-tempo"], arkcraftUpgrades: {} } });
+  const profile = hullCombatProfile(ship);
+  const base = hullCombatProfile(sloop({ progression: { level: 20, talentIds: [], arkcraftUpgrades: {} } }));
+  assert.equal(profile.ap, base.ap + 1);
+  assert.equal(profile.rp, base.rp + 1);
+});
