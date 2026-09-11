@@ -5,7 +5,7 @@ import { SHIP_SCHEMA_VERSION, createShip, normalizeShip } from "../src/ship/ship
 
 test("new ships use percentage Lifeveil and Morale resources", () => {
   const ship = createShip();
-  assert.equal(SHIP_SCHEMA_VERSION, 7);
+  assert.equal(SHIP_SCHEMA_VERSION, 8);
   assert.deepEqual(ship.resources.lifeveil, { value: 100, max: 100 });
   assert.deepEqual(ship.resources.morale, { value: 60, max: 100 });
 });
