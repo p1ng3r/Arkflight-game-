@@ -49,14 +49,14 @@ test("Station Bonus stays bounded at +1 / +2 / +3 and has a player-facing defini
 
 test("station action economy gives powerful actions meaningful secondary costs", () => {
   assert.deepEqual(stationActionEconomy(getCombatAction("captain-drive-the-crew"), 1), {
-    ap: 0, rp: 0, morale: 1, supplies: 0, lifeveil: 0, strain: 2
+    ap: 0, rp: 0, morale: 20, supplies: 0, lifeveil: 0, strain: 2
   });
   assert.equal(stationActionEconomy(getCombatAction("engineer-emergency-repair"), 1).supplies, 2);
   assert.deepEqual(stationActionEconomy(getCombatAction("common-reload-weapon"), 1), {
     ap: 1, rp: 0, morale: 0, supplies: 0, lifeveil: 0, strain: 0
   });
   assert.deepEqual(stationActionEconomy(getCombatAction("battlewatch-reload-weapon"), 1), {
-    ap: 0, rp: 0, morale: 1, supplies: 0, lifeveil: 0, strain: 1
+    ap: 0, rp: 0, morale: 20, supplies: 0, lifeveil: 0, strain: 1
   });
   assert.equal(stationActionEconomy(getCombatAction("battlewatch-ready-broadside"), 1).supplies, 1);
   assert.equal(stationActionEconomy(getCombatAction("veilwarden-reinforce-lifeveil"), 1).lifeveil, 5);
