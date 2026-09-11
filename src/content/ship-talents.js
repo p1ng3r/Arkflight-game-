@@ -155,8 +155,8 @@ const LEGENDARY = [
 ];
 
 const MYTHIC = [
-  talent("impossible-burn", "Impossible Burn", TIER.MYTHIC, 4, "+2 Speed and unlock the Impossible Burn capability.", [add("combatSpeed", 2), add("mythicCapabilityCount", 1)], { capabilities: ["impossible-burn"] }),
-  talent("turn-between-heartbeats", "Turn Between Heartbeats", TIER.MYTHIC, 4, "+2 Maneuverability and unlock mythic turning.", [add("maneuverability", 2), add("mythicCapabilityCount", 1)], { capabilities: ["turn-between-heartbeats"] }),
+  talent("impossible-burn", "Impossible Burn", TIER.MYTHIC, 4, "Once per battle, add 50% of current Speed to one turn's movement allowance and gain 2 Arkengine Strain.", [add("mythicCapabilityCount", 1)], { capabilities: ["impossible-burn"] }),
+  talent("turn-between-heartbeats", "Turn Between Heartbeats", TIER.MYTHIC, 4, "Once per battle, gain 2 extraordinary 60-degree facing steps during movement.", [add("mythicCapabilityCount", 1)], { capabilities: ["turn-between-heartbeats"] }),
   talent("ship-will-not-die", "The Ship Will Not Die", TIER.MYTHIC, 4, "+50% base Hull maximum.", [percentBase("hullIntegrity", 50)], { capabilities: ["mythic-hull-survival"] }),
   talent("void-cannot-have-us", "The Void Cannot Have Us", TIER.MYTHIC, 4, "+50% base Lifeveil maximum.", [percentBase("lifeveilCapacity", 50)], { capabilities: ["mythic-lifeveil-survival"] }),
   talent("legendary-tempo", "Legendary Tempo", TIER.MYTHIC, 4, "+1 Action Point and +1 Reaction Point per combat round.", [add("actionBonus", 1), add("reactionBonus", 1)]),
