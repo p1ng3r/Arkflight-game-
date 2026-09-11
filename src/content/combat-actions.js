@@ -48,12 +48,12 @@ function action({
 // Veilwarden changes magical defense. Station Bonus remains bounded at +1/+2/+3
 // so ship-level progression adds capability without breaking PF2e-style math.
 const CORE_ACTIONS = [
-  // COMMON — baseline ship actions available to any assigned crew member.
+  // COMMON — baseline ship actions available to any ship Owner.
   action({
     id: "common-reload-weapon",
     station: "common",
     name: "Reload",
-    description: "Spend 1 AP to reduce one installed weapon's remaining Reload by 1 round. Any assigned crew member may perform this action.",
+    description: "Spend 1 AP to reduce one installed weapon's remaining Reload by 1 round. Any Owner of the ship may perform this action.",
     summary: "Spend 1 AP to reduce one weapon's Reload by 1 round.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.RELOAD,
