@@ -269,6 +269,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   let attackerAfter = fireWeapon(attackerBefore, weaponKey, round);
   const offense = attackEffectPlan(attackerBefore, target, solution, attackerLevel);
   const attackDefense = attackDefensePlan(targetAttackState, targetLevel);
+  if (attackDefense.consumed.length && !canMutateTargetLocally && !primaryGM) {
+    throw new Error("An active GM is required to consume this target's attack-defense effect.");
+  }
 
   const perception = perceptionModifier(battlewatch);
   if (perception == null) throw new Error(`${attacker.name} needs an assigned Battlewatch officer with PF2e Perception.`);
