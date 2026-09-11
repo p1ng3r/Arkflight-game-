@@ -5,6 +5,7 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { validateShip } from "../ship/validate-ship.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { applyShipEffects } from "../ship/ship-effects.js";
+import { resolveShipStrainGain } from "./ship-strain-runtime.js";
 import { PlanningController } from "../event/planning-controller.js";
 import { ArkflightEventBoard } from "../ui/event-board-app.js";
 import { ArkflightRewardSummary } from "../ui/reward-summary-app.js";
@@ -119,11 +120,38 @@ function stationOptionsForShip(actor = activeVoyageShip()) {
 async function applyEventShipEffects(effects = []) {
   const actor = activeVoyageShip();
   if (!actor) throw new Error("Arkflight Event cannot apply a persistent consequence because no vessel is bound.");
-  const ship = shipPayload(actor);
-  if (!ship) throw new Error("The active Arkflight vessel has no persistent ship payload.");
-  const result = applyShipEffects(ship, effects);
-  await actor.update({ [`flags.${MODULE_ID}.ship`]: result.ship });
-  return result;
+  let working = shipPayload(actor);
+  if (!working) throw new Error("The active Arkflight vessel has no persistent ship payload.");
+
+  const affectedSystems = [];
+  const strainOutcomes = [];
+  for (const effect of effects ?? []) {
+    if (effect?.kind === "gain-strain" && Number(effect.value ?? 0) > 0) {
+      const outcome = await resolveShipStrainGain(working, {
+        amount: Number(effect.value),
+        currentStrain: working.resources?.strain?.value ?? 0,
+        strainMax: working.resources?.strain?.max ?? 0,
+        sourceLabel: effect.source ?? "Voyage Event",
+        speaker: ChatMessage.getSpeaker({ actor }),
+        forcedTarget: effect.degradationOverride ?? null
+      });
+      working = outcome.ship;
+      strainOutcomes.push(outcome);
+      if (outcome.degradation?.target && !affectedSystems.includes(outcome.degradation.target)) affectedSystems.push(outcome.degradation.target);
+      continue;
+    }
+    const result = applyShipEffects(working, [effect]);
+    working = result.ship;
+    for (const system of result.affectedSystems ?? result.threatenedAreas ?? []) {
+      if (!affectedSystems.includes(system)) affectedSystems.push(system);
+    }
+  }
+
+  await actor.update({ [`flags.${MODULE_ID}.ship`]: working });
+  if (strainOutcomes.some((outcome) => outcome.degradation)) {
+    Hooks.callAll("arkflightShipDamageStateChanged", { actor, voyageEvent: true, strainOutcomes });
+  }
+  return Object.freeze({ ship: working, affectedSystems: Object.freeze(affectedSystems), threatenedAreas: Object.freeze(affectedSystems), strainOutcomes: Object.freeze(strainOutcomes) });
 }
 
 async function bindExistingEventShipIfNeeded() {
