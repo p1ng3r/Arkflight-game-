@@ -6,9 +6,9 @@ export const STRAIN_THRESHOLD_DEFINITION = "When Strain reaches or exceeds the s
 
 const SECONDARY_SPENDS = Object.freeze({
   "captain-rally-crew": Object.freeze({ supplies: 1 }),
-  "captain-drive-the-crew": Object.freeze({ morale: 1 }),
+  "captain-drive-the-crew": Object.freeze({ morale: 20 }),
   "engineer-emergency-repair": Object.freeze({ supplies: 2 }),
-  "battlewatch-reload-weapon": Object.freeze({ morale: 1 }),
+  "battlewatch-reload-weapon": Object.freeze({ morale: 20 }),
   "battlewatch-ready-broadside": Object.freeze({ supplies: 1 }),
   "veilwarden-reinforce-lifeveil": Object.freeze({ lifeveil: 5 }),
   "veilwarden-focus-ward": Object.freeze({ lifeveil: 10 }),
@@ -55,13 +55,13 @@ export function stationActionStrainArea(action) {
 export function stationActionRulesText(action) {
   const fallback = action?.description ?? action?.summary ?? "";
   const rules = {
-    "captain-rally-crew": "Spend 1 AP and 1 Supply. Restore Morale equal to the Station Bonus, or improve a degraded Morale area by one step. At ship level 15+, improving the Morale area also restores Morale equal to the Station Bonus.",
-    "captain-drive-the-crew": "Spend 1 Morale. Gain 1 AP for this turn and gain 2 Strain. At ship level 15+ gain only 1 Strain; at level 20 gain no Strain. Once per round. This Strain threatens Morale.",
+    "captain-rally-crew": "Spend 1 AP and 1 Supply. Restore 20% Morale × Station Bonus, or improve a degraded Morale area by one step. At ship level 15+, improving the Morale area also restores 20% Morale × Station Bonus.",
+    "captain-drive-the-crew": "Spend 20% Morale. Gain 1 AP for this turn and gain 2 Strain. At ship level 15+ gain only 1 Strain; at level 20 gain no Strain. Once per round. This Strain threatens Morale.",
     "engineer-overcharge-arkengine": "Spend 1 AP and gain 2 Strain. Gain one additional full Helm block this turn: movement equal to Combat Speed and facing steps equal to Maneuverability. Once per round. This Strain threatens the Arkengine.",
     "engineer-emergency-repair": "Spend 2 AP and 2 Supplies. Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by one step. At ship level 15+, improve it by two steps instead.",
     "engineer-redistribute-power": "Spend 1 AP and gain 1 Strain. Route power to Propulsion, Weapons, or Lifeveil. Propulsion immediately grants Station Bonus movement and 1 maneuver step. Weapons gives the next weapon attack(s) +Station Bonus damage. Lifeveil reduces the next wardable hit(s) by 2 × Station Bonus. From ship level 5, Weapons and Lifeveil each cover two qualifying uses. This Strain threatens the Arkengine.",
     "common-reload-weapon": "Spend 1 AP to reduce one installed weapon's remaining Reload by 1 round. Any Owner of the ship may perform this action.",
-    "battlewatch-reload-weapon": "Once per round, spend 1 Morale and gain 1 Strain. Choose one installed weapon with 2 or fewer rounds of Reload remaining; it immediately becomes Ready. This action costs 0 AP. This Strain threatens Morale.",
+    "battlewatch-reload-weapon": "Once per round, spend 20% Morale and gain 1 Strain. Choose one installed weapon with 2 or fewer rounds of Reload remaining; it immediately becomes Ready. This action costs 0 AP. This Strain threatens Morale.",
     "battlewatch-ready-broadside": "Spend 1 AP and 1 Supply. Choose Port or Starboard. The next shot from that facing gains +2 × Station Bonus damage. At ship level 15+, that shot also reduces its resulting reload by 1 round.",
     "veilwarden-reinforce-lifeveil": "Spend 1 AP and 5 Lifeveil. The next wardable hit reduces incoming damage by 2 × Station Bonus before Hardness. From ship level 5, this protects against the next two qualifying hits before the ship's next turn.",
     "veilwarden-focus-ward": "Spend 1 AP and 10 Lifeveil. Choose a ship area or energy type. The next matching hit reduces incoming damage by 3 × Station Bonus before Hardness. From ship level 5, this protects against the next two matching hits before the ship's next turn.",
@@ -81,8 +81,8 @@ export function stationResourceIdentity() {
     ap: "Action Points: what the ship can do during its turn.",
     rp: "Reaction Points: shared emergency capacity used for reactions.",
     strain: "Strain: pressure from pushing the ship beyond safe operation. Reaching the Strain Limit degrades the area threatened by the action, then one Strain Limit is removed and overflow remains.",
-    morale: "Morale: crew resolve that the Captain can spend to force extraordinary effort.",
-    lifeveil: "Lifeveil: magical defensive energy that can also be deliberately burned for stronger ward effects.",
+    morale: "Morale: crew resolve tracked from 0-100%. A former 1-point Morale cost is now 20%.",
+    lifeveil: "Lifeveil: a 0-100% magical/environmental envelope. Abilities spend percentage points directly.",
     supplies: "Supplies: ammunition, spare parts, sealant, powder, reagents, replacement rigging, and other consumables."
   });
 }
