@@ -51,7 +51,11 @@ async function postRoll(roll, flavor, speaker = null) {
   });
 }
 
-async function rollDegradation(ship, { sourceLabel = "Strain", speaker = null } = {}) {
+async function rollDegradation(ship, { sourceLabel = "Strain", speaker = null, forcedTarget = null } = {}) {
+  if (forcedTarget) {
+    const applied = applyStrainDegradation(ship, 8, { chosenTarget: forcedTarget });
+    return Object.freeze({ ship: applied.ship, roll: null, rolled: null, chosenTarget: forcedTarget, target: applied.target, degradation: applied, forced: true });
+  }
   const d8 = await new Roll("1d8").evaluate();
   await postRoll(d8, `<strong>${sourceLabel} — Ship Condition</strong><br>Roll 1d8 to determine what worsens.`, speaker);
   const rolled = Math.trunc(Number(d8.total) || 0);
@@ -73,7 +77,8 @@ export async function resolveShipStrainGain(ship, {
   strainMax = ship?.resources?.strain?.max ?? 0,
   alreadyDegraded = false,
   sourceLabel = "Strain",
-  speaker = null
+  speaker = null,
+  forcedTarget = null
 } = {}) {
   const working = structuredClone(ship);
   working.resources ??= {};
@@ -97,7 +102,7 @@ export async function resolveShipStrainGain(ship, {
   if (resolved.thresholdCrossed) {
     notes.push(`Strain Limit reached; ${resolved.strainAfter} overflow Strain remains.`);
     if (resolved.degradationRequired) {
-      degradation = await rollDegradation(next, { sourceLabel: `${sourceLabel} — Strain Limit`, speaker });
+      degradation = await rollDegradation(next, { sourceLabel: `${sourceLabel} — Strain Limit`, speaker, forcedTarget });
       next = degradation.ship;
     }
   } else if (resolved.flatCheckRequired) {
@@ -110,12 +115,13 @@ export async function resolveShipStrainGain(ship, {
     );
     notes.push(`Strain flat check DC ${resolved.flatCheckDC}: ${passed ? "success" : "failure"}.`);
     if (!passed) {
-      degradation = await rollDegradation(next, { sourceLabel: `${sourceLabel} — Failed Strain Check`, speaker });
+      degradation = await rollDegradation(next, { sourceLabel: `${sourceLabel} — Failed Strain Check`, speaker, forcedTarget });
       next = degradation.ship;
     }
   }
 
   if (degradation) {
+    if (degradation.forced) notes.push(`Ship Condition target redirected to ${degradation.target}.`);
     const before = degradation.degradation.previous?.label ?? degradation.degradation.previous?.id ?? "Normal";
     const after = degradation.degradation.condition?.label ?? degradation.degradation.condition?.id ?? "Worsened";
     notes.push(`${degradation.target}: ${before} → ${after}.`);
