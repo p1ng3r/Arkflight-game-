@@ -46,7 +46,6 @@ function stableHash(value) {
 }
 
 function costLabel(action) {
-  if (action.rules?.costSource === "weapon.fireAP") return "Installed weapon Fire AP";
   const cost = stationActionEconomy(action, 1);
   const parts = [];
   if (action.id === "captain-drive-the-crew") parts.push("Gain +1 AP");
@@ -68,12 +67,9 @@ function chip(label, tone = "default") {
 function actionChips(action) {
   const cost = stationActionEconomy(action, 1);
   const chips = [];
-  if (action.rules?.costSource === "weapon.fireAP") chips.push(chip("Weapon AP", "ap"));
-  else {
-    if (action.id === "captain-drive-the-crew") chips.push(chip("+1 AP", "gain"));
-    else if (cost.ap > 0) chips.push(chip(`${cost.ap} AP`, "ap"));
-    if (cost.rp > 0) chips.push(chip(`${cost.rp} RP`, "rp"));
-  }
+  if (action.id === "captain-drive-the-crew") chips.push(chip("+1 AP", "gain"));
+  else if (cost.ap > 0) chips.push(chip(`${cost.ap} AP`, "ap"));
+  if (cost.rp > 0) chips.push(chip(`${cost.rp} RP`, "rp"));
   if (cost.morale > 0) chips.push(chip(`-${cost.morale} Morale`, "morale"));
   if (cost.supplies > 0) chips.push(chip(`-${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`, "supplies"));
   if (cost.lifeveil > 0) chips.push(chip(`-${cost.lifeveil} Lifeveil`, "lifeveil"));
