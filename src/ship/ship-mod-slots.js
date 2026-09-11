@@ -42,6 +42,51 @@ export function shipModSlotClass(mod) {
   return "utility";
 }
 
+export function shipModSpecializedSlotClasses(mod) {
+  if (!mod) return Object.freeze([]);
+  const tags = new Set([...(mod.tags ?? []), ...(mod.traits ?? [])].map((value) => String(value).toLowerCase()));
+  const capabilities = new Set([...(mod.capabilities ?? [])].map((value) => String(value).toLowerCase()));
+  const text = `${mod.name ?? ""} ${mod.description ?? ""}`.toLowerCase();
+  const classes = [];
+
+  const exploration = ["exploration", "survey", "cartography", "anomaly-detection", "scanning"].some((tag) => tags.has(tag))
+    || (tags.has("detection") && (tags.has("navigation") || /survey|anomal|scout|chart|observ/.test(text)))
+    || [...capabilities].some((value) => /survey|anomal|scout|cartograph|detect/.test(value));
+  if (exploration) classes.push("exploration");
+
+  const expedition = ["expedition", "field-operations", "field-logistics", "salvage", "repair", "docking"].some((tag) => tags.has(tag))
+    || /field lab|laboratory|medical bay|workshop|salvage|repair store|shore-party|expedition/.test(text)
+    || [...capabilities].some((value) => /field|salvage|repair|docking|expedition/.test(value));
+  if (expedition) classes.push("expedition");
+
+  return Object.freeze(classes);
+}
+
+export function shipModCompatibleSlotClasses(mod) {
+  const primary = String(mod?.data?.refit?.slotClass ?? shipModSlotClass(mod) ?? "utility");
+  return Object.freeze([...new Set([primary, ...shipModSpecializedSlotClasses(mod)])]);
+}
+
+export function shipModFitsSocketType(mod, socketType = "generic") {
+  const type = String(socketType ?? "generic");
+  if (type === "generic" || type === "flexible") return true;
+  return shipModCompatibleSlotClasses(mod).includes(type);
+}
+
+export function shipModSocketRows(ship, catalogs, derived) {
+  const summary = shipModSlotSummary(ship, catalogs, derived);
+  const rows = [];
+  const push = (type, count) => {
+    for (let i = 0; i < Math.max(0, Math.trunc(Number(count) || 0)); i += 1) {
+      rows.push(Object.freeze({ index: rows.length, type, typeIndex: i }));
+    }
+  };
+  push("generic", summary.generic);
+  for (const type of SHIP_MOD_SLOT_CLASSES) push(type, summary.typed[type]);
+  push("flexible", summary.flexible);
+  return Object.freeze(rows);
+}
+
 export function shipModSlotSummary(ship, catalogs, derived) {
   const bonuses = derived?.stats?.modSlotBonuses ?? {};
   const typed = Object.fromEntries(SHIP_MOD_SLOT_CLASSES.map((key) => [key, Math.max(0, Number(bonuses[key] ?? 0))]));
