@@ -133,7 +133,8 @@ async function applyEventShipEffects(effects = []) {
         strainMax: working.resources?.strain?.max ?? 0,
         sourceLabel: effect.source ?? "Voyage Event",
         speaker: ChatMessage.getSpeaker({ actor }),
-        forcedTarget: effect.degradationOverride ?? null
+        forcedTarget: effect.degradationOverride ?? null,
+        finalStageGuardTarget: effect.finalStageGuardTarget ?? null
       });
       working = outcome.ship;
       strainOutcomes.push(outcome);
