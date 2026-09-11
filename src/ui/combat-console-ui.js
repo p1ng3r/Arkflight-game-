@@ -117,7 +117,8 @@ function unavailableLabel(reason) {
     "once-per-round": "Used This Round",
     "reaction-readied": "Reaction Readied",
     "combatant-required": "Combat Offline",
-    "not-your-station": "Assigned Crew Only"
+    "not-your-station": "Assigned Crew Only",
+    "not-ship-owner": "Ship Owner Only"
   })[reason] ?? "Unavailable";
 }
 
