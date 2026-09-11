@@ -62,10 +62,13 @@ function userCanUpdateDocument(user, document) {
 }
 
 function canUserOperateCombatant(combatant, user = game.user) {
-  return Boolean(
-    userOwnsCombatant(user, combatant)
-    && userCanUpdateDocument(user, combatant?.actor)
-  );
+  if (!userOwnsCombatant(user, combatant) || !userCanUpdateDocument(user, combatant?.actor)) return false;
+  try {
+    return typeof combatant?.canUserModify !== "function"
+      || combatant.canUserModify(user, "update") === true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 function canUserEndTurn(combatant, user = game.user, combat = game.combat) {
