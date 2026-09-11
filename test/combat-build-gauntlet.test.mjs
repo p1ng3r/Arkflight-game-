@@ -17,8 +17,8 @@ test("build-aware battle is deterministic for fixed build, policy, scenario, and
   assert.equal(a.rounds, b.rounds);
   assert.equal(a.rum.hull, b.rum.hull);
   assert.equal(a.iron.hull, b.iron.hull);
-  assert.deepEqual(a.rum.areas, b.rum.areas);
-  assert.deepEqual(a.iron.areas, b.iron.areas);
+  assert.equal(a.rum.strain, b.rum.strain);
+  assert.equal(a.iron.strain, b.iron.strain);
 });
 
 test("single build-aware matchup returns bounded rates", () => {
