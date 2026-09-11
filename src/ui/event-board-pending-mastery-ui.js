@@ -60,17 +60,17 @@ function ensureStyles() {
 }
 
 function choiceFields(window) {
-  const areas = [...(window?.areas ?? window?.pressureSystems ?? [])];
   if (window.masteryId === "engineer-crosswire-the-systems") {
-    const sources = areas.length ? areas : ["hull", "arkengine", "rigging", "lifeveil"];
+    const targets = ["hull", "drive", "weapons", "lifeveil", "morale"];
     return `<div class="arkflight-pending-mastery-fields">
-      <label>Threatened Area<select data-inline-mastery-from>${sources.map((id) => `<option value="${id}">${areaName(id)}</option>`).join("")}</select></label>
-      <label>Redirect To<select data-inline-mastery-to>${["hull","arkengine","rigging","lifeveil"].map((id) => `<option value="${id}">${areaName(id)}</option>`).join("")}</select></label>
+      <label>Redirect Degradation To<select data-inline-mastery-to>${targets.map((id) => `<option value="${id}">${areaName(id)}</option>`).join("")}</select></label>
     </div>`;
   }
-  if (window.masteryId === "veilwarden-stand-between") {
-    const sources = areas.length ? areas : ["hull", "arkengine", "rigging"];
-    return `<div class="arkflight-pending-mastery-fields"><label>Threatened Area<select data-inline-mastery-from>${sources.map((id) => `<option value="${id}">${areaName(id)}</option>`).join("")}</select></label></div>`;
+  if (window.masteryId === "engineer-keep-her-breathing") {
+    const targets = ["hull", "drive", "weapons"];
+    return `<div class="arkflight-pending-mastery-fields">
+      <label>Protect System<select data-inline-mastery-system>${targets.map((id) => `<option value="${id}">${areaName(id)}</option>`).join("")}</select></label>
+    </div>`;
   }
   return "";
 }
@@ -101,16 +101,14 @@ async function useWindow(controller, card) {
   const options = {};
   if (sourceStationId) options.sourceStationId = sourceStationId;
   if (masteryId === "engineer-crosswire-the-systems") {
-    const fromArea = card.querySelector("[data-inline-mastery-from]")?.value;
-    const toArea = card.querySelector("[data-inline-mastery-to]")?.value;
-    if (!fromArea || !toArea || fromArea === toArea) throw new Error("Crosswire the Systems requires two different ship Areas.");
-    options.fromArea = fromArea;
-    options.toArea = toArea;
+    const toSystem = card.querySelector("[data-inline-mastery-to]")?.value;
+    if (!toSystem) throw new Error("Choose a Ship Condition for Crosswire the Systems.");
+    options.toSystem = toSystem;
   }
-  if (masteryId === "veilwarden-stand-between") {
-    const fromArea = card.querySelector("[data-inline-mastery-from]")?.value;
-    if (!fromArea) throw new Error("Choose the threatened Area for Stand Between.");
-    options.fromArea = fromArea;
+  if (masteryId === "engineer-keep-her-breathing") {
+    const system = card.querySelector("[data-inline-mastery-system]")?.value;
+    if (!system) throw new Error("Choose Hull, Drive, or Weapons for Keep Her Breathing.");
+    options.system = system;
   }
   await controller.command({ type: "use-mastery", station, windowId, options });
 }
