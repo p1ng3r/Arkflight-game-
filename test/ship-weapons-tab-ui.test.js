@@ -72,12 +72,16 @@ test("legacy weapon controls do not force GM-only fire resolution", () => {
 });
 
 
-test("native station combat effects let owners fire locally and relay only protected target mutation", () => {
+test("native station combat effects use Foundry v14 chat-applied ship damage", () => {
   const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
   assert.match(effects, /userCanResolveShipState\(game\.user, attacker\)/);
-  assert.match(effects, /TARGET_MUTATION_REQUEST = "attack-target-mutation-request"/);
-  assert.match(effects, /canMutateTargetLocally/);
-  assert.match(effects, /game\.socket\?\.emit\?\.\(COMBAT_SOCKET/);
+  assert.match(effects, /TARGET_EFFECT_REQUEST = "attack-target-effect-consume-request"/);
+  assert.match(effects, /flags:[\s\S]*?shipDamage/);
+  assert.match(effects, /Hooks\.on\("renderChatMessageHTML"/);
+  assert.match(effects, /Apply \$\{base\} Hull/);
+  assert.match(effects, /Half \(\$\{Math\.floor\(base \/ 2\)\}\)/);
+  assert.match(effects, /Double \(\$\{base \* 2\}\)/);
+  assert.doesNotMatch(effects, /TARGET_MUTATION_REQUEST/);
   assert.doesNotMatch(effects, /Only the GM may resolve Arkflight ship combat attacks/);
 });
 
@@ -103,4 +107,16 @@ test("Reload and Work the Guns resolve locally for shared ship owners", () => {
   assert.match(consoleUi, /stationAction\("common-reload-weapon"/);
   assert.match(consoleUi, /stationAction\("battlewatch-reload-weapon"/);
   assert.match(consoleUi, /buttonLabel = "Work the Guns"/);
+});
+
+
+test("ship damage is not automatically written to the target during fire resolution", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  const fireStart = effects.indexOf("async function enhancedFireAtTarget");
+  const applyStart = effects.indexOf("async function applyShipDamageMessage");
+  const fireBody = effects.slice(fireStart, applyStart);
+  assert.doesNotMatch(fireBody, /target\.actor\.update\(\{ \[`flags\.\$\{MODULE_ID\}\.ship\.resources\.hull\.value/);
+  assert.match(effects, /async function applyShipDamageMessage/);
+  assert.match(effects, /chatDamageApplications/);
+  assert.match(effects, /async function undoShipDamageMessage/);
 });
