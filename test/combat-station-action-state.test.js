@@ -182,3 +182,23 @@ test("Work the Guns costs 0 AP, adds 1 Strain, and locks after one use in a roun
   const refreshed = beginStationActionTurn(next, 2);
   assert.equal(stationActionAvailability(refreshed, action, { round: 2, shipLevel: 1 }).ok, true);
 });
+
+
+test("Mythic movement abilities remain spent across later combat rounds", () => {
+  const base = combatState(20);
+  const burn = getCombatAction("navigator-impossible-burn");
+  const turned = getCombatAction("navigator-turn-between-heartbeats");
+
+  const burned = executeStationStateAction(base, burn, { round: 1, shipLevel: 20 });
+  assert.equal(burned.economy.ap.value, base.economy.ap.value);
+  assert.equal(burned.mobility.movement.allowance, base.mobility.movement.allowance + Math.ceil(base.mobility.speed * 0.5));
+  assert.equal(burned.strain.value, base.strain.value + 2);
+  assert.equal(stationActionAvailability(burned, burn, { round: 1, shipLevel: 20 }).reason, "once-per-battle");
+
+  const refreshed = beginStationActionTurn(burned, 2);
+  assert.equal(stationActionAvailability(refreshed, burn, { round: 2, shipLevel: 20 }).reason, "once-per-battle");
+
+  const heartbeat = executeStationStateAction(refreshed, turned, { round: 2, shipLevel: 20 });
+  assert.equal(heartbeat.mobility.maneuver.allowance, refreshed.mobility.maneuver.allowance + 2);
+  assert.equal(stationActionAvailability(heartbeat, turned, { round: 2, shipLevel: 20 }).reason, "once-per-battle");
+});
