@@ -1,86 +1,187 @@
-# Arkflight Ship Condition & Strain Contract
+# Arkflight Ship Conditions & Strain Contract
 
-**Status:** DESIGN LOCK / authoritative gameplay backbone for implementation
+**Status:** DESIGN LOCK / authoritative gameplay backbone
 
-**Scope:** Persistent ship condition, Strain, Area degradation, Voyage consequences, Ship Combat carryover, repair, recovery, ship progression hooks, talent-tree hooks, and mod hooks.
-
-This document is the current design authority for the ship-condition model. Existing Pressure/Hazard-era behavior that conflicts with this document is legacy and must be removed or migrated during implementation cleanup.
+This document defines the current persistent ship-damage model. Older Area, Pressure, Hazard, and targeted-Strain language is legacy compatibility only and must not be used for new gameplay rules.
 
 ---
 
 ## 1. Core Model
 
-Arkflight uses **one shared ship-wide Strain pool** plus persistent ship systems/resources.
+Arkflight ships use:
 
-Current percentage resources:
+- **Hull** — physical Hull Integrity plus Hardness.
+- **Drive** — combined propulsion, rigging, helm, and control damage.
+- **Weapons** — shipwide gunnery condition.
+- **Lifeveil** — fixed 0–100% magical/environmental integrity.
+- **Morale** — fixed 0–100% crew resolve.
+- **Strain** — one shared vessel-wide push-your-luck pool.
+- **Supply** — logistics/cargo resource, not a damage system.
 
-- **Lifeveil:** fixed 0-100%.
-- **Morale:** fixed 0-100%.
+Persistent ship damage is expressed as **Ship Conditions**, similar in purpose to PF2e character conditions. There is no universal Stable → Stressed → Damaged → Critical → Disabled ladder and no universal station penalty.
 
-Current physical resource:
+Hull, Drive, and Weapons have named condition tracks. Lifeveil and Morale derive their condition wording directly from their percentages.
 
-- **Hull:** physical integrity/HP plus Hardness.
+---
 
-System degradation is not a second set of HP pools. A degradation result changes the affected system's gameplay state or percentage.
+## 2. Named Ship Conditions
 
-The emerging damage-system model is:
+### 2.1 Hull
 
-- **Hull** — physical structure/Hardness.
-- **Drive** — merged Arkengine + Rigging damage track for propulsion and control.
-- **Lifeveil** — environmental/magical envelope percentage.
-- **Morale** — crew cohesion percentage.
-- **Weapons** — weapon operation/readiness.
+Hull Integrity remains the ship's physical HP. Hull Conditions change **Hardness**, not maximum Hull Integrity.
 
-Arkengine and Rigging remain distinct components/mod families even though their general damage consequence is moving toward the shared **Drive** track.
-
-Legacy persisted Area fields remain during migration, but where this document gives a percentage-resource rule, the percentage is authoritative.
-
-## 2. Strain
-
-### 2.1 Shared Strain Pool
-
-Strain is the persistent push-your-luck resource for the entire vessel.
-
-Strain is **not Hull damage**. It represents accumulated operational stress caused by forcing the ship beyond safe operation.
-
-Strain persists until removed by maintenance, abilities, repairs, shipyard service, or another explicit rule.
-
-### 2.2 Strain Danger Bands
-
-When an effect **adds Strain**, determine the ship's resulting Strain percentage after that effect resolves.
-
-| Resulting Strain | Flat Check |
+| Hull Condition | Effective Hardness |
 |---|---:|
-| 0-49% | None |
-| 50-74% | DC 5 |
-| 75-89% | DC 10 |
-| 90-99% | DC 15 |
-| 100%+ | Resolve the Strain Limit consequence instead |
+| **Sound** | 100% of base |
+| **Battered** | 75% of base |
+| **Breached** | 50% of base |
+| **Shattered** | 0 |
 
-The flat check occurs **after** the triggering ability/effect and after its Strain is added.
+Fractional Hardness always rounds down.
 
-A Strain addition that remains below 50% does not prompt a flat check.
+Examples:
 
-### 2.3 Pushed Ability Degrees of Success
+- Hardness 4: 4 → 3 → 2 → 0.
+- Hardness 3: 3 → 2 → 1 → 0.
 
-For pushed maneuvers/abilities using the agreed four-degree model, the desired maneuver/effect still occurs on every degree. The degree determines the cost to the ship.
+Hull 0 is **Wrecked** and is the universal terminal combat state. A non-Hull Ship Condition never automatically removes a vessel from combat.
 
-| Degree | Strain | System degradation | Additional flat check? |
-|---|---:|---|---|
-| Critical Success | +0 | No | No |
-| Success | +1 | No | Yes, if resulting Strain is 50-99% |
-| Failure | +1 | Yes | No |
-| Critical Failure | +2 | Yes | No |
+### 2.2 Drive
 
-Failure is already costly because a system degrades. Do **not** also make a Strain flat check for the same resolution.
+Drive represents Arkengine propulsion, rigging, helm, and control as one damage track. Arkengines and Rigging remain separate equipment/modification families.
 
-Critical Failure adds 2 Strain and causes one system degradation, but the maneuver still occurs.
+| Drive Condition | Speed | Maneuverability |
+|---|---:|---:|
+| **Responsive** | Normal | Normal |
+| **Sluggish** | –1 | Normal |
+| **Faltering** | –2 | –1 |
+| **Unresponsive** | –3 | –2 |
 
-### 2.4 Failed Flat Check — d8 System Degradation
+Speed and Maneuverability cannot be reduced below 0 by Drive Conditions.
 
-When a Strain flat check fails, roll **1d8**:
+An Unresponsive vessel can still remain in combat, fire weapons, be boarded, drift, surrender, or attempt repairs.
 
-| d8 | Degradation target |
+### 2.3 Weapons
+
+Weapons Conditions affect all installed ship weapons.
+
+| Weapons Condition | Weapon Attacks | Reload |
+|---|---:|---:|
+| **Ready** | Normal | Normal |
+| **Fouled** | –1 | +1 |
+| **Malfunctioning** | –2 | +2 |
+| **Barely Operable** | –3 | +3 |
+
+Firing still costs exactly **1 AP**. Weapons Conditions do not increase Fire AP.
+
+Common Reload still spends 1 AP to reduce remaining Reload by 1 round.
+
+**Work the Guns** remains once per round: spend **20% Morale + 1 Strain** to immediately ready one weapon with 2 or fewer rounds of Reload remaining.
+
+---
+
+## 3. Percentage-Derived Conditions
+
+### 3.1 Lifeveil
+
+Lifeveil is always stored as **0–100%**. Its percentage is authoritative; there is no separate Lifeveil damage-state pool or hull-specific maximum.
+
+| Lifeveil | Condition |
+|---|---|
+| 76–100% | **Stable** |
+| 51–75% | **Degraded** |
+| 1–50% | **Critical** |
+| 0% | **Collapsed** |
+
+Rules:
+
+- A Lifeveil degradation result removes **25 percentage points**.
+- Standard authored Lifeveil ability-cost unit: **5 percentage points**.
+- Stabilization Success restores **10 percentage points**.
+- Stabilization Critical Success restores **20 percentage points**.
+- At 0%, Lifeveil environmental/magical protection is offline.
+
+### 3.2 Morale
+
+Morale is always stored as **0–100%**.
+
+The legacy 0–5 scale migrates directly: **1 old Morale point = 20 percentage points**.
+
+| Morale | Condition |
+|---|---|
+| 100% | **Inspired** |
+| 80–99% | **Confident** |
+| 60–79% | **Steady** |
+| 40–59% | **Shaken** |
+| 1–39% | **Faltering** |
+| 0% | **Broken** |
+
+Rules:
+
+- A Morale degradation result removes **20 percentage points**.
+- Existing 1-Morale costs become **20% Morale**.
+- **Work the Guns:** 20% Morale + 1 Strain.
+- Safe-rest recovery normally restores 20% only up to 60% (Steady); rest never lowers higher Morale.
+- 100% retains the Inspired benefit.
+- 0% prevents Crew Tactics until Morale is restored.
+- Broken Morale does not automatically mean mutiny; fiction determines panic, refusal, surrender, rout, exhaustion, or another consequence.
+
+---
+
+## 4. Worsening and Improving Conditions
+
+When a rule says a system **degrades**, **worsens**, or suffers **System Degradation**:
+
+- Hull worsens one step: Sound → Battered → Breached → Shattered.
+- Drive worsens one step: Responsive → Sluggish → Faltering → Unresponsive.
+- Weapons worsens one step: Ready → Fouled → Malfunctioning → Barely Operable.
+- Lifeveil loses 25%.
+- Morale loses 20%.
+
+A named condition cannot worsen beyond its final stage.
+
+Repair/recovery reverses the appropriate mechanic:
+
+- Hull/Drive/Weapons improve their named Ship Condition.
+- Lifeveil restores percentage.
+- Morale restores percentage through appropriate crew/recovery rules.
+- Hull Integrity repair restores HP separately from Hull Condition repair.
+- Strain reduction is maintenance, not condition repair.
+
+---
+
+## 5. Strain
+
+### 5.1 Shared Pool
+
+Strain is one shared ship-wide pool. New rules must not assign Strain to Hull, Arkengine, Rigging, Lifeveil, Morale, or Weapons.
+
+When Strain is added, evaluate the ship's **resulting** Strain percentage.
+
+| Resulting Strain | Result |
+|---|---|
+| 0–49% | No flat check |
+| 50–74% | **DC 5 flat check** |
+| 75–89% | **DC 10 flat check** |
+| 90–99% | **DC 15 flat check** |
+| 100%+ | Automatic degradation; no flat check |
+
+On a failed danger-band flat check, roll the shared 1d8 degradation table.
+
+At 100%+:
+
+1. Skip the flat check.
+2. Roll the shared 1d8 degradation table automatically.
+3. Subtract one full Strain capacity.
+4. Keep overflow Strain.
+
+A single triggering resolution can worsen **at most one** Ship Condition.
+
+If that resolution already caused a condition to worsen directly, its Strain does not cause another degradation or danger-band flat check.
+
+### 5.2 Shared d8 Degradation Table
+
+| d8 | Target |
 |---:|---|
 | 1 | Hull |
 | 2 | Morale |
@@ -91,530 +192,101 @@ When a Strain flat check fails, roll **1d8**:
 | 7 | Weapons |
 | 8 | Players choose |
 
-**Drive** is the merged Arkengine/Rigging damage target.
+On an 8, the players choose Hull, Drive, Lifeveil, Morale, or Weapons.
 
-A single triggering resolution can cause **at most one system degradation**. Do not cascade another flat check from Strain generated by the consequence itself.
+### 5.3 Pushed Ability Degrees
 
-### 2.5 Strain Limit
+For pushed maneuvers/abilities where the maneuver itself still happens:
 
-When Strain reaches or exceeds the vessel's Strain Limit, the existing threshold rule still resolves:
-
-1. Resolve one threshold degradation/consequence.
-2. Subtract one full Strain Limit.
-3. Keep overflow Strain.
-4. Do not also roll the 50/75/90 flat check for that same resolution.
-
-A single resolution can trigger at most one threshold degradation even when overflow remains at or above the limit.
-
-## 3. Percentage Resources and Degradation
-
-Lifeveil and Morale no longer use hull-specific maximum values. Their maximum is always **100%**.
-
-### 3.1 Lifeveil
-
-Lifeveil percentage is its condition. There is no second Lifeveil HP/cap track.
-
-| Lifeveil | State |
-|---|---|
-| 76-100% | Stable |
-| 51-75% | Degraded |
-| 1-50% | Critical |
-| 0% | Collapsed / Offline |
-
-Rules:
-
-- Standard authored Lifeveil ability-cost unit: **5 percentage points**.
-- A Lifeveil system-degradation result removes **25 percentage points**.
-- Stabilization Success restores **10 percentage points**.
-- Stabilization Critical Success restores **20 percentage points**.
-- At 0%, atmospheric/environmental and magical shielding are offline; encounter/GM exposure rules apply.
-
-### 3.2 Morale
-
-Morale is a 0-100% crew-condition resource.
-
-The old 0-5 economy converts directly:
-
-**1 old Morale point = 20 percentage points.**
-
-| Morale | State |
-|---|---|
-| 100% | Inspired |
-| 80-99% | Confident |
-| 60-79% | Steady |
-| 40-59% | Shaken |
-| 1-39% | Faltering |
-| 0% | Broken |
-
-Rules:
-
-- Existing 1-Morale costs become **20% Morale**.
-- **Work the Guns:** 20% Morale + 1 Strain.
-- **Drive the Crew:** 20% Morale plus its authored Strain cost.
-- A Morale degradation result removes **20 percentage points**.
-- Eight hours of safe rest restores **20% Morale**, normally only up to **60% (Steady)**.
-- At exactly 100% Morale, the existing Inspired benefit remains available.
-- At 0%, Crew Tactics are unavailable until Morale is restored.
-
-Percentage loss and restoration change Current directly. They do not create a second Morale damage-state pool.
-
-## 4. Combat Identity of Each Area
-
-### 4.1 Hull / Battlewatch
-
-Hull already represents the ship's physical HP/structural integrity.
-
-Hull condition also affects all ship attack rolls:
-
-| Hull State | Combat effect |
-|---|---|
-| Stable | Normal |
-| Stressed | -1 to all ship attack rolls |
-| Damaged | -3 to all ship attack rolls |
-| Critical | -5 to all ship attack rolls |
-| Disabled | -10 to emergency/last-ditch ship attack rolls; ship is effectively out of normal combat |
-
-Hull does not need a separate invented movement/defense subsystem on top of this.
-
-### 4.2 Arkengine / Engineer
-
-Arkengine governs powered movement/speed.
-
-| Arkengine State | Combat effect |
-|---|---|
-| Stable | Full movement |
-| Stressed | Engineer -1; Speed -1 hex |
-| Damaged | Engineer -3; Speed -3 hex, minimum 1 |
-| Critical | Engineer -5; maximum Speed 1 hex |
-| Disabled | Recovery/emergency use -10; 0 powered movement |
-
-### 4.3 Rigging / Navigator
-
-Rigging governs maneuverability and facing changes.
-
-Each ship has a base **Facing Allowance**: the number of facing changes it may make during movement without spending extra Actions.
-
-Rigging degradation effectively reduces this allowance by one step at a time. Once the free allowance is exhausted, additional degradation converts facing changes into Action costs with no movement benefit.
-
-Conceptual rule:
-
-- Effective free facing changes = base Facing Allowance reduced by Rigging degradation.
-- Once the free allowance falls below zero, each additional step increases the Action cost of a facing change.
-- Disabled Rigging prevents voluntary facing changes.
-
-Example for a ship with base Facing Allowance 2:
-
-| Rigging State | Facing effect |
-|---|---|
-| Stable | 2 free facing changes during movement |
-| Stressed | 1 free facing change |
-| Damaged | 0 free; 1 Action per facing change |
-| Critical | 2 Actions per facing change |
-| Disabled | No voluntary facing change |
-
-Example for a ship with base Facing Allowance 1:
-
-| Rigging State | Facing effect |
-|---|---|
-| Stable | 1 free facing change |
-| Stressed | 0 free; 1 Action per facing change |
-| Damaged | 2 Actions per facing change |
-| Critical | 3 Actions per facing change |
-| Disabled | No voluntary facing change |
-
-Exact combat action timing will be finalized when the tactical combat action economy is implemented, but the above degradation principle is locked.
-
-### 4.4 Lifeveil / Veilwarden
-
-Lifeveil is a fixed **0-100% integrity resource**.
-
-Its percentage and the bands in Section 3.1 are authoritative. Hull/chassis no longer changes the Lifeveil maximum.
-
-Veilwarden abilities may spend Lifeveil percentage directly. The standard authored spend unit is 5%, while stronger abilities may explicitly spend more.
-
-A Lifeveil degradation result removes 25%.
-
-At 0%, the Lifeveil is offline and the crew can be exposed to environmental, void, magical, or aetheric hazards according to the encounter.
-
-### 4.5 Morale / Captain
-
-Morale is a fixed **0-100% crew-condition resource**.
-
-Its percentage and the bands in Section 3.2 are authoritative.
-
-Morale remains spendable. Existing 1-point spends are converted to 20%.
-
-Morale degradation removes 20%. Reaching 0% does not automatically mean mutiny; the specific fiction may be panic, surrender, refusal, exhaustion, rout, or another appropriate consequence.
-
+| Degree | Strain | Direct degradation | Extra Strain check? |
+|---|---:|---|---|
+| Critical Success | +0 | No | No |
+| Success | +1 | No | Yes, if resulting Strain is 50–99% |
+| Failure | +1 | One degradation | No |
+| Critical Failure | +2 | One degradation | No |
 
 ---
 
-## 5. Repair
+## 6. Ship Combat
 
-### 5.1 Repair Requires Time + Resources + Check
+Normal ship weapon resolution is:
 
-At sea, Area repair requires:
+**Attack → Damage → Hardness → Hull Integrity**
 
-- time,
-- Supplies,
-- an appropriate PF2e skill check.
+Core weapon hits do not directly roll System Threat or degrade a predetermined Area.
 
-Each successful repair improves the Area by the listed amount.
+A **Critical Success weapon attack adds +1 ship-wide Strain** in addition to its normal critical damage. That Strain uses the same danger bands and d8 table as every other Strain source.
 
-| Starting State | Repair result | Base Time | Supply Cost |
-|---|---|---:|---:|
-| Stressed | Stable | 4 hours | 1 |
-| Damaged | Stressed | 1 day | 3 |
-| Critical | Damaged | 3 days | 5 |
-| Disabled | **Damaged** | **10 days** | **10** |
+Special authored weapon traits or effects may explicitly worsen a particular Ship Condition, but that is an exception written on the effect—not the default combat rule.
 
-Disabled is intentionally special: a successful 10-day rebuild restores the Area directly to Damaged rather than Critical.
-
-### 5.2 Suggested Repair Skills
-
-Final skill legality may be further authored by ship component/content, but defaults are:
-
-- **Hull:** Crafting
-- **Arkengine:** Crafting, Engineering Lore, Arcana
-- **Rigging:** Crafting, Sailing Lore, appropriate nautical Lore
-- **Lifeveil:** Arcana, Religion, Nature, Occultism
-- **Morale:** Diplomacy, Performance, Intimidation, appropriate command/crew Lore
-
-### 5.3 Repair DC
-
-Repair DC is based on the PF2e level-based DC for the **ship's level**, then modified by Area severity:
-
-| Starting State | DC modifier |
-|---|---:|
-| Stressed | +0 |
-| Damaged | +2 |
-| Critical | +5 |
-| Disabled | +10 |
-
-This should use PF2e level-based DC logic, rather than naively taking an unrelated DC and adding ship level again.
-
-### 5.4 Repair Degrees of Success
-
-**Critical Success**
-
-- Repair succeeds.
-- Required time is halved.
-- Supply cost is halved, round up, minimum 1.
-- Gain a +2 circumstance bonus to the **next repair check on the same Area**.
-
-The +2 follow-up bonus:
-
-- does not stack,
-- applies only to the next repair check on that same Area,
-- is consumed when used,
-- disappears if the crew switches to repairing a different Area before using it.
-
-**Success**
-
-- Repair succeeds.
-- Normal time.
-- Normal Supply cost.
-
-**Failure**
-
-- No Area improvement.
-- Time is spent.
-- Half the normal Supply cost is consumed, round up.
-
-**Critical Failure**
-
-- No Area improvement.
-- Time is spent.
-- Full Supply cost is consumed.
-- Ship gains +1 Strain.
-
-### 5.5 Aid
-
-Use native PF2e **Aid**, not a custom d6 bonus.
-
-Normal PF2e Aid rules apply (commonly DC 15, with normal success/critical-success bonuses).
-
-Default limit:
-
-- one primary repairer,
-- one primary Aid contribution per repair check.
-
-Other PCs may repair different Areas simultaneously when crew, time, and resources permit.
-
-Talents may later expand the normal Aid limit or improve coordinated work crews.
+Ship Conditions never add a universal station check penalty. Their listed system-specific consequences are the penalty.
 
 ---
 
-## 6. Port and Shipyard Repair
+## 7. Repair and Recovery
 
-At sea, repairs consume Supplies.
+PF2e-style terminology:
 
-In port, the crew may spend **money instead of Supplies** for repairs.
+- **Worsen a Ship Condition** = move one named condition step worse or apply the percentage loss.
+- **Improve a Ship Condition** = move one named condition step better.
+- **Remove a Ship Condition** = return Hull/Drive/Weapons to their first state.
+- **Restore Lifeveil/Morale** = increase the percentage.
+- **Repair Hull Integrity** = restore Hull HP.
+- **Reduce Strain** = remove ship-wide stress.
 
-A proper shipyard reduces monetary repair cost by **25%**.
+Out-of-combat repair packages and shipyard workflows may define their own time/resource costs, but they must operate through these canonical condition/resource rules rather than reintroducing Areas.
 
-Special facilities, talents, mods, factions, or abilities may modify this further.
-
-Special abilities may improve an Area by **one degree** unless explicitly authored otherwise.
-
----
-
-## 7. Reducing Strain
-
-Reducing Strain and repairing an Area are different actions.
-
-- **Strain reduction** prevents future degradation.
-- **Area repair** fixes degradation that has already occurred.
-
-Recommended maintenance structure:
-
-### Routine Maintenance
-
-- Time: 4 hours
-- PF2e ship-maintenance check
-- No Supply required
-- Success: remove 1 Strain
-- Critical Success: remove 2 Strain
-
-### Emergency Maintenance
-
-- Time: 1 hour
-- Cost: 1 Supply
-- Success: remove 1 Strain
-- Critical Success: remove 2 Strain
-- Failure: Supply spent, no Strain removed
-- Critical Failure: Supply spent, +1 Strain
-
-This creates a strategic choice between spending expedition time and spending Supplies.
-
-Arkcraft Skills, Crew Tactics, talents, mods, or authored effects may reduce Strain instantly when explicitly allowed.
-
-### Port/Shipyard Strain
-
-Simply reaching port does not automatically clear Strain.
-
-A proper paid shipyard service/refit may clear remaining Strain as part of the service.
+Combat **Emergency Repair** currently supports Hull, Drive, Weapons, or Lifeveil. Morale recovery belongs to Captain/crew recovery effects rather than engineering repair.
 
 ---
 
-## 8. Voyage to Combat Carryover
+## 8. Supply
 
-All Area states and Strain are persistent ship state.
-
-Voyage damage carries directly into Ship Combat.
-
-Examples:
-
-- Damaged Arkengine -> Engineer -3 and Speed -3 hex in combat.
-- Critical Rigging -> Navigator -5 and severely restricted facing changes.
-- Damaged Hull -> Battlewatch/ship attacks -3 plus reduced Hull integrity.
-- Critical Lifeveil -> Veilwarden -5 and Lifeveil capped at 25% effective integrity.
-- Damaged Morale -> Captain -3 and reduced Crew Tactic/Reaction economy.
-
-Combat and Voyage must read the same authoritative ship-condition data. Do not build separate duplicate condition systems.
-
----
-
-## 9. Ship Combat Damage and System Threat
-
-Ship Combat should feed the same shared Strain/Area system.
-
-Recommended base rule:
-
-- Normal hit: deal weapon damage normally.
-- Critical hit: deal critical weapon damage and add **+1 Ship Strain**.
-- The weapon's **System Threat** identifies the Area threatened if that Strain crosses the threshold.
-
-Weapons may have different System Threat identities, for example:
-
-- Heavy Bombard -> Hull
-- Chain Battery / chain shot -> Rigging
-- Aether Lance -> Lifeveil
-- Resonance Harpoon -> Arkengine
-- Crew-sweeper/boarding-focused weapon -> Morale
-
-Special weapon traits may alter the normal rule. Example: a Breaching weapon could add Strain on a normal hit.
-
-Exact weapon families and traits are not yet locked; this is the intended architecture.
-
----
-
-## 10. Ship Level, Hull/Chassis, Talent Tree, and Mods
-
-Ship progression must be designed against this condition system before final Strain-limit numbers are locked.
-
-### 10.1 Hull/Chassis Establishes the Baseline
-
-Hull/chassis is expected to define or strongly influence:
-
-- Base Hull HP
-- Base Lifeveil
-- Base Morale
-- Base Strain Limit
-- Base Speed
-- Base Facing Allowance
-- Weapon capacity
-- Mod slots
-- Crew capacity
-
-Different hulls should create meaningfully different vessels before talents and mods are applied.
-
-### 10.2 Ship Level
-
-Target progression remains compatible with a **1-20 ship-level model**.
-
-Ship level should primarily unlock progression choices rather than automatically inflating every stat each level.
-
-### 10.3 Branching Talent Tree
-
-Ship talents should form a **branching progression system**, not five boring linear +1 tracks.
-
-Expected major branches:
-
-- Hull / Battlewatch
-- Arkengine / Engineer
-- Rigging / Navigator
-- Lifeveil / Veilwarden
-- Morale / Captain
-
-Cross-branch talents are encouraged.
-
-Talent types may include:
-
-- Passive
-- Unlock/new ship or station action
-- Reaction
-- Base-rule modifier
-- Recovery/repair benefit
-- Keystone
-
-Possible talent hooks now available include:
-
-- increase Strain Limit,
-- prevent/reduce Strain,
-- improve Strain recovery,
-- ignore a degradation penalty,
-- reduce repair Supply cost,
-- reduce repair time,
-- improve Aid/work crews,
-- alter Arkengine speed degradation,
-- alter Rigging facing degradation,
-- modify Hull attack penalties,
-- improve Lifeveil or Morale integrity,
-- improve Disabled recovery,
-- add Arkcraft/Combat actions.
-
-### 10.4 Mods
-
-Mods remain separate from talents.
-
-- **Talents** = persistent ship development/expertise/design progression.
-- **Mods** = physical installable/removable/upgradable/salvageable equipment.
-
-Maintain the existing distinction between:
-
-- **Ship Mods**
-- **Arkengine Mods**
-
-Mods may modify Strain Limit, movement, facing, repairs, integrity, weapons, special actions, and other ship capabilities according to authored content.
-
----
-
-## 11. Player-Facing Repair and Damage Philosophy
-
-The condition system should create meaningful but readable ship problems.
-
-The player should always be able to answer:
-
-- How much Strain does the ship have?
-- What is the Strain Limit?
-- Which Areas are Stable/Stressed/Damaged/Critical/Disabled?
-- What is each Area's Base Max, Effective Max, and Current value where applicable?
-- What penalty does the Area currently impose?
-- What does that penalty mean in Voyage?
-- What does that penalty mean in Ship Combat?
-- What will it cost and how long will it take to repair?
-
-Arkcraft Skills and Crew Tactics may allow the crew to fight through damage temporarily, but temporary mitigation does **not** automatically repair the persistent Area state.
-
----
-
-## 12. Legacy Systems to Remove
-
-The active Voyage/ship gameplay architecture should no longer depend on separate **Pressure** or **Hazard** subsystems.
-
-Pressure/Hazard-era code and authored content should be audited and removed, migrated, or retained only as narrowly scoped backward-compatibility translation where truly required for old persisted data.
-
-Targets for cleanup include, where present:
-
-- Pressure state/tracks
-- Pressure UI
-- `pressure` authored consequences
-- `reduce-highest-pressure`
-- Hazard state
-- Hazard UI
-- hazard guards
-- hazard shelters
-- suppressed hazards
-- Hazard-targeted rewards/abilities that no longer fit the new model
-
-New production Event content must use the Strain/Area contract rather than author new Pressure/Hazard mechanics.
-
----
-
-## 13. Implementation Plan
-
-Do not continue adding unrelated Voyage mechanics before this backbone is implemented cleanly.
-
-Recommended sequence:
-
-1. Treat this document as the design contract.
-2. Audit current ship schema and ship sheet against Base Max / Effective Max / Current / Area State requirements.
-3. Design Hull/chassis baselines, ship level progression, branching talent-tree structure, Ship Mods, and Arkengine Mods enough to lock Strain Limit derivation.
-4. Add/adjust domain tests for Strain gain, threshold crossing, overflow, one-degradation-per-resolution, Area mapping, persistence, repair, and recovery.
-5. Centralize Area degradation and ship-effect resolution into one authoritative domain path.
-6. Remove active Pressure mechanics.
-7. Remove active Hazard mechanics.
-8. Rewrite existing Voyage/Event outcomes to the Strain/Area model.
-9. Update Arkcraft Skills, Crew Tactics, Risk benefits, rewards, and tooltips to use the new contract.
-10. Update opening/Event/ship-sheet UI to show authoritative Strain and Area state rather than legacy Pressure/Hazard data.
-11. Make Ship Combat consume the same Area states and shared Strain pool.
-12. Implement combat weapon System Threat behavior.
-13. Implement repair/maintenance workflow.
-14. Build the branching ship Talent Tree and mods on top of the stable domain model.
-15. Remove any remaining migration translator once old persisted content no longer requires it.
-
----
-
-## 14. Still Open / Not Yet Locked
-
-The following are intentionally still design work, not accidental omissions:
-
-1. Exact Hull/chassis catalog and base Strain Limit values.
-2. Exact ship-level progression cadence and talent-point cadence.
-3. Exact branching Talent Tree nodes, prerequisites, cross-links, and keystones.
-4. Exact Ship Mod slot model and Arkengine Mod slot model.
-5. Exact monetary repair-cost formula in port/shipyard.
-6. Exact Morale Current-value gain/loss rules outside Area degradation.
-7. Exact tactical-combat Action timing for paid facing changes.
-8. Exact weapon families, System Threat traits, and which weapons add Strain on normal hits.
-9. Exact ship-sheet UI layout for Base Max / Effective Max / Current / condition display.
-10. Exact rules for authored emergency behavior of Disabled Areas beyond the baseline 'normal function unavailable' rule.
-
-Everything else in this document is the current agreed backbone and should be treated as the basis for implementation and cleanup.
-
----
-
-## 13. Supply Economy
-
-**Supply** is Arkflight's standardized abstraction for ship provisions, routine maintenance stock, and ordinary consumables.
-
-Locked baseline rules:
+Supply is a standardized bundle of provisions, routine maintenance stock, and normal ship consumables.
 
 - **Base value:** 1 gp per Supply.
-- **Cargo:** 10 Supply occupy 1 Cargo Space; therefore 1 Supply occupies 0.1 Cargo Space.
-- **Daily consumption:** a crewed ship consumes 1 Supply per 10 crew aboard per day, rounded up.
-- Supply may also be consumed by repairs, emergency maintenance, and explicitly authored ship abilities.
-- Supply competes with salvage, spare components, weapons, trade goods, and other carried material for the ship's normal Cargo capacity.
+- **Cargo:** 10 Supply = 1 Cargo Space.
+- **1 Supply:** 0.1 Cargo Space.
+- **Daily consumption:** 1 Supply per 10 crew aboard per day, rounded up.
+- Supply competes with salvage, spare components, weapons, trade goods, and ordinary cargo.
+- A normal-port price is 1 gp; scarcity and authored events may alter market price.
 
-The 1 gp value is a normal-port baseline. Scarcity, blockade, remoteness, faction pricing, or authored Events may change the purchase price without changing the underlying Supply unit.
+Supply is not a Ship Condition and is not included on the Strain degradation table.
+
+---
+
+## 9. Persistence and Migration
+
+Current persistent condition data:
+
+```js
+shipConditions: {
+  hull: "sound",
+  drive: "responsive",
+  weapons: "ready"
+}
+```
+
+Lifeveil and Morale conditions are derived from their resource percentages and are not stored as duplicate condition states.
+
+Legacy Arkengine/Rigging/Helm damage migrates to **Drive**, using the worst old severity.
+
+Legacy Area/System exports may remain temporarily as compatibility shims, but active gameplay code and new authored content must use Ship Conditions.
+
+Hidden legacy derived fields such as old Lifeveil Capacity may remain temporarily while older components are migrated. They do not define current Lifeveil/Morale/Supply resource maxima.
+
+---
+
+## 10. Player-Facing Summary
+
+A player should be able to read the ship as:
+
+- **Hull:** current/max HP, effective Hardness, named Hull Condition.
+- **Drive:** named condition plus resulting Speed/Maneuverability.
+- **Weapons:** named condition plus attack/Reload modifier.
+- **Lifeveil:** percentage plus derived condition.
+- **Morale:** percentage plus derived condition.
+- **Strain:** current/max plus visible DC 5 / DC 10 / DC 15 danger thresholds.
+- **Supply/Cargo:** current Supply and total Cargo use.
+
+Do not display generic Area penalties or a second condition state for Lifeveil or Morale.
