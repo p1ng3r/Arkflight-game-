@@ -89,12 +89,14 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
   assert.ok(weaponReloadRemaining(state.weapons[portGun.key], 1) > 0);
   assert.throws(() => fireWeapon(state, portGun.key, 1), /still reloading/);
 
-  // A later turn refreshes AP but keeps reload history; the common Reload action advances it.
+  // A later turn refreshes AP but does not advance Reload. Only the common
+  // Reload action reduces the weapon's remaining Reload requirement.
+  const reloadBeforeTurn = weaponReloadRemaining(state.weapons[portGun.key], 1);
   state = beginCombatantTurn(state, 2);
-  const reloadBeforeWork = weaponReloadRemaining(state.weapons[portGun.key], 2);
-  if (reloadBeforeWork > 0) {
+  assert.equal(weaponReloadRemaining(state.weapons[portGun.key], 2), reloadBeforeTurn);
+  if (reloadBeforeTurn > 0) {
     state = reloadWeapon(state, portGun.key, 2);
-    assert.ok(weaponReloadRemaining(state.weapons[portGun.key], 2) < reloadBeforeWork);
+    assert.equal(weaponReloadRemaining(state.weapons[portGun.key], 2), reloadBeforeTurn - 1);
   }
 
   // Resolve real Hardness against incoming damage. Ship Conditions are a
