@@ -22,7 +22,8 @@ import {
 
 import { syncResourceMaxima } from "../src/ship/derive-ship.js";
 import { applyShipEffect } from "../src/ship/ship-effects.js";
-import { AREA_STATES, createShip } from "../src/ship/ship-schema.js";
+import { createShip } from "../src/ship/ship-schema.js";
+import { shipConditionProfile } from "../src/ship/ship-conditions.js";
 
 test("0 Hull means disabled/wrecked, not destroyed", () => {
   const state = hullOperationalState({ resources: { hull: { value: 0 } } });
@@ -40,14 +41,14 @@ test("positive Hull remains operational", () => {
   assert.equal(state.normalOperationAvailable, true);
 });
 
-test("Morale uses the locked 0-5 named bands", () => {
-  assert.equal(moraleBand(5).label, "Inspired");
-  assert.equal(moraleBand(4).label, "Confident");
-  assert.equal(moraleBand(3).label, "Steady");
-  assert.equal(moraleBand(2).label, "Shaken");
-  assert.equal(moraleBand(1).label, "Faltering");
+test("Morale uses the locked 0-100 percentage bands", () => {
+  assert.equal(moraleBand(100).label, "Inspired");
+  assert.equal(moraleBand(80).label, "Confident");
+  assert.equal(moraleBand(60).label, "Steady");
+  assert.equal(moraleBand(40).label, "Shaken");
+  assert.equal(moraleBand(20).label, "Faltering");
   assert.equal(moraleBand(0).label, "Broken");
-  assert.equal(moraleBand(99).label, "Inspired");
+  assert.equal(moraleBand(99).label, "Confident");
   assert.equal(moraleBand(-4).label, "Broken");
 });
 
@@ -73,14 +74,14 @@ test("installed hardware occupies installation capacity instead of Cargo", () =>
   assert.deepEqual(INSTALLED_HARDWARE_CARGO_EXEMPT.length, 3);
 });
 
-test("ordinary Hull damage does not automatically degrade the Hull Area", () => {
+test("ordinary Hull damage does not automatically worsen the Hull Condition", () => {
   const ship = createShip({
     resources: { hull: { value: 100, max: 100 } },
-    areas: { hull: { state: AREA_STATES.STABLE } }
+    shipConditions: { hull: "sound" }
   });
   const result = applyShipEffect(ship, { kind: "damage-hull", value: 25 });
   assert.equal(result.ship.resources.hull.value, 75);
-  assert.equal(result.ship.areas.hull.state, AREA_STATES.STABLE);
+  assert.equal(shipConditionProfile(result.ship, "hull").id, "sound");
 });
 
 test("Hull repair uses one Salvage Part per 10 Hull on success and 20 on critical success", () => {
@@ -145,14 +146,16 @@ test("syncing derived maxima preserves a legitimate zero Hull value", () => {
   const ship = createShip({
     resources: {
       hull: { value: 0, max: 100 },
-      lifeveil: { value: 0, max: 50 },
+      lifeveil: { value: 0, max: 100 },
       strain: { value: 0, max: 4 },
       supplies: { value: 0, max: 10 },
-      morale: { value: 3, max: 5 }
+      morale: { value: 60, max: 100 }
     }
   });
-  const synced = syncResourceMaxima(ship, { stats: { hullIntegrity: 120, lifeveilCapacity: 60, strainCapacity: 4 } });
+  const synced = syncResourceMaxima(ship, { stats: { hullIntegrity: 120, cargoCapacity: 10, strainCapacity: 4 } });
   assert.equal(synced.resources.hull.value, 0);
   assert.equal(synced.resources.lifeveil.value, 0);
   assert.equal(synced.resources.hull.max, 120);
+  assert.equal(synced.resources.lifeveil.max, 100);
+  assert.equal(synced.resources.morale.max, 100);
 });
