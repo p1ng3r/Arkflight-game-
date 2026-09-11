@@ -9,7 +9,6 @@ export * from "./engagement-rules.js";
 export * from "./station-action-state.js";
 export * from "./station-action-economy.js";
 export * from "./station-effect-rules.js";
-export * from "./system-damage.js";
 export * from "./weapon-combat.js";
 export * from "./weapon-targeting.js";
 export {
