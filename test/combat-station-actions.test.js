@@ -33,9 +33,6 @@ test("core combat Actions consume shared AP and Reactions consume shared RP", ()
     if (entry.timing === COMBAT_ACTION_TIMING.REACTION) {
       assert.equal(entry.cost.ap, 0, `${entry.id} does not spend AP`);
       assert.ok(entry.cost.rp >= 1, `${entry.id} spends RP`);
-    } else if (entry.rules?.costSource) {
-      assert.equal(entry.id, "battlewatch-fire-weapon");
-      assert.equal(entry.rules.costSource, "weapon.fireAP");
     } else if (entry.id === "battlewatch-reload-weapon") {
       assert.equal(entry.cost.ap, 0, "Work the Guns costs 0 AP");
       assert.equal(entry.rules.oncePerRound, true, "Work the Guns is once per round");
@@ -87,4 +84,11 @@ test("Reload is a common 1 AP action separate from Battlewatch Work the Guns", (
   assert.equal(work.cost.ap, 0);
   assert.equal(work.rules.oncePerRound, true);
   assert.equal(work.rules.maxReloadRemaining, 2);
+});
+
+
+test("Fire Weapon has a fixed 1 AP cost independent of weapon definition", () => {
+  const fire = COMBAT_ACTIONS["battlewatch-fire-weapon"];
+  assert.equal(fire.cost.ap, 1);
+  assert.equal(fire.rules.costSource, undefined);
 });
