@@ -106,7 +106,10 @@ const PF2E_RUNES = Object.freeze([
 ]);
 
 function majorSalvageRewards({ gold, scrap = 0, extraordinary = false } = {}) {
-  return rewardPackage({ gold, aetherScrap: scrap, pf2eItems: PF2E_RUNES, shipComponents: [{ id: "gilded-shatter-rare-blueprint-roll", kind: "blueprint-table", name: "Rare Arkflight Blueprint", rarity: "rare", description: `Roll/select one result from the Gilded Shatter rare blueprint table (${GILDED_SHATTER_BLUEPRINT_TABLE.map((entry) => entry.name).join(", ")}).` }], boons: [{ id: "gilded-shatter-deep-salvage-choice", name: "Deep Salvage Choice — Choose One", description: GILDED_SHATTER_DEEP_SALVAGE_OPTIONS.map((entry, index) => `${index + 1}) ${entry.name}: ${entry.description}`).join(" ") }], ...(extraordinary ? { salvage: [{ name: "Exceptional Gilded Aetherite Cache", description: "A compact cache of stable transmuted salvage recovered without sacrificing the guaranteed blueprint, chosen deep salvage, or PF2e rune rewards.", valueGp: 75, rarity: "uncommon", level: 6 }] } : {}) });
+  return rewardPackage({ gold, aetherScrap: scrap, pf2eItems: PF2E_RUNES, shipComponents: [
+    { id: "gilded-shatter-rare-blueprint-roll", kind: "blueprint-table", name: "Rare Arkflight Blueprint", rarity: "rare", options: GILDED_SHATTER_BLUEPRINT_TABLE, description: `Roll/select one result from the Gilded Shatter rare blueprint table (${GILDED_SHATTER_BLUEPRINT_TABLE.map((entry) => entry.name).join(", ")}).` },
+    { id: "gilded-shatter-deep-salvage-choice", kind: "choice-table", name: "Deep Salvage Choice — Choose One", options: GILDED_SHATTER_DEEP_SALVAGE_OPTIONS, description: GILDED_SHATTER_DEEP_SALVAGE_OPTIONS.map((entry, index) => `${index + 1}) ${entry.name}: ${entry.description}`).join(" ") }
+  ], ...(extraordinary ? { salvage: [{ name: "Exceptional Gilded Aetherite Cache", description: "A compact cache of stable transmuted salvage recovered without sacrificing the guaranteed blueprint, chosen deep salvage, or PF2e rune rewards.", valueGp: 75, rarity: "uncommon", level: 6 }] } : {}) });
 }
 
 export const GILDED_SHATTER = eventDefinition({
