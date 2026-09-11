@@ -62,7 +62,7 @@ test("Command HUD permanently exposes core combat state and all five ship vitals
     assert.match(template, new RegExp(`data-afch-vital="${vital}"`));
   }
   assert.match(commandHud, /deriveShip/);
-  assert.match(commandHud, /supplyCapacity/);
+  assert.match(commandHud, /cargoCapacity/);
   assert.match(commandHud, /state\?\.strain/);
 });
 
