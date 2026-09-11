@@ -55,11 +55,13 @@ function userCanUpdateDocument(user, document) {
 }
 
 function userCanResolveShipState(user, combatant) {
-  return Boolean(
-    combatant?.actor
-    && userOwnsActor(user, combatant.actor)
-    && userCanUpdateDocument(user, combatant.actor)
-  );
+  if (!combatant?.actor || !userOwnsActor(user, combatant.actor) || !userCanUpdateDocument(user, combatant.actor)) return false;
+  try {
+    return typeof combatant?.canUserModify !== "function"
+      || combatant.canUserModify(user, "update") === true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 function resolveCombatant(base, reference) {
