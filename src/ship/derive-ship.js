@@ -1,4 +1,5 @@
 import { AREA_STATES } from "./ship-schema.js";
+import { driveConditionPenalties, effectiveHullHardness, weaponConditionModifiers } from "./ship-conditions.js";
 import { applyTalentProgression, clampShipLevel, progressionView, shipDefenseProgressionBonus } from "./progression.js";
 import { resolveInstalledModTalentSynergies } from "./mod-talent-synergy.js";
 import { applyShipSpecialization } from "./specialization-rules.js";
@@ -112,6 +113,12 @@ export function deriveShip(ship, catalogs = {}) {
   // resistances remain active through deriveResistanceProfile.
   derived.resistances = deriveResistanceProfile(baseStats.physicalResistances, components);
   const normalizedStats = normalizeDerivedStats(derived);
+  const drive = driveConditionPenalties(ship);
+  const weaponsCondition = weaponConditionModifiers(ship);
+  normalizedStats.hardness = effectiveHullHardness(normalizedStats.hardness, ship);
+  normalizedStats.combatSpeed = Math.max(0, Number(normalizedStats.combatSpeed ?? 0) - drive.speedPenalty);
+  normalizedStats.maneuverability = Math.max(0, Number(normalizedStats.maneuverability ?? 0) - drive.maneuverPenalty);
+  normalizedStats.weaponAttackBonus = Number(normalizedStats.weaponAttackBonus ?? 0) - weaponsCondition.attackPenalty;
 
   const frozenStationCapabilities = Object.fromEntries(Object.entries(stationCapabilities).map(([station, values]) => [station, Object.freeze({ masteries: Object.freeze([...values.masteries]), combatActions: Object.freeze([...values.combatActions]), passiveEffects: Object.freeze([...values.passiveEffects]) })]));
   const progression = progressionView(ship);
@@ -126,19 +133,14 @@ export function deriveShip(ship, catalogs = {}) {
 }
 
 export function syncResourceMaxima(ship, derived) {
-  const existingSupplyMax = Number(ship.resources?.supplies?.max ?? 0);
-  const derivedSupplyMax = Number(derived.stats?.supplyCapacity ?? 0);
-  const supplyMax = derivedSupplyMax > 0 ? derivedSupplyMax : existingSupplyMax;
   const hullValue = ship.resources?.hull?.value;
+  const supplyMax = Math.max(0, Number(derived.stats?.cargoCapacity ?? 0) * 10);
   const clampPercent = (value, fallback) => Math.max(0, Math.min(100, Math.round(Number(value ?? fallback) || 0)));
   return { ...ship, resources: { ...ship.resources,
     hull: { value: Math.min(hullValue ?? derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
-    // Lifeveil and Morale are normalized percentage resources. Hull-specific
-    // legacy capacities remain available in derived stats for migration/content
-    // review but no longer define these resource maxima.
     lifeveil: { value: clampPercent(ship.resources?.lifeveil?.value, 100), max: 100 },
     strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity },
     morale: { value: clampPercent(ship.resources?.morale?.value, 60), max: 100 },
-    supplies: { value: Math.min(ship.resources.supplies?.value ?? 0, supplyMax || Number.MAX_SAFE_INTEGER), max: supplyMax }
+    supplies: { value: Math.max(0, Number(ship.resources.supplies?.value ?? 0)), max: supplyMax }
   } };
 }
