@@ -15,15 +15,6 @@ const SECONDARY_SPENDS = Object.freeze({
   "veilwarden-emergency-ward": Object.freeze({ lifeveil: 5 })
 });
 
-const STRAIN_AREAS = Object.freeze({
-  "captain-drive-the-crew": "morale",
-  "engineer-overcharge-arkengine": "arkengine",
-  "engineer-redistribute-power": "arkengine",
-  "navigator-hard-turn": "rigging",
-  "navigator-evasive-maneuver": "rigging",
-  "battlewatch-reload-weapon": "morale"
-});
-
 export function stationActionEconomy(action, shipLevel = 1) {
   const profile = stationEffectProfile(shipLevel);
   const spends = SECONDARY_SPENDS[action?.id] ?? {};
@@ -48,8 +39,10 @@ export function stationActionEconomy(action, shipLevel = 1) {
   });
 }
 
-export function stationActionStrainArea(action) {
-  return STRAIN_AREAS[action?.id] ?? action?.rules?.strainArea ?? null;
+export function stationActionStrainArea(_action) {
+  // Deprecated compatibility API. Strain is ship-wide and does not threaten a
+  // predetermined Area; failed checks use the shared d8 Ship Condition table.
+  return null;
 }
 
 export function stationActionRulesText(action) {
