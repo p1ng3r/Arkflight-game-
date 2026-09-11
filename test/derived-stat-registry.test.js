@@ -58,8 +58,13 @@ test("presentation groups keep primary operational and technical stats distinct"
   const primary = derivedStatsByPresentation("primary").map((entry) => entry.path);
   const operational = derivedStatsByPresentation("operational").map((entry) => entry.path);
   const technical = derivedStatsByPresentation("technical").map((entry) => entry.path);
-  for (const path of ["armorClass", "hullIntegrity", "lifeveilCapacity", "strainCapacity", "cargoCapacity", "detection", "combatSpeed", "maneuverability"]) assert.ok(primary.includes(path));
-  for (const path of ["hardness", "weaponAttackBonus", "supplyCapacity", "moraleCapacity", "resistances"]) assert.ok(operational.includes(path));
+  for (const path of ["armorClass", "hullIntegrity", "strainCapacity", "cargoCapacity", "detection", "combatSpeed", "maneuverability"]) assert.ok(primary.includes(path));
+  for (const path of ["hardness", "weaponAttackBonus", "resistances"]) assert.ok(operational.includes(path));
+  for (const legacy of ["lifeveilCapacity", "supplyCapacity", "moraleCapacity"]) {
+    assert.equal(primary.includes(legacy), false);
+    assert.equal(operational.includes(legacy), false);
+    assert.equal(derivedStatsByPresentation("hidden").some((entry) => entry.path === legacy), true);
+  }
   for (const path of ["repairTimePercent", "actionBonus", "reactionBonus", "arkengineFuelSlots"]) assert.ok(technical.includes(path));
 });
 
