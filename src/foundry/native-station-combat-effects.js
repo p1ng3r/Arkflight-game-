@@ -1,6 +1,7 @@
 import {
   activeStationEffects,
   applyHardnessToDamage,
+  applyWeaponSystemThreat,
   consumeStationEffects,
   degreeOfSuccess,
   fireWeapon,
@@ -404,6 +405,8 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
             targetActorId: target.actor?.id ?? null,
             targetName: target.name,
             weaponName: solution.weapon.name,
+            degree,
+            systemThreat: solution.weapon.data?.systemThreat ?? "hull",
             hullDamage: damage.hullDamage,
             effectIds: damageEffectIds,
             effectSnapshots: damageEffectSnapshots
@@ -484,6 +487,69 @@ function appliedDamageAmount(baseDamage, mode) {
   return value;
 }
 
+const DAMAGE_AREA_ORDER = Object.freeze(["stable", "stressed", "damaged", "critical", "disabled"]);
+
+function damageAreaIndex(value) {
+  const index = DAMAGE_AREA_ORDER.indexOf(String(value ?? "stable"));
+  return index < 0 ? 0 : index;
+}
+
+function hullAreaStateForValue(value, max) {
+  const pct = Math.max(0, Math.min(1, Number(value) / Math.max(1, Number(max) || 1)));
+  return pct <= 0 ? "disabled" : pct <= 0.25 ? "critical" : pct <= 0.5 ? "damaged" : pct <= 0.75 ? "stressed" : "stable";
+}
+
+function damageConsequenceSnapshot(ship) {
+  return Object.freeze({
+    hull: structuredClone(ship?.resources?.hull ?? null),
+    lifeveil: structuredClone(ship?.resources?.lifeveil ?? null),
+    morale: structuredClone(ship?.resources?.morale ?? null),
+    areas: structuredClone(ship?.areas ?? {})
+  });
+}
+
+function damageSnapshotMatches(ship, snapshot) {
+  if (!snapshot) return false;
+  return JSON.stringify(damageConsequenceSnapshot(ship)) === JSON.stringify(snapshot);
+}
+
+function resolveDeferredDamageConsequences(ship, flag, amount) {
+  let next = structuredClone(ship);
+  const notes = [];
+  const beforeHull = Math.max(0, Number(next.resources?.hull?.value) || 0);
+  const requestedAfter = Math.max(0, beforeHull - amount);
+  next.resources ??= {};
+  next.resources.hull = { ...(next.resources.hull ?? {}), value: requestedAfter };
+
+  const hullNow = next.areas?.hull?.state ?? "stable";
+  const hullBand = hullAreaStateForValue(requestedAfter, next.resources?.hull?.max ?? beforeHull);
+  if (damageAreaIndex(hullBand) > damageAreaIndex(hullNow)) {
+    next.areas ??= {};
+    next.areas.hull = { ...(next.areas?.hull ?? {}), state: hullBand };
+    notes.push(`Hull ${hullNow} → ${hullBand}`);
+  }
+
+  const threatResult = applyWeaponSystemThreat(next, {
+    threat: flag.systemThreat ?? "hull",
+    degree: Number(flag.degree ?? 0),
+    hullDamage: amount
+  });
+  next = structuredClone(threatResult.ship);
+  if (threatResult.triggered && threatResult.degraded) {
+    notes.push(`${threatResult.threatenedArea} ${threatResult.previousState} → ${threatResult.state}`);
+  }
+
+  if (Number(flag.degree) === 2) {
+    const morale = Math.max(0, Number(next.resources?.morale?.value) || 0);
+    if (morale > 0) {
+      next.resources.morale = { ...(next.resources.morale ?? {}), value: morale - 1 };
+      notes.push(`Morale ${morale} → ${morale - 1}`);
+    }
+  }
+
+  return Object.freeze({ ship: next, notes: Object.freeze(notes) });
+}
+
 async function applyShipDamageMessage(message, mode = "apply") {
   const flag = message?.flags?.[MODULE_ID]?.shipDamage ?? null;
   if (!flag) return;
@@ -497,9 +563,14 @@ async function applyShipDamageMessage(message, mode = "apply") {
   }
 
   const ship = shipPayload(actor);
-  const beforeHull = Math.max(0, Number(ship?.resources?.hull?.value) || 0);
+  if (!ship) throw new Error(`${actor.name} has no Arkflight ship state.`);
+  const beforeSnapshot = damageConsequenceSnapshot(ship);
+  const beforeHull = Math.max(0, Number(ship.resources?.hull?.value) || 0);
   const amount = appliedDamageAmount(flag.hullDamage, mode);
-  const afterHull = Math.max(0, beforeHull - amount);
+  const consequence = resolveDeferredDamageConsequences(ship, flag, amount);
+  const afterSnapshot = damageConsequenceSnapshot(consequence.ship);
+  const afterHull = Math.max(0, Number(consequence.ship.resources?.hull?.value) || 0);
+
   const beforeState = game.arkflight?.combat?.state?.(combatant) ?? null;
   const effectIds = Array.isArray(flag.effectIds) ? flag.effectIds.filter(Boolean) : [];
   const afterState = beforeState && effectIds.length ? consumeStationEffects(beforeState, effectIds) : beforeState;
@@ -507,18 +578,28 @@ async function applyShipDamageMessage(message, mode = "apply") {
 
   if (afterState && afterState !== beforeState) await combatant.update({ [STATE_PATH]: afterState });
   await actor.update({
-    [`flags.${MODULE_ID}.ship.resources.hull.value`]: afterHull,
+    [`flags.${MODULE_ID}.ship.resources.hull`]: consequence.ship.resources?.hull ?? ship.resources?.hull,
+    [`flags.${MODULE_ID}.ship.resources.lifeveil`]: consequence.ship.resources?.lifeveil ?? ship.resources?.lifeveil,
+    [`flags.${MODULE_ID}.ship.resources.morale`]: consequence.ship.resources?.morale ?? ship.resources?.morale,
+    [`flags.${MODULE_ID}.ship.areas`]: consequence.ship.areas ?? ship.areas,
     [`flags.${MODULE_ID}.chatDamageApplications.${message.id}`]: {
       beforeHull,
       afterHull,
       amount,
       mode,
+      degree: Number(flag.degree ?? 0),
+      systemThreat: flag.systemThreat ?? "hull",
+      beforeSnapshot,
+      afterSnapshot,
       effectSnapshots: snapshots,
+      consequenceNotes: [...consequence.notes],
       appliedBy: game.user?.id ?? null
     }
   });
 
-  Hooks.callAll("arkflightChatDamageApplied", { message, combatant, actor, amount, mode, beforeHull, afterHull });
+  const damage = Object.freeze({ hullDamage: amount, before: beforeHull, after: afterHull });
+  Hooks.callAll("arkflightChatDamageApplied", { message, combatant, actor, amount, mode, beforeHull, afterHull, degree: Number(flag.degree ?? 0), systemThreat: flag.systemThreat ?? "hull", notes: consequence.notes });
+  Hooks.callAll("arkflightShipDamageStateChanged", { actor, target: combatant, degree: Number(flag.degree ?? 0), damage, notes: consequence.notes, chatDamage: true });
   ui.notifications?.info?.(`${actor.name}: ${amount} Hull damage applied (${beforeHull} → ${afterHull}).`);
 }
 
@@ -533,20 +614,26 @@ async function undoShipDamageMessage(message) {
 
   const record = damageApplicationRecord(actor, message.id);
   if (!record) throw new Error("This Arkflight damage message has not been applied.");
-  const currentHull = Math.max(0, Number(shipPayload(actor)?.resources?.hull?.value) || 0);
-  if (currentHull !== Number(record.afterHull)) {
-    throw new Error("Hull changed after this damage was applied; undo it manually to avoid overwriting later damage.");
+  const currentShip = shipPayload(actor);
+  if (!damageSnapshotMatches(currentShip, record.afterSnapshot)) {
+    throw new Error("Ship damage state changed after this result was applied; undo it manually to avoid overwriting later changes.");
   }
 
   const currentState = game.arkflight?.combat?.state?.(combatant) ?? null;
   const restoredState = restoreConsumedEffects(currentState, record.effectSnapshots ?? []);
   if (restoredState && restoredState !== currentState) await combatant.update({ [STATE_PATH]: restoredState });
+
+  const beforeSnapshot = record.beforeSnapshot;
   await actor.update({
-    [`flags.${MODULE_ID}.ship.resources.hull.value`]: Math.max(0, Number(record.beforeHull) || 0),
+    [`flags.${MODULE_ID}.ship.resources.hull`]: beforeSnapshot?.hull,
+    [`flags.${MODULE_ID}.ship.resources.lifeveil`]: beforeSnapshot?.lifeveil,
+    [`flags.${MODULE_ID}.ship.resources.morale`]: beforeSnapshot?.morale,
+    [`flags.${MODULE_ID}.ship.areas`]: beforeSnapshot?.areas,
     [`flags.${MODULE_ID}.chatDamageApplications.-=${message.id}`]: null
   });
 
   Hooks.callAll("arkflightChatDamageUndone", { message, combatant, actor, record });
+  Hooks.callAll("arkflightShipDamageStateChanged", { actor, target: combatant, undoChatDamage: true, notes: ["Chat damage transaction undone."] });
   ui.notifications?.info?.(`${actor.name}: Arkflight chat damage undone.`);
 }
 
