@@ -353,7 +353,7 @@ Hooks.once("ready", () => {
     },
     stationAction(actionId, options = {}, reference = null) {
       if (actionId === "battlewatch-reload-weapon") {
-        // Reload is a Battlewatch station action too. Always preserve the
+        // Work the Guns is a Battlewatch station action. Always preserve the
         // player-authorized socket relay instead of resolving it on the client.
         return originalStationAction(actionId, options, reference);
       }
