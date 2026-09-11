@@ -48,7 +48,7 @@ function applyAuthoredRiskCommitment(state, chosen) {
   if (commitStrain) encounter.notes.push(`Heroic commitment adds ${commitStrain} ${parameters.commitStrainArea ?? "ship"} Strain before escape.`);
 
   const pendingShipEffects = [...(state.pendingShipEffects ?? [])];
-  if (commitStrain) pendingShipEffects.push({ kind: "gain-strain", value: commitStrain, area: parameters.commitStrainArea ?? null, source: `Heroic commitment — ${chosen.action?.name ?? "Risk Bid"}` });
+  if (commitStrain) pendingShipEffects.push({ kind: "gain-strain", value: commitStrain, source: `Heroic commitment — ${chosen.action?.name ?? "Risk Bid"}` });
 
   const prior = state.riskCarryover ?? null;
   const targetRoundIndex = Number(state.roundIndex ?? 0) + 1;
@@ -93,7 +93,7 @@ export function applyStationRollResult({ event, state, actor, roll, shipRollBonu
   const masteryRiskTierReductions = { ...(nextState.masteryRiskTierReductions ?? {}) }; const masteryPostCheckMap = { ...(nextState.masteryPostCheckShipEffects ?? {}) }; delete masteryRiskTierReductions[stationId]; delete masteryPostCheckMap[stationId];
   nextState = { ...nextState, masteryRiskTierReductions, masteryPostCheckShipEffects: masteryPostCheckMap };
   if (postCheckShipEffects.length) {
-    nextState = { ...nextState, pendingShipEffects: [...(nextState.pendingShipEffects ?? []), ...postCheckShipEffects.map((effect) => ({ ...effect }))], encounter: { ...nextState.encounter, notes: [...(nextState.encounter?.notes ?? []), ...postCheckShipEffects.map((effect) => `${effect.source ?? "Arkcraft"}: ${effect.value >= 0 ? "+" : ""}${effect.value} Strain threatening ${effect.area ?? "the ship"} after ${stationId} resolved.`)] } };
+    nextState = { ...nextState, pendingShipEffects: [...(nextState.pendingShipEffects ?? []), ...postCheckShipEffects.map((effect) => ({ ...effect }))], encounter: { ...nextState.encounter, notes: [...(nextState.encounter?.notes ?? []), ...postCheckShipEffects.map((effect) => `${effect.source ?? "Arkcraft"}: ${effect.value >= 0 ? "+" : ""}${effect.value} ship-wide Strain after ${stationId} resolved.`)] } };
   }
   nextState = applyAuthoredRiskCommitment(nextState, chosen);
   if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey);
