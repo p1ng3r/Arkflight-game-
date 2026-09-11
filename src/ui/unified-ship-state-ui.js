@@ -1,5 +1,5 @@
 import { getMasteryTechnique } from "../content/base-mastery.js";
-import { strainRiskState } from "../ship/area-readiness.js";
+import { strainRiskState } from "../ship/strain-rules.js";
 import {
   SHIP_CONDITION_SYSTEMS,
   activeShipConditionViews,
