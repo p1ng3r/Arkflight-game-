@@ -415,10 +415,10 @@ const ADDITIONAL_ACTIONS = [
     description: "Once two ships are Moored, establish boarding between them at 0 AP. Ship combat keeps the vessels Moored while character-scale fighting proceeds using normal PF2e rules.",
     summary: "0 AP: establish boarding with a Moored ship.",
     ap: 0,
-    category: COMBAT_ACTION_CATEGORIES.SUPPORT,
+    category: COMBAT_ACTION_CATEGORIES.COMMAND,
     tags: ["core", "boarding", "grapple", "pf2e-handoff"],
     rules: { resolver: "boardShip", chooseTarget: true, requiresMoored: true }
-
+  })
 ];
 
 export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries([...CORE_ACTIONS, ...ADDITIONAL_ACTIONS].map((entry) => [entry.id, entry])));
