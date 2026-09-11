@@ -159,14 +159,18 @@ test("active ship owners can end their turn through the GM-validated combat rela
 });
 
 
-test("all players can view every station while only assigned station crew can use its actions", () => {
+test("ship owners can use common actions while station actions still require assigned crew", () => {
   assert.match(source, /stationActionControl\?\.\(action\.id, combatant\)/);
   assert.match(source, /control\.ok && availability\.ok/);
   assert.match(source, /"not-your-station": "Assigned Crew Only"/);
+  assert.match(source, /"not-ship-owner": "Ship Owner Only"/);
   assert.doesNotMatch(source, /reason = "GM Resolve"/);
   assert.match(stationApi, /function stationControl/);
   assert.match(stationApi, /testUserPermission\?\.\(user, "OWNER"\)/);
+  assert.match(stationApi, /function userOwnsShip/);
+  assert.match(stationApi, /reason: "not-ship-owner"/);
   assert.match(stationApi, /reason: "not-your-station"/);
+  assert.match(stationApi, /userCanResolveShipState/);
   assert.match(stationApi, /STATION_ACTION_REQUEST/);
   assert.match(stationApi, /requestStationAction/);
   assert.match(stationApi, /handleStationActionSocket/);
@@ -191,4 +195,13 @@ test("combat console uses only the authoritative weapon arc renderer", () => {
   assert.doesNotMatch(source, /function removeConsoleArcGraphics/);
   assert.match(source, /redrawFiringArcs/);
   assert.match(source, /setFiringArcsVisible/);
+});
+
+
+test("shared ship owners resolve own combat-state helpers without a GM guard", () => {
+  assert.match(combatApi, /function canUserOperateCombatant/);
+  assert.match(combatApi, /async function requireOwnedCombatant/);
+  for (const method of ["buyMovement", "buyManeuver", "spendAP", "spendRP", "turn", "fireWeapon", "reloadWeapon"]) {
+    assert.match(combatApi, new RegExp(`async ${method}\\([^]*?requireOwnedCombatant`));
+  }
 });
