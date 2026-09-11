@@ -78,9 +78,9 @@ test("native station combat effects use Foundry v14 chat-applied ship damage", (
   assert.match(effects, /TARGET_EFFECT_REQUEST = "attack-target-effect-consume-request"/);
   assert.match(effects, /flags:[\s\S]*?shipDamage/);
   assert.match(effects, /Hooks\.on\("renderChatMessageHTML"/);
-  assert.match(effects, /Apply \$\{base\} Hull/);
-  assert.match(effects, /Half \(\$\{Math\.floor\(base \/ 2\)\}\)/);
-  assert.match(effects, /Double \(\$\{base \* 2\}\)/);
+  assert.match(effects, /Apply \$\{base\}/);
+  assert.match(effects, /Half \$\{Math\.floor\(base \/ 2\)\}/);
+  assert.match(effects, /Double \$\{base \* 2\}/);
   assert.doesNotMatch(effects, /TARGET_MUTATION_REQUEST/);
   assert.doesNotMatch(effects, /Only the GM may resolve Arkflight ship combat attacks/);
 });
