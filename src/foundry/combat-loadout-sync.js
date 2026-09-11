@@ -1,7 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
-import { areaMobilityPenalties } from "../combat/system-damage.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
@@ -39,13 +38,10 @@ function buildReconciledState(combatant) {
   const ship = shipPayload(combatant?.actor);
   if (!ship) return null;
   const derived = deriveShip(ship, SHIP_CATALOGS);
-  const penalties = areaMobilityPenalties(ship);
   return reconcileCombatantState(ship, currentState(combatant), {
     derived,
     catalogs: SHIP_CATALOGS,
-    rotation: currentState(combatant)?.mobility?.heading ?? combatant?.token?.rotation ?? 0,
-    speedPenalty: penalties.speedPenalty,
-    maneuverPenalty: penalties.maneuverPenalty
+    rotation: currentState(combatant)?.mobility?.heading ?? combatant?.token?.rotation ?? 0
   });
 }
 
