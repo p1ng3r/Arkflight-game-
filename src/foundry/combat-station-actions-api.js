@@ -292,15 +292,22 @@ function actionCostLabel(action, actor) {
 
 async function postActionChat({ actor, crewActor, action, selection, notes = [], userId = game.user?.id ?? null }) {
   const esc = foundry.utils.escapeHTML;
-  const selectionLine = selection == null || selection === ""
-    ? ""
-    : `<br><strong>Choice:</strong> ${esc(String(selection).replaceAll("-", " "))}`;
-  const notesLine = notes.length ? `<br><strong>Effect:</strong> ${notes.map((entry) => esc(entry)).join(" · ")}` : "";
   const profile = stationEffectProfile(shipLevel(actor));
+  const choice = selection == null || selection === ""
+    ? ""
+    : `<span>Choice: ${esc(String(selection).replaceAll("-", " "))}</span>`;
+  const notesLine = notes.length
+    ? `<div class="arkflight-chat-action-notes">${notes.map((entry) => esc(entry)).join(" · ")}</div>`
+    : "";
+  const reactionClass = action.timing === COMBAT_ACTION_TIMING.REACTION ? " is-reaction" : "";
   await ChatMessage.create({
     user: userId,
     speaker: ChatMessage.getSpeaker({ actor: crewActor ?? actor }),
-    content: `<div class="arkflight-chat-card arkflight-station-action-chat"><strong>${esc(actor.name)} — ${esc(action.name)}</strong><br><em>${esc(action.station)} ${action.timing}</em> · ${esc(actionCostLabel(action, actor))} · Station Bonus +${profile.bonus}${selectionLine}${notesLine}<hr><p>${esc(stationActionRulesText(action))}</p></div>`
+    content: `<div class="arkflight-chat-card arkflight-station-action-chat${reactionClass}">
+      <div class="arkflight-chat-action-head"><strong>${esc(actor.name)} — ${esc(action.name)}</strong><span>${esc(actionCostLabel(action, actor))}</span></div>
+      <div class="arkflight-chat-action-meta"><span>${esc(action.station)} · ${esc(action.timing)} · Bonus +${profile.bonus}</span>${choice}</div>
+      ${notesLine}
+    </div>`
   });
 }
 
@@ -378,7 +385,7 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     const remaining = Math.max(0, Number(weapon?.readyRound ?? round) - round);
     const notes = [...persistent.notes];
     notes.push(`Reload reduced by 1 round; ${remaining} remaining.`);
-    await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes, userId: requesterUserId });
+    if (!options.suppressChat) await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes, userId: requesterUserId });
     Hooks.callAll("arkflightStationActionResolved", {
       combat: game.combat,
       combatant,
@@ -460,7 +467,7 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     });
   }
 
-  await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes, userId: requesterUserId });
+  if (!options.suppressChat) await postActionChat({ actor: combatant.actor, crewActor, action, selection, notes, userId: requesterUserId });
   Hooks.callAll("arkflightStationActionResolved", {
     combat: game.combat,
     combatant,
