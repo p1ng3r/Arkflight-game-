@@ -172,6 +172,130 @@ function crewCandidates(ship, stationId) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+
+function buildExpeditionPanel(app, ship) {
+  const api = game.arkflight?.expedition;
+  const expedition = api?.get?.() ?? null;
+  const panel = document.createElement("article");
+  panel.className = "arkflight-gm-panel arkflight-gm-expedition";
+
+  if (expedition?.active) {
+    const specialists = (expedition.specialistIds ?? []).map((id) => {
+      const entry = api?.specialists?.(ship?.actor)?.find?.((row) => row.id === id);
+      return entry?.name ?? id;
+    });
+    const equipment = (expedition.equipment ?? []).map((entry) => entry.virtual ? `${entry.name} (We Brought One)` : entry.name);
+    panel.innerHTML = `
+      <div class="arkflight-gm-card-heading">
+        <div><div class="arkflight-gm-kicker">EXPEDITION</div><h2>${foundry.utils.escapeHTML(expedition.name || "Active Expedition")}</h2></div>
+        <i class="fa-solid fa-person-hiking"></i>
+      </div>
+      <div class="arkflight-gm-metric-row"><span>Vessel</span><strong>${foundry.utils.escapeHTML(expedition.shipName ?? "Arkflight Ship")}</strong></div>
+      <div class="arkflight-gm-metric-row"><span>Specialists</span><strong>${foundry.utils.escapeHTML(specialists.join(", ") || "None")}</strong></div>
+      <div class="arkflight-gm-metric-row"><span>Prepared Gear</span><strong>${foundry.utils.escapeHTML(equipment.join(", ") || "None")}</strong></div>
+      <div class="arkflight-gm-metric-row"><span>Faction / Contact</span><strong>${foundry.utils.escapeHTML(expedition.faction || "None")}</strong></div>
+      <div class="arkflight-gm-metric-row"><span>Supplies Committed</span><strong>${Number(expedition.suppliesCommitted ?? 0)}</strong></div>`;
+
+    if ((expedition.capabilities ?? []).includes("we-brought-one") && !expedition.flexibleEquipmentUsed) {
+      const flexible = document.createElement("div");
+      flexible.className = "arkflight-gm-voyage-route-form";
+      flexible.innerHTML = '<label><span>We Brought One</span><input type="text" data-expedition-flex-equipment placeholder="Needed expedition item"></label>';
+      const use = document.createElement("button");
+      use.type = "button";
+      use.innerHTML = '<i class="fa-solid fa-toolbox"></i> Produce Item';
+      use.addEventListener("click", async () => {
+        const name = flexible.querySelector("[data-expedition-flex-equipment]")?.value ?? "";
+        const result = await api.useFlexibleEquipment(name);
+        if (!result?.ok) ui.notifications?.warn(result?.reason ?? "Unable to use We Brought One.");
+        else app.render({ force: true });
+      });
+      flexible.append(use);
+      panel.append(flexible);
+    }
+
+    const actions = document.createElement("div");
+    actions.className = "arkflight-gm-command-actions";
+    const complete = document.createElement("button");
+    complete.type = "button";
+    complete.className = "arkflight-gm-primary";
+    complete.innerHTML = '<i class="fa-solid fa-check"></i> Complete Expedition';
+    complete.addEventListener("click", async () => { await api.complete(); app.render({ force: true }); });
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.innerHTML = '<i class="fa-solid fa-xmark"></i> Cancel';
+    cancel.addEventListener("click", async () => { await api.cancel(); app.render({ force: true }); });
+    actions.append(complete, cancel);
+    panel.append(actions);
+    return panel;
+  }
+
+  const specialists = ship?.actor ? (api?.specialists?.(ship.actor) ?? []) : [];
+  panel.innerHTML = `
+    <div class="arkflight-gm-card-heading">
+      <div><div class="arkflight-gm-kicker">EXPEDITION</div><h2>Prepare Away Mission</h2></div>
+      <i class="fa-solid fa-person-hiking"></i>
+    </div>
+    <div class="arkflight-gm-voyage-route-form">
+      <label><span>Mission</span><input type="text" data-expedition-name placeholder="Expedition / objective"></label>
+      <label><span>Faction / Contact</span><input type="text" data-expedition-faction placeholder="Optional faction or contact"></label>
+      <label><span>Prepared Equipment</span><input type="text" data-expedition-equipment placeholder="Comma-separated gear"></label>
+      <label><span>Supplies Committed</span><input type="number" min="0" step="1" value="0" data-expedition-supplies></label>
+    </div>`;
+
+  const specialistBox = document.createElement("div");
+  specialistBox.className = "arkflight-gm-expedition-specialists";
+  const label = document.createElement("strong");
+  label.textContent = "Ship Specialists";
+  specialistBox.append(label);
+  if (!specialists.length) {
+    const empty = document.createElement("span");
+    empty.className = "arkflight-gm-muted";
+    empty.textContent = "No Crew Specialists are assigned to this ship.";
+    specialistBox.append(empty);
+  } else {
+    for (const specialist of specialists) {
+      const row = document.createElement("label");
+      row.className = "arkflight-gm-voyage-check";
+      row.innerHTML = `<input type="checkbox" data-expedition-specialist value="${foundry.utils.escapeHTML(specialist.id)}"> ${foundry.utils.escapeHTML(specialist.name)}`;
+      specialistBox.append(row);
+    }
+  }
+  panel.append(specialistBox);
+
+  const note = document.createElement("p");
+  note.className = "arkflight-gm-muted";
+  note.textContent = "Committed Supplies are tracked as mission context but are not automatically spent; authored Events or expedition outcomes decide what is actually consumed.";
+  panel.append(note);
+
+  const actions = document.createElement("div");
+  actions.className = "arkflight-gm-command-actions";
+  const start = document.createElement("button");
+  start.type = "button";
+  start.className = "arkflight-gm-primary";
+  start.disabled = !ship?.actor;
+  start.innerHTML = '<i class="fa-solid fa-play"></i> Start Expedition';
+  start.addEventListener("click", async () => {
+    const specialistIds = [...panel.querySelectorAll("[data-expedition-specialist]:checked")].map((input) => input.value);
+    const equipment = String(panel.querySelector("[data-expedition-equipment]")?.value ?? "")
+      .split(",").map((value) => value.trim()).filter(Boolean);
+    try {
+      await api.start(ship.actor, {
+        name: panel.querySelector("[data-expedition-name]")?.value ?? "",
+        faction: panel.querySelector("[data-expedition-faction]")?.value ?? "",
+        equipment,
+        suppliesCommitted: Number(panel.querySelector("[data-expedition-supplies]")?.value ?? 0),
+        specialistIds
+      });
+      app.render({ force: true });
+    } catch (error) {
+      ui.notifications?.warn(error?.message ?? "Unable to start Expedition.");
+    }
+  });
+  actions.append(start);
+  panel.append(actions);
+  return panel;
+}
+
 function buildCrewAssignments(app, ship) {
   const section = document.createElement("section");
   section.className = "arkflight-gm-voyage-crew";
@@ -288,6 +412,7 @@ function buildEventLibrary(app) {
   }
   wrapper.append(shipPanel);
   wrapper.append(buildRoutePlanner(app, ship));
+  wrapper.append(buildExpeditionPanel(app, ship));
 
   const events = Object.entries(game.arkflight?.events ?? {});
   for (const [eventId, definition] of events) {
