@@ -213,30 +213,6 @@ function decorateShipDerivedMasteries(root) {
   if (help) help.textContent = "Lock one different officer into each station for the Event. Each station readies one Mastery unlocked by the bound ship; hull, rooms, Arkengine choices, mods, weapons, specialists, and progression can expand these choices.";
 }
 
-function replaceLegacyPlayerText(root) {
-  const replacements = [
-    [/Hull Pressure/gi, "ship Strain"],
-    [/Arkengine Pressure/gi, "ship Strain"],
-    [/Rigging Pressure/gi, "ship Strain"],
-    [/Lifeveil Pressure/gi, "ship Strain"],
-    [/threatening Arkengine/gi, "stressing the ship"],
-    [/threatening Rigging/gi, "stressing the ship"],
-    [/system Pressure/gi, "ship Strain"],
-    [/\bPressure\b/g, "Strain"],
-    [/\bArea readiness\b/gi, "Ship Conditions"],
-    [/\bAreas\b/g, "Ship Conditions"]
-  ];
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const nodes = [];
-  while (walker.nextNode()) nodes.push(walker.currentNode);
-  for (const node of nodes) {
-    let text = node.nodeValue;
-    for (const [pattern, replacement] of replacements) text = text.replace(pattern, replacement);
-    node.nodeValue = text;
-  }
-  for (const node of root.querySelectorAll("[data-station='watchmaster']")) node.dataset.station = "battlewatch";
-}
-
 function decorateEventBoard(app, element) {
   if (app?.id !== "arkflight-event-board") return;
   const root = rootElement(element, app);
@@ -244,7 +220,6 @@ function decorateEventBoard(app, element) {
   setTimeout(() => {
     decorateEventStatus(root);
     decorateShipDerivedMasteries(root);
-    replaceLegacyPlayerText(root);
     const complete = root.querySelector(".arkflight-event-complete-copy");
     if (complete) complete.textContent = "The Event has reached its conclusion. The bound ship carries Hull, Lifeveil, Strain, Morale, Ship Conditions, and other persistent Conditions forward; Momentum and Hazards remain Event state only.";
   }, 0);
