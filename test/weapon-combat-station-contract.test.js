@@ -47,7 +47,7 @@ test("player reload UI separates common Reload from Battlewatch Work the Guns", 
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
   assert.match(source, /stationActionAvailability\?\.\("common-reload-weapon"/);
   assert.match(source, /Reload · 1 AP/);
-  assert.match(source, /Work the Guns · 1 Morale · \+1 Strain/);
+  assert.match(source, /Work the Guns · 20% Morale · \+1 Strain/);
   assert.match(source, /remaining <= 2/);
   assert.match(source, /arkflightStationActionRemoteResult/);
   assert.match(stationApi, /resolver === "reloadWeapon"/);
