@@ -16,6 +16,67 @@ export const AREA_INTEGRITY_FRACTIONS = Object.freeze({
   [AREA_STATES.DISABLED]: 0
 });
 
+
+export const STRAIN_FLAT_CHECK_BANDS = Object.freeze([
+  Object.freeze({ minimumPercent: 90, maximumPercent: 99.999, dc: 15, id: "critical" }),
+  Object.freeze({ minimumPercent: 75, maximumPercent: 89.999, dc: 10, id: "danger" }),
+  Object.freeze({ minimumPercent: 50, maximumPercent: 74.999, dc: 5, id: "warning" })
+]);
+
+export const STRAIN_DEGRADATION_D8 = Object.freeze({
+  1: "hull",
+  2: "morale",
+  3: "drive",
+  4: "drive",
+  5: "lifeveil",
+  6: "hull",
+  7: "weapons",
+  8: "player-choice"
+});
+
+export const PUSHED_ABILITY_STRAIN = Object.freeze({
+  criticalSuccess: Object.freeze({ strain: 0, directDegradation: false, flatCheckEligible: false }),
+  success: Object.freeze({ strain: 1, directDegradation: false, flatCheckEligible: true }),
+  failure: Object.freeze({ strain: 1, directDegradation: true, flatCheckEligible: false }),
+  criticalFailure: Object.freeze({ strain: 2, directDegradation: true, flatCheckEligible: false })
+});
+
+export function strainPercent(value, maximum) {
+  const max = Math.max(0, Number(maximum) || 0);
+  if (max <= 0) return 0;
+  return Math.max(0, (Number(value) || 0) / max * 100);
+}
+
+export function strainFlatCheckDC(value, maximum) {
+  const percent = strainPercent(value, maximum);
+  if (percent >= 100) return null;
+  const band = STRAIN_FLAT_CHECK_BANDS.find((entry) => percent >= entry.minimumPercent);
+  return band?.dc ?? null;
+}
+
+export function strainRiskState(value, maximum) {
+  const percent = strainPercent(value, maximum);
+  const dc = strainFlatCheckDC(value, maximum);
+  return Object.freeze({
+    percent,
+    flatCheckRequired: dc !== null,
+    flatCheckDC: dc,
+    thresholdReached: percent >= 100
+  });
+}
+
+export function strainDegradationTarget(d8) {
+  const roll = Math.trunc(Number(d8) || 0);
+  if (roll < 1 || roll > 8) throw new Error(`Strain degradation roll must be 1-8, got: ${d8}`);
+  return STRAIN_DEGRADATION_D8[roll];
+}
+
+export function pushedAbilityStrainOutcome(degree) {
+  const result = PUSHED_ABILITY_STRAIN[String(degree ?? "")];
+  if (!result) throw new Error(`Unknown pushed ability degree: ${degree}`);
+  return result;
+}
+
 function assertArea(area) {
   if (!SHIP_AREA_KEYS.includes(area)) throw new Error(`Unknown Arkflight area: ${area}`);
 }
@@ -90,7 +151,8 @@ export function applyAreaIntegrityCaps(ship, { hullBaseMax, lifeveilBaseMax } = 
 export function resolveStrainContribution(ship, {
   amount = 0,
   threatenedArea,
-  strainLimit = ship?.resources?.strain?.max ?? 0
+  strainLimit = ship?.resources?.strain?.max ?? 0,
+  suppressFlatCheck = false
 } = {}) {
   assertArea(threatenedArea);
   const next = normalizeShip(structuredClone(ship));
@@ -101,6 +163,7 @@ export function resolveStrainContribution(ship, {
 
   if (limit <= 0 || total < limit) {
     next.resources.strain = { ...(next.resources.strain ?? {}), value: total, max: limit };
+    const flatCheckDC = (!suppressFlatCheck && gained > 0) ? strainFlatCheckDC(total, limit) : null;
     return Object.freeze({
       ship: next,
       thresholdCrossed: false,
@@ -108,7 +171,10 @@ export function resolveStrainContribution(ship, {
       threatenedArea,
       strainBefore: current,
       strainAdded: gained,
-      strainAfter: total
+      strainAfter: total,
+      strainPercent: strainPercent(total, limit),
+      flatCheckRequired: flatCheckDC !== null,
+      flatCheckDC
     });
   }
 
@@ -125,6 +191,9 @@ export function resolveStrainContribution(ship, {
     areaState: degraded.state,
     strainBefore: current,
     strainAdded: gained,
-    strainAfter: overflow
+    strainAfter: overflow,
+    strainPercent: strainPercent(overflow, limit),
+    flatCheckRequired: false,
+    flatCheckDC: null
   });
 }
