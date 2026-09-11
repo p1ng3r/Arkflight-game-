@@ -1,4 +1,5 @@
 import { SHIP_CATALOGS } from "../content/index.js";
+import { weaponReloadRemaining } from "../combat/index.js";
 
 const GM_OPERATIONS_ID = "arkflight-gm-operations";
 
@@ -45,7 +46,7 @@ function reloadSummary(state, round) {
   const rows = Object.values(state?.weapons ?? {});
   if (!rows.length) return "No weapons installed";
   return rows.map((weapon) => {
-    const remaining = Math.max(0, Number(weapon.readyRound ?? 0) - Number(round ?? 0));
+    const remaining = weaponReloadRemaining(weapon);
     return remaining > 0 ? `${weapon.name}: ${remaining}` : `${weapon.name}: Ready`;
   }).join(" · ");
 }
@@ -72,7 +73,7 @@ function weaponFireControl(app, combatant, state, round) {
     const combat = weapon?.data?.combat ?? {};
     const range = combat.rangeHexes ?? {};
     const damage = weapon?.data?.damageProfile ?? {};
-    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const remaining = weaponReloadRemaining(weaponState);
     const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= 1;
     const workGunsAvailability = remaining > 0 && remaining <= 2
       ? game.arkflight?.combat?.stationActionAvailability?.("battlewatch-reload-weapon", combatant)
@@ -85,7 +86,7 @@ function weaponFireControl(app, combatant, state, round) {
       <div class="arkflight-gm-weapon-stats"><span>${damage.dice ?? "—"} ${titleCase(damage.type)}</span><span>1 AP fire</span><span>Reload ${weaponState.reloadRounds}</span><span>Range ${range.min ?? "—"} / ${range.optimalMin ?? "—"}–${range.optimalMax ?? "—"} / ${range.max ?? "—"}</span></div>
       <label>Target<select data-weapon-target>${targets.map((target) => `<option value="${target.id}">${foundry.utils.escapeHTML(target.name)}</option>`).join("")}</select></label>
       <div class="arkflight-gm-weapon-solution" data-weapon-solution>${targets.length ? "Calculating target solution…" : "No target"}</div>
-      <div class="arkflight-gm-command-actions"><button type="button" class="arkflight-gm-primary" data-fire-weapon ${targets.length && remaining === 0 && enoughAP ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i> ${remaining ? `Reloading · ${remaining} round${remaining === 1 ? "" : "s"}` : enoughAP ? "Fire Weapon · 1 AP" : "Need 1 AP"}</button>${remaining ? `<button type="button" data-reload-weapon ${enoughAP ? "" : "disabled"}><i class="fa-solid fa-rotate"></i> Reload · 1 AP</button>${remaining <= 2 ? `<button type="button" data-work-guns ${canWorkGuns ? "" : "disabled"} title="${foundry.utils.escapeHTML(workGunsAvailability?.reason ?? "")}"><i class="fa-solid fa-bolt"></i> Work the Guns · 20% Morale · +1 Strain</button>` : ""}` : ""}</div>`;
+      <div class="arkflight-gm-command-actions"><button type="button" class="arkflight-gm-primary" data-fire-weapon ${targets.length && remaining === 0 && enoughAP ? "" : "disabled"}><i class="fa-solid fa-crosshairs"></i> ${remaining ? `Reload ${remaining}` : enoughAP ? "Fire Weapon · 1 AP" : "Need 1 AP"}</button>${remaining ? `<button type="button" data-reload-weapon ${enoughAP ? "" : "disabled"}><i class="fa-solid fa-rotate"></i> Reload · 1 AP</button>${remaining <= 2 ? `<button type="button" data-work-guns ${canWorkGuns ? "" : "disabled"} title="${foundry.utils.escapeHTML(workGunsAvailability?.reason ?? "")}"><i class="fa-solid fa-bolt"></i> Work the Guns · 20% Morale · +1 Strain</button>` : ""}` : ""}</div>`;
     const select = row.querySelector("[data-weapon-target]");
     const solutionNode = row.querySelector("[data-weapon-solution]");
     const fireButton = row.querySelector("[data-fire-weapon]");
