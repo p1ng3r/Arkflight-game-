@@ -119,9 +119,10 @@ export function coalesceShipEffects(effects = []) {
     const previous = output.at(-1);
     const sameSource = String(previous?.source ?? "") === String(effect.source ?? "");
     const sameOverride = String(previous?.degradationOverride ?? "") === String(effect.degradationOverride ?? "");
+    const sameFinalStageGuard = String(previous?.finalStageGuardTarget ?? "") === String(effect.finalStageGuardTarget ?? "");
     const previousPositiveStrain = previous?.kind === "gain-strain" && Number(previous?.value ?? 0) > 0;
 
-    if (positiveStrain && previousPositiveStrain && sameSource && sameOverride) {
+    if (positiveStrain && previousPositiveStrain && sameSource && sameOverride && sameFinalStageGuard) {
       previous.value = Number(previous.value ?? 0) + value;
       continue;
     }
