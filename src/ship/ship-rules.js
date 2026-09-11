@@ -7,6 +7,7 @@ export const HULL_ZERO_STATE = Object.freeze({
   repairable: true
 });
 
+// Deprecated 0-5 labels retained for migration/reference only.
 export const MORALE_BANDS = Object.freeze({
   5: Object.freeze({ value: 5, id: "inspired", label: "Inspired" }),
   4: Object.freeze({ value: 4, id: "confident", label: "Confident" }),
@@ -15,6 +16,15 @@ export const MORALE_BANDS = Object.freeze({
   1: Object.freeze({ value: 1, id: "faltering", label: "Faltering" }),
   0: Object.freeze({ value: 0, id: "broken", label: "Broken" })
 });
+
+export const MORALE_PERCENT_BANDS = Object.freeze([
+  Object.freeze({ minimum: 100, id: "inspired", label: "Inspired" }),
+  Object.freeze({ minimum: 80, id: "confident", label: "Confident" }),
+  Object.freeze({ minimum: 60, id: "steady", label: "Steady" }),
+  Object.freeze({ minimum: 40, id: "shaken", label: "Shaken" }),
+  Object.freeze({ minimum: 1, id: "faltering", label: "Faltering" }),
+  Object.freeze({ minimum: 0, id: "broken", label: "Broken" })
+]);
 
 export const CARGO_BEARING_CATEGORIES = Object.freeze([
   "supplies",
@@ -63,7 +73,8 @@ function clampInteger(value, min, max) {
 }
 
 export function moraleBand(value) {
-  return MORALE_BANDS[clampInteger(value, 0, 5)];
+  const morale = clampInteger(value, 0, 100);
+  return MORALE_PERCENT_BANDS.find((band) => morale >= band.minimum) ?? MORALE_PERCENT_BANDS.at(-1);
 }
 
 export function hullOperationalState(ship) {
