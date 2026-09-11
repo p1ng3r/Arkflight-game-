@@ -307,7 +307,6 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
 }
 
 function actionCostLabel(action, actor) {
-  if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
   const cost = stationActionEconomy(action, shipLevel(actor));
   const parts = [];
   if (cost.ap > 0) parts.push(`${cost.ap} AP`);
