@@ -64,7 +64,8 @@ export function buildConditionViews(ship = {}) {
       station: presentation.station,
       stationLabel: presentation.stationLabel,
       penalty: 0,
-      penaltyLabel: "System-specific condition",
+      effectLabel: { hull: "Hardness", drive: "Speed / Maneuverability", weapons: "Attack / Reload" }[system],
+      penaltyLabel: { hull: "Hardness", drive: "Speed / Maneuverability", weapons: "Attack / Reload" }[system],
       consequence: conditionConsequence(system, profile),
       severity: profile.severity
     });
@@ -76,14 +77,14 @@ export function buildConditionViews(ship = {}) {
     key: "lifeveil", label: "Lifeveil", icon: "fa-sparkles",
     state: lifeveil.id, stateLabel: lifeveil.label, stateClass: `is-${lifeveil.id}`,
     station: "veilwarden", stationLabel: "Veilwarden", penalty: 0,
-    penaltyLabel: "Percentage-derived condition",
+    effectLabel: "Integrity %", penaltyLabel: "Integrity %",
     consequence: `Lifeveil ${lifeveil.value}%.`, severity: lifeveil.severity
   }));
   fixed.push(Object.freeze({
     key: "morale", label: "Morale", icon: "fa-flag",
     state: morale.id, stateLabel: morale.label, stateClass: `is-${morale.id}`,
     station: "captain", stationLabel: "Captain", penalty: 0,
-    penaltyLabel: "Percentage-derived condition",
+    effectLabel: "Crew Resolve %", penaltyLabel: "Crew Resolve %",
     consequence: `Morale ${morale.value}%.`, severity: morale.severity
   }));
   return Object.freeze(fixed);
