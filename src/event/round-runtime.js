@@ -15,7 +15,6 @@ function cloneEncounter(encounter) {
     dcAdjustmentSources: cloneSourceMap(encounter?.dcAdjustmentSources),
     degreeLiftSources: cloneSourceMap(encounter?.degreeLiftSources),
     notes: [...(encounter?.notes ?? [])],
-    strainGuards: { ...(encounter?.strainGuards ?? {}) },
     generalStrainGuard: Number(encounter?.generalStrainGuard ?? 0),
     hazardGuard: Number(encounter?.hazardGuard ?? 0),
     momentumLossGuard: Number(encounter?.momentumLossGuard ?? 0),
@@ -94,14 +93,14 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
         if (critical) { encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) - 1; addSource(encounter, "dcAdjustmentSources", target, riskSource(chosen, "-1 DC")); }
       }
       break;
-    case "arkengine-vent": next = appendShipEffect(next, { kind: "gain-strain", value: critical ? -2 : -1, area: "arkengine" }, riskSource(chosen, "vent Strain")); break;
-    case "lifeveil-steady": next = appendShipEffect(next, { kind: "gain-strain", value: critical ? -2 : -1, area: "lifeveil" }, riskSource(chosen, "steady Strain")); break;
+    case "arkengine-vent": next = appendShipEffect(next, { kind: "gain-strain", value: critical ? -2 : -1 }, riskSource(chosen, "vent Strain")); break;
+    case "lifeveil-steady": next = appendShipEffect(next, { kind: "gain-strain", value: critical ? -2 : -1 }, riskSource(chosen, "steady Strain")); break;
     case "arkengine-overdrive": {
       const eligibleTarget = nextEligibleStation(state, ["engineer", "navigator"]); addCheckBonus(eligibleTarget, critical ? 3 : 2);
-      if (critical) { encounter.strainGuards.arkengine = Number(encounter.strainGuards.arkengine ?? 0) + 1; encounter.notes.push("Controlled Overdrive prevents the next point of Strain that threatens Arkengine this round."); }
+      if (critical) { encounter.generalStrainGuard = Number(encounter.generalStrainGuard ?? 0) + 1; encounter.notes.push("Controlled Overdrive prevents the next point of ship-wide Strain this round."); }
       break;
     }
-    case "arkengine-master": next = appendShipEffect(next, { kind: "gain-strain", value: -2, area: "arkengine" }, riskSource(chosen, "vent Strain")); if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); break;
+    case "arkengine-master": next = appendShipEffect(next, { kind: "gain-strain", value: -2 }, riskSource(chosen, "vent Strain")); if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); break;
     case "degree-lift": if (target) { encounter.degreeLifts[target] = Math.max(Number(encounter.degreeLifts[target] ?? 0), 1); addSource(encounter, "degreeLiftSources", target, riskSource(chosen, "improve the degree of success by one step")); } break;
     case "order-swap": if (target) { const activeIndex = Number(state.activeOrderIndex ?? 0); const currentTargetIndex = state.order.indexOf(target); if (currentTargetIndex > activeIndex) { const order = [...state.order]; order.splice(currentTargetIndex, 1); order.splice(activeIndex, 0, target); next = { ...next, order }; } } break;
     case "hazard-remove-1": { const hazardId = chosen.riskBid.parameters?.hazardId ?? encounter.hazards[0]; if (hazardId) encounter.hazards = encounter.hazards.filter((row) => row !== hazardId); if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); break; }
@@ -114,19 +113,22 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
 function guardedStrainEffect(encounter, effect) {
   let value = Number(effect.value ?? 0);
   if (value <= 0) return { ...effect, value };
-  const area = effect.area ?? null;
-  if (area) {
-    const guard = Number(encounter.strainGuards?.[area] ?? 0); const blocked = Math.min(value, guard); value -= blocked; encounter.strainGuards[area] = Math.max(0, guard - blocked);
-  }
-  const general = Number(encounter.generalStrainGuard ?? 0); const blockedGenerally = Math.min(value, general); value -= blockedGenerally; encounter.generalStrainGuard = Math.max(0, general - blockedGenerally);
+  const general = Number(encounter.generalStrainGuard ?? 0);
+  const blocked = Math.min(value, general);
+  value -= blocked;
+  encounter.generalStrainGuard = Math.max(0, general - blocked);
   return { ...effect, value };
 }
 
 function normalizedShipEffect(effect) {
   if (!effect) return null;
-  if (effect.kind === "gain-strain") return { kind: "gain-strain", value: Number(effect.value ?? 0), area: effect.area ?? null };
-  if (effect.kind === "pressure") return { kind: "gain-strain", value: Number(effect.value ?? 0), area: effect.system ?? null };
-  if (effect.kind === "reduce-highest-pressure") return { kind: "gain-strain", value: -Math.abs(Number(effect.value ?? 1)), area: null };
+  if (effect.kind === "gain-strain") return {
+    kind: "gain-strain",
+    value: Number(effect.value ?? 0),
+    ...(effect.degradationOverride ? { degradationOverride: effect.degradationOverride } : {})
+  };
+  if (effect.kind === "pressure") return { kind: "gain-strain", value: Number(effect.value ?? 0) };
+  if (effect.kind === "reduce-highest-pressure") return { kind: "gain-strain", value: -Math.abs(Number(effect.value ?? 1)) };
   if (["damage-hull", "damage-lifeveil", "change-morale", "degrade-area", "recover-area", "add-condition", "remove-condition"].includes(effect.kind)) return { ...effect };
   return null;
 }
