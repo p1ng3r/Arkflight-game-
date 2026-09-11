@@ -65,7 +65,6 @@ function canUserOperateCombatant(combatant, user = game.user) {
   return Boolean(
     userOwnsCombatant(user, combatant)
     && userCanUpdateDocument(user, combatant?.actor)
-    && userCanUpdateDocument(user, combatant)
   );
 }
 
