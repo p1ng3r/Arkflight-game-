@@ -205,7 +205,7 @@ export function renderArkflightCombatStations(app, root, actor) {
     }
     const actions = document.createElement("div");
     actions.className = "arkflight-combat-station-action-list";
-    for (const action of api.stationActions?.(station) ?? []) {
+    for (const action of api.stationActions?.(station, combatant) ?? []) {
       actions.append(buildActionRow({ action, api, combatant, actor, root, rerender }));
     }
     card.append(actions);
