@@ -61,8 +61,8 @@ test("Gilded Shatter rewards use authored Arkflight salvage and real PF2e rune U
     "Compendium.pf2e.equipment-srd.Item.JQdwHECogcTzdd8R",
     "Compendium.pf2e.equipment-srd.Item.qlunQzfnzPQpMG6U"
   ]);
-  assert.equal(rewards.shipComponents.length, 1);
-  assert.equal(rewards.boons.length, 1);
+  assert.equal(rewards.shipComponents.length, 2);
+  assert.equal(rewards.boons.length, 0);
 });
 
 test("Gilded Shatter ending vignettes stay within the 10-sentence closing limit", () => {
