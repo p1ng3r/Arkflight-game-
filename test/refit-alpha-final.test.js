@@ -1,31 +1,27 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 
 const moduleJson = JSON.parse(fs.readFileSync(new URL("../module.json", import.meta.url), "utf8"));
-const cleanupPath = new URL("../src/ui/refit-alpha-cleanup-ui.js", import.meta.url);
-const cleanupSource = fs.readFileSync(cleanupPath, "utf8");
 const unifiedCss = fs.readFileSync(new URL("../styles/refit-alpha-unified.css", import.meta.url), "utf8");
 const diagnostics = fs.readFileSync(new URL("../src/foundry/refit-diagnostics.js", import.meta.url), "utf8");
 const portrait = fs.readFileSync(new URL("../src/ui/ship-portrait-ui.js", import.meta.url), "utf8");
 const workOrder = fs.readFileSync(new URL("../src/ui/shipwright-refit-work-order-ui.js", import.meta.url), "utf8");
+const draftUi = fs.readFileSync(new URL("../src/ui/shipwright-refit-draft-ui.js", import.meta.url), "utf8");
 const time = fs.readFileSync(new URL("../src/foundry/refit-time.js", import.meta.url), "utf8");
 
-test("final Refit Alpha presentation assets load after the core refit layers", () => {
+test("final Refit Alpha presentation assets load without a post-render cleanup shim", () => {
   const unifiedIndex = moduleJson.styles.indexOf("styles/refit-alpha-unified.css");
   assert.ok(unifiedIndex >= 0);
   assert.ok(unifiedIndex > moduleJson.styles.indexOf("styles/shipwright-refit-draft.css"));
-  assert.equal(moduleJson.esmodules.at(-1), "src/ui/refit-alpha-cleanup-ui.js");
+  assert.equal(moduleJson.esmodules.includes("src/ui/refit-alpha-cleanup-ui.js"), false);
 });
 
-test("final cleanup UI parses and removes ambiguous Apply Refit language", () => {
-  const parsed = spawnSync(process.execPath, ["--check", fileURLToPath(cleanupPath)], { encoding: "utf8" });
-  assert.equal(parsed.status, 0, parsed.stderr || parsed.stdout);
-  assert.match(cleanupSource, /SAVE CORE BUILD/);
-  assert.match(cleanupSource, /INSTALL MOD — CREW/);
-  assert.match(cleanupSource, /INSTALL MOD — SHIPYARD/);
+test("owning Refit modules provide canonical build and installation language", () => {
+  assert.match(workOrder, /SAVE CORE BUILD/);
+  assert.match(workOrder, /Core-build changes use Save Core Build/);
+  assert.match(draftUi, /INSTALL MOD — CREW/);
+  assert.match(draftUi, /INSTALL MOD — SHIPYARD/);
 });
 
 test("unified presentation reserves cyan amber and red for consistent states", () => {
