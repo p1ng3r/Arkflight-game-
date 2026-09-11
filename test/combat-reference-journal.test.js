@@ -27,13 +27,15 @@ test("Combat Reference defines Station Bonus and the expanded resource economy",
   assert.match(journalSource, /Arkflight Combat — Fundamentals/);
   assert.match(journalSource, /Combat Resources/);
   assert.match(journalSource, /Strain Limit/);
-  assert.match(journalSource, /Stable → Stressed → Damaged → Critical → Disabled/);
+  assert.match(journalSource, /Sound → Battered → Breached → Shattered/);
+  assert.match(journalSource, /Responsive → Sluggish → Faltering → Unresponsive/);
+  assert.match(journalSource, /Ready → Fouled → Malfunctioning → Barely Operable/);
 });
 
 test("Drive the Crew HUD copy shows the net player-facing result and Morale cost", () => {
-  assert.match(hudSource, /Gain 1 AP this turn\. Spend 1 Morale/);
+  assert.match(hudSource, /Gain 1 AP this turn\. Spend 20% Morale/);
   assert.match(hudSource, /Station Bonus \+\$\{profile\.bonus\}/);
-  assert.match(economySource, /"captain-drive-the-crew": Object\.freeze\(\{ morale: 1 \}\)/);
+  assert.match(economySource, /"captain-drive-the-crew": Object\.freeze\(\{ morale: 20 \}\)/);
 });
 
 test("HUD exposes Supplies Lifeveil Morale and Strain costs clearly", () => {
@@ -78,6 +80,6 @@ test("Combat Reference includes Common Reload separately from Battlewatch Work t
   assert.match(journalSource, /Arkflight Combat — Common Actions/);
   assert.match(journalSource, /Common Ship Action/);
   assert.match(economySource, /"common-reload-weapon"/);
-  assert.match(economySource, /"battlewatch-reload-weapon": Object\.freeze\(\{ morale: 1 \}\)/);
+  assert.match(economySource, /"battlewatch-reload-weapon": Object\.freeze\(\{ morale: 20 \}\)/);
   assert.match(economySource, /2 or fewer rounds of Reload remaining/);
 });
