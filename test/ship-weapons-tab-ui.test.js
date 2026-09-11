@@ -120,3 +120,27 @@ test("ship damage is not automatically written to the target during fire resolut
   assert.match(effects, /chatDamageApplications/);
   assert.match(effects, /async function undoShipDamageMessage/);
 });
+
+
+test("all target-side ship damage consequences wait for chat Apply Damage", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  const flow = readFileSync(new URL("../src/foundry/combat-flow-usability.js", import.meta.url), "utf8");
+  const areas = readFileSync(new URL("../src/foundry/combat-area-consequences.js", import.meta.url), "utf8");
+  assert.match(effects, /resolveDeferredDamageConsequences/);
+  assert.match(effects, /applyWeaponSystemThreat/);
+  assert.match(effects, /systemThreat: solution\.weapon\.data\?\.systemThreat/);
+  assert.match(effects, /arkflightShipDamageStateChanged/);
+  assert.doesNotMatch(flow, /Hooks\.on\("arkflightNativeShipAttackResolved", damageConsequences\)/);
+  assert.doesNotMatch(areas, /Hooks\.on\("arkflightNativeShipAttackResolved"/);
+});
+
+test("GM Operations uses the same fixed-fire Reload and Work the Guns rules as players", () => {
+  const gm = readFileSync(new URL("../src/ui/gm-operations-combat-ui.js", import.meta.url), "utf8");
+  assert.match(gm, /1 AP fire/);
+  assert.match(gm, /Reload · 1 AP/);
+  assert.match(gm, /Work the Guns · 1 Morale · \+1 Strain/);
+  assert.match(gm, /stationAction\("common-reload-weapon"/);
+  assert.match(gm, /stationAction\("battlewatch-reload-weapon"/);
+  assert.doesNotMatch(gm, /combat\.workTheGuns\(/);
+  assert.doesNotMatch(gm, /Need \$\{weaponState\.fireAP\} AP/);
+});
