@@ -205,3 +205,13 @@ test("shared ship owners resolve own combat-state helpers without a GM guard", (
     assert.match(combatApi, new RegExp(`async ${method}\\([^]*?requireOwnedCombatant`));
   }
 });
+
+
+test("combat HUD exposes Maneuver defense and Moored Boarding state", () => {
+  assert.match(source, /shipManeuverDC/);
+  assert.match(source, /combatEngagement/);
+  assert.match(template, /engagement\.moored/);
+  assert.match(template, /engagement\.boarding/);
+  assert.match(template, /engagement\.partnerName/);
+  assert.match(source, /Moored — Break Grapple/);
+});
