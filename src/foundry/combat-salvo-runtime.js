@@ -10,7 +10,8 @@ import {
   stationEffectMagnitude,
   stationEffectProfile,
   stationMitigationValue,
-  weaponDamageProfile
+  weaponDamageProfile,
+  weaponReloadRemaining
 } from "../combat/index.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
@@ -165,8 +166,11 @@ function compatibleSalvoSolutions(solutions) {
   }
   return Object.freeze({ mount, damageType, threat });
 }
-function reduceOneReadyRound(state, keys, amount, round) {
-  const candidates = keys.map((key) => state.weapons?.[key]).filter(Boolean).sort((a,b) => Number(b.readyRound ?? 0) - Number(a.readyRound ?? 0));
+function reduceOneReload(state, keys, amount, round) {
+  const candidates = keys
+    .map((key) => state.weapons?.[key])
+    .filter(Boolean)
+    .sort((a, b) => weaponReloadRemaining(b) - weaponReloadRemaining(a));
   const chosen = candidates[0];
   return chosen ? reduceWeaponReload(state, chosen.key, round, amount) : state;
 }
@@ -202,7 +206,7 @@ async function fireSalvoAtTarget(base, weaponKeys, targetReference, attackerRefe
   const degree = degreeOfSuccess(Number(attack.total), die, ac);
 
   attackerAfter = consumeStationEffects(attackerAfter, offense.consumed);
-  if (offense.broadside.some((effect) => stationEffectProfile(effect.shipLevel ?? attackerLevel).master)) attackerAfter = reduceOneReadyRound(attackerAfter, plan.keys, 1, round);
+  if (offense.broadside.some((effect) => stationEffectProfile(effect.shipLevel ?? attackerLevel).master)) attackerAfter = reduceOneReload(attackerAfter, plan.keys, 1, round);
   let targetAfter = consumeStationEffects(targetAttackState, attackDefense.consumed);
   let damageDefense = Object.freeze({ wardable:false, wardMitigation:0, braceMitigation:0, wardConsumed:[], emergencyWardConsumed:[], braceConsumed:[] });
   let damage = null;
