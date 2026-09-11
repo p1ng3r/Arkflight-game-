@@ -684,6 +684,10 @@ Hooks.on("preMoveToken", (token, movement) => {
   const combat = game.combat;
   const combatant = combat?.combatants?.find((entry) => entry.tokenId === token.id && isArkflightCombatant(entry));
   if (!combatant || combat.combatant?.id !== combatant.id) return;
+  if (game.arkflight?.combatEngagement?.isMoored?.(combatant)) {
+    ui.notifications?.warn(`Movement blocked: ${combatant.name} is Moored. Use Break Grapple first.`);
+    return false;
+  }
   movement.autoRotate = false;
   const state = combatantState(combatant);
   if (!state) return;
@@ -714,6 +718,10 @@ Hooks.on("preUpdateToken", (token, changes, options) => {
   const combat = game.combat;
   const combatant = combat?.combatants?.find((entry) => entry.tokenId === token.id && isArkflightCombatant(entry));
   if (!combatant || combat.combatant?.id !== combatant.id) return;
+  if (game.arkflight?.combatEngagement?.isMoored?.(combatant)) {
+    ui.notifications?.warn(`Facing change blocked: ${combatant.name} is Moored. Use Break Grapple first.`);
+    return false;
+  }
   const state = combatantState(combatant);
   if (!state) return;
   const requested = Number(changes.rotation);
