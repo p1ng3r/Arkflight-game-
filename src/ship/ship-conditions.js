@@ -165,6 +165,13 @@ export function weaponConditionModifiers(ship) {
   });
 }
 
+export function wouldWorsenToFinalStage(ship, system) {
+  if (!SHIP_CONDITION_SYSTEMS.includes(system)) return false;
+  const rows = track(system);
+  const current = shipConditionProfile(ship, system);
+  return current.severity === rows.length - 2;
+}
+
 export function lifeveilCondition(value) {
   const percent = clampPercent(value);
   if (percent === 0) return Object.freeze({ id: "collapsed", label: "Collapsed", severity: 3, value: percent });
