@@ -71,3 +71,13 @@ test("each combat action can open its exact JournalEntryPage without replacing e
   assert.match(linkSource, /Full Rules/);
   assert.doesNotMatch(linkSource, /replaceDriveCrewPresentation/);
 });
+
+
+test("Combat Reference includes Common Reload separately from Battlewatch Work the Guns", () => {
+  assert.match(journalSource, /"common", "captain", "battlewatch"/);
+  assert.match(journalSource, /Arkflight Combat — Common Actions/);
+  assert.match(journalSource, /Common Ship Action/);
+  assert.match(economySource, /"common-reload-weapon"/);
+  assert.match(economySource, /"battlewatch-reload-weapon": Object\.freeze\(\{ morale: 1 \}\)/);
+  assert.match(economySource, /2 or fewer rounds of Reload remaining/);
+});
