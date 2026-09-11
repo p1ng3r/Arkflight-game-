@@ -47,6 +47,26 @@
       <button type="button" data-workbench-category="weapon" class="{{#if isWeapon}}is-active{{/if}}">Weapons</button>
     </nav>
 
+    {{#if isWeapon}}
+      {{#if isRaider}}
+        <section class="arkflight-raider-pursuit-config">
+          <div>
+            <span>RAIDER — PURSUIT WEAPON INTEGRATION</span>
+            <strong>{{#if raiderPursuitConfigured}}Integrated mount configured{{else}}Choose one pursuit mount{{/if}}</strong>
+            <small>Only Raider-qualified pursuit, harpoon, tether, disabling, chase, or boarding-support weapons gain the +1 size exception.</small>
+          </div>
+          {{#if canConfigureRaiderMount}}
+            <select data-raider-pursuit-mount>
+              <option value="">Choose integrated mount…</option>
+              {{#each raiderMounts as |mount|}}<option value="{{mount.value}}" {{#if mount.selected}}selected{{/if}}>{{mount.label}}</option>{{/each}}
+            </select>
+          {{else}}
+            <em>Dock at a Shipyard to configure or move this integration.</em>
+          {{/if}}
+        </section>
+      {{/if}}
+    {{/if}}
+
     <main class="arkflight-workspace-board-layout">
       <section class="arkflight-workspace-board-panel">
         <div class="arkflight-workspace-socket-legend"><strong>SOCKET KEY</strong><span class="is-free">Free</span><span class="is-installed">Installed</span><span class="is-reserved">Reserved / Working</span>{{#if isWeapon}}<em>Weapon sockets show facing and maximum weapon size.</em>{{else}}<em>These are flexible family sockets; fitting type is shown in inventory.</em>{{/if}}</div>
