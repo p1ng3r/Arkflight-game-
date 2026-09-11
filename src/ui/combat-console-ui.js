@@ -96,7 +96,6 @@ function crewName(api, combatant, station) {
 }
 
 function costLabel(action) {
-  if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
   if (action.id === "battlewatch-reload-weapon") return "1 Morale · +1 Strain";
   const parts = [];
   if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
