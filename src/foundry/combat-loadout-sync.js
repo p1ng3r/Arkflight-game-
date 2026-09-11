@@ -41,7 +41,8 @@ function buildReconciledState(combatant) {
   return reconcileCombatantState(ship, currentState(combatant), {
     derived,
     catalogs: SHIP_CATALOGS,
-    rotation: currentState(combatant)?.mobility?.heading ?? combatant?.token?.rotation ?? 0
+    rotation: currentState(combatant)?.mobility?.heading ?? combatant?.token?.rotation ?? 0,
+    round: game.combat?.round ?? null
   });
 }
 
