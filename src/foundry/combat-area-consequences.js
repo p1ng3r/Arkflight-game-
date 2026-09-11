@@ -29,7 +29,7 @@ async function resolveEncounterOutcome(combatant, ship) {
   const victory = combatVictoryState(entries);
 
   if (outcome.terminal) {
-    const label = outcome.status === "destroyed" ? "destroyed" : "disabled";
+    const label = outcome.status === "wrecked" ? "wrecked" : "disabled";
     ui.notifications?.warn(`${combatant?.name ?? "Arkflight ship"} is ${label} and can no longer continue combat.`);
   }
   if (victory.ended) {
