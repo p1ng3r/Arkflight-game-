@@ -409,8 +409,8 @@ const ADDITIONAL_ACTIONS = [
     rules: { resolver: "breakGrapple", chooseTarget: true, requiresMoored: true }
   }),
   action({
-    id: "common-board-ship",
-    station: "common",
+    id: "captain-board-ship",
+    station: "captain",
     name: "Board Ship",
     description: "Once two ships are Moored, establish boarding between them at 0 AP. Ship combat keeps the vessels Moored while character-scale fighting proceeds using normal PF2e rules.",
     summary: "0 AP: establish boarding with a Moored ship.",
