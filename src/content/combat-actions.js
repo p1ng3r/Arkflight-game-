@@ -351,7 +351,7 @@ const CORE_ACTIONS = [
   })
 ];
 
-const PROGRESSION_ACTIONS = [
+const ADDITIONAL_ACTIONS = [
   action({
     id: "navigator-impossible-burn",
     station: "navigator",
@@ -373,10 +373,55 @@ const PROGRESSION_ACTIONS = [
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
     tags: ["progression", "mythic", "maneuver", "facing", "interleavable"],
     rules: { resolver: "turnBetweenHeartbeats", oncePerBattle: true, requiresCapability: "turn-between-heartbeats", extraFacingSteps: 2, interleavable: true, permitsPivot: true }
-  })
+  }),
+
+  action({
+    id: "navigator-ram-ship",
+    station: "navigator",
+    name: "Ram",
+    description: "Spend 2 AP after moving at least 1 hex this turn to ram an adjacent ship. The target makes a Maneuver Save against this ship's Collision DC. Collision damage scales with hull class and approach momentum; the ramming ship can suffer recoil damage.",
+    summary: "2 AP: ram an adjacent ship; target makes a Maneuver Save.",
+    ap: 2,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["core", "maneuver", "collision", "target", "risk-reward"],
+    rules: { resolver: "ramShip", chooseTarget: true, requiresAdjacency: true, requiresMovementThisTurn: true }
+  }),
+  action({
+    id: "navigator-grapple-ship",
+    station: "navigator",
+    name: "Grapple Ship",
+    description: "Spend 1 AP to throw lines and grapples across an adjacent ship. The target makes a Maneuver Save against this ship's Grapple DC. On a failed save the ships become Moored; on a critical failure the target also exposes a boarding opportunity.",
+    summary: "1 AP: adjacent target saves or becomes Moored.",
+    ap: 1,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["core", "maneuver", "grapple", "boarding", "target"],
+    rules: { resolver: "grappleShip", chooseTarget: true, requiresAdjacency: true }
+  }),
+  action({
+    id: "navigator-break-grapple",
+    station: "navigator",
+    name: "Break Grapple",
+    description: "Spend 1 AP while Moored to wrench the ship free. Make this ship's Maneuver Save against the other vessel's Grapple DC. On a success the Moored condition ends for both ships.",
+    summary: "1 AP: Maneuver Save to break an existing grapple.",
+    ap: 1,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["core", "maneuver", "grapple", "escape"],
+    rules: { resolver: "breakGrapple", chooseTarget: true, requiresMoored: true }
+  }),
+  action({
+    id: "common-board-ship",
+    station: "common",
+    name: "Board Ship",
+    description: "Once two ships are Moored, establish boarding between them at 0 AP. Ship combat keeps the vessels Moored while character-scale fighting proceeds using normal PF2e rules.",
+    summary: "0 AP: establish boarding with a Moored ship.",
+    ap: 0,
+    category: COMBAT_ACTION_CATEGORIES.SUPPORT,
+    tags: ["core", "boarding", "grapple", "pf2e-handoff"],
+    rules: { resolver: "boardShip", chooseTarget: true, requiresMoored: true }
+
 ];
 
-export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries([...CORE_ACTIONS, ...PROGRESSION_ACTIONS].map((entry) => [entry.id, entry])));
+export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries([...CORE_ACTIONS, ...ADDITIONAL_ACTIONS].map((entry) => [entry.id, entry])));
 
 export const CORE_COMBAT_ACTIONS_BY_STATION = Object.freeze(
   Object.fromEntries(
