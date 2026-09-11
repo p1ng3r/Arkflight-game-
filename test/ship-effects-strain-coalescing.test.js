@@ -29,3 +29,22 @@ test("negative Strain changes are never merged into positive danger checks", () 
   ]);
   assert.deepEqual(effects.map((effect) => effect.value), [2, -1, 1]);
 });
+
+
+test("condition guard metadata is preserved while coalescing a resolution", () => {
+  const effects = coalesceShipEffects([
+    { kind: "gain-strain", value: 1, source: "Event round consequence", finalStageGuardTarget: "drive" },
+    { kind: "gain-strain", value: 2, source: "Event round consequence", finalStageGuardTarget: "drive" }
+  ]);
+  assert.deepEqual(effects, [
+    { kind: "gain-strain", value: 3, source: "Event round consequence", finalStageGuardTarget: "drive" }
+  ]);
+});
+
+test("different condition guards are not incorrectly merged", () => {
+  const effects = coalesceShipEffects([
+    { kind: "gain-strain", value: 1, source: "Event round consequence", finalStageGuardTarget: "drive" },
+    { kind: "gain-strain", value: 1, source: "Event round consequence", finalStageGuardTarget: "hull" }
+  ]);
+  assert.equal(effects.length, 2);
+});
