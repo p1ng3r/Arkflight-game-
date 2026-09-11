@@ -96,6 +96,7 @@ export function ramImpactProfile({ hullTier = 1, movementUsed = 0, ramship = fal
     movementUsed: nonnegative(movementUsed),
     dice,
     formula: `${dice}d10`,
+    ramship: Boolean(ramship),
     recoilFactor: ramship ? 0.25 : 0.5
   });
 }
