@@ -54,9 +54,9 @@ function vitalPair(actor, state, key) {
 
   const map = {
     hull: ["hull", "hullIntegrity"],
-    lifeveil: ["lifeveil", "lifeveilCapacity"],
-    morale: ["morale", "moraleCapacity"],
-    supplies: ["supplies", "supplyCapacity"]
+    lifeveil: ["lifeveil", null],
+    morale: ["morale", null],
+    supplies: ["supplies", "cargoCapacity"]
   };
   const [resourceKey, statKey] = map[key] ?? [key, null];
   const resource = resources[resourceKey] ?? {};
@@ -97,9 +97,9 @@ function resolvedStationEffect(action, actor, state) {
   const effects = {
     "captain-issue-order": `Chosen station's next qualifying check or attack: +${bonus} circumstance bonus. Expires after that roll or before this ship's next turn.`,
     "captain-rally-crew": profile.master
-      ? `Spend 1 Supply. Restore ${bonus} Morale OR improve the Morale area 1 step; if you improve the area, also restore ${bonus} Morale.`
-      : `Spend 1 Supply. Restore ${bonus} Morale OR improve the Morale area 1 damage step.`,
-    "captain-drive-the-crew": `Gain 1 AP this turn. Spend 1 Morale and gain ${cost.strain} Strain. Once per round.`,
+      ? `Spend 1 Supply. Restore ${20 * bonus}% Morale OR restore Morale; if you improve the area, also restore ${20 * bonus}% Morale.`
+      : `Spend 1 Supply. Restore ${20 * bonus}% Morale OR improve the Morale 1 damage step.`,
+    "captain-drive-the-crew": `Gain 1 AP this turn. Spend 20% Morale and gain ${cost.strain} Strain. Once per round.`,
     "captain-coordinate-assault": `Mark one hostile vessel. Its Hardness is reduced by ${bonus} against the next ${charges} qualifying weapon attack${charges === 1 ? "" : "s"} before this ship's next turn.`,
     "captain-brace-for-impact": `Reaction: reduce incoming Hull damage by ${3 * bonus} after Hardness.`,
 
@@ -147,9 +147,9 @@ function actionRuleChips(action, actor) {
     if (cost.ap > 0) chips.push({ label: `${cost.ap} AP`, tone: "cost" });
     if (cost.rp > 0) chips.push({ label: `${cost.rp} RP`, tone: "reaction" });
   }
-  if (cost.morale > 0) chips.push({ label: `−${cost.morale} Morale`, tone: "morale" });
+  if (cost.morale > 0) chips.push({ label: `−${cost.morale}% Morale`, tone: "morale" });
   if (cost.supplies > 0) chips.push({ label: `−${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`, tone: "supply" });
-  if (cost.lifeveil > 0) chips.push({ label: `−${cost.lifeveil} Lifeveil`, tone: "lifeveil" });
+  if (cost.lifeveil > 0) chips.push({ label: `−${cost.lifeveil}% Lifeveil`, tone: "lifeveil" });
   if (cost.strain > 0) chips.push({ label: `+${cost.strain} Strain`, tone: "strain" });
   if (!chips.length) chips.push({ label: "No fixed cost", tone: "free" });
 
@@ -228,9 +228,9 @@ function decorateActionCards(app, root) {
         if (cost.ap) parts.push(`${cost.ap} AP`);
         if (cost.rp) parts.push(`${cost.rp} RP`);
       }
-      if (cost.morale) parts.push(`−${cost.morale} Morale`);
+      if (cost.morale) parts.push(`−${cost.morale}% Morale`);
       if (cost.supplies) parts.push(`−${cost.supplies} Supply`);
-      if (cost.lifeveil) parts.push(`−${cost.lifeveil} Lifeveil`);
+      if (cost.lifeveil) parts.push(`−${cost.lifeveil}% Lifeveil`);
       if (cost.strain) parts.push(`+${cost.strain} Strain`);
       metaCost.textContent = parts.join(" · ") || "No cost";
     }
