@@ -10,7 +10,6 @@ import {
   getCoreCombatActionDefinitionsForStation,
   stationActionAvailability,
   stationActionEconomy,
-  stationActionRulesText,
   stationEffectMagnitude,
   reloadWeapon,
   reduceWeaponReload,
