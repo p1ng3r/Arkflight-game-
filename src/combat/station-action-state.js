@@ -201,7 +201,7 @@ export function executeStationStateAction(state, action, {
   if (!availability.ok) throw new Error(`${action?.name ?? "Station action"} is unavailable: ${availability.reason}.`);
 
   const resolver = action.rules?.resolver;
-  if (["fireAtTarget", "workTheGuns"].includes(resolver)) {
+  if (["fireAtTarget", "reloadWeapon"].includes(resolver)) {
     throw new Error(`${action.name} uses the dedicated weapon fire-control resolver.`);
   }
 
