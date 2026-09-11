@@ -9,6 +9,8 @@ test("retired Area and direct system-damage modules stay removed", () => {
   assert.equal(existsSync(new URL("src/ship/area-readiness.js", root)), false);
   assert.equal(existsSync(new URL("src/combat/system-damage.js", root)), false);
   assert.equal(existsSync(new URL("src/foundry/combat-area-consequences.js", root)), false);
+  assert.equal(existsSync(new URL("src/ui/refit-alpha-cleanup-ui.js", root)), false);
+  assert.equal(existsSync(new URL("src/foundry/combat-balance-runtime.js", root)), false);
   assert.equal(existsSync(new URL("src/ship/strain-rules.js", root)), true);
   assert.equal(existsSync(new URL("src/foundry/combat-condition-consequences.js", root)), true);
 });
