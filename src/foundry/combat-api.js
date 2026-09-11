@@ -219,10 +219,12 @@ function degreeOfSuccess(total, die, dc) {
 const DEGREE_LABEL = Object.freeze({ "-1": "Critical Failure", 0: "Failure", 1: "Success", 2: "Critical Success" });
 
 async function fireAtTarget(weaponKey, targetReference, attackerReference = null) {
-  requireGM();
-  const attacker = await requireCombatant(attackerReference);
+  const attacker = await requireOwnedCombatant(attackerReference);
   const target = findCombatant(targetReference);
   if (!target) throw new Error("Choose a target ship in the current combat.");
+  if (!game.user?.isGM && !canUserOperateCombatant(target)) {
+    throw new Error("Protected target mutation requires the Arkflight station combat-effects runtime.");
+  }
   const solution = targetSolution(attacker, target, weaponKey);
   if (!solution.range.legal) throw new Error(`${solution.weapon.name}: target is ${solution.range.label.toLowerCase()} (${solution.distanceHexes.toFixed(1)} hex).`);
   if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
@@ -255,6 +257,7 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
   const esc = foundry.utils.escapeHTML;
   const damageLine = damage ? `<br><strong>Damage:</strong> ${damage.incoming} ${esc(damage.type)} − ${damage.absorbed} Hardness = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})` : "";
   await attack.toMessage({
+    user: game.user?.id ?? null,
     speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
     flavor: `<strong>${esc(attacker.name)} fires ${esc(solution.weapon.name)} at ${esc(target.name)}</strong><br>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)} · ${esc(solution.weaponState.mount ?? "fore")} ${esc(solution.arc.arcTemplate)} arc<br>Attack ${attack.total} vs AC ${ac}: <strong>${DEGREE_LABEL[degree]}</strong>${damageLine}`
   });
