@@ -75,8 +75,8 @@ test("installed hardware is not counted by Cargo calculator", () => {
   assert.equal(usage.used, 0);
 });
 
-test("zero Supplies costs one Morale each day and one Strain every second day", () => {
-  assert.deepEqual(zeroSupplyDayConsequences(1), { days: 1, moraleLoss: 1, strainGain: 0 });
-  assert.deepEqual(zeroSupplyDayConsequences(2), { days: 2, moraleLoss: 2, strainGain: 1 });
-  assert.deepEqual(zeroSupplyDayConsequences(5), { days: 5, moraleLoss: 5, strainGain: 2 });
+test("zero Supplies costs twenty percent Morale each day and one Strain every second day", () => {
+  assert.deepEqual(zeroSupplyDayConsequences(1), { days: 1, moraleLoss: 20, strainGain: 0 });
+  assert.deepEqual(zeroSupplyDayConsequences(2), { days: 2, moraleLoss: 40, strainGain: 1 });
+  assert.deepEqual(zeroSupplyDayConsequences(5), { days: 5, moraleLoss: 100, strainGain: 2 });
 });
