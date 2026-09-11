@@ -48,6 +48,19 @@ function action({
 // Veilwarden changes magical defense. Station Bonus remains bounded at +1/+2/+3
 // so ship-level progression adds capability without breaking PF2e-style math.
 const CORE_ACTIONS = [
+  // COMMON — baseline ship actions available to any assigned crew member.
+  action({
+    id: "common-reload-weapon",
+    station: "common",
+    name: "Reload",
+    description: "Spend 1 AP to reduce one installed weapon's remaining Reload by 1 round. Any assigned crew member may perform this action.",
+    summary: "Spend 1 AP to reduce one weapon's Reload by 1 round.",
+    ap: 1,
+    category: COMBAT_ACTION_CATEGORIES.RELOAD,
+    tags: ["core", "common", "weapon", "reload", "interleavable"],
+    rules: { resolver: "reloadWeapon", minimumReload: 0, chooseWeapon: true, interleavable: true }
+  }),
+
   // CAPTAIN — tempo, morale, coordination, broad defense.
   action({
     id: "captain-issue-order",
@@ -248,12 +261,11 @@ const CORE_ACTIONS = [
     id: "battlewatch-reload-weapon",
     station: "battlewatch",
     name: "Work the Guns",
-    description: "Reduce one installed weapon's remaining reload time by the Station Bonus in rounds, to a minimum of 0.",
-    summary: "Reduce selected weapon reload by Station Bonus rounds.",
-    ap: 1,
+    description: "Once per round, spend 1 Morale and gain 1 Strain to immediately ready one installed weapon with 2 or fewer rounds of Reload remaining. This action costs 0 AP.",
+    summary: "Once/round: 1 Morale +1 Strain; ready a weapon at Reload 2 or less for 0 AP.",
     category: COMBAT_ACTION_CATEGORIES.RELOAD,
-    tags: ["core", "weapon", "reload", "interleavable"],
-    rules: { resolver: "workTheGuns", scaledReloadReduction: true, minimumReload: 0, chooseWeapon: true, interleavable: true }
+    tags: ["core", "weapon", "reload", "battlewatch", "risk-reward", "interleavable"],
+    rules: { resolver: "workTheGuns", maxReloadRemaining: 2, readyWeapon: true, chooseWeapon: true, interleavable: true, oncePerRound: true, strain: 1, strainArea: "morale" }
   }),
   action({
     id: "battlewatch-ready-broadside",
