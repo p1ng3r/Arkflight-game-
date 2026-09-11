@@ -132,11 +132,13 @@ export function purchaseMovement(state) {
 }
 
 export function purchaseManeuver(state) {
+  const maneuverability = Math.max(0, Math.trunc(Number(state?.mobility?.maneuverability) || 0));
+  if (maneuverability <= 0) throw new Error("Maneuverability 0 cannot purchase normal facing steps.");
   let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
   const current = next.mobility.maneuver;
   const maneuver = Object.freeze({
     purchases: current.purchases + 1,
-    allowance: current.allowance + next.mobility.maneuverability,
+    allowance: current.allowance + maneuverability,
     used: current.used
   });
   return Object.freeze({ ...next, mobility: Object.freeze({ ...next.mobility, maneuver }) });
@@ -157,7 +159,6 @@ export function recordFacingChange(state, steps, heading) {
   const add = Math.max(0, Math.trunc(Number(steps) || 0));
   const current = state.mobility.maneuver;
   const used = current.used + add;
-  if (used > current.allowance) throw new Error(`Facing change exceeds Maneuver allowance by ${used - current.allowance} step${used - current.allowance === 1 ? "" : "s"}.`);
   return Object.freeze({
     ...state,
     mobility: Object.freeze({
