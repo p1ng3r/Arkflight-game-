@@ -78,10 +78,14 @@ function normalizeProgression(progression = {}) {
   const specializationId = typeof progression.specializationId === "string" && progression.specializationId.trim()
     ? progression.specializationId.trim()
     : null;
+  const specializationConfig = progression.specializationConfig && typeof progression.specializationConfig === "object"
+    ? structuredClone(progression.specializationConfig)
+    : {};
   return {
     level,
     xp: level >= 20 ? Math.min(1000, xp) : Math.min(999, xp),
     specializationId,
+    specializationConfig,
     talentIds: [...new Set(progression.talentIds ?? [])],
     arkcraftUpgrades: { ...(progression.arkcraftUpgrades ?? {}) }
   };
@@ -211,6 +215,7 @@ function mergeShip(base, overrides) {
       ...base.progression,
       ...(overrides.progression ?? {}),
       specializationId: overrides.progression?.specializationId ?? base.progression.specializationId ?? null,
+      specializationConfig: structuredClone(overrides.progression?.specializationConfig ?? base.progression.specializationConfig ?? {}),
       talentIds: [...(overrides.progression?.talentIds ?? base.progression.talentIds)],
       arkcraftUpgrades: { ...base.progression.arkcraftUpgrades, ...(overrides.progression?.arkcraftUpgrades ?? {}) }
     },
