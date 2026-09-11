@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { weaponArcCheck } from "../combat/weapon-targeting.js";
+import { weaponReloadRemaining } from "../combat/index.js";
 
 const MODULE_ID = "arkflight-game";
 const DEG_TO_RAD = Math.PI / 180;
@@ -335,7 +336,7 @@ function buildShipWeaponStation(app, actor) {
   for (const weaponState of weapons) {
     const weapon = SHIP_CATALOGS.weapons?.[weaponState.id] ?? null;
     const combat = weapon?.data?.combat ?? {};
-    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const remaining = weaponReloadRemaining(weaponState);
     const row = document.createElement("article");
     row.className = "arkflight-weapon-control-row";
     row.innerHTML = `
@@ -363,7 +364,7 @@ function buildShipWeaponStation(app, actor) {
         : '<i class="fa-solid fa-rotate"></i> Reload · 1 AP';
       reloadButton.title = reloadBlocker
         ? `Reload unavailable: ${stationActionBlockerLabel(reloadBlocker)}.`
-        : "Common action: spend 1 AP to reduce this weapon's remaining Reload by 1 round.";
+        : "Common action: spend 1 AP to reduce this weapon's remaining Reload by 1.";
       reloadButton.addEventListener("click", async () => {
         try {
           const result = await api.stationAction("common-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
@@ -417,7 +418,7 @@ function buildShipWeaponStation(app, actor) {
       const fireControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
       fireButton.disabled = !fireControl.ok || remaining > 0 || !enoughAP || !legal;
       if (!fireControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> Battlewatch Only';
-      else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reloading · ${remaining} round${remaining === 1 ? "" : "s"}`;
+      else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reload ${remaining}`;
       else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Target Illegal';
       else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Roll Damage';
