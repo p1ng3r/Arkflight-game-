@@ -82,7 +82,7 @@ export function shipRewardPlan(rewards = {}) {
 export async function grantShipRewards(actor, rewards = {}) {
   const plan = shipRewardPlan(rewards);
   const granted = [];
-  if (plan.direct.length && !actor) throw new Error("No active Arkflight ship is bound for ship rewards.");
+  if ((plan.direct.length || plan.pending.length) && !actor) throw new Error("No active Arkflight ship is bound for ship rewards.");
   for (const item of plan.direct) {
     if (item.type === "blueprint") {
       const result = await game.arkflight?.refit?.learnBlueprint?.(actor, item.family, item.componentId);
@@ -93,6 +93,20 @@ export async function grantShipRewards(actor, rewards = {}) {
       if (!result?.ok) throw new Error(`Could not acquire Arkflight component ${item.componentId}: ${result?.reason ?? "unknown error"}`);
       granted.push({ type: "component", family: item.family, componentId: item.componentId, quantity: item.quantity, name: result.component?.name ?? item.entry?.name ?? item.componentId });
     }
+  }
+  if (plan.pending.length) {
+    const ship = structuredClone(actor.flags?.[MODULE_ID]?.ship ?? {});
+    ship.rewards ??= { pendingShip: [] };
+    const current = [...(ship.rewards.pendingShip ?? [])];
+    const seen = new Set(current.map((entry) => entryKey(entry)));
+    for (const entry of plan.pending) {
+      const key = entryKey(entry);
+      if (key && seen.has(key)) continue;
+      current.push({ ...entry });
+      if (key) seen.add(key);
+    }
+    ship.rewards.pendingShip = current;
+    await actor.update({ [`flags.${MODULE_ID}.ship`]: ship });
   }
   return Object.freeze({ granted: Object.freeze(granted), pending: plan.pending });
 }
