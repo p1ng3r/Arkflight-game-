@@ -1,25 +1,6 @@
 import { normalizeShipConditions } from "./ship-conditions.js";
 export const SHIP_SCHEMA_VERSION = 8;
 
-export const SHIP_AREA_KEYS = Object.freeze(["hull", "drive", "lifeveil", "morale", "weapons"]);
-
-export const AREA_STATES = Object.freeze({
-  STABLE: "stable",
-  STRESSED: "stressed",
-  DAMAGED: "damaged",
-  CRITICAL: "critical",
-  DISABLED: "disabled"
-});
-
-// Deprecated compatibility exports. New code should use SHIP_AREA_KEYS / AREA_STATES.
-export const SHIP_SYSTEM_KEYS = Object.freeze(["hull", "drive", "lifeveil", "morale", "weapons"]);
-export const SYSTEM_STATES = Object.freeze({
-  FUNCTIONAL: "functional",
-  DAMAGED: "damaged",
-  DISABLED: "disabled",
-  DESTROYED: "destroyed"
-});
-
 export const STATION_KEYS = Object.freeze([
   "captain",
   "engineer",
@@ -46,16 +27,6 @@ function normalizePercentageResource(source, defaultValue = 0) {
   return resource(clampPercent(value), 100);
 }
 function counter(value = 0) { return { value: Math.max(0, Math.trunc(Number(value) || 0)) }; }
-function area(state = AREA_STATES.STABLE) { return { state }; }
-
-function legacySystemToAreaState(value) {
-  if (value === "destroyed" || value === "disabled") return AREA_STATES.DISABLED;
-  if (value === "damaged") return AREA_STATES.DAMAGED;
-  return AREA_STATES.STABLE;
-}
-
-function migrateAreas(_ship = {}) { return {}; }
-
 function migrateStations(stations = {}) {
   const next = { ...stations };
   if (!next.battlewatch && next.watchmaster) next.battlewatch = next.watchmaster;
