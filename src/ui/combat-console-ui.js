@@ -117,7 +117,9 @@ function unavailableLabel(reason) {
     "reaction-readied": "Reaction Readied",
     "combatant-required": "Combat Offline",
     "not-your-station": "Assigned Crew Only",
-    "not-ship-owner": "Ship Owner Only"
+    "not-ship-owner": "Ship Owner Only",
+    "moored": "Moored — Break Grapple",
+    "capability-required": "Requires Ship Talent"
   })[reason] ?? "Unavailable";
 }
 
@@ -127,7 +129,13 @@ function choiceOptions(action, api, combatant, actor, targets, weapons) {
     return STATIONS.filter((entry) => entry.id !== action.station)
       .map((entry) => ({ value: entry.id, label: entry.label }));
   }
-  if (rules.chooseTarget) return targets.map((target) => ({ value: target.id, label: target.name }));
+  if (rules.chooseTarget) {
+    const engagementResolvers = new Set(["ramShip", "grappleShip", "breakGrapple", "boardShip"]);
+    const candidates = engagementResolvers.has(rules.resolver)
+      ? (game.arkflight?.combatEngagement?.eligibleTargets?.(rules.resolver, combatant) ?? [])
+      : targets;
+    return candidates.map((target) => ({ value: target.id, label: target.name }));
+  }
   if (rules.chooseWeapon) {
     let choices = weapons.filter((weapon) => !weapon.ready);
     if (rules.resolver === "workTheGuns") {
