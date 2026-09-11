@@ -215,3 +215,9 @@ test("combat HUD exposes Maneuver defense and Moored Boarding state", () => {
   assert.match(template, /engagement\.partnerName/);
   assert.match(source, /Moored — Break Grapple/);
 });
+
+
+test("combat UIs resolve capability-gated station actions against the acting combatant", () => {
+  assert.match(source, /stationActions\?\.\(station, combatant\)/);
+  assert.match(source, /stationActions\?\.\(this\.selectedStation, combatant\)/);
+});
