@@ -31,6 +31,7 @@ test("sheet exposes five named Ship Conditions without a universal station penal
   const rows = buildAreaViews(ship);
   assert.deepEqual(rows.map((row) => row.key), ["hull", "drive", "weapons", "lifeveil", "morale"]);
   assert.deepEqual(rows.map((row) => row.stateLabel), ["Battered", "Faltering", "Malfunctioning", "Degraded", "Shaken"]);
+  assert.deepEqual(rows.map((row) => row.effectLabel), ["Hardness", "Speed / Maneuverability", "Attack / Reload", "Integrity %", "Crew Resolve %"]);
   assert.equal(rows.every((row) => row.penalty === 0), true);
   assert.equal(rows.some((row) => row.stationLabel === "Watchmaster"), false);
 });
