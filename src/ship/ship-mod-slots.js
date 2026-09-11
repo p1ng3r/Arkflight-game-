@@ -4,7 +4,9 @@ export const SHIP_MOD_SLOT_CLASSES = Object.freeze([
   "rigging",
   "lifeveil",
   "support",
-  "utility"
+  "utility",
+  "exploration",
+  "expedition"
 ]);
 
 const TYPE_CLASS = Object.freeze({
@@ -30,6 +32,8 @@ export function shipModSlotClass(mod) {
   const type = mod.data?.modType ?? "";
   if (TYPE_CLASS[type]) return TYPE_CLASS[type];
   const tags = new Set([...(mod.tags ?? []), ...(mod.traits ?? [])]);
+  if (tags.has("exploration") || tags.has("survey") || tags.has("cartography") || tags.has("anomaly-detection")) return "exploration";
+  if (tags.has("expedition") || tags.has("field-operations") || tags.has("field-logistics")) return "expedition";
   if (tags.has("weapon") || tags.has("military")) return "weapon";
   if (tags.has("structural") || tags.has("hull") || tags.has("bulkhead")) return "structural";
   if (tags.has("rigging") || tags.has("helm") || tags.has("sailSystem") || tags.has("maneuvering") || tags.has("propulsionSupport")) return "rigging";
