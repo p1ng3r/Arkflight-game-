@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 import { SHIP_CATALOGS } from "../src/content/index.js";
 import {
   applyHardnessToDamage,
-  applyWeaponSystemThreat,
   beginCombatantTurn,
   combatVictoryState,
   fireWeapon,
@@ -13,12 +12,12 @@ import {
   recordFacingChange,
   recordMovement,
   shipCombatOutcome,
-  systemDamageThreshold,
   weaponReloadRemaining,
   weaponTargetingSolution,
   reloadWeapon
 } from "../src/combat/index.js";
 import { deriveBuild } from "../scripts/combat-build-lab.mjs";
+import { applyShipSystemDegradation, shipConditionProfile } from "../src/ship/ship-conditions.js";
 
 function installedWeapon(state, mount) {
   const row = Object.values(state.weapons ?? {}).find((weapon) => weapon.mount === mount);
@@ -98,34 +97,35 @@ test("Combat Alpha vertical slice uses real builds from movement through victory
     assert.ok(weaponReloadRemaining(state.weapons[portGun.key], 2) < reloadBeforeWork);
   }
 
-  // Resolve real Hardness against incoming damage, then drive the actual
-  // Arkengine area track to Disabled through the shared system-damage rule.
+  // Resolve real Hardness against incoming damage. Ship Conditions are a
+  // separate persistent layer: even an Unresponsive Drive does not
+  // automatically remove a vessel from combat.
   const incoming = iron.derived.stats.hardness + 7;
   const hardened = applyHardnessToDamage(incoming, iron.derived.stats.hardness);
   assert.equal(hardened.hullDamage, 7);
 
   let targetShip = structuredClone(ironShip);
   targetShip.resources.hull.value = Math.max(1, targetShip.resources.hull.value - hardened.hullDamage);
-  const threshold = systemDamageThreshold(targetShip);
-  for (let i = 0; i < 4; i += 1) {
-    const result = applyWeaponSystemThreat(targetShip, {
-      threat: "arkengine",
-      degree: 2,
-      hullDamage: threshold
-    });
-    targetShip = structuredClone(result.ship);
+  for (let i = 0; i < 3; i += 1) {
+    targetShip = applyShipSystemDegradation(targetShip, "drive").ship;
   }
-  assert.equal(targetShip.areas.arkengine.state, "disabled");
-  assert.equal(shipCombatOutcome(targetShip).status, "disabled");
+  assert.equal(shipConditionProfile(targetShip, "drive").id, "unresponsive");
+  assert.equal(shipCombatOutcome(targetShip).status, "active");
 
-  const victory = combatVictoryState([
+  const stillContested = combatVictoryState([
     { id: "rum-runner", ship: rumShip },
     { id: "iron-spear", ship: targetShip }
   ]);
-  assert.equal(victory.ended, true);
-  assert.equal(victory.winnerId, "rum-runner");
+  assert.equal(stillContested.ended, false);
 
-  const wreckedIron = structuredClone(ironShip);
+  const wreckedIron = structuredClone(targetShip);
   wreckedIron.resources.hull.value = 0;
   assert.equal(shipCombatOutcome(wreckedIron).status, "wrecked");
+
+  const victory = combatVictoryState([
+    { id: "rum-runner", ship: rumShip },
+    { id: "iron-spear", ship: wreckedIron }
+  ]);
+  assert.equal(victory.ended, true);
+  assert.equal(victory.winnerId, "rum-runner");
 });
