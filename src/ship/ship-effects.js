@@ -98,3 +98,35 @@ export function applyShipEffects(ship, effects = []) {
   // threatenedAreas is retained as a compatibility alias for older event code.
   return { ship: next, affectedSystems, threatenedAreas: affectedSystems };
 }
+
+
+/**
+ * Coalesce consecutive positive ship-wide Strain effects from the same
+ * resolution/source so one Event consequence cannot trigger multiple danger
+ * checks merely because legacy content authored multiple Area-specific gains.
+ *
+ * Negative Strain changes and explicitly redirected degradations remain
+ * separate because their ordering can matter.
+ */
+export function coalesceShipEffects(effects = []) {
+  const output = [];
+  for (const raw of effects ?? []) {
+    const effect = raw ? { ...raw } : raw;
+    if (!effect) continue;
+
+    const value = Number(effect.value ?? 0);
+    const positiveStrain = effect.kind === "gain-strain" && value > 0;
+    const previous = output.at(-1);
+    const sameSource = String(previous?.source ?? "") === String(effect.source ?? "");
+    const sameOverride = String(previous?.degradationOverride ?? "") === String(effect.degradationOverride ?? "");
+    const previousPositiveStrain = previous?.kind === "gain-strain" && Number(previous?.value ?? 0) > 0;
+
+    if (positiveStrain && previousPositiveStrain && sameSource && sameOverride) {
+      previous.value = Number(previous.value ?? 0) + value;
+      continue;
+    }
+
+    output.push(effect);
+  }
+  return Object.freeze(output.map((effect) => Object.freeze({ ...effect })));
+}
