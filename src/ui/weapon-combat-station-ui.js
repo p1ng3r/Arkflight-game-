@@ -41,7 +41,7 @@ function stationActionBlockerLabel(reason) {
     "not-this-ships-turn": "Not this ship's turn",
     "insufficient-ap": "Need 1 AP",
     "insufficient-supplies": "Need 1 Supply",
-    "insufficient-morale": "Need 1 Morale",
+    "insufficient-morale": "Need 20% Morale",
     "once-per-round": "Used this round",
     "crew-unassigned": "No crew assigned",
     "not-assigned-crew": "Assigned crew only",
@@ -381,10 +381,10 @@ function buildShipWeaponStation(app, actor) {
         workButton.disabled = Boolean(workBlocker);
         workButton.innerHTML = workBlocker
           ? `<i class="fa-solid fa-lock"></i> Work the Guns · ${esc(stationActionBlockerLabel(workBlocker))}`
-          : '<i class="fa-solid fa-burst"></i> Work the Guns · 1 Morale · +1 Strain';
+          : '<i class="fa-solid fa-burst"></i> Work the Guns · 20% Morale · +1 Strain';
         workButton.title = workBlocker
           ? `Work the Guns unavailable: ${stationActionBlockerLabel(workBlocker)}.`
-          : "Battlewatch, once per round: spend 1 Morale and gain 1 Strain to immediately ready this weapon for 0 AP.";
+          : "Battlewatch, once per round: spend 20% Morale and gain 1 Strain to immediately ready this weapon for 0 AP.";
         workButton.addEventListener("click", async () => {
           try {
             const result = await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
