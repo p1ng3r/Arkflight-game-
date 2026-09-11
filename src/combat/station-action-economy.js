@@ -65,7 +65,9 @@ export function stationActionRulesText(action) {
     "battlewatch-ready-broadside": "Spend 1 AP and 1 Supply. Choose Port or Starboard. The next shot from that facing gains +2 × Station Bonus damage. At ship level 15+, that shot also reduces its resulting reload by 1 round.",
     "veilwarden-reinforce-lifeveil": "Spend 1 AP and 5 Lifeveil. The next wardable hit reduces incoming damage by 2 × Station Bonus before Hardness. From ship level 5, this protects against the next two qualifying hits before the ship's next turn.",
     "veilwarden-focus-ward": "Spend 1 AP and 10 Lifeveil. Choose a ship area or energy type. The next matching hit reduces incoming damage by 3 × Station Bonus before Hardness. From ship level 5, this protects against the next two matching hits before the ship's next turn.",
-    "veilwarden-emergency-ward": "Reaction — Spend 1 RP and 5 Lifeveil. Trigger: a wardable hit is about to deal damage. Reduce incoming damage by 4 × Station Bonus before Hardness."
+    "veilwarden-emergency-ward": "Reaction — Spend 1 RP and 5 Lifeveil. Trigger: a wardable hit is about to deal damage. Reduce incoming damage by 4 × Station Bonus before Hardness.",
+    "navigator-impossible-burn": "Once per battle, at 0 AP, overburn the Arkengine to add 50% of current Combat Speed (rounded up) to this turn's movement allowance. Gain 2 Strain threatening the Arkengine.",
+    "navigator-turn-between-heartbeats": "Once per battle, at 0 AP, gain 2 extraordinary 60-degree facing steps this turn. These are additional allowance and may be used during movement."
   };
   return rules[action?.id] ?? fallback;
 }
