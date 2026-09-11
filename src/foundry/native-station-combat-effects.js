@@ -373,15 +373,26 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   if (attackDefense.acBonus) modifiers.push(`+${attackDefense.acBonus} target AC`);
   if (offense.hardnessReduction) modifiers.push(`−${offense.hardnessReduction} target Hardness`);
   if (solution.arc.vectorTolerance) modifiers.push(`+${solution.arc.vectorTolerance}° arc tolerance`);
-  const stationLine = modifiers.length ? `<br><strong>Station effects:</strong> ${modifiers.join(" · ")}` : "";
-  const damageLine = damage
-    ? `<br><strong>Hull:</strong> ${damage.incoming} − ${damage.wardAbsorbed} Ward − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` (${damage.hardnessBase}→${damage.hardnessEffective})` : ""} − ${damage.braceAbsorbed} Brace = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})`
+
+  const shotClass = degree === 2 ? "is-critical" : degree >= 1 ? "is-hit" : "is-miss";
+  const effectChips = [
+    ...modifiers,
+    ...(damage?.wardAbsorbed ? [`Ward −${damage.wardAbsorbed}`] : []),
+    ...(damage ? [`Hardness −${damage.absorbed}`] : []),
+    ...(damage?.braceAbsorbed ? [`Brace −${damage.braceAbsorbed}`] : [])
+  ];
+  const effectLine = effectChips.length
+    ? `<div class="arkflight-chat-shot-effects">${effectChips.map((entry) => `<span class="arkflight-chat-chip">${esc(entry)}</span>`).join("")}</div>`
     : "";
-  await attack.toMessage({
-    user: requester?.id ?? requesterUserId,
-    speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
-    flavor: `<strong>${esc(attacker.name)} fires ${esc(solution.weapon.name)} at ${esc(target.name)}</strong><br>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)} · ${esc(solution.weaponState.mount ?? "fore")} ${esc(solution.arc.arcTemplate)} arc<br>Attack ${attack.total} vs AC ${ac}: <strong>${DEGREE_LABEL[degree]}</strong>${stationLine}${damageLine}`
-  });
+  const damageLine = damage
+    ? `<div class="arkflight-chat-shot-damage"><span>${damage.incoming} incoming → ${damage.hullDamage} after mitigation</span><strong class="arkflight-chat-damage-final">${damage.hullDamage} Hull</strong><span>${damage.before} → ${damage.after}</span></div>`
+    : "";
+  const compactFlavor = `<div class="arkflight-chat-card arkflight-attack-chat ${shotClass}">
+    <div class="arkflight-chat-shot-head"><strong>${esc(solution.weapon.name)} → ${esc(target.name)}</strong><span>${esc(attacker.name)}</span></div>
+    <div class="arkflight-chat-shot-meta"><span>${solution.distanceHexes.toFixed(1)} hex</span><span>${esc(solution.range.label)}</span><span>${esc(solution.weaponState.mount ?? "fore")} · ${esc(solution.arc.arcTemplate)}</span></div>
+    <div class="arkflight-chat-shot-result"><strong>Attack ${attack.total} vs AC ${ac}</strong><span class="arkflight-chat-outcome">${esc(DEGREE_LABEL[degree])}</span></div>
+    ${effectLine}${damageLine}
+  </div>`;
 
   if (damage) {
     const damageEffectIds = [
@@ -392,10 +403,13 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       .filter((effect) => damageEffectIds.includes(effect.id))
       .map((effect) => ({ ...effect }));
 
+    // A successful attack produces one combined chat message. The damage roll
+    // remains visible for dice transparency; attack/AC/mitigation live in its
+    // compact flavor block instead of creating a second full roll card.
     await damage.roll.toMessage({
       user: requester?.id ?? requesterUserId,
       speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
-      flavor: `<strong>${esc(solution.weapon.name)} Damage — ${esc(target.name)}</strong><br>Rolled ${damage.rolled}${offense.damageBonus ? ` + ${offense.damageBonus} station damage` : ""}${damage.wardAbsorbed ? ` − ${damage.wardAbsorbed} Ward` : ""} − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` after ${damage.hardnessReduced} Hardness reduction` : ""}${damage.braceAbsorbed ? ` − ${damage.braceAbsorbed} Brace` : ""} = <strong>${damage.hullDamage} Hull</strong>`,
+      flavor: compactFlavor,
       flags: {
         [MODULE_ID]: {
           shipDamage: {
@@ -413,6 +427,12 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
           }
         }
       }
+    });
+  } else {
+    await attack.toMessage({
+      user: requester?.id ?? requesterUserId,
+      speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
+      flavor: compactFlavor
     });
   }
 
