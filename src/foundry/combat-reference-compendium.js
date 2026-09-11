@@ -53,9 +53,9 @@ function costLabel(action) {
     if (cost.ap > 0) parts.push(`${cost.ap} AP`);
     if (cost.rp > 0) parts.push(`${cost.rp} RP`);
   }
-  if (cost.morale > 0) parts.push(`${cost.morale} Morale`);
+  if (cost.morale > 0) parts.push(`${cost.morale}% Morale`);
   if (cost.supplies > 0) parts.push(`${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`);
-  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil} Lifeveil`);
+  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil}% Lifeveil`);
   if (cost.strain > 0) parts.push(`+${cost.strain} Strain`);
   return parts.length ? parts.join(" + ") : "No fixed cost";
 }
@@ -70,9 +70,9 @@ function actionChips(action) {
   if (action.id === "captain-drive-the-crew") chips.push(chip("+1 AP", "gain"));
   else if (cost.ap > 0) chips.push(chip(`${cost.ap} AP`, "ap"));
   if (cost.rp > 0) chips.push(chip(`${cost.rp} RP`, "rp"));
-  if (cost.morale > 0) chips.push(chip(`-${cost.morale} Morale`, "morale"));
+  if (cost.morale > 0) chips.push(chip(`-${cost.morale}% Morale`, "morale"));
   if (cost.supplies > 0) chips.push(chip(`-${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`, "supplies"));
-  if (cost.lifeveil > 0) chips.push(chip(`-${cost.lifeveil} Lifeveil`, "lifeveil"));
+  if (cost.lifeveil > 0) chips.push(chip(`-${cost.lifeveil}% Lifeveil`, "lifeveil"));
   if (cost.strain > 0) chips.push(chip(`+${cost.strain} Strain`, "strain"));
   chips.push(chip(labelize(action.timing), action.timing === "reaction" ? "reaction" : "timing"));
   return chips.join("");
@@ -158,24 +158,27 @@ function fundamentalsResourcesHtml(identities) {
 }
 
 function fundamentalsStrainHtml() {
-  const areas = [
-    ["Drive the Crew", "Morale"],
-    ["Overcharge Arkengine", "Arkengine"],
-    ["Redistribute Power", "Arkengine"],
-    ["Hard Turn", "Rigging"],
-    ["Evasive Maneuver", "Rigging"],
-    ["Work the Guns", "Morale"]
+  const table = [
+    ["1", "Hull"],
+    ["2", "Morale"],
+    ["3", "Drive"],
+    ["4", "Drive"],
+    ["5", "Lifeveil"],
+    ["6", "Hull"],
+    ["7", "Weapons"],
+    ["8", "Players choose"]
   ];
   return codexPage({
     kicker: "Arkflight Combat Fundamentals",
-    title: "Strain Limit",
+    title: "Strain & Ship Conditions",
     subtitle: "Push the ship hard enough and something gives",
     station: "fundamentals",
-    chips: `${chip("Stable", "safe")}${chip("Stressed", "warning")}${chip("Damaged", "warning")}${chip("Critical", "danger")}${chip("Disabled", "danger")}`,
+    chips: `${chip("50–74%: DC 5", "warning")}${chip("75–89%: DC 10", "warning")}${chip("90–99%: DC 15", "danger")}${chip("100%+: Auto d8", "danger")}`,
     body: [
-      section("Threshold Rule", `<p class="afcr-quick-text">${escapeHtml(STRAIN_THRESHOLD_DEFINITION)}</p>`, "callout"),
-      section("Threatened Areas", `<div class="afcr-threat-list">${areas.map(([action, area]) => `<div><strong>${escapeHtml(action)}</strong><span>${escapeHtml(area)}</span></div>`).join("")}</div>`, "meta"),
-      section("When the Limit Is Crossed", `<p>The threatened Area degrades one step: <strong>Stable → Stressed → Damaged → Critical → Disabled</strong>. One Strain Limit is then subtracted from current Strain and overflow remains. A single station action can degrade at most one Area from its Strain crossing. If the threatened Area is already Disabled, it cannot degrade further, but the threshold is still consumed.</p>`, "rules")
+      section("Strain Rule", `<p class="afcr-quick-text">${escapeHtml(STRAIN_THRESHOLD_DEFINITION)}</p>`, "callout"),
+      section("Ship Conditions", `<p><strong>Hull:</strong> Sound → Battered → Breached → Shattered.<br><strong>Drive:</strong> Responsive → Sluggish → Faltering → Unresponsive.<br><strong>Weapons:</strong> Ready → Fouled → Malfunctioning → Barely Operable.<br><strong>Lifeveil</strong> and <strong>Morale</strong> derive their condition directly from their 0–100% resources.</p>`, "rules"),
+      section("Failed Check / Strain Limit — 1d8", `<div class="afcr-threat-list">${table.map(([roll, target]) => `<div><strong>${escapeHtml(roll)}</strong><span>${escapeHtml(target)}</span></div>`).join("")}</div>`, "meta"),
+      section("One Consequence Per Resolution", `<p>A single triggering resolution can worsen at most one Ship Condition. If that resolution already worsened a condition, its Strain cannot cause another degradation. At 100% Strain, skip the flat check, roll the degradation d8 automatically, subtract one full Strain capacity, and retain overflow.</p>`, "rules")
     ].join("")
   });
 }
