@@ -204,7 +204,7 @@ function buildWeapons(state, round) {
       mountLabel: titleCase(weaponState.mount ?? "fore"),
       mountIndex: Number(weaponState.mountIndex ?? 0) + 1,
       arc: titleCase(combat.arcTemplate ?? "wide"),
-      fireAP: Math.max(1, Number(weaponState.fireAP ?? combat.fireAP ?? 1)),
+      fireAP: 1,
       damage: `${damage.dice ?? "—"} ${titleCase(damage.type ?? "damage")}`,
       remaining,
       ready: remaining <= 0,
@@ -247,14 +247,14 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
         try { legal = Boolean(api.targetingSolution(selectedWeapon.key, selectedTargetId, combatant)?.legal); }
         catch (_error) { legal = false; }
       }
-      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(selectedWeapon?.fireAP ?? 99);
+      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= 1;
       usable = Boolean(control.ok && availability.ok && selectedWeapon?.ready && selectedTargetId && legal && enoughAP);
       buttonLabel = "Fire";
       if (!selectedWeapon) reason = "Choose Weapon";
       else if (!selectedTargetId) reason = "Choose Target";
       else if (!selectedWeapon.ready) reason = `Reload ${selectedWeapon.remaining}`;
       else if (!legal) reason = "Illegal Shot";
-      else if (!enoughAP) reason = `Need ${selectedWeapon.fireAP} AP`;
+      else if (!enoughAP) reason = "Need 1 AP";
     } else if (resolver === "workTheGuns") {
       usable = Boolean(control.ok && availability.ok && choices.length > 0);
       buttonLabel = "Work the Guns";
@@ -451,7 +451,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         weapon.solution = "No target";
       }
       weapon.statusLabel = weapon.ready ? "Ready" : `Reload ${weapon.remaining}`;
-      weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= weapon.fireAP);
+      weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= 1);
       weapon.canReload = Boolean(commonReloadControl.ok && commonReloadAvailability.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
       weapon.showWorkGuns = Boolean(workGunsControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(weapon.remaining ?? 0) <= 2);
       weapon.canWorkGuns = Boolean(weapon.showWorkGuns && workGunsAvailability.ok);
@@ -492,7 +492,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         && game.combat?.combatant?.id === combatant.id
         && target?.legal
         && weapons.find((entry) => entry.key === this.selectedWeaponKey)?.ready
-        && Number(state?.economy?.ap?.value ?? 0) >= Number(weapons.find((entry) => entry.key === this.selectedWeaponKey)?.fireAP ?? 99)
+        && Number(state?.economy?.ap?.value ?? 0) >= 1
       ),
       arcVisible,
       arcButtonLabel: arcVisible ? "Hide Weapon Arcs" : "Show Weapon Arcs",
