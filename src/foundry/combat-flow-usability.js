@@ -1,4 +1,4 @@
-import { applyFreeHelmAllowance, canChangeFacingNow, helmRemaining } from "../combat/helm-rules.js";
+import { applyFreeHelmAllowance, helmRemaining } from "../combat/helm-rules.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
@@ -131,17 +131,6 @@ async function maybePromptEngineerBypass(base, actionId, options, reference) {
 
 Hooks.on("arkflightCombatTurnChanged", queueHelm);
 Hooks.on("updateCombat", (_combat, changes) => { if (Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn")) queueHelm(); });
-Hooks.on("preUpdateToken", (token, changes, options) => {
-  if (changes?.rotation == null || options?.arkflightCombatFacing || !game.combat) return;
-  const c = combatantFor(token);
-  if (!c || game.combat.combatant?.id !== c.id || !isShip(c.actor)) return;
-  const s = stateOf(c);
-  if (s && !canChangeFacingNow(s, game.combat.round ?? 1)) {
-    ui.notifications?.warn(`${c.name}: move at least 1 hex before using the free facing allowance, or spend AP on an exceptional maneuver.`);
-    return false;
-  }
-});
-
 Hooks.once("ready", () => {
   const base = game.arkflight?.combat;
   if (!base) return;
@@ -162,9 +151,6 @@ Hooks.once("ready", () => {
     },
     initializeHelm(ref = null) { const c = ref ? base.findCombatant(ref) : game.combat?.combatant; return ensureHelm(c); },
     async turn(steps = 1, ref = null) {
-      const c = ref ? base.findCombatant(ref) : game.combat?.combatant;
-      const s = c ? base.state(c) : null;
-      if (c && s && !canChangeFacingNow(s, game.combat?.round ?? 1)) throw new Error(`${c.name} must move at least 1 hex before using its free facing allowance. Purchase Extra Maneuver or use an exceptional propulsion maneuver to pivot.`);
       return turn(steps, ref);
     },
     async fireAtTarget(weaponKey, targetRef, attackerRef = null) {
