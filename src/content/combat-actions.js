@@ -77,12 +77,12 @@ const CORE_ACTIONS = [
     id: "captain-rally-crew",
     station: "captain",
     name: "Rally Crew",
-    description: "Restore 20% Morale × Station Bonus, or restore Morale. At ship level 15+, improving the Morale also restores 20% Morale × Station Bonus.",
-    summary: "Recover Morale or improve the Morale one step.",
+    description: "Restore 20% Morale × Station Bonus, up to 100%.",
+    summary: "Restore 20% Morale × Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
     tags: ["core", "command", "morale", "recovery"],
-    rules: { resolver: "rallyCrew", area: "morale", scaledRecovery: true }
+    rules: { resolver: "rallyCrew", scaledRecovery: true }
   }),
   action({
     id: "captain-drive-the-crew",
@@ -93,7 +93,7 @@ const CORE_ACTIONS = [
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
     tags: ["core", "command", "strain", "action-economy", "risk-reward"],
-    rules: { resolver: "driveCrew", gainAP: 2, strain: 2, strainArea: "morale", oncePerRound: true, masterReducedStrain: true, legendaryNoStrain: true }
+    rules: { resolver: "driveCrew", gainAP: 2, strain: 2, oncePerRound: true, masterReducedStrain: true, legendaryNoStrain: true }
   }),
   action({
     id: "captain-coordinate-assault",
@@ -140,7 +140,7 @@ const CORE_ACTIONS = [
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
     tags: ["core", "arkengine", "strain", "overcharge", "risk-reward"],
-    rules: { resolver: "overchargeArkengine", strain: 1, strainArea: "arkengine", fullHelmBlock: true, oncePerRound: true }
+    rules: { resolver: "overchargeArkengine", strain: 1, fullHelmBlock: true, oncePerRound: true }
   }),
   action({
     id: "engineer-emergency-repair",
@@ -209,7 +209,7 @@ const CORE_ACTIONS = [
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
     tags: ["core", "maneuver", "facing", "strain", "risk-reward"],
-    rules: { resolver: "hardTurn", scaledFacingSteps: true, includeManeuverability: true, strain: 1, strainArea: "rigging", permitsPivot: true }
+    rules: { resolver: "hardTurn", scaledFacingSteps: true, includeManeuverability: true, strain: 1, permitsPivot: true }
   }),
   action({
     id: "navigator-set-attack-vector",
@@ -226,7 +226,7 @@ const CORE_ACTIONS = [
     id: "navigator-evasive-maneuver",
     station: "navigator",
     name: "Evasive Maneuver",
-    description: "Reaction — Trigger: this ship is targeted by a weapon attack. Increase this ship's AC against that attack by the Station Bonus, then gain 1 Strain against Rigging.",
+    description: "Reaction — Trigger: this ship is targeted by a weapon attack. Increase this ship's AC against that attack by the Station Bonus, then gain 1 ship-wide Strain.",
     summary: "Reaction: +Station Bonus AC vs this attack; +1 Strain.",
     rp: 1,
     timing: COMBAT_ACTION_TIMING.REACTION,
@@ -357,7 +357,7 @@ const ADDITIONAL_ACTIONS = [
     station: "navigator",
     name: "Impossible Burn",
     description: "Once per battle, overburn the Arkengine to add 50% of current Combat Speed to this turn's movement allowance. Gain 2 Strain.",
-    summary: "Once/battle: +50% Speed movement this turn; +2 Arkengine Strain.",
+    summary: "Once/battle: +50% Speed movement this turn; +2 Strain.",
     ap: 0,
     category: COMBAT_ACTION_CATEGORIES.MOVEMENT,
     tags: ["progression", "mythic", "movement", "strain", "interleavable"],
