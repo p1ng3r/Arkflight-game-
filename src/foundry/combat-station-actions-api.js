@@ -31,10 +31,6 @@ const AREA_ORDER = Object.freeze([
   AREA_STATES.DISABLED
 ]);
 
-function requireGM() {
-  if (!game.user?.isGM) throw new Error("Only the GM may resolve Arkflight ship combat actions.");
-}
-
 function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
 }
