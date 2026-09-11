@@ -97,6 +97,7 @@ function crewName(api, combatant, station) {
 
 function costLabel(action) {
   if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
+  if (action.id === "battlewatch-reload-weapon") return "1 Morale · +1 Strain";
   const parts = [];
   if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
   if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
@@ -110,6 +111,9 @@ function unavailableLabel(reason) {
     "not-this-ships-turn": "Wait for Turn",
     "insufficient-ap": "Not Enough AP",
     "insufficient-rp": "Not Enough RP",
+    "insufficient-morale": "Not Enough Morale",
+    "crew-unassigned": "Assign Crew",
+    "not-assigned-crew": "Assigned Crew Only",
     "once-per-round": "Used This Round",
     "reaction-readied": "Reaction Readied",
     "combatant-required": "Combat Offline",
@@ -245,10 +249,11 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
       else if (!legal) reason = "Illegal Shot";
       else if (!enoughAP) reason = `Need ${selectedWeapon.fireAP} AP`;
     } else if (resolver === "workTheGuns") {
-      usable = Boolean(control.ok && availability.ok && selectedWeapon && !selectedWeapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
-      buttonLabel = "Reload";
+      usable = Boolean(control.ok && availability.ok && selectedWeapon && !selectedWeapon.ready && Number(selectedWeapon.remaining ?? 0) <= 2);
+      buttonLabel = "Work the Guns";
       if (!selectedWeapon) reason = "Choose Weapon";
       else if (selectedWeapon.ready) reason = "Weapon Ready";
+      else if (Number(selectedWeapon.remaining ?? 0) > 2) reason = "Requires Reload 2 or less";
     } else if (choices.length === 0 && (
       action.rules?.chooseStation || action.rules?.chooseTarget || action.rules?.chooseWeapon
       || action.rules?.chooseSystem || action.rules?.chooseFacing || action.rules?.chooseAreaOrEnergy
@@ -408,7 +413,10 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     const targetCombatant = targets.find((entry) => entry.id === this.selectedTargetId) ?? null;
     const target = targetSummary(targetCombatant, this.selectedWeaponKey, combatant);
     const battlewatchFireControl = combatant ? api?.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: false } : { ok: false };
-    const battlewatchReloadControl = combatant ? api?.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const commonReloadControl = combatant ? api?.stationActionControl?.("common-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const commonReloadAvailability = combatant ? api?.stationActionAvailability?.("common-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const workGunsControl = combatant ? api?.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const workGunsAvailability = combatant ? api?.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
     const arcVisible = Boolean(combatant && firingArcsVisible(combatant));
     const undoStatus = combatant ? api?.movementUndoStatus?.(combatant) ?? {} : {};
     const stationRows = STATIONS.map((entry) => ({
@@ -439,7 +447,8 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       }
       weapon.statusLabel = weapon.ready ? "Ready" : `Reload ${weapon.remaining}`;
       weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= weapon.fireAP);
-      weapon.canReload = Boolean(battlewatchReloadControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
+      weapon.canReload = Boolean(commonReloadControl.ok && commonReloadAvailability.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
+      weapon.canWorkGuns = Boolean(workGunsControl.ok && workGunsAvailability.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(weapon.remaining ?? 0) <= 2);
     }
 
     const ap = Number(state?.economy?.ap?.value ?? 0);
@@ -614,10 +623,24 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         const key = button.dataset.workWeapon;
         if (!key) return;
         try {
+          await api.stationAction("common-reload-weapon", { weaponKey: key, selection: key }, combatant);
+          this.render({ force: true });
+        } catch (error) {
+          console.error("Arkflight combat console reload failed", error);
+          ui.notifications?.error(error?.message ?? "Reload failed.");
+        }
+      });
+    }
+
+    for (const button of root.querySelectorAll("[data-work-guns]")) {
+      button.addEventListener("click", async () => {
+        const key = button.dataset.workGuns;
+        if (!key) return;
+        try {
           await api.stationAction("battlewatch-reload-weapon", { weaponKey: key, selection: key }, combatant);
           this.render({ force: true });
         } catch (error) {
-          console.error("Arkflight combat console work guns failed", error);
+          console.error("Arkflight combat console Work the Guns failed", error);
           ui.notifications?.error(error?.message ?? "Work the Guns failed.");
         }
       });
