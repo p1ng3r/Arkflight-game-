@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
+import { shipManeuverDC } from "../combat/index.js";
 import { firingArcsVisible, firingArcWeaponVisible, redrawFiringArcs, setFiringArcsVisible, toggleWeaponFiringArc } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
@@ -27,7 +28,9 @@ const REFRESH_HOOKS = [
   "targetToken",
   "arkflightStationActionResolved",
   "arkflightStationActionsRefreshed",
-  "arkflightStationActionRemoteResult"
+  "arkflightStationActionRemoteResult",
+  "arkflightCombatEngagementChanged",
+  "arkflightBoardingEstablished"
 ];
 let combatConsole = null;
 let refreshQueued = false;
@@ -180,6 +183,7 @@ function targetSummary(target, selectedWeaponKey, attacker) {
     name: target.name,
     img: target.token?.texture?.src ?? target.actor?.img ?? "icons/svg/mystery-man.svg",
     armorClass: Math.max(0, Number(derived?.stats?.armorClass) || 0),
+    maneuverDC: derived ? shipManeuverDC({ ship, derived }) : 0,
     hardness: Math.max(0, Number(derived?.stats?.hardness) || 0),
     hullValue,
     hullMax,
@@ -193,8 +197,8 @@ function targetSummary(target, selectedWeaponKey, attacker) {
     legal: Boolean(solution?.legal),
     arcLegal: Boolean(solution?.arc?.legal),
     solutionText: solution
-      ? `${Number(solution.distanceHexes).toFixed(1)} hex · ${solution.range.label} · ${solution.arc.legal ? "IN ARC" : "OUT OF ARC"}`
-      : "Choose a weapon for a firing solution."
+      ? `${Number(solution.distanceHexes).toFixed(1)} hex · ${solution.range.label} · ${solution.arc.legal ? "IN ARC" : "OUT OF ARC"} · AC ${Math.max(0, Number(derived?.stats?.armorClass) || 0)} · Maneuver DC ${derived ? shipManeuverDC({ ship, derived }) : "—"}`
+      : `AC ${Math.max(0, Number(derived?.stats?.armorClass) || 0)} · Maneuver DC ${derived ? shipManeuverDC({ ship, derived }) : "—"}`
   };
 }
 
@@ -431,6 +435,8 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     const workGunsControl = combatant ? api?.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
     const workGunsAvailability = combatant ? api?.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
     const arcVisible = Boolean(combatant && firingArcsVisible(combatant));
+    const engagement = combatant ? game.arkflight?.combatEngagement?.state?.(combatant) ?? null : null;
+    const mooredCombatant = engagement?.mooredTo ? targets.find((entry) => entry.id === engagement.mooredTo) ?? null : null;
     const undoStatus = combatant ? api?.movementUndoStatus?.(combatant) ?? {} : {};
     const stationRows = STATIONS.map((entry) => ({
       ...entry,
@@ -490,6 +496,13 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       hasTargets: targets.length > 0,
       target,
       targetName: target?.name ?? "No Target",
+      engagement: engagement ? {
+        moored: Boolean(engagement.mooredTo),
+        boarding: Boolean(engagement.boardingActive),
+        boardingOpportunity: Boolean(engagement.boardingOpportunity),
+        partnerName: mooredCombatant?.name ?? (engagement.mooredTo ? "Moored Vessel" : ""),
+        label: engagement.boardingActive ? "BOARDING" : engagement.mooredTo ? "MOORED" : ""
+      } : null,
       weapons,
       weaponGroups: groupWeapons(weapons),
       hasWeapons: weapons.length > 0,
