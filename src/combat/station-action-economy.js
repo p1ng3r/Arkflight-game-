@@ -67,7 +67,11 @@ export function stationActionRulesText(action) {
     "veilwarden-focus-ward": "Spend 1 AP and 10 Lifeveil. Choose a ship area or energy type. The next matching hit reduces incoming damage by 3 × Station Bonus before Hardness. From ship level 5, this protects against the next two matching hits before the ship's next turn.",
     "veilwarden-emergency-ward": "Reaction — Spend 1 RP and 5 Lifeveil. Trigger: a wardable hit is about to deal damage. Reduce incoming damage by 4 × Station Bonus before Hardness.",
     "navigator-impossible-burn": "Once per battle, at 0 AP, overburn the Arkengine to add 50% of current Combat Speed (rounded up) to this turn's movement allowance. Gain 2 Strain threatening the Arkengine.",
-    "navigator-turn-between-heartbeats": "Once per battle, at 0 AP, gain 2 extraordinary 60-degree facing steps this turn. These are additional allowance and may be used during movement."
+    "navigator-turn-between-heartbeats": "Once per battle, at 0 AP, gain 2 extraordinary 60-degree facing steps this turn. These are additional allowance and may be used during movement.",
+    "navigator-ram-ship": "Spend 2 AP after moving at least 1 hex this turn. Choose an adjacent ship. The target makes a Maneuver Save against this ship's Collision DC. Critical Success: no collision. Success: half impact. Failure: full impact. Critical Failure: double impact. Hardness reduces final Hull damage, and the ramming ship can suffer recoil damage.",
+    "navigator-grapple-ship": "Spend 1 AP and choose an adjacent ship. The target makes a Maneuver Save against this ship's Grapple DC. Failure: both ships become Moored. Critical Failure: Moored and the attacker gains a boarding opportunity.",
+    "navigator-break-grapple": "Spend 1 AP while Moored. Make this ship's Maneuver Save against the other vessel's Grapple DC. Success or Critical Success breaks the grapple for both ships.",
+    "common-board-ship": "At 0 AP, choose the ship currently Moored to this vessel and establish boarding. Character-scale movement, initiative, attacks, and encounters then use normal PF2e rules while ship combat keeps the vessels Moored."
   };
   return rules[action?.id] ?? fallback;
 }
