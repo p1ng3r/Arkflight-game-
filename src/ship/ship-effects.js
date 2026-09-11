@@ -1,4 +1,4 @@
-import { resolveStrainContribution } from "./area-readiness.js";
+import { resolveStrainContribution } from "./strain-rules.js";
 import { applyShipSystemDegradation, canonicalDamageTarget, improveShipCondition } from "./ship-conditions.js";
 import { normalizeShip } from "./ship-schema.js";
 
