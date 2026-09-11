@@ -251,11 +251,12 @@ const CORE_ACTIONS = [
     id: "battlewatch-fire-weapon",
     station: "battlewatch",
     name: "Fire Weapon",
-    description: "Fire one ready installed weapon at a legal target. Arkflight resolves range, arc, station effects, attack, damage, mitigation, Hardness, Hull damage, and reload.",
-    summary: "Resolve a legal installed weapon attack.",
+    description: "Spend 1 AP to fire one ready installed weapon at a legal target. Arkflight resolves range, arc, station effects, attack, damage, mitigation, Hardness, Hull damage, and reload.",
+    summary: "Spend 1 AP to resolve a legal installed weapon attack.",
+    ap: 1,
     category: COMBAT_ACTION_CATEGORIES.WEAPON,
     tags: ["core", "weapon", "interleavable"],
-    rules: { resolver: "fireAtTarget", costSource: "weapon.fireAP", requiresReadyWeapon: true, requiresRange: true, requiresArc: true, interleavable: true, startsReload: true }
+    rules: { resolver: "fireAtTarget", requiresReadyWeapon: true, requiresRange: true, requiresArc: true, interleavable: true, startsReload: true }
   }),
   action({
     id: "battlewatch-reload-weapon",
