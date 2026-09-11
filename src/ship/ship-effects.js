@@ -1,3 +1,4 @@
+import { resolveStrainContribution } from "./area-readiness.js";
 import { AREA_STATES, SHIP_AREA_KEYS, normalizeShip } from "./ship-schema.js";
 
 const AREA_ORDER = Object.freeze([AREA_STATES.STABLE, AREA_STATES.STRESSED, AREA_STATES.DAMAGED, AREA_STATES.CRITICAL, AREA_STATES.DISABLED]);
@@ -20,10 +21,18 @@ export function applyShipEffect(ship, effect = {}) {
   switch (effect.kind) {
     case "gain-strain": {
       if (effect.area) assertArea(effect.area);
+      const delta = Number(effect.value ?? 0);
       const resource = next.resources?.strain ?? { value: 0, max: 0 };
-      const max = Number(resource.max ?? 0);
-      const value = Number(resource.value ?? 0) + Number(effect.value ?? 0);
-      next.resources.strain = { ...resource, value: max > 0 ? clamp(value, 0, max) : Math.max(0, value) };
+      if (delta > 0 && effect.area) {
+        const resolved = resolveStrainContribution(next, {
+          amount: delta,
+          threatenedArea: effect.area,
+          strainLimit: resource.max
+        });
+        return { ship: resolved.ship, threatenedArea: effect.area, strainResolution: resolved };
+      }
+      const value = Number(resource.value ?? 0) + delta;
+      next.resources.strain = { ...resource, value: Math.max(0, value) };
       return { ship: next, threatenedArea: effect.area ?? null };
     }
     case "damage-hull": {
