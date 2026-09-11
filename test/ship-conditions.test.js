@@ -10,7 +10,8 @@ import {
   moraleCondition,
   shipConditionProfile,
   weaponConditionModifiers,
-  worsenShipCondition
+  worsenShipCondition,
+  wouldWorsenToFinalStage
 } from "../src/ship/ship-conditions.js";
 import { SHIP_CATALOGS } from "../src/content/index.js";
 import { deriveShip } from "../src/ship/derive-ship.js";
@@ -112,4 +113,16 @@ test("conditions stop worsening at their worst named stage", () => {
   const result = worsenShipCondition(ship, "drive");
   assert.equal(result.condition.id, "unresponsive");
   assert.equal(result.changed, false);
+});
+
+
+test("final-stage guard detects only the step into the worst named condition", () => {
+  const hullBreached = createShip({ shipConditions: { hull: "breached" } });
+  const driveFaltering = createShip({ shipConditions: { drive: "faltering" } });
+  const weaponsFouled = createShip({ shipConditions: { weapons: "fouled" } });
+
+  assert.equal(wouldWorsenToFinalStage(hullBreached, "hull"), true);
+  assert.equal(wouldWorsenToFinalStage(driveFaltering, "drive"), true);
+  assert.equal(wouldWorsenToFinalStage(weaponsFouled, "weapons"), false);
+  assert.equal(wouldWorsenToFinalStage(createShip(), "lifeveil"), false);
 });
