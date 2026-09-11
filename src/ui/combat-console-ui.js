@@ -128,7 +128,14 @@ function choiceOptions(action, api, combatant, actor, targets, weapons) {
       .map((entry) => ({ value: entry.id, label: entry.label }));
   }
   if (rules.chooseTarget) return targets.map((target) => ({ value: target.id, label: target.name }));
-  if (rules.chooseWeapon) return weapons.map((weapon) => ({ value: weapon.key, label: weapon.name }));
+  if (rules.chooseWeapon) {
+    let choices = weapons.filter((weapon) => !weapon.ready);
+    if (rules.resolver === "workTheGuns") {
+      const maxRemaining = Math.max(1, Number(rules.maxReloadRemaining) || 2);
+      choices = choices.filter((weapon) => Number(weapon.remaining ?? 0) <= maxRemaining);
+    }
+    return choices.map((weapon) => ({ value: weapon.key, label: `${weapon.name} · Reload ${weapon.remaining}` }));
+  }
   if (Array.isArray(rules.choices)) return rules.choices.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseSystem) return ["hull", "arkengine", "rigging", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
   if (Array.isArray(rules.chooseFacing)) return rules.chooseFacing.map((value) => ({ value, label: titleCase(value) }));
@@ -249,11 +256,9 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
       else if (!legal) reason = "Illegal Shot";
       else if (!enoughAP) reason = `Need ${selectedWeapon.fireAP} AP`;
     } else if (resolver === "workTheGuns") {
-      usable = Boolean(control.ok && availability.ok && selectedWeapon && !selectedWeapon.ready && Number(selectedWeapon.remaining ?? 0) <= 2);
+      usable = Boolean(control.ok && availability.ok && choices.length > 0);
       buttonLabel = "Work the Guns";
-      if (!selectedWeapon) reason = "Choose Weapon";
-      else if (selectedWeapon.ready) reason = "Weapon Ready";
-      else if (Number(selectedWeapon.remaining ?? 0) > 2) reason = "Requires Reload 2 or less";
+      if (!choices.length) reason = "No weapon at Reload 2 or less";
     } else if (choices.length === 0 && (
       action.rules?.chooseStation || action.rules?.chooseTarget || action.rules?.chooseWeapon
       || action.rules?.chooseSystem || action.rules?.chooseFacing || action.rules?.chooseAreaOrEnergy
@@ -448,7 +453,8 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       weapon.statusLabel = weapon.ready ? "Ready" : `Reload ${weapon.remaining}`;
       weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= weapon.fireAP);
       weapon.canReload = Boolean(commonReloadControl.ok && commonReloadAvailability.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
-      weapon.canWorkGuns = Boolean(workGunsControl.ok && workGunsAvailability.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(weapon.remaining ?? 0) <= 2);
+      weapon.showWorkGuns = Boolean(workGunsControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(weapon.remaining ?? 0) <= 2);
+      weapon.canWorkGuns = Boolean(weapon.showWorkGuns && workGunsAvailability.ok);
     }
 
     const ap = Number(state?.economy?.ap?.value ?? 0);
@@ -659,8 +665,9 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
             if (!this.selectedWeaponKey || !this.selectedTargetId) throw new Error("Choose a weapon and target first.");
             await api.stationAction(actionId, { selection, weaponKey: this.selectedWeaponKey, targetId: this.selectedTargetId }, combatant);
           } else if (action.rules?.resolver === "workTheGuns") {
-            if (!this.selectedWeaponKey) throw new Error("Choose an installed weapon first.");
-            await api.stationAction(actionId, { selection, weaponKey: this.selectedWeaponKey }, combatant);
+            const weaponKey = selection || this.selectedWeaponKey;
+            if (!weaponKey) throw new Error("Choose an installed weapon first.");
+            await api.stationAction(actionId, { selection: weaponKey, weaponKey }, combatant);
           } else await api.stationAction(actionId, { selection }, combatant);
           this.render({ force: true });
         } catch (error) {
