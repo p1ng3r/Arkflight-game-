@@ -9,7 +9,7 @@ import {
 } from "../src/combat/index.js";
 
 test("every Arkflight combat station has four core Actions and one core Reaction", () => {
-  assert.equal(Object.keys(COMBAT_ACTIONS).length, 28);
+  assert.equal(Object.keys(COMBAT_ACTIONS).length, 32);
 
   for (const station of COMBAT_STATIONS) {
     const entries = getCoreCombatActionDefinitionsForStation(station);
@@ -40,6 +40,8 @@ test("core combat Actions consume shared AP and Reactions consume shared RP", ()
       assert.equal(entry.rules.strain, 1, "Work the Guns gains 1 Strain");
     } else if (entry.rules?.oncePerBattle && entry.rules?.requiresCapability) {
       assert.equal(entry.cost.ap, 0, `${entry.id} is an activated progression ability, not a normal AP action`);
+    } else if (entry.id === "captain-board-ship") {
+      assert.equal(entry.cost.ap, 0, "Board Ship is a 0 AP PF2e handoff once Moored");
     } else {
       assert.ok(entry.cost.ap >= 1, `${entry.id} spends AP`);
       assert.equal(entry.cost.rp, 0, `${entry.id} does not spend RP`);
@@ -105,4 +107,23 @@ test("Mythic Navigator abilities are progression actions, not extra core menu en
   assert.equal(turn.rules.requiresCapability, "turn-between-heartbeats");
   assert.equal(turn.rules.oncePerBattle, true);
   assert.equal(getCoreCombatActionDefinitionsForStation("navigator").length, 5);
+});
+
+
+test("ship engagement actions use the locked Ram Grapple Break and Board costs", () => {
+  const ram = COMBAT_ACTIONS["navigator-ram-ship"];
+  const grapple = COMBAT_ACTIONS["navigator-grapple-ship"];
+  const escape = COMBAT_ACTIONS["navigator-break-grapple"];
+  const board = COMBAT_ACTIONS["captain-board-ship"];
+
+  assert.equal(ram.cost.ap, 2);
+  assert.equal(ram.rules.resolver, "ramShip");
+  assert.equal(ram.rules.requiresMovementThisTurn, true);
+  assert.equal(grapple.cost.ap, 1);
+  assert.equal(grapple.rules.resolver, "grappleShip");
+  assert.equal(escape.cost.ap, 1);
+  assert.equal(escape.rules.resolver, "breakGrapple");
+  assert.equal(board.cost.ap, 0);
+  assert.equal(board.station, "captain");
+  assert.equal(board.rules.resolver, "boardShip");
 });
