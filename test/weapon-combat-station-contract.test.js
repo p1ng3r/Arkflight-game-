@@ -28,16 +28,18 @@ test("weapon station supports target lock and Foundry canvas targeting", () => {
   assert.match(source, /targetingSolution/);
 });
 
-test("weapon fire stays station-authorized while only protected target mutation is relayed", () => {
+test("weapon fire stays station-authorized and applies Hull from the damage chat card", () => {
   const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
-  assert.match(source, /Fire &amp; Apply Damage/);
+  assert.match(source, /Fire &amp; Roll Damage/);
   assert.match(source, /stationAction\("battlewatch-fire-weapon"/);
   assert.match(source, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
   assert.doesNotMatch(source, /api\.fireAtTarget\(weaponState\.key, target\.id, combatant\)/);
-  assert.match(effects, /TARGET_MUTATION_REQUEST/);
-  assert.match(effects, /applyProtectedTargetMutation/);
+  assert.match(effects, /shipDamage/);
+  assert.match(effects, /renderChatMessageHTML/);
+  assert.match(effects, /applyShipDamageMessage/);
+  assert.match(effects, /undoShipDamageMessage/);
   assert.match(effects, /await attacker\.update/);
-  assert.match(effects, /target\.actor\.update/);
+  assert.doesNotMatch(effects, /TARGET_MUTATION_REQUEST/);
 });
 
 
@@ -75,4 +77,14 @@ test("player-owned station actions preserve the initiating user in chat", () => 
   assert.match(stationApi, /user: userId/);
   assert.match(stationApi, /requesterUserId: game\.user\?\.id/);
   assert.match(effects, /user: requester\?\.id \?\? requesterUserId/);
+});
+
+
+test("chat damage application consumes recorded Ward and Brace effects only when applied", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(effects, /Ward and Brace effects are not consumed yet/);
+  assert.match(effects, /damageEffectIds/);
+  assert.match(effects, /effectSnapshots/);
+  assert.match(effects, /consumeStationEffects\(beforeState, effectIds\)/);
+  assert.match(effects, /restoreConsumedEffects/);
 });
