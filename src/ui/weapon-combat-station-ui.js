@@ -420,7 +420,7 @@ function buildShipWeaponStation(app, actor) {
       else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reloading · ${remaining} round${remaining === 1 ? "" : "s"}`;
       else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Target Illegal';
-      else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Apply Damage';
+      else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Roll Damage';
     };
 
     fireButton.addEventListener("click", async () => {
@@ -523,7 +523,7 @@ function enhanceGMWeaponConsole(app) {
     });
   }
   for (const button of consoleNode.querySelectorAll("[data-fire-weapon]")) {
-    if (button.textContent?.trim() === "Fire Weapon") button.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Apply Damage';
+    if (button.textContent?.trim() === "Fire Weapon") button.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Roll Damage';
     button.title = "Resolve attack, damage, target Hardness, and Hull reduction automatically.";
   }
 }
