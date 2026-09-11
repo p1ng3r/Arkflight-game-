@@ -1,7 +1,6 @@
 import {
   activeStationEffects,
   applyHardnessToDamage,
-  applyWeaponSystemThreat,
   consumeStationEffects,
   degreeOfSuccess,
   fireWeapon,
@@ -14,6 +13,7 @@ import {
 } from "../combat/index.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
+import { resolveShipStrainGain } from "./ship-strain-runtime.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
@@ -487,24 +487,13 @@ function appliedDamageAmount(baseDamage, mode) {
   return value;
 }
 
-const DAMAGE_AREA_ORDER = Object.freeze(["stable", "stressed", "damaged", "critical", "disabled"]);
-
-function damageAreaIndex(value) {
-  const index = DAMAGE_AREA_ORDER.indexOf(String(value ?? "stable"));
-  return index < 0 ? 0 : index;
-}
-
-function hullAreaStateForValue(value, max) {
-  const pct = Math.max(0, Math.min(1, Number(value) / Math.max(1, Number(max) || 1)));
-  return pct <= 0 ? "disabled" : pct <= 0.25 ? "critical" : pct <= 0.5 ? "damaged" : pct <= 0.75 ? "stressed" : "stable";
-}
-
 function damageConsequenceSnapshot(ship) {
   return Object.freeze({
     hull: structuredClone(ship?.resources?.hull ?? null),
     lifeveil: structuredClone(ship?.resources?.lifeveil ?? null),
     morale: structuredClone(ship?.resources?.morale ?? null),
-    areas: structuredClone(ship?.areas ?? {})
+    strain: structuredClone(ship?.resources?.strain ?? null),
+    shipConditions: structuredClone(ship?.shipConditions ?? {})
   });
 }
 
@@ -513,7 +502,7 @@ function damageSnapshotMatches(ship, snapshot) {
   return JSON.stringify(damageConsequenceSnapshot(ship)) === JSON.stringify(snapshot);
 }
 
-function resolveDeferredDamageConsequences(ship, flag, amount) {
+async function resolveDeferredDamageConsequences(ship, flag, amount, actor = null) {
   let next = structuredClone(ship);
   const notes = [];
   const beforeHull = Math.max(0, Number(next.resources?.hull?.value) || 0);
@@ -521,30 +510,19 @@ function resolveDeferredDamageConsequences(ship, flag, amount) {
   next.resources ??= {};
   next.resources.hull = { ...(next.resources.hull ?? {}), value: requestedAfter };
 
-  const hullNow = next.areas?.hull?.state ?? "stable";
-  const hullBand = hullAreaStateForValue(requestedAfter, next.resources?.hull?.max ?? beforeHull);
-  if (damageAreaIndex(hullBand) > damageAreaIndex(hullNow)) {
-    next.areas ??= {};
-    next.areas.hull = { ...(next.areas?.hull ?? {}), state: hullBand };
-    notes.push(`Hull ${hullNow} → ${hullBand}`);
-  }
-
-  const threatResult = applyWeaponSystemThreat(next, {
-    threat: flag.systemThreat ?? "hull",
-    degree: Number(flag.degree ?? 0),
-    hullDamage: amount
-  });
-  next = structuredClone(threatResult.ship);
-  if (threatResult.triggered && threatResult.degraded) {
-    notes.push(`${threatResult.threatenedArea} ${threatResult.previousState} → ${threatResult.state}`);
-  }
-
+  // Normal weapon hits only damage Hull. Critical hits add one point of
+  // ship-wide Strain; Strain is the universal route into Ship Conditions.
   if (Number(flag.degree) === 2) {
-    const morale = Math.max(0, Number(next.resources?.morale?.value) || 0);
-    if (morale > 0) {
-      next.resources.morale = { ...(next.resources.morale ?? {}), value: morale - 1 };
-      notes.push(`Morale ${morale} → ${morale - 1}`);
-    }
+    const outcome = await resolveShipStrainGain(next, {
+      amount: 1,
+      currentStrain: next.resources?.strain?.value ?? 0,
+      strainMax: next.resources?.strain?.max ?? 0,
+      sourceLabel: `${flag.weaponName ?? "Weapon"} Critical Hit`,
+      speaker: actor ? ChatMessage.getSpeaker({ actor }) : null
+    });
+    next = structuredClone(outcome.ship);
+    notes.push("Critical hit: +1 Strain.");
+    notes.push(...outcome.notes);
   }
 
   return Object.freeze({ ship: next, notes: Object.freeze(notes) });
@@ -567,7 +545,7 @@ async function applyShipDamageMessage(message, mode = "apply") {
   const beforeSnapshot = damageConsequenceSnapshot(ship);
   const beforeHull = Math.max(0, Number(ship.resources?.hull?.value) || 0);
   const amount = appliedDamageAmount(flag.hullDamage, mode);
-  const consequence = resolveDeferredDamageConsequences(ship, flag, amount);
+  const consequence = await resolveDeferredDamageConsequences(ship, flag, amount, actor);
   const afterSnapshot = damageConsequenceSnapshot(consequence.ship);
   const afterHull = Math.max(0, Number(consequence.ship.resources?.hull?.value) || 0);
 
@@ -581,7 +559,8 @@ async function applyShipDamageMessage(message, mode = "apply") {
     [`flags.${MODULE_ID}.ship.resources.hull`]: consequence.ship.resources?.hull ?? ship.resources?.hull,
     [`flags.${MODULE_ID}.ship.resources.lifeveil`]: consequence.ship.resources?.lifeveil ?? ship.resources?.lifeveil,
     [`flags.${MODULE_ID}.ship.resources.morale`]: consequence.ship.resources?.morale ?? ship.resources?.morale,
-    [`flags.${MODULE_ID}.ship.areas`]: consequence.ship.areas ?? ship.areas,
+    [`flags.${MODULE_ID}.ship.resources.strain`]: consequence.ship.resources?.strain ?? ship.resources?.strain,
+    [`flags.${MODULE_ID}.ship.shipConditions`]: consequence.ship.shipConditions ?? ship.shipConditions,
     [`flags.${MODULE_ID}.chatDamageApplications.${message.id}`]: {
       beforeHull,
       afterHull,
@@ -628,7 +607,8 @@ async function undoShipDamageMessage(message) {
     [`flags.${MODULE_ID}.ship.resources.hull`]: beforeSnapshot?.hull,
     [`flags.${MODULE_ID}.ship.resources.lifeveil`]: beforeSnapshot?.lifeveil,
     [`flags.${MODULE_ID}.ship.resources.morale`]: beforeSnapshot?.morale,
-    [`flags.${MODULE_ID}.ship.areas`]: beforeSnapshot?.areas,
+    [`flags.${MODULE_ID}.ship.resources.strain`]: beforeSnapshot?.strain,
+    [`flags.${MODULE_ID}.ship.shipConditions`]: beforeSnapshot?.shipConditions,
     [`flags.${MODULE_ID}.chatDamageApplications.-=${message.id}`]: null
   });
 
