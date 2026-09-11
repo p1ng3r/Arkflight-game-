@@ -6,11 +6,11 @@ This repository exists to prove the game first and keep the older Arcflight deve
 
 ## Design Goal
 
-Create a fast, cooperative fantasy-ship encounter game where five officers plan together, take risks, chain advantages through station order, build Momentum, manage Pressure, and use one selected Signature Ability to create memorable crew moments.
+Create a fast, cooperative fantasy-ship encounter game where five officers plan together, take risks, chain advantages through station order, build Momentum, manage ship-wide Strain and persistent Ship Conditions, and use decisive station abilities to create memorable crew moments.
 
 ## Core Loop
 
-**Plan → Choose Risk → Set Order → Resolve → Chain Benefits → Update Momentum / Pressure → Escalate**
+**Plan → Choose Risk → Set Order → Resolve → Chain Benefits → Update Momentum / Strain / Ship Conditions → Escalate**
 
 The game should feel like five officers operating one ship, not five unrelated skill checks.
 
@@ -38,4 +38,4 @@ The playable loop is the product. Infrastructure exists only to support it.
 
 The first milestone is one complete encounter that is enjoyable in Foundry from planning through closeout. Large persistence, replay, recovery, provenance, and campaign subsystems are not prerequisites for proving the game.
 
-See [GAME-DESIGN.md](GAME-DESIGN.md) for the current design authority.
+See [GAME-DESIGN.md](GAME-DESIGN.md) for the core game loop and [docs/SHIP-CONDITION-STRAIN-CONTRACT.md](docs/SHIP-CONDITION-STRAIN-CONTRACT.md) for the authoritative persistent ship-damage rules.
