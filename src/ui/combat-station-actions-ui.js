@@ -1,10 +1,11 @@
+import { lifeveilCondition, moraleCondition, shipConditionProfile } from "../ship/ship-conditions.js";
 const MODULE_ID = "arkflight-game";
 const OPEN_TABS = new Map();
 const STATIONS = Object.freeze([
   ["captain", "Captain", "fa-solid fa-compass", "morale"],
-  ["battlewatch", "Battlewatch", "fa-solid fa-crosshairs", "hull"],
-  ["navigator", "Navigator", "fa-solid fa-route", "rigging"],
-  ["engineer", "Engineer", "fa-solid fa-gears", "arkengine"],
+  ["battlewatch", "Battlewatch", "fa-solid fa-crosshairs", "weapons"],
+  ["navigator", "Navigator", "fa-solid fa-route", "drive"],
+  ["engineer", "Engineer", "fa-solid fa-gears", "drive"],
   ["veilwarden", "Veilwarden", "fa-solid fa-shield-halved", "lifeveil"]
 ]);
 let refreshQueued = false;
@@ -20,6 +21,23 @@ function titleCase(value) {
 
 function shipFlag(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
+}
+
+function stationConditionText(ship, system) {
+  if (system === "lifeveil") {
+    const condition = lifeveilCondition(ship?.resources?.lifeveil?.value ?? 0);
+    return `Lifeveil: ${condition.label} (${condition.value}%)`;
+  }
+  if (system === "morale") {
+    const condition = moraleCondition(ship?.resources?.morale?.value ?? 0);
+    return `Morale: ${condition.label} (${condition.value}%)`;
+  }
+  const condition = shipConditionProfile(ship, system);
+  if (system === "weapons") {
+    const hull = shipConditionProfile(ship, "hull");
+    return `Weapons: ${condition.label} · Hull: ${hull.label}`;
+  }
+  return `${titleCase(system)}: ${condition.label}`;
 }
 
 function combatantFor(actor) {
@@ -46,12 +64,12 @@ function choiceOptions(action, api, combatant, actor) {
   }
   if (Array.isArray(rules.choices)) return rules.choices.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseSystem) {
-    return ["hull", "arkengine", "rigging", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
+    return ["hull", "drive", "weapons", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
   }
   if (Array.isArray(rules.chooseFacing)) return rules.chooseFacing.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseFacing) return ["fore", "port", "starboard", "aft"].map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseAreaOrEnergy) {
-    return ["hull", "arkengine", "rigging", "lifeveil", "morale", "fire", "cold", "electricity", "acid", "sonic", "force"]
+    return ["hull", "drive", "weapons", "lifeveil", "morale", "fire", "cold", "electricity", "acid", "sonic", "force"]
       .map((value) => ({ value, label: titleCase(value) }));
   }
   if (rules.resolver === "purgeInterference") {
@@ -65,7 +83,7 @@ function choiceOptions(action, api, combatant, actor) {
 
 function costLabel(action) {
   if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
-  if (action.id === "battlewatch-reload-weapon") return "1 Morale · +1 Strain";
+  if (action.id === "battlewatch-reload-weapon") return "20% Morale · +1 Strain";
   const parts = [];
   if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
   if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
@@ -197,9 +215,9 @@ export function renderArkflightCombatStations(app, root, actor) {
     const card = document.createElement("section");
     card.className = `arkflight-combat-station-card station-${station}`;
     const crew = crewName(api, combatant, station, actor);
-    const areaState = shipFlag(actor)?.areas?.[area]?.state ?? "stable";
+    const conditionText = stationConditionText(shipFlag(actor), area);
     const effects = api.stationEffects?.(combatant, station) ?? [];
-    card.innerHTML = `<header><div class="arkflight-combat-station-title"><i class="${icon}"></i><div><span>${esc(label)}</span><strong>${esc(crew)}</strong></div></div><div class="arkflight-combat-area-state">${esc(titleCase(area))}: <strong>${esc(titleCase(areaState))}</strong></div></header>`;
+    card.innerHTML = `<header><div class="arkflight-combat-station-title"><i class="${icon}"></i><div><span>${esc(label)}</span><strong>${esc(crew)}</strong></div></div><div class="arkflight-combat-area-state"><strong>${esc(conditionText)}</strong></div></header>`;
     if (effects.length) {
       card.insertAdjacentHTML("beforeend", `<div class="arkflight-combat-active-effects"><span>ACTIVE</span>${effects.map((effect) => `<strong>${esc(effect.name)}${effect.selection ? ` · ${esc(titleCase(effect.selection))}` : ""}</strong>`).join("")}</div>`);
     }
