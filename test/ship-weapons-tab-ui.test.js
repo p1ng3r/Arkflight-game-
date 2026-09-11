@@ -36,10 +36,12 @@ test("Weapons tab is native and no longer injects or hides vessel-sheet sections
   assert.doesNotMatch(ui, /Hooks\.on\("renderActorSheet"/);
 });
 
-test("all crew can inspect Weapons but only assigned Battlewatch controls fire and reload", () => {
+test("assigned crew can Reload while Battlewatch retains firing and Work the Guns", () => {
   assert.match(ui, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
+  assert.match(ui, /stationActionControl\?\.\("common-reload-weapon"/);
   assert.match(ui, /stationActionControl\?\.\("battlewatch-reload-weapon"/);
-  assert.match(ui, /View only — assigned Battlewatch crew controls weapons/);
+  assert.match(ui, /Reload · 1 AP/);
+  assert.match(ui, /Work the Guns · 1 Morale · \+1 Strain/);
   assert.match(ui, /Battlewatch Only/);
 });
 
@@ -61,6 +63,7 @@ test("player weapon fire resolves Battlewatch assignments stored as id uuid or n
 test("legacy weapon controls do not force GM-only fire resolution", () => {
   const legacy = readFileSync(new URL("../src/ui/weapon-combat-station-ui.js", import.meta.url), "utf8");
   assert.match(legacy, /stationAction\("battlewatch-fire-weapon"/);
+  assert.match(legacy, /stationAction\("common-reload-weapon"/);
   assert.match(legacy, /stationAction\("battlewatch-reload-weapon"/);
   assert.match(legacy, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
   assert.doesNotMatch(legacy, /GM Fire Control/);
@@ -85,13 +88,15 @@ test("authoritative enhanced fire resolves Battlewatch assignment by id uuid or 
 });
 
 
-test("assigned Battlewatch player can reload through the GM-authoritative relay", () => {
+test("Reload and Work the Guns both use the GM-authoritative station relay", () => {
   const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
   const consoleUi = readFileSync(new URL("../src/ui/combat-console-ui.js", import.meta.url), "utf8");
   assert.match(effects, /actionId === "battlewatch-reload-weapon"[\s\S]*?return originalStationAction\(actionId, options, reference\)/);
-  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?base\.workTheGuns\(options\.weaponKey, combatant\)/);
+  assert.match(stationApi, /resolver === "reloadWeapon"[\s\S]*?base\.workTheGuns\(options\.weaponKey, combatant\)/);
+  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
   assert.match(stationApi, /STATION_ACTION_REQUEST/);
+  assert.match(consoleUi, /stationAction\("common-reload-weapon"/);
   assert.match(consoleUi, /stationAction\("battlewatch-reload-weapon"/);
-  assert.match(consoleUi, /buttonLabel = "Reload"/);
+  assert.match(consoleUi, /buttonLabel = "Work the Guns"/);
 });
