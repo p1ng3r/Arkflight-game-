@@ -48,7 +48,7 @@ export function stationActionStrainArea(_action) {
 export function stationActionRulesText(action) {
   const fallback = action?.description ?? action?.summary ?? "";
   const rules = {
-    "captain-rally-crew": "Spend 1 AP and 1 Supply. Restore 20% Morale × Station Bonus, or restore Morale. At ship level 15+, improving the Morale also restores 20% Morale × Station Bonus.",
+    "captain-rally-crew": "Spend 1 AP and 1 Supply. Restore 20% Morale × Station Bonus, up to 100%.",
     "captain-drive-the-crew": "Spend 20% Morale. Gain 1 AP for this turn and gain 2 Strain. At ship level 15+ gain only 1 Strain; at level 20 gain no Strain. Once per round. This Strain stresses the whole ship.",
     "engineer-overcharge-arkengine": "Spend 1 AP and gain 2 Strain. Gain one additional full Helm block this turn: movement equal to Combat Speed and facing steps equal to Maneuverability. Once per round. This Strain stresses the whole ship.",
     "engineer-emergency-repair": "Spend 2 AP and 2 Supplies. Choose Hull, Drive, Weapons, or Lifeveil. Improve that Ship Condition by one step, or restore 25% Lifeveil. At ship level 15+, improve/restore two steps instead.",
