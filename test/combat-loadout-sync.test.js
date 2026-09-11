@@ -72,7 +72,7 @@ test("loadout sync preserves reload runtime while refreshing authored install da
       "rum-runner-port-1": {
         ...base.weapons["rum-runner-port-1"],
         fireAP: 3,
-        readyRound: 6,
+        reloadRemaining: 2,
         lastFiredRound: 3
       }
     }
@@ -91,7 +91,7 @@ test("loadout sync preserves reload runtime while refreshing authored install da
   const synced = reconcile(upgradedShip, current);
   const weapon = synced.weapons["rum-runner-port-1"];
   assert.equal(weapon.fireAP, 1);
-  assert.equal(weapon.readyRound, 6);
+  assert.equal(weapon.reloadRemaining, 2);
   assert.equal(weapon.lastFiredRound, 3);
   assert.equal(weapon.upgrades.potency, 1);
 });
@@ -230,4 +230,41 @@ test("Drive condition penalties are applied exactly once during combat reconcili
 
   assert.equal(synced.mobility.speed, 3);
   assert.equal(synced.mobility.maneuverability, 1);
+});
+
+
+test("legacy readyRound combat states migrate to active Reload remaining", () => {
+  const ship = rumRunner({
+    weapons: [{
+      id: "light-broadside-cannon",
+      instanceId: "rum-runner-port-1",
+      mount: "port",
+      arc: "port",
+      mountIndex: 0
+    }]
+  });
+  const base = createCombatantState(ship, {
+    derived: deriveShip(ship, SHIP_CATALOGS),
+    catalogs: SHIP_CATALOGS
+  });
+  const key = "rum-runner-port-1";
+  const { reloadRemaining: _removed, ...legacyWeapon } = base.weapons[key];
+  const current = {
+    ...base,
+    version: 4,
+    turnKey: "round:5",
+    weapons: {
+      ...base.weapons,
+      [key]: { ...legacyWeapon, readyRound: 9, lastFiredRound: 4 }
+    }
+  };
+
+  const synced = reconcileCombatantState(ship, current, {
+    derived: deriveShip(ship, SHIP_CATALOGS),
+    catalogs: SHIP_CATALOGS,
+    round: 5
+  });
+
+  assert.equal(synced.weapons[key].reloadRemaining, synced.weapons[key].reloadRounds);
+  assert.equal("readyRound" in synced.weapons[key], false);
 });
