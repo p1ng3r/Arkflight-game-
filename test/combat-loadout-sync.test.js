@@ -71,6 +71,7 @@ test("loadout sync preserves reload runtime while refreshing authored install da
       ...base.weapons,
       "rum-runner-port-1": {
         ...base.weapons["rum-runner-port-1"],
+        fireAP: 3,
         readyRound: 6,
         lastFiredRound: 3
       }
@@ -89,6 +90,7 @@ test("loadout sync preserves reload runtime while refreshing authored install da
   });
   const synced = reconcile(upgradedShip, current);
   const weapon = synced.weapons["rum-runner-port-1"];
+  assert.equal(weapon.fireAP, 1);
   assert.equal(weapon.readyRound, 6);
   assert.equal(weapon.lastFiredRound, 3);
   assert.equal(weapon.upgrades.potency, 1);
