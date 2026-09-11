@@ -45,8 +45,28 @@ function activePrimaryGM() {
 
 function userOwnsCombatant(user, combatant) {
   if (!user || !combatant?.actor) return false;
+  if (user.isGM) return true;
   try { return combatant.actor.testUserPermission?.(user, "OWNER") === true; }
   catch (_error) { return false; }
+}
+
+function userCanUpdateDocument(user, document) {
+  if (!user || !document) return false;
+  if (user.isGM) return true;
+  try {
+    if (typeof document.canUserModify === "function") return document.canUserModify(user, "update") === true;
+    return document.testUserPermission?.(user, "OWNER") === true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function canUserOperateCombatant(combatant, user = game.user) {
+  return Boolean(
+    userOwnsCombatant(user, combatant)
+    && userCanUpdateDocument(user, combatant?.actor)
+    && userCanUpdateDocument(user, combatant)
+  );
 }
 
 function canUserEndTurn(combatant, user = game.user, combat = game.combat) {
@@ -361,8 +381,8 @@ function movementUndoStatus(combatant) {
 }
 
 async function restoreTurnStart(combatant, { move = false, facing = false } = {}) {
-  requireGM();
   if (!combatant?.id) throw new Error("Choose an Arkflight ship Combatant.");
+  if (!canUserOperateCombatant(combatant)) throw new Error(`You must own ${combatant.name} to undo its movement or facing.`);
   const snapshot = TURN_START_SNAPSHOTS.get(combatant.id);
   if (!snapshot) throw new Error("No turn-start position has been recorded for this ship.");
   const token = combatant.token;
@@ -474,6 +494,14 @@ async function requireCombatant(reference = null) {
   return combatant;
 }
 
+async function requireOwnedCombatant(reference = null, user = game.user) {
+  const combatant = await requireCombatant(reference);
+  if (!canUserOperateCombatant(combatant, user)) {
+    throw new Error(`You must be an Owner of ${combatant.name} with update permission to change its ship combat state.`);
+  }
+  return combatant;
+}
+
 async function beginTurn(combatant, round) {
   if (!isArkflightCombatant(combatant)) return null;
   const current = combatantState(combatant) ?? freshState(combatant.actor, combatant.token);
@@ -506,6 +534,10 @@ Hooks.once("ready", () => {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
       return canUserEndTurn(combatant);
     },
+    canOperate(reference = null, user = game.user) {
+      const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return canUserOperateCombatant(combatant, user);
+    },
     async endTurn(reference = null) {
       return endTurnForUser(reference);
     },
@@ -527,28 +559,23 @@ Hooks.once("ready", () => {
       return Object.freeze({ combat, combatant, state: combatantState(combatant), initiative });
     },
     async buyMovement(reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, purchaseMovement(combatantState(combatant)));
     },
     async buyManeuver(reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, purchaseManeuver(combatantState(combatant)));
     },
     async spendAP(amount = 1, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, spendPoints(combatantState(combatant), "ap", amount));
     },
     async spendRP(amount = 1, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, spendPoints(combatantState(combatant), "rp", amount));
     },
     async turn(steps = 1, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       const state = combatantState(combatant);
       const signedSteps = Math.trunc(Number(steps) || 0);
       const targetHeading = normalizeHexHeading(state.mobility.heading + signedSteps * 60);
@@ -557,8 +584,7 @@ Hooks.once("ready", () => {
       return updateCombatantState(combatant, next);
     },
     async fireWeapon(weaponKey, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       const next = fireWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
     },
@@ -573,8 +599,7 @@ Hooks.once("ready", () => {
     },
     fireAtTarget,
     async reloadWeapon(weaponKey, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       const next = reloadWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
     },
@@ -592,15 +617,15 @@ Hooks.once("ready", () => {
       return movementUndoStatus(combatant);
     },
     async undoMove(reference = null) {
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return restoreTurnStart(combatant, { move: true, facing: false });
     },
     async undoFacing(reference = null) {
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return restoreTurnStart(combatant, { move: false, facing: true });
     },
     async resetTurnPosition(reference = null) {
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return restoreTurnStart(combatant, { move: true, facing: true });
     },
     async nextRound() {
