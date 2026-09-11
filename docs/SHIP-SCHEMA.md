@@ -43,7 +43,7 @@ Each system has a state of `functional`, `damaged`, `disabled`, or `destroyed`.
 
 ```js
 {
-  schemaVersion: 1,
+  schemaVersion: 7,
   identity: {
     name, registry, callsign, owner, origin, builder, motto, notes
   },
@@ -144,6 +144,13 @@ A breach or consequence may convert encounter Pressure into a persistent conditi
 The initial persistent resources are Hull, Lifeveil, Strain, Supplies, and Morale. Momentum is not persistent ship data; it belongs to an encounter.
 
 Generic `supplies` is retained for Alpha, but the schema can later support additional named resources without restructuring the ship.
+
+## Lifeveil and Morale percentage lock
+
+- **Lifeveil** is stored as `{ value: 0..100, max: 100 }`. Legacy hull-specific Lifeveil point pools migrate proportionally.
+- **Morale** is stored as `{ value: 0..100, max: 100 }`. Legacy 0-5 Morale migrates proportionally, so 3/5 becomes 60%.
+- One former Morale point equals 20 percentage points.
+- Strain remains `{ value, max }` because its maximum is vessel-derived.
 
 ## Morale and Momentum
 
