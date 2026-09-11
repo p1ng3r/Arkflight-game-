@@ -1,7 +1,8 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { componentEconomyQuote } from "../ship/refit-value.js";
 import { resolveEngineeringInstallOutcome } from "../ship/refit-engineering.js";
-import { installedSocketLayout, pendingSocketReservations, validateRefitSocketAssignment } from "../ship/refit-sockets.js";
+import { installedSocketLayout, pendingSocketReservations, validateRefitSocketAssignment, raiderPursuitWeapon } from "../ship/refit-sockets.js";
+import { shipModFitsSocketType } from "../ship/ship-mod-slots.js";
 import { shipAllowsRefitMode, shipOperationalStatus } from "../ship/operational-status.js";
 
 const MODULE_ID = "arkflight-game";
@@ -129,9 +130,11 @@ function weaponFitsMount(weapon, mount, ship) {
   const weaponSize = weapon.data?.size ?? weapon.data?.mountType ?? "small";
   const shipLevel = Math.max(1, Math.trunc(Number(ship?.progression?.level) || 1));
   const minShipLevel = Math.max(1, Math.trunc(Number(weapon.data?.minShipLevel) || 1));
-  return (weapon.data?.allowedMounts ?? []).includes(mount.facing)
-    && (WEAPON_SIZE_RANK[weaponSize] ?? 99) <= (WEAPON_SIZE_RANK[mount.maxSize] ?? 0)
-    && shipLevel >= minShipLevel;
+  if (!(weapon.data?.allowedMounts ?? []).includes(mount.facing) || shipLevel < minShipLevel) return false;
+  const printed = (WEAPON_SIZE_RANK[weaponSize] ?? 99) <= (WEAPON_SIZE_RANK[mount.maxSize] ?? 0);
+  if (printed) return true;
+  if (!mount.raiderIntegrated || !raiderPursuitWeapon(weapon)) return false;
+  return (WEAPON_SIZE_RANK[weaponSize] ?? 99) <= Math.min(WEAPON_SIZE_RANK.large, (WEAPON_SIZE_RANK[mount.maxSize] ?? 0) + 1);
 }
 
 function blueprintRows(actor, group) {
@@ -208,9 +211,22 @@ function socketRows(actor, group) {
       sourceInstallJobId: placement?.sourceJobId ?? "",
       placementSocketIndices: [...(placement?.socketIndices ?? [])],
       mount,
-      mountLabel: mount ? `${mount.facing} ${mount.mountIndex + 1} · max ${mount.maxSize}` : "",
-      typeLabel: mount ? `${titleCase(mount.facing)} Mount ${mount.mountIndex + 1}` : group === "ship" ? `Flexible Ship Mod Socket ${index + 1}` : `Flexible Arkengine Socket ${index + 1}`,
-      capacityLabel: mount ? `${titleCase(mount.maxSize)} or smaller` : "Any fitting in this family",
+      socketType: group === "ship" ? (layout.sockets?.find((entry) => entry.index === index)?.type ?? "generic") : null,
+      mountLabel: mount ? `${mount.facing} ${mount.mountIndex + 1} · max ${mount.maxSize}${mount.raiderIntegrated ? " · Raider Pursuit Integrated" : ""}` : "",
+      typeLabel: mount
+        ? `${titleCase(mount.facing)} Mount ${mount.mountIndex + 1}${mount.raiderIntegrated ? " · Raider" : ""}`
+        : group === "ship"
+          ? `${titleCase(layout.sockets?.find((entry) => entry.index === index)?.type ?? "generic")} Ship Mod Socket ${index + 1}`
+          : `Flexible Arkengine Socket ${index + 1}`,
+      capacityLabel: mount
+        ? `${titleCase(mount.maxSize)} or smaller${mount.raiderIntegrated ? " · +1 size for Raider-qualified pursuit/disable weapons" : ""}`
+        : group === "ship"
+          ? ((layout.sockets?.find((entry) => entry.index === index)?.type ?? "generic") === "generic"
+            ? "Any Ship Mod"
+            : (layout.sockets?.find((entry) => entry.index === index)?.type ?? "generic") === "flexible"
+              ? "Any Ship Mod"
+              : `${titleCase(layout.sockets?.find((entry) => entry.index === index)?.type)}-qualified Ship Mod`)
+          : "Any fitting in this family",
       stateLabel: pending ? (String(pending.status).toUpperCase() === "WORKING" ? "Work in Progress" : "Reserved") : placement ? "Installed" : "Free",
       art: group === "weapon" ? (SOCKET_ART.weapon[mount?.facing] ?? SOCKET_ART.weapon.flexible) : SOCKET_ART[group]
     };
@@ -275,8 +291,19 @@ function anchoredAssignment(actor, group, componentId, socketIndex) {
   const cost = Math.max(1, Math.trunc(Number(item?.data?.refit?.slotCost ?? item?.capacityCost ?? 1)));
   const occupied = new Set([...layout.occupied, ...reserved]);
   if (occupied.has(socketIndex)) return null;
+  if (group === "ship") {
+    const selectedType = layout.sockets?.find((entry) => entry.index === socketIndex)?.type ?? "generic";
+    if (!shipModFitsSocketType(item, selectedType)) return null;
+  }
   const picks = [socketIndex];
-  for (let index = 0; index < layout.capacity && picks.length < cost; index += 1) if (index !== socketIndex && !occupied.has(index)) picks.push(index);
+  for (let index = 0; index < layout.capacity && picks.length < cost; index += 1) {
+    if (index === socketIndex || occupied.has(index)) continue;
+    if (group === "ship") {
+      const socketType = layout.sockets?.find((entry) => entry.index === index)?.type ?? "generic";
+      if (!shipModFitsSocketType(item, socketType)) continue;
+    }
+    picks.push(index);
+  }
   if (picks.length !== cost) return null;
   const assignment = { family, componentId, socketIndices: picks };
   return validateRefitSocketAssignment(shipFlag(actor), SHIP_CATALOGS, assignment).ok ? assignment : null;
@@ -442,6 +469,17 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
       contents: selectedRow.componentName || (selectedRow.available ? "Empty — ready for fitting" : selectedRow.stateLabel)
     } : null;
     const compatibleWeapons = group === "weapon" ? compatibleWeaponRows(this.actor, selectedRow) : [];
+    const ship = shipFlag(this.actor);
+    const weaponLayout = group === "weapon" ? installedSocketLayout(ship, SHIP_CATALOGS, "weapon") : null;
+    const isRaider = Number(ship?.progression?.level ?? 1) >= 5 && ship?.progression?.specializationId === "raider";
+    const raiderMount = ship?.progression?.specializationConfig?.raiderPursuitMount ?? null;
+    const eligibleRaiderMounts = isRaider ? (weaponLayout?.mounts ?? []).filter((mount) => mount.maxSize !== "large") : [];
+    const raiderMounts = (isRaider ? ((eligibleRaiderMounts.length ? eligibleRaiderMounts : weaponLayout?.mounts) ?? []) : []).map((mount) => ({
+      ...mount,
+      value: `${mount.facing}:${mount.mountIndex}`,
+      label: `${titleCase(mount.facing)} Mount ${mount.mountIndex + 1} · ${titleCase(mount.maxSize)}`,
+      selected: raiderMount?.facing === mount.facing && Number(raiderMount?.mountIndex) === mount.mountIndex
+    }));
     return {
       actorName: this.actor.name,
       actorUuid: this.actor.uuid,
@@ -457,6 +495,11 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
       selectedSocketAvailable: Boolean(selectedRow?.available),
       compatibleWeapons,
       hasCompatibleWeapons: compatibleWeapons.length > 0,
+      isRaider,
+      raiderMounts,
+      hasRaiderMounts: raiderMounts.length > 0,
+      raiderPursuitConfigured: Boolean(raiderMount),
+      canConfigureRaiderMount: isRaider && mode === "shipyard",
       inventory: group ? inventoryRows(this.actor, group, selectedRow?.available ? selected : null) : [],
       blueprints: group ? blueprintRows(this.actor, group) : [],
       blueprintCount: group ? blueprintRows(this.actor, group).length : 0,
@@ -478,6 +521,18 @@ export class ArkflightShipwrightWorkspace extends HandlebarsApplication {
     for (const button of root.querySelectorAll("[data-workbench-category]")) button.addEventListener("click", () => { this.group = button.dataset.workbenchCategory; this.selectedSocket = null; this.render({ force: true }); });
     root.querySelector("[data-workbench-home]")?.addEventListener("click", () => { this.group = null; this.selectedSocket = null; this.render({ force: true }); });
     const socketRowsByIndex = new Map((this.group ? socketRows(this.actor, this.group) : []).map((row) => [Number(row.index), row]));
+    root.querySelector("[data-raider-pursuit-mount]")?.addEventListener("change", async (event) => {
+      const value = String(event.currentTarget.value ?? "");
+      if (!value) return;
+      const [facing, mountIndex] = value.split(":");
+      try {
+        await game.arkflight?.refit?.configureRaiderPursuitMount?.(this.actor, { facing, mountIndex: Number(mountIndex) }, { serviceMode: service(this.actor) });
+        ui.notifications?.info?.(`${this.actor.name}: Raider pursuit integration moved to ${titleCase(facing)} Mount ${Number(mountIndex) + 1}.`);
+        this.render({ force: true });
+      } catch (error) {
+        ui.notifications?.warn?.(error?.message ?? "Unable to configure Raider pursuit mount.");
+      }
+    });
     for (const socket of root.querySelectorAll("[data-workspace-socket]")) {
       socket.addEventListener("click", () => {
         const index = Number(socket.dataset.socketIndex);
