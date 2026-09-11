@@ -14,7 +14,7 @@ import {
   recordFacingChange,
   recordMovement,
   weaponReloadRemaining,
-  workTheGuns
+  reloadWeapon
 } from "../src/combat/index.js";
 
 function ship(hullId = "brigantine", strain = 0, strainMax = 10) {
@@ -97,11 +97,12 @@ test("hex headings snap to six directions and measure shortest facing change", (
   assert.equal(headingStepDistance(60, 240), 3);
 });
 
-test("weapon fire spends weapon AP and creates a separate reload clock", () => {
+test("weapon fire always spends exactly 1 AP and creates a separate reload clock", () => {
   let state = createCombatantState(ship(), { derived, catalogs });
   const weaponKey = Object.keys(state.weapons)[0];
   state = fireWeapon(state, weaponKey, 1);
-  assert.equal(state.economy.ap.value, 2);
+  assert.equal(state.weapons[weaponKey].fireAP, 1);
+  assert.equal(state.economy.ap.value, 3);
   assert.equal(state.weapons[weaponKey].lastFiredRound, 1);
   assert.equal(state.weapons[weaponKey].readyRound, 3);
   assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 2), 1);
@@ -109,12 +110,12 @@ test("weapon fire spends weapon AP and creates a separate reload clock", () => {
   assert.throws(() => fireWeapon(state, weaponKey, 2), /still reloading/);
 });
 
-test("Work the Guns spends 1 AP to shorten reload by one round", () => {
+test("common Reload spends 1 AP to shorten reload by one round", () => {
   let state = createCombatantState(ship(), { derived, catalogs });
   const weaponKey = Object.keys(state.weapons)[0];
   state = fireWeapon(state, weaponKey, 1);
-  state = workTheGuns(state, weaponKey, 1);
-  assert.equal(state.economy.ap.value, 1);
+  state = reloadWeapon(state, weaponKey, 1);
+  assert.equal(state.economy.ap.value, 2);
   assert.equal(state.weapons[weaponKey].readyRound, 2);
   assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 2), 0);
 });
