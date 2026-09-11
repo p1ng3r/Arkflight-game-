@@ -40,15 +40,18 @@ test("weapon fire control routes through player-authorized station relay and aut
 });
 
 
-test("player reload UI exposes authoritative availability and refreshes after GM relay", () => {
+test("player reload UI separates common Reload from Battlewatch Work the Guns", () => {
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
-  assert.match(source, /stationActionAvailability\?\.\("battlewatch-reload-weapon"/);
-  assert.match(source, /Need 1 Supply/);
-  assert.match(source, /Not this ship's turn/);
+  assert.match(source, /stationActionAvailability\?\.\("common-reload-weapon"/);
+  assert.match(source, /Reload · 1 AP/);
+  assert.match(source, /Work the Guns · 1 Morale · \+1 Strain/);
+  assert.match(source, /remaining <= 2/);
   assert.match(source, /arkflightStationActionRemoteResult/);
+  assert.match(stationApi, /resolver === "reloadWeapon"/);
+  assert.match(stationApi, /resolver === "workTheGuns"/);
+  assert.match(stationApi, /maxReloadRemaining/);
+  assert.match(stationApi, /reduceWeaponReload\(rawAfter, selection, round, workTheGunsRemaining\)/);
   assert.match(stationApi, /STATION_ACTION_RESULT = "station-action-result"/);
-  assert.match(stationApi, /emitStationActionResult/);
-  assert.match(stationApi, /Hooks\.callAll\("arkflightStationActionRemoteResult"/);
 });
 
 
@@ -60,6 +63,6 @@ test("legacy gunnery runtime cannot bypass the Battlewatch reload station relay"
   assert.doesNotMatch(balanceRuntime, /Only the GM may resolve Arkflight gunnery work/);
   assert.doesNotMatch(balanceRuntime, /stationAction\(/);
   assert.match(stationApi, /reduceWeaponReload/);
-  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?profile\.bonus - 1/);
+  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
   assert.match(stationApi, /updatePersistentShipForAction/);
 });
