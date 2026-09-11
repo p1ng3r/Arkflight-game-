@@ -107,15 +107,15 @@ const entries = [
     capabilities: ["mythic-power-routing", "dead-engine-impulse"],
     ruleModifiers: [
       { kind: "hard-burn-strain-reduction", value: 3 },
-      { kind: "arkengine-area-repair-bonus", value: 2 }
+      { kind: "drive-condition-repair-bonus", value: 2 }
     ],
     upgradeChain: { requiresMods: ["arkengine-sovereign-distribution-grid"] },
     coreRuleException: {
-      rule: "arkengine-disabled-operation",
-      trigger: "while the Arkengine Area is Disabled",
+      rule: "unresponsive-drive-operation",
+      trigger: "while the Drive Condition is Unresponsive",
       usage: "once-per-event",
       cost: "+3 Strain after the granted operation",
-      limit: "permits one round of powered movement only; does not restore the Arkengine Area"
+      limit: "permits one round of powered movement only; Drive remains Unresponsive"
     },
     tags: ["arkengine", "power", "strain", "upgrade"]
   }),
@@ -139,11 +139,11 @@ const entries = [
       capabilities: ["mythic-three-point-drive"]
     }],
     coreRuleException: {
-      rule: "rigging-disabled-burst",
-      trigger: "when voluntary movement would be prevented by a Disabled Rigging Area",
+      rule: "unresponsive-drive-burst",
+      trigger: "when Unresponsive Drive would prevent the needed maneuver or facing change",
       usage: "once-per-event",
       cost: "+2 Strain",
-      limit: "permits one movement action only; Rigging remains Disabled"
+      limit: "permits one movement or maneuver action only; Drive remains Unresponsive"
     },
     tags: ["rigging", "speed", "maneuverability", "set"]
   }),
@@ -157,7 +157,7 @@ const entries = [
     capabilities: ["mythic-veil-envelope", "companion-veil-extension"],
     ruleModifiers: [
       { kind: "lifeveil-recovery-support", value: 8 },
-      { kind: "lifeveil-area-repair-bonus", value: 2 }
+      { kind: "lifeveil-recovery-bonus", value: 2 }
     ],
     upgradeChain: { requiresMods: ["aegis-of-the-star-sea"] },
     coreRuleException: {
@@ -234,7 +234,7 @@ const entries = [
       trigger: "when a discrete Strain contribution would cross the Strain Limit",
       usage: "once-per-event",
       cost: "the prevented contribution is not removed; add +2 Strain after the current discrete resolution",
-      limit: "prevents only the Area degradation from that one threshold crossing"
+      limit: "prevents only the Ship Condition degradation from that one Strain Limit crossing"
     },
     tags: ["strain", "cross-system", "set"]
   })
