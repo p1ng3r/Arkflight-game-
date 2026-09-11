@@ -10,12 +10,12 @@ function areaState(ship, area) {
 
 /**
  * Resolve whether a ship can continue an Arkflight combat encounter.
- * Zero Hull is destruction. A disabled Arkengine leaves an otherwise intact
+ * Zero Hull is Wrecked / combat-disabled, not automatically destroyed. A disabled Arkengine leaves an otherwise intact
  * vessel combat-disabled and eligible to surrender, be boarded, or be left behind.
  */
 export function shipCombatOutcome(ship) {
   if (!ship) return Object.freeze({ status: "invalid", terminal: true, reason: "missing-ship" });
-  if (hullValue(ship) <= 0) return Object.freeze({ status: "destroyed", terminal: true, reason: "hull-zero" });
+  if (hullValue(ship) <= 0) return Object.freeze({ status: "wrecked", terminal: true, reason: "hull-zero" });
   if (areaState(ship, "arkengine") === TERMINAL_AREA_STATE) {
     return Object.freeze({ status: "disabled", terminal: true, reason: "arkengine-disabled" });
   }
