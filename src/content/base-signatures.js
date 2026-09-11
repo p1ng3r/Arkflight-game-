@@ -12,9 +12,9 @@ export const BASE_SIGNATURES = Object.freeze({
     Object.freeze({
       id: "engineer-emergency-vent",
       name: "Emergency Vent",
-      description: "Once this encounter, vent the Arkengine and reduce Arkengine Pressure by 2.",
+      description: "Once this encounter, vent the Arkengine and reduce ship-wide Strain by 2.",
       timing: "any",
-      effect: Object.freeze({ kind: "reduce-pressure", system: "arkengine", value: 2 })
+      effect: Object.freeze({ kind: "gain-strain", value: -2 })
     })
   ]),
   navigator: Object.freeze([
@@ -39,9 +39,9 @@ export const BASE_SIGNATURES = Object.freeze({
     Object.freeze({
       id: "veilwarden-aegis-of-the-veil",
       name: "Aegis of the Veil",
-      description: "Once this encounter, prevent the next 2 Lifeveil Pressure that would be gained this round.",
+      description: "Once this encounter, prevent the next 2 ship-wide Strain that would be gained this round.",
       timing: "any",
-      effect: Object.freeze({ kind: "pressure-guard", system: "lifeveil", value: 2 })
+      effect: Object.freeze({ kind: "strain-guard", value: 2 })
     })
   ])
 });
