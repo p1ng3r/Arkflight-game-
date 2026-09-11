@@ -16,12 +16,11 @@ import { deriveShip } from "../ship/derive-ship.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
+const COMBAT_SOCKET = `module.${MODULE_ID}`;
+const TARGET_MUTATION_REQUEST = "attack-target-mutation-request";
+const TARGET_MUTATION_RESULT = "attack-target-mutation-result";
 const ENERGY_TYPES = new Set(["fire", "cold", "electricity", "acid", "sonic", "force"]);
 const DEGREE_LABEL = Object.freeze({ "-1": "Critical Failure", 0: "Failure", 1: "Success", 2: "Critical Success" });
-
-function requireGM() {
-  if (!game.user?.isGM) throw new Error("Only the GM may resolve Arkflight ship combat attacks.");
-}
 
 function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
@@ -29,6 +28,39 @@ function shipPayload(actor) {
 
 function shipLevel(actor) {
   return Math.max(1, Math.min(20, Math.trunc(Number(shipPayload(actor)?.progression?.level) || 1)));
+}
+
+function activePrimaryGM() {
+  return [...(game.users ?? [])]
+    .filter((user) => user?.active && user?.isGM)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))[0] ?? null;
+}
+
+function userOwnsActor(user, actor) {
+  if (!user || !actor) return false;
+  if (user.isGM) return true;
+  try { return actor.testUserPermission?.(user, "OWNER") === true; }
+  catch (_error) { return false; }
+}
+
+function userCanUpdateDocument(user, document) {
+  if (!user || !document) return false;
+  if (user.isGM) return true;
+  try {
+    if (typeof document.canUserModify === "function") return document.canUserModify(user, "update") === true;
+    return document.testUserPermission?.(user, "OWNER") === true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function userCanResolveShipState(user, combatant) {
+  return Boolean(
+    combatant?.actor
+    && userOwnsActor(user, combatant.actor)
+    && userCanUpdateDocument(user, combatant.actor)
+    && userCanUpdateDocument(user, combatant)
+  );
 }
 
 function resolveCombatant(base, reference) {
@@ -203,11 +235,28 @@ function damageDefensePlan(targetState, targetLevel, solution, targetActor) {
   });
 }
 
-async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference = null) {
-  requireGM();
+async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference = null, {
+  requesterUserId = game.user?.id ?? null
+} = {}) {
   const attacker = attackerReference ? resolveCombatant(base, attackerReference) : game.combat?.combatant ?? null;
   const target = resolveCombatant(base, targetReference);
   if (!attacker || !target) throw new Error("Choose attacker and target Arkflight ship combatants.");
+
+  const requester = game.users?.get?.(requesterUserId) ?? game.user;
+  const battlewatch = battlewatchActor(attacker.actor);
+  if (!requester?.isGM) {
+    if (!userOwnsActor(requester, attacker.actor)) throw new Error("You must own the firing ship.");
+    if (!battlewatch || !userOwnsActor(requester, battlewatch)) throw new Error("Only the assigned Battlewatch owner may fire this ship's weapons.");
+  }
+  if (!userCanResolveShipState(game.user, attacker)) {
+    throw new Error(`You do not have permission to update ${attacker.name}'s firing state.`);
+  }
+
+  const canMutateTargetLocally = userCanResolveShipState(game.user, target);
+  const primaryGM = canMutateTargetLocally ? null : activePrimaryGM();
+  if (!canMutateTargetLocally && !primaryGM) {
+    throw new Error("An active GM is required to apply damage or consumed defenses to a ship you do not own.");
+  }
 
   const attackerLevel = shipLevel(attacker.actor);
   const targetLevel = shipLevel(target.actor);
@@ -223,7 +272,6 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   const offense = attackEffectPlan(attackerBefore, target, solution, attackerLevel);
   const attackDefense = attackDefensePlan(targetAttackState, targetLevel);
 
-  const battlewatch = battlewatchActor(attacker.actor);
   const perception = perceptionModifier(battlewatch);
   if (perception == null) throw new Error(`${attacker.name} needs an assigned Battlewatch officer with PF2e Perception.`);
   const attackerDerived = deriveShip(shipPayload(attacker.actor), SHIP_CATALOGS);
@@ -246,7 +294,8 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     attackerAfter = reduceWeaponReload(attackerAfter, weaponKey, round, 1);
   }
 
-  let targetAfter = consumeStationEffects(targetAttackState, attackDefense.consumed);
+  const targetConsumedEffectIds = new Set(attackDefense.consumed);
+  let targetAfter = consumeStationEffects(targetAttackState, [...targetConsumedEffectIds]);
   let damageDefense = Object.freeze({ wardable: false, wardMitigation: 0, braceMitigation: 0, wardConsumed: [], emergencyWardConsumed: [], braceConsumed: [] });
   let damage = null;
 
@@ -288,13 +337,35 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       after,
       type: profile.type ?? "damage"
     });
-    if (wardAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed]);
-    if (braceAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, damageDefense.braceConsumed);
+    if (wardAbsorbed > 0) {
+      for (const id of [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed]) targetConsumedEffectIds.add(id);
+      targetAfter = consumeStationEffects(targetAfter, [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed]);
+    }
+    if (braceAbsorbed > 0) {
+      for (const id of damageDefense.braceConsumed) targetConsumedEffectIds.add(id);
+      targetAfter = consumeStationEffects(targetAfter, damageDefense.braceConsumed);
+    }
   }
 
   await attacker.update({ [STATE_PATH]: attackerAfter });
-  if (targetAfter !== targetAttackState) await target.update({ [STATE_PATH]: targetAfter });
-  if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
+
+  const targetMutationNeeded = targetConsumedEffectIds.size > 0 || Boolean(damage);
+  let targetMutationRequested = false;
+  if (targetMutationNeeded && canMutateTargetLocally) {
+    if (targetAfter !== targetAttackState) await target.update({ [STATE_PATH]: targetAfter });
+    if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
+  } else if (targetMutationNeeded) {
+    targetMutationRequested = true;
+    game.socket?.emit?.(COMBAT_SOCKET, {
+      type: TARGET_MUTATION_REQUEST,
+      userId: requester?.id ?? requesterUserId,
+      combatId: game.combat?.id ?? null,
+      attackerId: attacker.id,
+      targetId: target.id,
+      effectIds: [...targetConsumedEffectIds],
+      hullAfter: damage?.after ?? null
+    });
+  }
 
   const defense = Object.freeze({ ...attackDefense, ...damageDefense });
   const esc = foundry.utils.escapeHTML;
@@ -309,12 +380,14 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     ? `<br><strong>Hull:</strong> ${damage.incoming} − ${damage.wardAbsorbed} Ward − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` (${damage.hardnessBase}→${damage.hardnessEffective})` : ""} − ${damage.braceAbsorbed} Brace = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})`
     : "";
   await attack.toMessage({
+    user: requester?.id ?? requesterUserId,
     speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
     flavor: `<strong>${esc(attacker.name)} fires ${esc(solution.weapon.name)} at ${esc(target.name)}</strong><br>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)} · ${esc(solution.weaponState.mount ?? "fore")} ${esc(solution.arc.arcTemplate)} arc<br>Attack ${attack.total} vs AC ${ac}: <strong>${DEGREE_LABEL[degree]}</strong>${stationLine}${damageLine}`
   });
 
   if (damage) {
     await damage.roll.toMessage({
+      user: requester?.id ?? requesterUserId,
       speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
       flavor: `<strong>${esc(solution.weapon.name)} Damage — ${esc(target.name)}</strong><br>Rolled ${damage.rolled}${offense.damageBonus ? ` + ${offense.damageBonus} station damage` : ""}${damage.wardAbsorbed ? ` − ${damage.wardAbsorbed} Ward` : ""} − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` after ${damage.hardnessReduced} Hardness reduction` : ""}${damage.braceAbsorbed ? ` − ${damage.braceAbsorbed} Brace` : ""} = <strong>${damage.hullDamage} Hull</strong>`
     });
@@ -331,10 +404,76 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     offense,
     defense,
     attackerState: attackerAfter,
-    targetState: targetAfter
+    targetState: targetAfter,
+    targetMutationRequested
   });
 
-  return Object.freeze({ state: attackerAfter, attack, attackBonus, ac, degree, solution, damage, offense, defense });
+  return Object.freeze({ state: attackerAfter, attack, attackBonus, ac, degree, solution, damage, offense, defense, targetMutationRequested });
+}
+
+async function applyProtectedTargetMutation(base, payload = {}) {
+  if (payload?.type === TARGET_MUTATION_RESULT) {
+    if (payload.userId === game.user?.id && payload.ok === false) {
+      ui.notifications?.error(payload.message ?? "Arkflight could not apply the target ship mutation.");
+    }
+    return;
+  }
+
+  if (!game.user?.isGM || payload?.type !== TARGET_MUTATION_REQUEST) return;
+  const primary = activePrimaryGM();
+  if (!primary || primary.id !== game.user.id) return;
+
+  const requester = game.users?.get?.(payload.userId) ?? null;
+  const combat = game.combats?.get?.(payload.combatId) ?? game.combat;
+  const attacker = combat?.combatants?.get?.(payload.attackerId)
+    ?? combat?.combatants?.find?.((entry) => entry.id === payload.attackerId)
+    ?? null;
+  const target = combat?.combatants?.get?.(payload.targetId)
+    ?? combat?.combatants?.find?.((entry) => entry.id === payload.targetId)
+    ?? null;
+
+  const reply = (ok, message) => game.socket?.emit?.(COMBAT_SOCKET, {
+    type: TARGET_MUTATION_RESULT,
+    userId: payload.userId ?? null,
+    combatId: combat?.id ?? payload.combatId ?? null,
+    attackerId: payload.attackerId ?? null,
+    targetId: payload.targetId ?? null,
+    ok,
+    message
+  });
+
+  if (!requester?.active || !combat || !attacker || !target || combat.id !== payload.combatId) {
+    reply(false, "Protected target mutation could not resolve its combatants.");
+    return;
+  }
+  const battlewatch = battlewatchActor(attacker.actor);
+  if (!userOwnsActor(requester, attacker.actor) || !battlewatch || !userOwnsActor(requester, battlewatch)) {
+    reply(false, "Requester no longer controls the firing ship's Battlewatch.");
+    return;
+  }
+
+  try {
+    const effectIds = Array.isArray(payload.effectIds) ? payload.effectIds.filter((id) => typeof id === "string") : [];
+    const currentTargetState = base.state(target);
+    if (currentTargetState && effectIds.length) {
+      const nextTargetState = consumeStationEffects(currentTargetState, effectIds);
+      if (nextTargetState !== currentTargetState) await target.update({ [STATE_PATH]: nextTargetState });
+    }
+
+    if (payload.hullAfter != null) {
+      const ship = shipPayload(target.actor);
+      const currentHull = Math.max(0, Number(ship?.resources?.hull?.value) || 0);
+      const requestedHull = Math.max(0, Math.trunc(Number(payload.hullAfter) || 0));
+      const nextHull = Math.min(currentHull, requestedHull);
+      await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: nextHull });
+    }
+
+    Hooks.callAll("arkflightProtectedTargetMutationResolved", { attacker, target, requester, payload });
+    reply(true, "Target ship updated.");
+  } catch (error) {
+    console.error("Arkflight | Protected target mutation failed", error);
+    reply(false, error?.message ?? "Protected target mutation failed.");
+  }
 }
 
 Hooks.once("ready", () => {
@@ -348,24 +487,12 @@ Hooks.once("ready", () => {
       const raw = base.targetingSolution(weaponKey, targetReference, attackerReference);
       return attacker ? attackVectorSolution(base.state(attacker), raw, shipLevel(attacker.actor)) : raw;
     },
-    fireAtTarget(weaponKey, targetReference, attackerReference = null) {
-      return enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference);
+    fireAtTarget(weaponKey, targetReference, attackerReference = null, options = {}) {
+      return enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference, options);
     },
     stationAction(actionId, options = {}, reference = null) {
-      if (actionId === "battlewatch-reload-weapon") {
-        // Work the Guns is a Battlewatch station action. Always preserve the
-        // player-authorized socket relay instead of resolving it on the client.
-        return originalStationAction(actionId, options, reference);
-      }
-      if (actionId === "battlewatch-fire-weapon") {
-        if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
-        // Players must go through the station-action socket relay so the active GM
-        // can resolve the authoritative attack on their behalf. Calling the enhanced
-        // resolver directly here would trip its GM guard on the player's client.
-        if (!game.user?.isGM) return originalStationAction(actionId, options, reference);
-        return enhancedFireAtTarget(base, options.weaponKey, options.targetId, reference);
-      }
       return originalStationAction(actionId, options, reference);
     }
   });
+  game.socket?.on?.(COMBAT_SOCKET, (payload) => applyProtectedTargetMutation(base, payload));
 });
