@@ -13,6 +13,7 @@ import {
   stationEffectMagnitude,
   reloadWeapon,
   reduceWeaponReload,
+  weaponReloadRemaining,
   stationEffectProfile
 } from "../combat/index.js";
 
@@ -381,9 +382,9 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     const finalState = persistent.state;
     await combatant.update({ [STATE_PATH]: finalState });
     const weapon = finalState.weapons?.[options.weaponKey];
-    const remaining = Math.max(0, Number(weapon?.readyRound ?? round) - round);
+    const remaining = weaponReloadRemaining(weapon);
     const notes = [...persistent.notes];
-    notes.push(`Reload reduced by 1 round; ${remaining} remaining.`);
+    notes.push(`Reload action completed; ${remaining} Reload remaining.`);
     if (!options.suppressChat) await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes, userId: requesterUserId });
     Hooks.callAll("arkflightStationActionResolved", {
       combat: game.combat,
@@ -410,11 +411,11 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     if (!weaponKey) throw new Error("Work the Guns requires an installed weapon.");
     const weapon = before?.weapons?.[weaponKey];
     if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
-    const remaining = Math.max(0, Number(weapon.readyRound ?? round) - round);
+    const remaining = weaponReloadRemaining(weapon);
     if (remaining <= 0) throw new Error(`${weapon.name} is already ready.`);
     const maxRemaining = Math.max(1, Number(action.rules?.maxReloadRemaining) || 2);
     if (remaining > maxRemaining) {
-      throw new Error(`Work the Guns can target only a weapon with ${maxRemaining} or fewer rounds of Reload remaining.`);
+      throw new Error(`Work the Guns can target only a weapon with ${maxRemaining} or fewer Reload actions remaining.`);
     }
     selection = weaponKey;
     workTheGunsRemaining = remaining;
