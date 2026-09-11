@@ -26,18 +26,18 @@ Direct merge PR #1 (`feature/gm-operations-alpha` -> `dev`) is intentionally lef
 - Arkflight salvage-value policy
 - Officer weapon pools
 
-### Still to integrate from GM Operations
+### Current GM Operations / generator status
 
-- Enemy ship generator core
-- PF2e officer benchmark / NPC actor draft
-- Reusable PF2e ordinary-crew templates
-- Enemy encounter preview and package plan
-- PF2e equipment resolver
-- Generated preview resolver
-- Generated crew folders / persistence / commit API
-- Generator UI and its GM Operations wiring
-- Ship classification/readiness UI enhancements where they remain useful beside the newer Ships screen
-- Voyage Operations pieces after ship/generator integration is stable
+The enemy generator core, PF2e officer drafts, reusable ordinary-crew templates, encounter preview, PF2e preview resolution, generated crew folders, package persistence/commit API, generator UI, and GM Voyage/Combat operation panels are now represented in `dev`.
+
+Remaining generator/GM-operation work is primarily last-mile campaign integration:
+
+- generated package deployment to the active Scene;
+- token footprint/placement workflow;
+- optional add-to-current-Combat flow after generation;
+- finished Loot & Salvage recovery workflow;
+- reusable Library / crew-template browsing workflow;
+- campaign persistence for Arkflight-specific rewards such as blueprints, route knowledge, faction rewards, and boons.
 
 ## Promotion rule
 
