@@ -20,12 +20,6 @@ export const STATION_PRESENTATION = Object.freeze({
   veilwarden: "Veilwarden"
 });
 
-// Deprecated export retained for old UI consumers. Ship Conditions no longer
-// impose a universal station penalty ladder.
-export const AREA_STATION_PENALTIES = Object.freeze({
-  stable: 0, stressed: 0, damaged: 0, critical: 0, disabled: 0
-});
-
 function conditionConsequence(system, profile) {
   if (system === "hull") {
     const pct = Math.round(Number(profile.hardnessMultiplier ?? 1) * 100);
@@ -43,8 +37,6 @@ function conditionConsequence(system, profile) {
   }
   return "";
 }
-
-export function areaPenalty(_state) { return 0; }
 
 export function buildConditionViews(ship = {}) {
   const fixed = SHIP_CONDITION_SYSTEMS.map((system) => {
@@ -172,16 +164,12 @@ export function buildRefitInventory(ship = {}, catalogs = {}) {
   });
 }
 
-// Compatibility alias for older UI/tests while player-facing terminology is Ship Conditions.
-export function buildAreaViews(ship = {}) { return buildConditionViews(ship); }
-
 export function buildShipSheetView({ ship, derived, catalogs, resolveAssignment } = {}) {
   const stats = derived?.stats ?? {};
   const conditions = buildConditionViews(ship);
   return Object.freeze({
     tabs: SHIP_SHEET_TABS,
     conditions,
-    areas: conditions,
     stations: buildStationViews(ship, resolveAssignment),
     stats: buildStatPresentation(stats),
     fittings: buildInstalledFittings(ship, catalogs),
