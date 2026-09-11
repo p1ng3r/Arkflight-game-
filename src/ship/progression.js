@@ -203,7 +203,7 @@ function ensureProgressionStats(stats) {
   stats.mythicCapabilityCount ??= 0;
   stats.stationBonuses ??= { captain: 0, engineer: 0, navigator: 0, battlewatch: 0, veilwarden: 0 };
   stats.pillarBonuses ??= { voyage: 0, combat: 0 };
-  stats.modSlotBonuses ??= { weapon: 0, structural: 0, rigging: 0, lifeveil: 0, utility: 0, support: 0, arkengine: 0, flexible: 0 };
+  stats.modSlotBonuses ??= { weapon: 0, structural: 0, rigging: 0, lifeveil: 0, utility: 0, support: 0, exploration: 0, expedition: 0, arkengine: 0, flexible: 0 };
 }
 
 export function applyTalentProgression(stats, baseStats, ship, stationCapabilities, capabilities) {
