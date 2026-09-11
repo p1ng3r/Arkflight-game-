@@ -32,51 +32,51 @@ const ROUND_OUTCOMES = Object.freeze([
   Object.freeze({
     extraordinary: roundOutcome("The ship settles into the wreck's quiet pocket with room to spare, and the crew reads the Dark Star's first pull before it can bite. No new Strain is gained.", [], rewardPackage({ edgeCards: ["seize-the-gap"] })),
     "strong-success": roundOutcome("The approach holds cleanly, leaving the ship stable enough to begin boarding without new Strain."),
-    "mixed-success": roundOutcome("The crew reaches the wreck, but the first gravity shear loads the rigging and adds 1 Strain to it.", [{ kind: "gain-strain", value: 1 }]),
+    "mixed-success": roundOutcome("The crew reaches the wreck, but the first gravity shear loads the rigging and adds 1 Strain to the ship.", [{ kind: "gain-strain", value: 1 }]),
     failure: roundOutcome("The approach becomes a wrestling match with the Dark Star; the ship gains 1 Strain and Gravity Shear becomes active.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "gravity-shear" }]),
-    disaster: roundOutcome("The ships lurch across one another's vectors and the boarding approach nearly tears free. the ship gains 3 Strain, and Gravity Shear becomes active.", [{ kind: "gain-strain", value: 2 }, { kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "gravity-shear" }])
+    disaster: roundOutcome("The ships lurch across one another's vectors and the boarding approach nearly tears free. The ship gains 3 Strain, and Gravity Shear becomes active.", [{ kind: "gain-strain", value: 3 }, { kind: "hazard", hazardId: "gravity-shear" }])
   }),
   Object.freeze({
     extraordinary: roundOutcome("The two vessels move as one through the next gravity pulse, giving the boarders an almost impossible moment of calm. Reduce 1 Strain from the ship.", [{ kind: "gain-strain", value: -1 }], rewardPackage({ edgeCards: ["clear-opening"] })),
     "strong-success": roundOutcome("The boarding corridor stabilizes and the salvage team establishes a safe staging deck without new Strain."),
     "mixed-success": roundOutcome("The lines hold, but the wreck's changing mass wrenches the home ship and adds 1 Strain.", [{ kind: "gain-strain", value: 1 }]),
-    failure: roundOutcome("The boarding deck shifts under the crew. the ship gains 1 Strain and Gilded Mass becomes an active hazard.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "gilded-mass" }]),
-    disaster: roundOutcome("The derelict rolls hard against the boarding lines and a transformed deck section tears loose. the ship gains 2 Strain, and Gilded Mass remains active.", [{ kind: "gain-strain", value: 1 }, { kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "gilded-mass" }])
+    failure: roundOutcome("The boarding deck shifts under the crew. The ship gains 1 Strain and Gilded Mass becomes an active hazard.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "gilded-mass" }]),
+    disaster: roundOutcome("The derelict rolls hard against the boarding lines and a transformed deck section tears loose. The ship gains 2 Strain, and Gilded Mass remains active.", [{ kind: "gain-strain", value: 2 }, { kind: "hazard", hazardId: "gilded-mass" }])
   }),
   Object.freeze({
     extraordinary: roundOutcome("The crew traces the spreading gold all the way to its hidden source and understands the timing of the transformation before opening the lower decks. Gain a Tactic and reduce 1 Strain.", [{ kind: "gain-strain", value: -1 }], rewardPackage({ edgeCards: ["protect-the-system"] })),
     "strong-success": roundOutcome("The crew proves the gold is fresh transmutation and follows its pattern toward the engine spaces without new Strain."),
     "mixed-success": roundOutcome("The mystery gives way, but a transmutation pulse washes over the salvage team and adds 1 Strain.", [{ kind: "gain-strain", value: 1 }]),
-    failure: roundOutcome("The crew finds the path below only after the next pulse catches them. the ship gains 1 Strain and Core Resonance begins to bleed through the wreck.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "core-resonance" }]),
-    disaster: roundOutcome("The lower deck opens during a violent transmutation pulse and the wreck answers like a struck bell. the ship gains 2 Strain, and Core Resonance becomes active.", [{ kind: "gain-strain", value: 1 }, { kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "core-resonance" }])
+    failure: roundOutcome("The crew finds the path below only after the next pulse catches them. The ship gains 1 Strain and Core Resonance begins to bleed through the wreck.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "core-resonance" }]),
+    disaster: roundOutcome("The lower deck opens during a violent transmutation pulse and the wreck answers like a struck bell. The ship gains 2 Strain, and Core Resonance becomes active.", [{ kind: "gain-strain", value: 2 }, { kind: "hazard", hazardId: "core-resonance" }])
   }),
   Object.freeze({
     extraordinary: roundOutcome("The crew masters the engine room long enough to isolate the ruptured core from the worst of the Dark Star's resonance. Reduce 1 Strain and carry a clean salvage window forward.", [{ kind: "gain-strain", value: -1 }], rewardPackage({ edgeCards: ["second-chance"] })),
     "strong-success": roundOutcome("The ruptured Arkengine is understood and temporarily contained, opening the deep salvage spaces without new Strain."),
     "mixed-success": roundOutcome("The core is contained just long enough, but the effort adds 1 Strain to the ship.", [{ kind: "gain-strain", value: 1 }]),
-    failure: roundOutcome("The engine chamber begins to fold around the crew. the ship gains 1 Strain and Collapsing Decks become active.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "collapsing-decks" }]),
-    disaster: roundOutcome("The cracked core surges against the Dark Star and the engine room starts coming apart. the ship gains 2 Strain, the ship gains 1 Strain, and Collapsing Decks become active.", [{ kind: "gain-strain", value: 2 }, { kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "collapsing-decks" }])
+    failure: roundOutcome("The engine chamber begins to fold around the crew. The ship gains 1 Strain and Collapsing Decks become active.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "collapsing-decks" }]),
+    disaster: roundOutcome("The cracked core surges against the Dark Star and the engine room starts coming apart. The ship gains 3 Strain, and Collapsing Decks become active.", [{ kind: "gain-strain", value: 3 }, { kind: "hazard", hazardId: "collapsing-decks" }])
   }),
   Object.freeze({
     extraordinary: roundOutcome("The rare blueprint, the rune strongbox, and the chosen deep-salvage target all reach the boarding deck with time still on the clock. The crew banks the win without new Strain.", [], rewardPackage({ edgeCards: ["ride-the-momentum"] })),
     "strong-success": roundOutcome("The guaranteed blueprint and chosen deep salvage are secured cleanly, along with the rune strongbox."),
     "mixed-success": roundOutcome("The salvage is secured, but moving it through the failing wreck adds 1 Strain.", [{ kind: "gain-strain", value: 1 }]),
-    failure: roundOutcome("The crew gets the prizes out, but the wreck begins collapsing around the return route. the ship gains 1 Strain and Collapsing Decks remain active.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "collapsing-decks" }]),
-    disaster: roundOutcome("The deep salvage comes free at the worst possible moment, dragging crew and gear through a collapsing compartment. the ship gains 2 Strain, and Collapsing Decks remain active.", [{ kind: "gain-strain", value: 1 }, { kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "collapsing-decks" }])
+    failure: roundOutcome("The crew gets the prizes out, but the wreck begins collapsing around the return route. The ship gains 1 Strain and Collapsing Decks remain active.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "collapsing-decks" }]),
+    disaster: roundOutcome("The deep salvage comes free at the worst possible moment, dragging crew and gear through a collapsing compartment. The ship gains 2 Strain, and Collapsing Decks remain active.", [{ kind: "gain-strain", value: 2 }, { kind: "hazard", hazardId: "collapsing-decks" }])
   }),
   Object.freeze({
     extraordinary: roundOutcome("The crew steals extra value from the dying wreck and still reaches the boarding lines in disciplined order. Any Heroic greed commitment still carries its authored cost into the escape.", [], rewardPackage({ aetherScrap: 2 })),
     "strong-success": roundOutcome("The final salvage decision is carried out without losing control of the retreat, though any chosen Heroic greed commitment still follows the crew into Round 7."),
     "mixed-success": roundOutcome("The last haul costs precious seconds and adds 1 Strain before the ships separate.", [{ kind: "gain-strain", value: 1 }]),
-    failure: roundOutcome("The crew stays too long. the ship gains 1 Strain and Salvage Overload becomes active for the escape.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "salvage-overload" }]),
-    disaster: roundOutcome("Greed turns the retreat into a scramble. the ship gains 3 Strain, and Salvage Overload becomes active before the final breakaway.", [{ kind: "gain-strain", value: 2 }, { kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "salvage-overload" }])
+    failure: roundOutcome("The crew stays too long. The ship gains 1 Strain and Salvage Overload becomes active for the escape.", [{ kind: "gain-strain", value: 1 }, { kind: "hazard", hazardId: "salvage-overload" }]),
+    disaster: roundOutcome("Greed turns the retreat into a scramble. The ship gains 3 Strain, and Salvage Overload becomes active before the final breakaway.", [{ kind: "gain-strain", value: 3 }, { kind: "hazard", hazardId: "salvage-overload" }])
   }),
   Object.freeze({
     extraordinary: roundOutcome("The ship catches the Dark Star's own pull and turns it into speed, breaking free with the salvage secured and the crew in command. Reduce 1 Strain from the ship.", [{ kind: "gain-strain", value: -1 }]),
     "strong-success": roundOutcome("The vessel clears the collapsing wreck and escapes the gravity maw with its recovered prizes intact."),
     "mixed-success": roundOutcome("The ship escapes with everything important aboard, but the final gravity shear adds 1 Strain.", [{ kind: "gain-strain", value: 1 }]),
-    failure: roundOutcome("The ship tears free late and carries the cost with it. the ship gains 2 Strain before the Dark Star finally falls behind.", [{ kind: "gain-strain", value: 1 }, { kind: "gain-strain", value: 1 }]),
-    disaster: roundOutcome("The wreck collapses across the escape line and the ship survives only by forcing itself through the debris under brutal load. the ship gains 4 Strain.", [{ kind: "gain-strain", value: 2 }, { kind: "gain-strain", value: 1 }, { kind: "gain-strain", value: 1 }])
+    failure: roundOutcome("The ship tears free late and carries the cost with it. The ship gains 2 Strain before the Dark Star finally falls behind.", [{ kind: "gain-strain", value: 2 }]),
+    disaster: roundOutcome("The wreck collapses across the escape line and the ship survives only by forcing itself through the debris under brutal load. The ship gains 4 Strain.", [{ kind: "gain-strain", value: 4 }])
   })
 ]);
 
