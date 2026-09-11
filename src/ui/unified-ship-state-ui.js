@@ -1,4 +1,5 @@
 import { getMasteryTechnique } from "../content/base-mastery.js";
+import { strainRiskState } from "../ship/area-readiness.js";
 import {
   SHIP_CONDITION_SYSTEMS,
   activeShipConditionViews,
@@ -21,6 +22,41 @@ function rootElement(element, app = null) {
 function shipFromActor(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 function activeShipActor() { return game?.arkflight?.activeShip ?? null; }
 function titleCase(value) { return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (m) => m.toUpperCase()); }
+
+function strainStatus(resource = {}) {
+  const value = Math.max(0, Number(resource?.value) || 0);
+  const max = Math.max(0, Number(resource?.max) || 0);
+  const risk = strainRiskState(value, max);
+  const label = risk.thresholdReached
+    ? "LIMIT — automatic degradation"
+    : risk.flatCheckRequired
+      ? `DC ${risk.flatCheckDC} flat check when Strain is gained`
+      : "SAFE — no flat check";
+  return Object.freeze({ value, max, risk, label });
+}
+
+function decorateStrainResourceCard(root, ship) {
+  const strip = root.querySelector(".arkflight-resource-strip");
+  if (!strip) return;
+  const card = [...strip.children].find((node) =>
+    node.querySelector(".arkflight-resource-label")?.textContent?.trim().endsWith("Strain")
+  );
+  if (!card) return;
+  const status = strainStatus(ship.resources?.strain);
+  let help = card.querySelector(".arkflight-strain-danger");
+  if (!help) {
+    help = document.createElement("small");
+    help.className = "arkflight-strain-danger";
+    card.append(help);
+  }
+  help.textContent = status.label;
+  card.dataset.strainRisk = status.risk.thresholdReached
+    ? "limit"
+    : status.risk.flatCheckRequired
+      ? `dc-${status.risk.flatCheckDC}`
+      : "safe";
+  card.title = `Strain ${status.value}/${status.max}. 0–49% safe; 50–74% DC 5; 75–89% DC 10; 90–99% DC 15; 100%+ automatic degradation.`;
+}
 
 function reorderResourceStrip(root) {
   const strip = root.querySelector(".arkflight-resource-strip");
@@ -50,6 +86,7 @@ function decorateShipReadiness(app, root) {
   if (!ship) return;
 
   reorderResourceStrip(root);
+  decorateStrainResourceCard(root, ship);
 
   const panel = root.querySelector(".arkflight-systems-panel");
   if (panel) {
@@ -103,9 +140,11 @@ function shipStatusSnapshot() {
   const actor = activeShipActor();
   const ship = shipFromActor(actor);
   if (!ship) return null;
+  const strain = ship.resources?.strain ?? { value: 0, max: 0 };
   return {
     name: actor.name,
-    strain: ship.resources?.strain ?? { value: 0, max: 0 },
+    strain,
+    strainStatus: strainStatus(strain),
     conditions: activeShipConditionViews(ship)
   };
 }
@@ -125,7 +164,7 @@ function decorateEventStatus(root) {
   const status = root.querySelector(".arkflight-status-strip");
   if (status && !status.querySelector(".arkflight-persistent-status")) {
     const restart = status.querySelector("button");
-    addStatusBox(status, "Strain", `${snapshot.strain.value} / ${snapshot.strain.max}`, "is-strain");
+    addStatusBox(status, "Strain", `${snapshot.strain.value} / ${snapshot.strain.max} · ${snapshot.strainStatus.label}`, "is-strain");
     for (const row of snapshot.conditions) addStatusBox(status, CONDITION_LABELS[row.system], row.label, `is-${row.id}`);
     if (restart) status.append(restart);
   }
@@ -134,7 +173,7 @@ function decorateEventStatus(root) {
     if (summary.querySelector(".arkflight-persistent-state-inline")) continue;
     const strain = document.createElement("span");
     strain.className = "arkflight-persistent-state-inline";
-    strain.innerHTML = `Strain <strong>${snapshot.strain.value} / ${snapshot.strain.max}</strong>`;
+    strain.innerHTML = `Strain <strong>${snapshot.strain.value} / ${snapshot.strain.max}</strong> <small>${snapshot.strainStatus.label}</small>`;
     summary.append(strain);
     for (const row of snapshot.conditions) {
       const item = document.createElement(summary.classList.contains("arkflight-round-state-summary") ? "div" : "span");
@@ -176,10 +215,10 @@ function decorateShipDerivedMasteries(root) {
 
 function replaceLegacyPlayerText(root) {
   const replacements = [
-    [/Hull Pressure/gi, "Hull Strain"],
+    [/Hull Pressure/gi, "ship Strain"],
     [/Arkengine Pressure/gi, "ship Strain"],
     [/Rigging Pressure/gi, "ship Strain"],
-    [/Lifeveil Pressure/gi, "Lifeveil Strain"],
+    [/Lifeveil Pressure/gi, "ship Strain"],
     [/threatening Arkengine/gi, "stressing the ship"],
     [/threatening Rigging/gi, "stressing the ship"],
     [/system Pressure/gi, "ship Strain"],
