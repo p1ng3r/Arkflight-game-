@@ -203,3 +203,23 @@ test("progression cannot grant more than one permanent bonus AP or RP", () => {
   assert.equal(profile.ap, base.ap + 1);
   assert.equal(profile.rp, base.rp + 1);
 });
+
+
+test("level-5 specializations apply their locked derived identities", () => {
+  const trader = sloop({ progression: { level: 5, specializationId: "trader", talentIds: [], arkcraftUpgrades: {} } });
+  const voyager = sloop({ progression: { level: 5, specializationId: "voyager", talentIds: [], arkcraftUpgrades: {} } });
+  const explorer = sloop({ progression: { level: 5, specializationId: "explorer", talentIds: [], arkcraftUpgrades: {} } });
+  const expedition = sloop({ progression: { level: 5, specializationId: "expedition-ship", talentIds: [], arkcraftUpgrades: {} } });
+
+  const traderDerived = deriveShip(trader, SHIP_CATALOGS);
+  const voyagerDerived = deriveShip(voyager, SHIP_CATALOGS);
+  const explorerDerived = deriveShip(explorer, SHIP_CATALOGS);
+  const expeditionDerived = deriveShip(expedition, SHIP_CATALOGS);
+
+  assert.equal(traderDerived.stats.cargoCapacity, Math.floor(SHIP_CATALOGS.hulls.sloop.data.baseStats.cargoCapacity * 1.5));
+  assert.ok(traderDerived.capabilities.includes("established-routes"));
+  assert.equal(voyagerDerived.stats.supplyCapacity, Math.floor(SHIP_CATALOGS.hulls.sloop.data.baseStats.supplyCapacity * 1.5));
+  assert.equal(explorerDerived.stats.modSlotBonuses.exploration, 1);
+  assert.equal(expeditionDerived.stats.modSlotBonuses.expedition, 1);
+  assert.ok(expeditionDerived.capabilities.includes("we-brought-one"));
+});
