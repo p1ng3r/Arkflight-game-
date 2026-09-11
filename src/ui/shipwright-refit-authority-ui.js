@@ -224,6 +224,11 @@ function decorateAuthoritativeSockets(root, stage, ship, family) {
 
   for (const socket of schematic.querySelectorAll(".arkflight-bay-socket")) {
     const index = Number(socket.dataset.socketIndex);
+    const socketMeta = family === "shipMod" ? layout.sockets?.find((row) => row.index === index) ?? null : null;
+    if (socketMeta) {
+      socket.dataset.socketType = socketMeta.type;
+      socket.dataset.socketLabel = socketMeta.type;
+    }
     const entry = placementBySocket.get(index) ?? null;
     if (entry) {
       const tone = index % 4;
