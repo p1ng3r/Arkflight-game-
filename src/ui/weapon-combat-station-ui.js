@@ -45,6 +45,7 @@ function stationActionBlockerLabel(reason) {
     "once-per-round": "Used this round",
     "crew-unassigned": "No crew assigned",
     "not-assigned-crew": "Assigned crew only",
+    "not-ship-owner": "Ship owner only",
     "station-unassigned": "Battlewatch unassigned",
     "not-your-station": "Battlewatch only",
     "missing-state-or-action": "Combat state unavailable"
