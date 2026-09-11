@@ -1,20 +1,12 @@
-import { AREA_STATES, SHIP_AREA_KEYS } from "./ship-schema.js";
+import { SHIP_CONDITION_SYSTEMS, conditionProfileById } from "./ship-conditions.js";
 
 export const REPAIR_PACKAGES = Object.freeze({
-  patch: Object.freeze({ id: "patch", label: "Patch Repair", restoreFraction: 0.10, areaSteps: 1, hours: 4, dc: 15, baseScrap: 2 }),
-  standard: Object.freeze({ id: "standard", label: "Standard Repair", restoreFraction: 0.25, areaSteps: 2, hours: 8, dc: 18, baseScrap: 4 }),
-  full: Object.freeze({ id: "full", label: "Full Repair", restoreFraction: 0.50, areaSteps: Infinity, hours: 16, dc: 22, baseScrap: 8 })
+  patch: Object.freeze({ id: "patch", label: "Patch Repair", restoreFraction: 0.10, conditionSteps: 1, hours: 4, dc: 15, baseScrap: 2 }),
+  standard: Object.freeze({ id: "standard", label: "Standard Repair", restoreFraction: 0.25, conditionSteps: 2, hours: 8, dc: 18, baseScrap: 4 }),
+  full: Object.freeze({ id: "full", label: "Full Repair", restoreFraction: 0.50, conditionSteps: Infinity, hours: 16, dc: 22, baseScrap: 8 })
 });
 
 export const REPAIR_SERVICE_MULTIPLIERS = Object.freeze({ crew: 1, dock: 0.75, shipyard: 0.5 });
-
-const AREA_ORDER = Object.freeze([
-  AREA_STATES.DISABLED,
-  AREA_STATES.CRITICAL,
-  AREA_STATES.DAMAGED,
-  AREA_STATES.STRESSED,
-  AREA_STATES.STABLE
-]);
 
 export function repairPackage(id) {
   return REPAIR_PACKAGES[id] ?? REPAIR_PACKAGES.patch;
@@ -31,22 +23,37 @@ export function resourceRepairAmount(maximum, packageId) {
   return Math.max(1, Math.ceil(max * repairPackage(packageId).restoreFraction));
 }
 
-export function improveAreaState(state, packageId) {
-  const currentIndex = AREA_ORDER.indexOf(state);
-  if (currentIndex < 0 || state === AREA_STATES.STABLE) return AREA_STATES.STABLE;
-  const steps = repairPackage(packageId).areaSteps;
-  if (!Number.isFinite(steps)) return AREA_STATES.STABLE;
-  return AREA_ORDER[Math.min(AREA_ORDER.length - 1, currentIndex + Math.max(1, steps))];
+export function improveConditionState(system, state, packageId) {
+  if (!SHIP_CONDITION_SYSTEMS.includes(system)) throw new Error(`Unknown Ship Condition system: ${system}`);
+  const current = conditionProfileById(system, state);
+  const steps = repairPackage(packageId).conditionSteps;
+  const severity = Number.isFinite(steps) ? Math.max(0, current.severity - Math.max(1, steps)) : 0;
+  const rows = [0, 1, 2, 3];
+  const targetSeverity = rows.includes(severity) ? severity : 0;
+  const ids = {
+    hull: ["sound", "battered", "breached", "shattered"],
+    drive: ["responsive", "sluggish", "faltering", "unresponsive"],
+    weapons: ["ready", "fouled", "malfunctioning", "barely-operable"]
+  };
+  return ids[system][targetSeverity];
+}
+
+// Compatibility alias for older repair UI code.
+export function improveAreaState(state, packageId, system = "hull") {
+  return improveConditionState(system, state, packageId);
 }
 
 export function repairTargetLabel(targetType, targetKey) {
-  if (targetType === "resource") return targetKey === "lifeveil" ? "Lifeveil" : "Hull Integrity";
-  const labels = { hull: "Hull Area", arkengine: "Arkengine", rigging: "Rigging", lifeveil: "Lifeveil Area", morale: "Morale" };
+  if (targetType === "resource") {
+    if (targetKey === "lifeveil") return "Lifeveil";
+    return "Hull Integrity";
+  }
+  const labels = { hull: "Hull Condition", drive: "Drive Condition", weapons: "Weapons Condition" };
   return labels[targetKey] ?? targetKey;
 }
 
 export function validRepairTarget(targetType, targetKey) {
   if (targetType === "resource") return ["hull", "lifeveil"].includes(targetKey);
-  if (targetType === "area") return SHIP_AREA_KEYS.includes(targetKey);
+  if (["condition", "area"].includes(targetType)) return SHIP_CONDITION_SYSTEMS.includes(targetKey);
   return false;
 }
