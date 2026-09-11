@@ -10,156 +10,153 @@ This document is the current design authority for the ship-condition model. Exis
 
 ## 1. Core Model
 
-Arkflight uses **one shared ship-wide Strain pool**.
+Arkflight uses **one shared ship-wide Strain pool** plus persistent ship systems/resources.
 
-The ship does **not** have separate Strain tracks for Hull, Arkengine, Rigging, Lifeveil, or Morale.
+Current percentage resources:
 
-Ship condition is represented by five persistent Areas:
+- **Lifeveil:** fixed 0-100%.
+- **Morale:** fixed 0-100%.
 
-- **Hull** — Battlewatch
-- **Arkengine** — Engineer
-- **Rigging** — Navigator
-- **Lifeveil** — Veilwarden
-- **Morale** — Captain
+Current physical resource:
 
-Each Area uses the same five-state degradation ladder:
+- **Hull:** physical integrity/HP plus Hardness.
 
-`Stable -> Stressed -> Damaged -> Critical -> Disabled`
+System degradation is not a second set of HP pools. A degradation result changes the affected system's gameplay state or percentage.
 
-Universal station penalty by Area state:
+The emerging damage-system model is:
 
-| State | Related station penalty |
-|---|---:|
-| Stable | 0 |
-| Stressed | -1 |
-| Damaged | -3 |
-| Critical | -5 |
-| Disabled | -10 to recovery/emergency use; normal function may be unavailable |
+- **Hull** — physical structure/Hardness.
+- **Drive** — merged Arkengine + Rigging damage track for propulsion and control.
+- **Lifeveil** — environmental/magical envelope percentage.
+- **Morale** — crew cohesion percentage.
+- **Weapons** — weapon operation/readiness.
 
-The Area state persists between rounds, Events, Voyage, and Ship Combat until actually repaired or improved by a valid special effect.
+Arkengine and Rigging remain distinct components/mod families even though their general damage consequence is moving toward the shared **Drive** track.
 
----
+Legacy persisted Area fields remain during migration, but where this document gives a percentage-resource rule, the percentage is authoritative.
 
 ## 2. Strain
 
 ### 2.1 Shared Strain Pool
 
-Strain represents accumulated stress on the entire ship.
+Strain is the persistent push-your-luck resource for the entire vessel.
 
-Strain is **persistent**. It does not automatically reset between rounds or Events.
+Strain is **not Hull damage**. It represents accumulated operational stress caused by forcing the ship beyond safe operation.
 
-Reaching port alone does not automatically clear Strain.
+Strain persists until removed by maintenance, abilities, repairs, shipyard service, or another explicit rule.
 
-### 2.2 Standard Voyage Strain
+### 2.2 Strain Danger Bands
 
-Default result contribution:
+When an effect **adds Strain**, determine the ship's resulting Strain percentage after that effect resolves.
 
-| Degree of success | Strain |
+| Resulting Strain | Flat Check |
 |---|---:|
-| Critical Success | +0 |
-| Success | +0 |
-| Failure | +1 |
-| Critical Failure | +2 |
+| 0-49% | None |
+| 50-74% | DC 5 |
+| 75-89% | DC 10 |
+| 90-99% | DC 15 |
+| 100%+ | Resolve the Strain Limit consequence instead |
 
-Authored abilities, Risk Bids, Arkcraft Skills, Crew Tactics, talents, mods, weapons, Events, and GM-authored effects may explicitly add, reduce, prevent, or redirect Strain.
+The flat check occurs **after** the triggering ability/effect and after its Strain is added.
 
-### 2.3 Strain Limit
+A Strain addition that remains below 50% does not prompt a flat check.
 
-The Strain Limit is **derived from the vessel**, not a universal fixed value.
+### 2.3 Pushed Ability Degrees of Success
 
-The final Strain Limit is expected to come from:
+For pushed maneuvers/abilities using the agreed four-degree model, the desired maneuver/effect still occurs on every degree. The degree determines the cost to the ship.
 
-`Hull/chassis base + ship-level/talent-tree bonuses + ship mods + Arkengine mods + exceptional permanent effects`
+| Degree | Strain | System degradation | Additional flat check? |
+|---|---:|---|---|
+| Critical Success | +0 | No | No |
+| Success | +1 | No | Yes, if resulting Strain is 50-99% |
+| Failure | +1 | Yes | No |
+| Critical Failure | +2 | Yes | No |
 
-Exact Hull/chassis values and progression numbers are intentionally not locked yet. They will be defined when the ship-level, branching talent-tree, and mod systems are designed.
+Failure is already costly because a system degrades. Do **not** also make a Strain flat check for the same resolution.
 
-### 2.4 Threshold Crossing
+Critical Failure adds 2 Strain and causes one system degradation, but the maneuver still occurs.
 
-When a result reaches or exceeds the ship's Strain Limit:
+### 2.4 Failed Flat Check — d8 System Degradation
 
-1. Determine the triggering Area.
-2. Degrade that Area by one state.
-3. Subtract one full Strain Limit from current Strain.
-4. Keep any overflow Strain.
+When a Strain flat check fails, roll **1d8**:
 
-Example with Strain Limit 4:
+| d8 | Degradation target |
+|---:|---|
+| 1 | Hull |
+| 2 | Morale |
+| 3 | Drive |
+| 4 | Drive |
+| 5 | Lifeveil |
+| 6 | Hull |
+| 7 | Weapons |
+| 8 | Players choose |
 
-`3 Strain + 2 = 5 -> Area degrades one step -> 5 - 4 = 1 Strain remaining`
+**Drive** is the merged Arkengine/Rigging damage target.
 
-### 2.5 Triggering Area
+A single triggering resolution can cause **at most one system degradation**. Do not cascade another flat check from Strain generated by the consequence itself.
 
-Default station-to-Area mapping:
+### 2.5 Strain Limit
 
-| Triggering station | Area degraded |
+When Strain reaches or exceeds the vessel's Strain Limit, the existing threshold rule still resolves:
+
+1. Resolve one threshold degradation/consequence.
+2. Subtract one full Strain Limit.
+3. Keep overflow Strain.
+4. Do not also roll the 50/75/90 flat check for that same resolution.
+
+A single resolution can trigger at most one threshold degradation even when overflow remains at or above the limit.
+
+## 3. Percentage Resources and Degradation
+
+Lifeveil and Morale no longer use hull-specific maximum values. Their maximum is always **100%**.
+
+### 3.1 Lifeveil
+
+Lifeveil percentage is its condition. There is no second Lifeveil HP/cap track.
+
+| Lifeveil | State |
 |---|---|
-| Captain | Morale |
-| Engineer | Arkengine |
-| Navigator | Rigging |
-| Battlewatch | Hull |
-| Veilwarden | Lifeveil |
+| 76-100% | Stable |
+| 51-75% | Degraded |
+| 1-50% | Critical |
+| 0% | Collapsed / Offline |
 
-The **station/result that causes the threshold crossing** normally determines the Area that degrades.
+Rules:
 
-Earlier failures merely contributed to the shared Strain pool.
+- Standard authored Lifeveil ability-cost unit: **5 percentage points**.
+- A Lifeveil system-degradation result removes **25 percentage points**.
+- Stabilization Success restores **10 percentage points**.
+- Stabilization Critical Success restores **20 percentage points**.
+- At 0%, atmospheric/environmental and magical shielding are offline; encounter/GM exposure rules apply.
 
-An Event, weapon, ability, talent, mod, or other authored rule may explicitly override the threatened Area when fiction and mechanics require it.
+### 3.2 Morale
 
-Random Area selection is not the default rule.
+Morale is a 0-100% crew-condition resource.
 
-### 2.6 One Degradation per Resolution
+The old 0-5 economy converts directly:
 
-A single station resolution or single discrete effect may cause **at most one Area degradation**, even if the resulting overflow remains at or above the Strain Limit.
+**1 old Morale point = 20 percentage points.**
 
-The next qualifying resolution may trigger another degradation.
+| Morale | State |
+|---|---|
+| 100% | Inspired |
+| 80-99% | Confident |
+| 60-79% | Steady |
+| 40-59% | Shaken |
+| 1-39% | Faltering |
+| 0% | Broken |
 
-This prevents one bad roll from jumping an Area multiple states at once.
+Rules:
 
-### 2.7 Disabled Areas
+- Existing 1-Morale costs become **20% Morale**.
+- **Work the Guns:** 20% Morale + 1 Strain.
+- **Drive the Crew:** 20% Morale plus its authored Strain cost.
+- A Morale degradation result removes **20 percentage points**.
+- Eight hours of safe rest restores **20% Morale**, normally only up to **60% (Steady)**.
+- At exactly 100% Morale, the existing Inspired benefit remains available.
+- At 0%, Crew Tactics are unavailable until Morale is restored.
 
-Disabled is the bottom of the normal ladder.
-
-There is no sixth mechanical state.
-
-If a Disabled Area suffers further fictional abuse, the GM/Event may narrate or author consequences appropriate to the situation. There is no universal automatic extra-damage rule.
-
----
-
-## 3. Area Integrity Bands
-
-Hull, Lifeveil, and Morale use an integrity representation tied to the Area state.
-
-| State | Effective maximum integrity |
-|---|---:|
-| Stable | 100% |
-| Stressed | 90% |
-| Damaged | 65% |
-| Critical | 25% |
-| Disabled | 0% |
-
-The ship sheet must be capable of tracking:
-
-- Base Maximum
-- Effective Maximum
-- Current Value
-- Area State
-
-Recommended cap behavior:
-
-- Degradation lowers Effective Maximum.
-- If Current is above the new Effective Maximum, Current falls to the cap.
-- Improving the Area state raises Effective Maximum but **does not automatically restore Current**.
-
-Example:
-
-- Hull Base Max = 200
-- Hull becomes Damaged
-- Effective Max = 130
-- Current above 130 is reduced to 130
-- Later repairing Damaged -> Stressed raises Effective Max to 180, but Current remains 130 until separately restored
-
-This rule avoids state changes functioning as free healing.
-
----
+Percentage loss and restoration change Current directly. They do not create a second Morale damage-state pool.
 
 ## 4. Combat Identity of Each Area
 
@@ -229,40 +226,26 @@ Exact combat action timing will be finalized when the tactical combat action eco
 
 ### 4.4 Lifeveil / Veilwarden
 
-Lifeveil uses the universal integrity bands:
+Lifeveil is a fixed **0-100% integrity resource**.
 
-`100% -> 90% -> 65% -> 25% -> 0%`
+Its percentage and the bands in Section 3.1 are authoritative. Hull/chassis no longer changes the Lifeveil maximum.
 
-Lifeveil state applies the universal Veilwarden station penalty:
+Veilwarden abilities may spend Lifeveil percentage directly. The standard authored spend unit is 5%, while stronger abilities may explicitly spend more.
 
-- Stressed: -1
-- Damaged: -3
-- Critical: -5
-- Disabled: -10 recovery/emergency use; Lifeveil offline
+A Lifeveil degradation result removes 25%.
 
-The Lifeveil's numerical Current/Base/Effective Max is the primary protection/integrity representation. Avoid creating a redundant second Lifeveil defense track unless Ship Combat later proves one is necessary.
-
-At 0%/Disabled, the Lifeveil is offline. Fictional exposure and special void/environmental consequences are Event/GM/ability dependent.
+At 0%, the Lifeveil is offline and the crew can be exposed to environmental, void, magical, or aetheric hazards according to the encounter.
 
 ### 4.5 Morale / Captain
 
-Morale uses the universal integrity bands:
+Morale is a fixed **0-100% crew-condition resource**.
 
-`100% -> 90% -> 65% -> 25% -> 0%`
+Its percentage and the bands in Section 3.2 are authoritative.
 
-Recommended simple representation:
+Morale remains spendable. Existing 1-point spends are converted to 20%.
 
-| Morale State | Gameplay meaning |
-|---|---|
-| Stable / 100% | Normal crew coordination |
-| Stressed / 90% | Captain -1; crew rattled, otherwise normal cooperative economy |
-| Damaged / 65% | Captain -3; reduce Crew Tactic/Reaction availability by one opportunity per round |
-| Critical / 25% | Captain -5; maximum one Crew Tactic/Reaction opportunity per round |
-| Disabled / 0% | Captain -10 recovery; no Crew Tactics/coordinated reactions; mutiny/rout/refusal/panic becomes possible according to fiction |
+Morale degradation removes 20%. Reaching 0% does not automatically mean mutiny; the specific fiction may be panic, surrender, refusal, exhaustion, rout, or another appropriate consequence.
 
-0% Morale does **not** automatically mean mutiny.
-
-The GM determines what collapse means for that crew and situation. Possible outcomes include mutiny, panic, surrender, refusal, exhaustion, rout, or another narrative consequence.
 
 ---
 
