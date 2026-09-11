@@ -163,13 +163,14 @@ function addEconomyTabs(app, root, key, ship) {
     const button = event.target.closest(".arkflight-refit-build-button");
     const card = event.target.closest(".arkflight-refit-blueprint-card");
     if (!button || !card || button.disabled) return;
-    if (!game.user?.isGM) {
-      ui.notifications?.warn?.("Only the GM can complete blueprint construction until crew work orders are enabled.");
+    const actor = shipActor(app);
+    if (!game.user?.isGM && !actor?.isOwner) {
+      ui.notifications?.warn?.("You must own this Arkflight ship to build from its known blueprints.");
       return;
     }
     try {
       button.disabled = true;
-      const result = await game.arkflight?.refit?.buildFromBlueprint?.(shipActor(app), card.dataset.family, card.dataset.id, 1);
+      const result = await game.arkflight?.refit?.buildFromBlueprint?.(actor, card.dataset.family, card.dataset.id, 1);
       if (!result?.ok) throw new Error(result?.reason ?? "Construction could not be completed.");
       ui.notifications?.info?.(`${catalog[card.dataset.id]?.name ?? "Component"} built and added to Available Parts.`);
       app.render?.({ force: true });
