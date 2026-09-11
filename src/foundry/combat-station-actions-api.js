@@ -268,14 +268,14 @@ async function updatePersistentShipForAction(actor, action, options, beforeState
       if (profile.master) {
         const current = resourceValue(ship, "morale");
         const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
-        const next = Math.min(max, current + profile.bonus);
+        const next = Math.min(max, current + (20 * profile.bonus));
         patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
         notes.push(`Morale ${current} → ${next}`);
       }
     } else {
       const current = resourceValue(ship, "morale");
       const max = Math.max(current, Number(ship.resources?.morale?.max) || 0);
-      const next = Math.min(max, current + profile.bonus);
+      const next = Math.min(max, current + (20 * profile.bonus));
       patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = next;
       notes.push(`Morale ${current} → ${next}`);
     }
@@ -473,7 +473,7 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
 
   if (resolver === "issueOrder") notes.push("Applies only to the chosen station's next qualifying roll; fixed effects are not inflated.");
   if (resolver === "coordinateAssault") notes.push(`Target Hardness reduced by ${profile.bonus} for ${profile.advanced ? 2 : 1} qualifying attack${profile.advanced ? "s" : ""}.`);
-  if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 1 Morale; +${stationActionEconomy(action, level).strain} Strain.`);
+  if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 20% Morale; +${stationActionEconomy(action, level).strain} Strain.`);
   if (resolver === "ventStrain") notes.push(`Vents up to ${1 + profile.bonus} Strain.`);
   if (resolver === "hardTurn") notes.push(`+${Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus} maneuver allowance; pivot permitted.`);
   if (resolver === "impossibleBurn") notes.push(`Once per battle: +${Math.max(1, Math.ceil(Number(before?.mobility?.speed ?? 1) * 0.5))} movement allowance; +2 Arkengine Strain.`);
@@ -483,10 +483,10 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (resolver === "redistributePower" && selection === "weapons") notes.push(`Next ${profile.advanced ? 2 : 1} weapon attack${profile.advanced ? "s" : ""} gain +${profile.bonus} damage; +1 Strain.`);
   if (resolver === "redistributePower" && selection === "lifeveil") notes.push(`Next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} gain ${2 * profile.bonus} mitigation; +1 Strain.`);
   if (resolver === "setAttackVector") notes.push(`Selected facing gains ${15 * profile.bonus}° extra firing-arc tolerance while heading is unchanged.`);
-  if (resolver === "workTheGuns") notes.push("Weapon immediately readied for 0 AP; spend 1 Morale; +1 Strain; once per round.");
+  if (resolver === "workTheGuns") notes.push("Weapon immediately readied for 0 AP; spend 20% Morale; +1 Strain; once per round.");
   if (resolver === "readyBroadside") notes.push(`Spend 1 Supply; selected battery's next shot gains +${2 * profile.bonus} damage${profile.master ? " and reduces reload by 1" : ""}.`);
-  if (resolver === "reinforceLifeveil") notes.push(`Spend 5 Lifeveil; next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} reduce damage by ${2 * profile.bonus}.`);
-  if (resolver === "focusWard") notes.push(`Spend 10 Lifeveil; next ${profile.advanced ? 2 : 1} matching hit${profile.advanced ? "s" : ""} reduce damage by ${3 * profile.bonus}.`);
+  if (resolver === "reinforceLifeveil") notes.push(`Spend 5% Lifeveil; next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} reduce damage by ${2 * profile.bonus}.`);
+  if (resolver === "focusWard") notes.push(`Spend 10% Lifeveil; next ${profile.advanced ? 2 : 1} matching hit${profile.advanced ? "s" : ""} reduce damage by ${3 * profile.bonus}.`);
   if (action.timing === COMBAT_ACTION_TIMING.REACTION) notes.push("Reaction resolves against the current trigger and consumes shared RP.");
 
   if (strainResolution.threshold) {
