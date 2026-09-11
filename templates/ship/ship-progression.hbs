@@ -53,6 +53,26 @@
     {{/each}}
   </nav>
 
+  <section class="arkflight-specialization-strip">
+    <div class="arkflight-specialization-heading">
+      <span class="arkflight-progression-kicker">LEVEL 5 SHIP CALLING</span>
+      <strong>{{#if specializationId}}Chosen Specialization{{else}}What has this vessel become?{{/if}}</strong>
+      {{#unless specializationUnlocked}}<small>Unlocks at ship level 5.</small>{{/unless}}
+      {{#if specializationLockedForPlayer}}<small>Permanent once chosen; only a GM may respec the Specialization itself.</small>{{/if}}
+    </div>
+    <div class="arkflight-specialization-grid">
+      {{#each specializations as |specialization|}}
+        <button type="button" class="arkflight-specialization-card {{#if specialization.selected}}is-selected{{/if}}"
+                data-choose-specialization="{{specialization.id}}"
+                {{#unless specialization.canChoose}}disabled{{/unless}}>
+          <strong>{{specialization.name}}</strong>
+          <span>{{specialization.summary}}</span>
+          {{#if specialization.selected}}<em><i class="fa-solid fa-circle-check"></i> CHOSEN</em>{{/if}}
+        </button>
+      {{/each}}
+    </div>
+  </section>
+
   <div class="arkflight-progression-toolbar">
     <div class="arkflight-talent-search">
       <i class="fa-solid fa-magnifying-glass"></i>
