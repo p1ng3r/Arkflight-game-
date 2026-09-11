@@ -349,7 +349,8 @@ async function executeAuthoritative(base, actionId, options = {}, reference = nu
     if (!options.weaponKey) throw new Error("Reload requires an installed weapon.");
     const before = base.state(combatant);
     const round = Math.max(1, Number(game.combat?.round ?? 1));
-    const state = await base.workTheGuns(options.weaponKey, combatant);
+    const reload = base.reloadWeapon ?? base.workTheGuns;
+    const state = await reload.call(base, options.weaponKey, combatant);
     const weapon = state.weapons?.[options.weaponKey];
     const remaining = Math.max(0, Number(weapon?.readyRound ?? round) - round);
     const notes = await updatePersistentShipForAction(combatant.actor, action, options, before, state);
@@ -442,6 +443,7 @@ async function requestStationAction(base, actionId, options = {}, reference = nu
   const control = stationControl(base, actionId, reference);
   if (!control.ok) {
     if (control.reason === "not-your-station") throw new Error(`Only the player assigned to ${control.action?.station ?? "that"} station may use this action.`);
+    if (control.reason === "not-assigned-crew") throw new Error("Only a player who owns an assigned crew member on this ship may use this common action.");
     throw new Error(`Station action unavailable: ${control.reason}.`);
   }
 
