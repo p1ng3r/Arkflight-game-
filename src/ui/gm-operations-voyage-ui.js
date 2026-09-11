@@ -33,6 +33,128 @@ function launchBlockers(ship) {
   return [...new Set(blockers)];
 }
 
+function routeFormValues(panel) {
+  const destination = panel.querySelector("[data-voyage-destination]")?.value ?? "";
+  const distanceHexes = Number(panel.querySelector("[data-voyage-distance]")?.value ?? 1);
+  const hexMultiplier = Number(panel.querySelector("[data-voyage-condition]")?.value ?? 1);
+  const knownRoute = Boolean(panel.querySelector("[data-voyage-known]")?.checked);
+  const establishedCommercialRoute = Boolean(panel.querySelector("[data-voyage-established]")?.checked);
+  return { destination, distanceHexes, hexMultiplier, knownRoute, establishedCommercialRoute };
+}
+
+function routeDaysLabel(value) {
+  const days = Math.max(0, Number(value) || 0);
+  if (days < 1) return `${Math.max(1, Math.round(days * 24))}h`;
+  return `${days.toFixed(days % 1 ? 1 : 0)} day${days === 1 ? "" : "s"}`;
+}
+
+function buildRoutePlanner(app, ship) {
+  const api = game.arkflight?.voyageTravel;
+  const panel = document.createElement("article");
+  panel.className = "arkflight-gm-panel arkflight-gm-voyage-route";
+  const route = api?.get?.() ?? null;
+
+  if (route?.active) {
+    const remaining = api?.remainingDays?.(route) ?? 0;
+    const leg = route.segments?.[route.currentLeg] ?? null;
+    panel.innerHTML = `
+      <div class="arkflight-gm-card-heading">
+        <div><div class="arkflight-gm-kicker">STRATEGIC ROUTE</div><h2>${foundry.utils.escapeHTML(route.destination || "Uncharted Destination")}</h2></div>
+        <i class="fa-solid fa-route"></i>
+      </div>
+      <div class="arkflight-gm-metric-row"><span>Vessel</span><strong>${foundry.utils.escapeHTML(route.shipName ?? "Arkflight Ship")}</strong></div>
+      <div class="arkflight-gm-metric-row"><span>Arkengine</span><strong>Tier ${route.engineTier} · ${foundry.utils.escapeHTML(route.engineName ?? "Arkengine")} · ${routeDaysLabel(route.daysPerHex)}/hex</strong></div>
+      <div class="arkflight-gm-metric-row"><span>Progress</span><strong>${route.currentLeg} / ${route.distanceHexes} hexes · ${routeDaysLabel(remaining)} remaining</strong></div>
+      <div class="arkflight-gm-metric-row"><span>Next Leg</span><strong>${leg ? routeDaysLabel(leg.days) : "Complete"}</strong></div>
+      <p class="arkflight-gm-muted">Advancing a leg advances Foundry world time. Voyage Events may interrupt the route; finish the active Event before advancing again.</p>`;
+
+    const actions = document.createElement("div");
+    actions.className = "arkflight-gm-command-actions";
+    const advance = document.createElement("button");
+    advance.type = "button";
+    advance.className = "arkflight-gm-primary";
+    advance.innerHTML = '<i class="fa-solid fa-forward-step"></i> Advance Next Hex';
+    advance.addEventListener("click", async () => {
+      advance.disabled = true;
+      try {
+        const result = await api.advanceLeg();
+        ui.notifications?.info(result.completed
+          ? `Arrived at ${result.route.destination}.`
+          : `Voyage advanced one strategic hex (${routeDaysLabel(result.segment.days)}).`);
+        app.render({ force: true });
+      } catch (error) {
+        ui.notifications?.warn(error?.message ?? "Unable to advance the strategic route.");
+        advance.disabled = false;
+      }
+    });
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.innerHTML = '<i class="fa-solid fa-xmark"></i> Cancel Route';
+    cancel.addEventListener("click", async () => {
+      await api.cancel();
+      app.render({ force: true });
+    });
+    actions.append(advance, cancel);
+    panel.append(actions);
+    return panel;
+  }
+
+  panel.innerHTML = `
+    <div class="arkflight-gm-card-heading">
+      <div><div class="arkflight-gm-kicker">STRATEGIC ROUTE</div><h2>Plot Galactic Passage</h2></div>
+      <i class="fa-solid fa-route"></i>
+    </div>
+    <div class="arkflight-gm-voyage-route-form">
+      <label><span>Destination</span><input type="text" data-voyage-destination placeholder="Destination name"></label>
+      <label><span>Galactic Hexes</span><input type="number" min="1" max="100" step="1" value="1" data-voyage-distance></label>
+      <label><span>Route Condition</span><select data-voyage-condition>
+        <option value="0.75">Favorable current ×0.75</option>
+        <option value="1" selected>Clear passage ×1</option>
+        <option value="1.5">Difficult void ×1.5</option>
+        <option value="2">Severe hazard ×2</option>
+      </select></label>
+      <label class="arkflight-gm-voyage-check"><input type="checkbox" data-voyage-known> Known route</label>
+      <label class="arkflight-gm-voyage-check"><input type="checkbox" data-voyage-established> Established commercial route</label>
+    </div>
+    <div class="arkflight-gm-metric-row"><span>Travel Preview</span><strong data-voyage-preview>Enter a route.</strong></div>
+    <p class="arkflight-gm-muted">Travel speed comes from the installed Arkengine's authored days per galactic hex. Tier remains the engine's technology/power class; it is not a fixed speed formula.</p>`;
+
+  const preview = () => {
+    const target = panel.querySelector("[data-voyage-preview]");
+    if (!target || !ship?.actor || !api?.plan) return;
+    try {
+      const plan = api.plan(ship.actor, routeFormValues(panel));
+      const trader = plan.timeMultiplier < 1 ? " · Trader route −20%" : "";
+      target.textContent = `${plan.distanceHexes} hex${plan.distanceHexes === 1 ? "" : "es"} · ${routeDaysLabel(plan.daysPerHex)}/hex · ${routeDaysLabel(plan.totalDays)} total${trader}`;
+    } catch (error) {
+      target.textContent = error?.message ?? "Route unavailable.";
+    }
+  };
+  for (const input of panel.querySelectorAll("input, select")) input.addEventListener("input", preview);
+  preview();
+
+  const actions = document.createElement("div");
+  actions.className = "arkflight-gm-command-actions";
+  const start = document.createElement("button");
+  start.type = "button";
+  start.className = "arkflight-gm-primary";
+  start.disabled = !ship?.actor;
+  start.innerHTML = '<i class="fa-solid fa-play"></i> Start Route';
+  start.addEventListener("click", async () => {
+    start.disabled = true;
+    try {
+      await api.start(ship.actor, routeFormValues(panel));
+      app.render({ force: true });
+    } catch (error) {
+      ui.notifications?.warn(error?.message ?? "Unable to start strategic route.");
+      start.disabled = false;
+    }
+  });
+  actions.append(start);
+  panel.append(actions);
+  return panel;
+}
+
 function crewCandidates(ship, stationId) {
   const stations = ship?.ship?.crew?.stations ?? {};
   const assignedElsewhere = new Map(
@@ -165,6 +287,7 @@ function buildEventLibrary(app) {
     shipPanel.append(gate);
   }
   wrapper.append(shipPanel);
+  wrapper.append(buildRoutePlanner(app, ship));
 
   const events = Object.entries(game.arkflight?.events ?? {});
   for (const [eventId, definition] of events) {
