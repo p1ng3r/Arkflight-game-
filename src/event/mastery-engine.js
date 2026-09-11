@@ -53,8 +53,11 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
       next = { ...next, masteryPostCheckShipEffects: { ...(state.masteryPostCheckShipEffects ?? {}), [options.targetStationId]: [{ kind: "gain-strain", value: 1, source }] } };
       break;
     case "engineer-keep-her-breathing": {
-      const area = options.area ?? options.system; if (!area) throw new Error("Choose the ship Area being kept operational.");
-      next = { ...next, masteryAreaDisableGuards: { ...(state.masteryAreaDisableGuards ?? {}), [area]: 1 } }; encounter.notes.push(`${source} keeps ${area} operational through the next station resolution.`); break;
+      const system = options.system ?? options.area;
+      if (!["hull", "drive", "weapons"].includes(system)) throw new Error("Choose Hull, Drive, or Weapons for Keep Her Breathing.");
+      next = { ...next, masteryStrainFinalStageGuard: { target: system, source } };
+      encounter.notes.push(`${source} protects ${system} from being pushed into its final Ship Condition by this Strain consequence.`);
+      break;
     }
     case "engineer-crosswire-the-systems": {
       const target = options.toSystem ?? options.toArea ?? options.system;
@@ -65,7 +68,7 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
     case "engineer-run-her-hot":
       assertTarget(state, options.targetStationId); if (!["engineer", "navigator"].includes(options.targetStationId)) throw new Error("Run Her Hot may only affect Engineer or Navigator.");
       addCheckBonus(encounter, options.targetStationId, 4, source);
-      next = { ...next, masteryPostCheckShipEffects: { ...(state.masteryPostCheckShipEffects ?? {}), [options.targetStationId]: [{ kind: "gain-strain", value: 1, area: "arkengine", source }] } };
+      next = { ...next, masteryPostCheckShipEffects: { ...(state.masteryPostCheckShipEffects ?? {}), [options.targetStationId]: [{ kind: "gain-strain", value: 1, source }] } };
       encounter.notes.push(`${source} grants ${options.targetStationId} +4, then adds 1 ship-wide Strain.`); break;
     case "engineer-heart-without-rest": encounter.generalStrainGuard = Number(encounter.generalStrainGuard ?? 0) + 2; encounter.notes.push(`${source} guards the next 2 points of Strain.`); break;
 
@@ -97,16 +100,34 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
 
 export function applyMasteryConsequenceRedirects(_event, beforeState, finalizedState) {
   const override = beforeState?.masteryStrainDegradationOverride ?? null;
-  if (!override?.target) return finalizedState;
+  const finalStageGuard = beforeState?.masteryStrainFinalStageGuard ?? null;
+  if (!override?.target && !finalStageGuard?.target) return finalizedState;
+
   const priorCount = (beforeState?.pendingShipEffects ?? []).length;
   const effects = [...(finalizedState?.pendingShipEffects ?? [])];
   const notes = [...(finalizedState.encounter?.notes ?? [])];
+  let modified = 0;
+
   for (let index = priorCount; index < effects.length; index += 1) {
     const effect = effects[index];
     if (effect?.kind !== "gain-strain" || Number(effect.value ?? 0) <= 0) continue;
-    effects[index] = { ...effect, degradationOverride: override.target, redirectSource: override.source };
-    notes.push(`${override.source}: if this Strain causes degradation, redirect it to ${override.target}.`);
-    return { ...finalizedState, pendingShipEffects: effects, encounter: { ...finalizedState.encounter, notes }, masteryStrainDegradationOverride: null };
+    effects[index] = {
+      ...effect,
+      ...(override?.target ? { degradationOverride: override.target, redirectSource: override.source } : {}),
+      ...(finalStageGuard?.target ? { finalStageGuardTarget: finalStageGuard.target, finalStageGuardSource: finalStageGuard.source } : {})
+    };
+    modified += 1;
   }
-  return finalizedState;
+
+  if (!modified) return finalizedState;
+  if (override?.target) notes.push(`${override.source}: if this Strain causes degradation, redirect it to ${override.target}.`);
+  if (finalStageGuard?.target) notes.push(`${finalStageGuard.source}: prevent ${finalStageGuard.target} from being pushed into its final Ship Condition by this Strain consequence.`);
+
+  return {
+    ...finalizedState,
+    pendingShipEffects: effects,
+    encounter: { ...finalizedState.encounter, notes },
+    masteryStrainDegradationOverride: null,
+    masteryStrainFinalStageGuard: null
+  };
 }
