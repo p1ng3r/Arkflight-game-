@@ -267,7 +267,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
       if (remaining <= 2) {
         workGunsButton = document.createElement("button");
         workGunsButton.type = "button";
-        workGunsButton.innerHTML = '<i class="fa-solid fa-burst"></i> Work the Guns · 1 Morale · +1 Strain';
+        workGunsButton.innerHTML = '<i class="fa-solid fa-burst"></i> Work the Guns · 20% Morale · +1 Strain';
         workGunsButton.title = "Battlewatch, once per round: immediately ready this weapon for 0 AP.";
         workGunsButton.addEventListener("click", async () => {
           try {
