@@ -1,6 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
-import { shipManeuverDC } from "../combat/index.js";
+import { shipManeuverDC, weaponReloadRemaining } from "../combat/index.js";
 import { firingArcsVisible, firingArcWeaponVisible, redrawFiringArcs, setFiringArcsVisible, toggleWeaponFiringArc } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
@@ -207,7 +207,7 @@ function buildWeapons(state, round) {
     const definition = SHIP_CATALOGS.weapons?.[weaponState.id] ?? null;
     const combat = definition?.data?.combat ?? {};
     const damage = definition?.data?.damageProfile ?? {};
-    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const remaining = weaponReloadRemaining(weaponState);
     return {
       key: weaponState.key,
       id: weaponState.id,
