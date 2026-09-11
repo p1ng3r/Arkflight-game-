@@ -129,16 +129,16 @@ export function syncResourceMaxima(ship, derived) {
   const existingSupplyMax = Number(ship.resources?.supplies?.max ?? 0);
   const derivedSupplyMax = Number(derived.stats?.supplyCapacity ?? 0);
   const supplyMax = derivedSupplyMax > 0 ? derivedSupplyMax : existingSupplyMax;
-  const existingMoraleMax = Number(ship.resources?.morale?.max ?? 5);
-  const derivedMoraleMax = Number(derived.stats?.moraleCapacity ?? 0);
-  const moraleMax = derivedMoraleMax > 0 ? derivedMoraleMax : existingMoraleMax;
   const hullValue = ship.resources?.hull?.value;
-  const lifeveilValue = ship.resources?.lifeveil?.value;
+  const clampPercent = (value, fallback) => Math.max(0, Math.min(100, Math.round(Number(value ?? fallback) || 0)));
   return { ...ship, resources: { ...ship.resources,
     hull: { value: Math.min(hullValue ?? derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
-    lifeveil: { value: Math.min(lifeveilValue ?? derived.stats.lifeveilCapacity, derived.stats.lifeveilCapacity), max: derived.stats.lifeveilCapacity },
+    // Lifeveil and Morale are normalized percentage resources. Hull-specific
+    // legacy capacities remain available in derived stats for migration/content
+    // review but no longer define these resource maxima.
+    lifeveil: { value: clampPercent(ship.resources?.lifeveil?.value, 100), max: 100 },
     strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity },
-    morale: { value: Math.min(ship.resources.morale?.value ?? moraleMax, moraleMax), max: moraleMax },
+    morale: { value: clampPercent(ship.resources?.morale?.value, 60), max: 100 },
     supplies: { value: Math.min(ship.resources.supplies?.value ?? 0, supplyMax || Number.MAX_SAFE_INTEGER), max: supplyMax }
   } };
 }
