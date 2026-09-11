@@ -263,7 +263,7 @@ function firstFreeSockets(occupied, capacity, cost) {
 
 export function installedSocketLayout(ship, catalogs, family) {
   if (family === "weapon") return installedWeaponSocketLayout(ship, catalogs);
-  if (family === "shipMod") return shipModSocketLayout(ship, catalogs);
+  if (family === "shipMod" && ship?.hull?.chassisId) return shipModSocketLayout(ship, catalogs);
   const capacity = refitSocketCapacity(ship, catalogs, family);
   const ids = installedIds(ship, family);
   const jobs = completedInstallJobs(ship, family);
@@ -336,7 +336,7 @@ export function findAvailableRefitSocketAssignment(ship, catalogs, { family, com
   }
   const socketIndices = family === "weapon"
     ? (layout.mounts ?? weaponMountSocketRows(ship, catalogs)).filter((mount) => !unavailable.has(mount.index) && weaponFitsMount(item, mount)).slice(0, 1).map((mount) => mount.index)
-    : family === "shipMod"
+    : family === "shipMod" && ship?.hull?.chassisId
       ? (layout.sockets ?? []).filter((socket) => !unavailable.has(socket.index) && shipModFitsSocketType(item, socket.type)).slice(0, cost).map((socket) => socket.index)
       : firstFreeSockets(unavailable, layout.capacity, cost);
   if (socketIndices.length !== cost) {
@@ -368,7 +368,7 @@ export function validateRefitSocketAssignment(ship, catalogs, { family, componen
     const minShipLevel = Math.max(1, Math.trunc(Number(weapon?.data?.minShipLevel) || 1));
     if (shipLevel < minShipLevel) return Object.freeze({ ok: false, reason: "ship-level-too-low", shipLevel, minShipLevel });
   }
-  if (family === "shipMod") {
+  if (family === "shipMod" && ship?.hull?.chassisId) {
     const mod = catalogFor(catalogs, family)?.[componentId];
     const sockets = layout.sockets ?? [];
     const incompatible = indices.find((index) => !shipModFitsSocketType(mod, sockets[index]?.type));
