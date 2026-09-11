@@ -255,9 +255,6 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
 
   const canMutateTargetLocally = userCanResolveShipState(game.user, target);
   const primaryGM = canMutateTargetLocally ? null : activePrimaryGM();
-  if (!canMutateTargetLocally && !primaryGM) {
-    throw new Error("An active GM is required to apply damage or consumed defenses to a ship you do not own.");
-  }
 
   const attackerLevel = shipLevel(attacker.actor);
   const targetLevel = shipLevel(target.actor);
@@ -311,8 +308,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     await game.arkflight?.shipCombatReactions?.promptDamage?.({ attacker, target, solution, incoming: poweredIncoming, hardness: hardnessEffective });
 
     const targetLatest = base.state(target) ?? targetAttackState;
-    targetAfter = consumeStationEffects(targetLatest, attackDefense.consumed);
-    damageDefense = damageDefensePlan(targetAfter, targetLevel, solution, target.actor);
+    const damageCalculationState = consumeStationEffects(targetLatest, attackDefense.consumed);
+    targetAfter = targetLatest;
+    damageDefense = damageDefensePlan(damageCalculationState, targetLevel, solution, target.actor);
 
     const wardAbsorbed = Math.min(poweredIncoming, damageDefense.wardMitigation);
     const afterWard = Math.max(0, poweredIncoming - wardAbsorbed);
@@ -346,9 +344,12 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
 
   let targetEffectMutationRequested = false;
   if (targetAttackEffectIds.length && canMutateTargetLocally) {
-    targetAfter = consumeStationEffects(targetAttackState, targetAttackEffectIds);
-    if (targetAfter !== targetAttackState) await target.update({ [STATE_PATH]: targetAfter });
+    const latestTargetState = base.state(target) ?? targetAfter ?? targetAttackState;
+    const nextTargetState = consumeStationEffects(latestTargetState, targetAttackEffectIds);
+    if (nextTargetState !== latestTargetState) await target.update({ [STATE_PATH]: nextTargetState });
+    targetAfter = nextTargetState;
   } else if (targetAttackEffectIds.length) {
+    if (!primaryGM) throw new Error("An active GM is required to consume this target's attack-defense effect.");
     targetEffectMutationRequested = true;
     game.socket?.emit?.(COMBAT_SOCKET, {
       type: TARGET_EFFECT_REQUEST,
@@ -383,7 +384,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       ...(damage.wardAbsorbed > 0 ? [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed] : []),
       ...(damage.braceAbsorbed > 0 ? damageDefense.braceConsumed : [])
     ];
-    const damageEffectSnapshots = activeStationEffects(targetAfter)
+    const damageEffectSnapshots = activeStationEffects(base.state(target) ?? targetAfter ?? targetAttackState)
       .filter((effect) => damageEffectIds.includes(effect.id))
       .map((effect) => ({ ...effect }));
 
