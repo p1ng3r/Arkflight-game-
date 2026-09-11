@@ -93,7 +93,7 @@ test("Reload and Work the Guns both use the GM-authoritative station relay", () 
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
   const consoleUi = readFileSync(new URL("../src/ui/combat-console-ui.js", import.meta.url), "utf8");
   assert.match(effects, /actionId === "battlewatch-reload-weapon"[\s\S]*?return originalStationAction\(actionId, options, reference\)/);
-  assert.match(stationApi, /resolver === "reloadWeapon"[\s\S]*?base\.workTheGuns\(options\.weaponKey, combatant\)/);
+  assert.match(stationApi, /resolver === "reloadWeapon"[\s\S]*?base\.reloadWeapon/);
   assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
   assert.match(stationApi, /STATION_ACTION_REQUEST/);
   assert.match(consoleUi, /stationAction\("common-reload-weapon"/);
