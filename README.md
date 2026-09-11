@@ -19,7 +19,7 @@ The game should feel like five officers operating one ship, not five unrelated s
 - Captain
 - Engineer
 - Navigator
-- Watchmaster
+- Battlewatch
 - Veilwarden
 
 Each station has its own role, authored actions, and a pool of Signature Abilities.
