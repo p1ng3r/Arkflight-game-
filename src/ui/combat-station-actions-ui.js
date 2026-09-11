@@ -65,6 +65,7 @@ function choiceOptions(action, api, combatant, actor) {
 
 function costLabel(action) {
   if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
+  if (action.id === "battlewatch-reload-weapon") return "1 Morale · +1 Strain";
   const parts = [];
   if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
   if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
@@ -78,6 +79,9 @@ function unavailableLabel(reason) {
     "not-this-ships-turn": "Wait for Turn",
     "insufficient-ap": "Not Enough AP",
     "insufficient-rp": "Not Enough RP",
+    "insufficient-morale": "Not Enough Morale",
+    "crew-unassigned": "Assign Crew",
+    "not-assigned-crew": "Assigned Crew Only",
     "once-per-round": "Used This Round",
     "reaction-readied": "Reaction Readied",
     "combatant-required": "Combat Offline",
