@@ -123,6 +123,12 @@ function normalizeRefit(refit = {}) {
   };
 }
 
+function normalizeRewardState(rewards = {}) {
+  return {
+    pendingShip: (rewards.pendingShip ?? []).filter((entry) => entry && typeof entry === "object").map((entry) => ({ ...entry }))
+  };
+}
+
 function normalizeResources(resources = {}) {
   return {
     hull: { ...resource(), ...(resources.hull ?? {}) },
@@ -148,6 +154,7 @@ export function createShip(overrides = {}) {
     blueprints: { shipModIds: [], arkengineModIds: [], weaponIds: [] },
     inventory: { shipMods: {}, arkengineMods: {}, weapons: {} },
     refit: { workOrders: [] },
+    rewards: { pendingShip: [] },
     areas: Object.fromEntries(SHIP_AREA_KEYS.map((key) => [key, area()])),
     progression: normalizeProgression(),
     conditions: []
@@ -164,6 +171,7 @@ export function normalizeShip(ship = {}) {
     blueprints: normalizeBlueprints(ship.blueprints),
     inventory: normalizeInventory(ship.inventory),
     refit: normalizeRefit(ship.refit),
+    rewards: normalizeRewardState(ship.rewards),
     areas: migrateAreas(ship),
     progression: normalizeProgression(ship.progression),
     conditions: [...(ship.conditions ?? [])]
@@ -197,6 +205,7 @@ function mergeShip(base, overrides) {
       weapons: { ...base.inventory.weapons, ...(overrides.inventory?.weapons ?? {}) }
     },
     refit: { ...base.refit, ...(overrides.refit ?? {}), workOrders: [...(overrides.refit?.workOrders ?? base.refit.workOrders)] },
+    rewards: { ...base.rewards, ...(overrides.rewards ?? {}), pendingShip: [...(overrides.rewards?.pendingShip ?? base.rewards.pendingShip)] },
     areas: { ...base.areas, ...(overrides.areas ?? {}) },
     progression: {
       ...base.progression,
