@@ -18,6 +18,8 @@ export const STATION_AREAS = Object.freeze({
 
 export const COMBAT_POINT_TYPES = Object.freeze({ AP: "ap", RP: "rp" });
 export const HEX_HEADINGS = Object.freeze([0, 60, 120, 180, 240, 300]);
+export const SHIP_HEADING_INCREMENT = 30;
+export const SHIP_HEADINGS = Object.freeze(Array.from({ length: 12 }, (_entry, index) => index * SHIP_HEADING_INCREMENT));
 export const WEAPON_MOUNTS = Object.freeze(["fore", "port", "starboard", "aft", "deck"]);
 export const WEAPON_ARC_TEMPLATES = Object.freeze(["forward", "rear", "broadside", "wide", "turret", "line"]);
 
@@ -69,9 +71,21 @@ export function headingStepDistance(from, to) {
   return Math.min(clockwise, counterClockwise);
 }
 
+export function normalizeShipHeading(rotation = 0) {
+  const normalized = ((Number(rotation) || 0) % 360 + 360) % 360;
+  return (Math.round(normalized / SHIP_HEADING_INCREMENT) * SHIP_HEADING_INCREMENT) % 360;
+}
+
+export function headingDegreeDistance(from, to) {
+  const a = normalizeShipHeading(from);
+  const b = normalizeShipHeading(to);
+  const difference = Math.abs(a - b);
+  return Math.min(difference, 360 - difference);
+}
+
 export function effectiveMobility({ combatSpeed = 1, maneuverability = 1, speedPenalty = 0, maneuverPenalty = 0 } = {}) {
   return Object.freeze({
     speed: Math.max(1, Math.trunc(Number(combatSpeed) || 1) - Math.max(0, Math.trunc(Number(speedPenalty) || 0))),
-    maneuverability: Math.max(1, Math.trunc(Number(maneuverability) || 1) - Math.max(0, Math.trunc(Number(maneuverPenalty) || 0)))
+    maneuverability: Math.max(0, Math.trunc(Number(maneuverability) || 0) - Math.max(0, Math.trunc(Number(maneuverPenalty) || 0)))
   });
 }
