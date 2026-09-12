@@ -100,7 +100,7 @@
         <div class="afch-stat rp"><label>Reaction Points</label><strong>RP {{resources.rp}} / {{resources.rpMax}}</strong></div>
         <div class="afch-stat strain"><label>Strain</label><strong>{{resources.strain}} / {{resources.strainMax}}</strong></div>
         <div class="afch-stat"><label>Heading</label><strong>{{resources.heading}}°</strong></div>
-        <div class="afch-stat facing {{#if resources.facingWarning}}is-warning{{/if}}"><label>Facing</label><strong>{{resources.facingUsed}} / {{resources.facingFree}} free</strong><small>{{resources.facingCostLabel}}</small></div>
+        <div class="afch-stat facing {{#if resources.facingWarning}}is-warning{{/if}}" title="Committed {{resources.committedHeading}}° · Preview {{resources.previewHeading}}° · If turn ended now: {{resources.facingProjectedDegrees}}° total"><label>Facing</label><strong>{{resources.facingUsedDegrees}}° / {{resources.facingFreeDegrees}}°</strong><small>{{resources.facingCostLabel}}</small></div>
         {{#if engagement.moored}}<div class="afch-stat engagement {{#if engagement.boarding}}is-boarding{{/if}}"><label>{{engagement.label}}</label><strong>{{engagement.partnerName}}</strong></div>{{/if}}
       </section>
 
