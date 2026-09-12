@@ -142,9 +142,11 @@ test("current-schema reconciliation refreshes build facts while preserving trans
     },
     mobility: {
       ...base.mobility,
-      heading: 60,
+      heading: 90,
+      committedHeading: 60,
+      facing: { usedDegrees: 90, commits: 2, lastReason: "fire" },
       movement: { purchases: 1, allowance: base.mobility.speed, used: 1 },
-      maneuver: { purchases: 1, allowance: base.mobility.maneuverability, used: 1 }
+      maneuver: { purchases: 1, allowance: base.mobility.maneuverability, used: 0 }
     },
     strain: { value: 2, max: base.strain.max },
     log: [{ round: 2, kind: "test-history" }]
@@ -171,7 +173,9 @@ test("current-schema reconciliation refreshes build facts while preserving trans
   assert.deepEqual(synced.economy.rp, { value: 1, max: 2 });
   assert.equal(synced.mobility.speed, 7);
   assert.equal(synced.mobility.maneuverability, 5);
-  assert.equal(synced.mobility.heading, 60);
+  assert.equal(synced.mobility.heading, 90);
+  assert.equal(synced.mobility.committedHeading, 60);
+  assert.deepEqual(synced.mobility.facing, current.mobility.facing);
   assert.deepEqual(synced.mobility.movement, current.mobility.movement);
   assert.deepEqual(synced.mobility.maneuver, current.mobility.maneuver);
   assert.deepEqual(synced.strain, { value: 2, max: 9 });
@@ -267,4 +271,33 @@ test("legacy readyRound combat states migrate to active Reload remaining", () =>
 
   assert.equal(synced.weapons[key].reloadRemaining, synced.weapons[key].reloadRounds);
   assert.equal("readyRound" in synced.weapons[key], false);
+});
+
+
+test("legacy mouse-update facing counts are discarded during committed-facing migration", () => {
+  const ship = rumRunner();
+  const derived = deriveShip(ship, SHIP_CATALOGS);
+  const base = createCombatantState(ship, { derived, catalogs: SHIP_CATALOGS, rotation: 120 });
+  const legacy = {
+    ...base,
+    version: 5,
+    mobility: {
+      ...base.mobility,
+      heading: 150,
+      committedHeading: undefined,
+      facing: undefined,
+      maneuver: { purchases: 0, allowance: 2, used: 38 }
+    }
+  };
+
+  const synced = reconcileCombatantState(ship, legacy, {
+    derived,
+    catalogs: SHIP_CATALOGS,
+    rotation: 150
+  });
+
+  assert.equal(synced.mobility.heading, 150);
+  assert.equal(synced.mobility.committedHeading, 150);
+  assert.deepEqual(synced.mobility.facing, { usedDegrees: 0, commits: 0, lastReason: null });
+  assert.equal(synced.mobility.maneuver.used, 0);
 });
