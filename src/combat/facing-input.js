@@ -1,12 +1,13 @@
+import { normalizeShipHeading, SHIP_HEADING_INCREMENT } from "./combat-schema.js";
+
 export function normalizeHeading(value) {
   const degrees = Number(value);
   if (!Number.isFinite(degrees)) return 0;
   return ((degrees % 360) + 360) % 360;
 }
 
-export function snapHexHeading(value) {
-  const normalized = normalizeHeading(value);
-  return (Math.round(normalized / 60) * 60) % 360;
+export function snapShipHeading(value) {
+  return normalizeShipHeading(value);
 }
 
 export function signedHeadingDelta(from, to) {
@@ -18,24 +19,23 @@ export function signedHeadingDelta(from, to) {
 }
 
 /**
- * Resolve a Foundry rotation request to one of Arkflight's six legal headings.
- *
- * Foundry's slow Ctrl+wheel rotation can request only a few degrees. A normal
- * nearest-60° snap turns those requests back into the current heading, making
- * the wheel appear broken. Treat any small non-zero request (<=30°) as intent
- * to advance exactly one Arkflight facing step in that direction.
- *
- * Larger requests still use nearest-heading snapping, so direct rotation
- * changes and Foundry's fast rotation behave naturally.
+ * Convert Foundry token rotation intent into Arkflight's 30° visual headings.
+ * Ctrl/Shift wheel commonly requests only 5° or 15°. Any small non-zero request
+ * is treated as one deliberate 30° preview step; direct larger rotations snap to
+ * the nearest 30° heading.
  */
-export function resolveHexFacingRequest(current, requested) {
-  const currentHeading = snapHexHeading(current);
+export function resolveShipFacingRequest(current, requested) {
+  const currentHeading = snapShipHeading(current);
   const requestedHeading = normalizeHeading(requested);
-  if (requestedHeading % 60 === 0) return requestedHeading;
+  if (requestedHeading % SHIP_HEADING_INCREMENT === 0) return requestedHeading;
 
   const delta = signedHeadingDelta(currentHeading, requestedHeading);
-  if (delta !== 0 && Math.abs(delta) <= 30) {
-    return normalizeHeading(currentHeading + Math.sign(delta) * 60);
+  if (delta !== 0 && Math.abs(delta) <= SHIP_HEADING_INCREMENT / 2) {
+    return normalizeHeading(currentHeading + Math.sign(delta) * SHIP_HEADING_INCREMENT);
   }
-  return snapHexHeading(requestedHeading);
+  return snapShipHeading(requestedHeading);
 }
+
+// Compatibility aliases for older callers and stored macro references.
+export const snapHexHeading = snapShipHeading;
+export const resolveHexFacingRequest = resolveShipFacingRequest;
