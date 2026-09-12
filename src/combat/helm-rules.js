@@ -1,4 +1,6 @@
-import { purchaseManeuver } from "./combatant-state.js";
+import { commitFacing, purchaseManeuver } from "./combatant-state.js";
+
+const DEGREES_PER_FACING_STEP = 60;
 
 function nonnegativeInt(value) {
   return Math.max(0, Math.trunc(Number(value) || 0));
@@ -34,63 +36,76 @@ export function applyFreeHelmAllowance(state) {
   });
 }
 
+export function facingAllowanceDegrees(state) {
+  const normalized = applyFreeHelmAllowance(state);
+  return nonnegativeInt(normalized?.mobility?.maneuver?.allowance) * DEGREES_PER_FACING_STEP;
+}
+
 export function helmRemaining(state) {
-  const movement = state?.mobility?.movement ?? {};
-  const maneuver = state?.mobility?.maneuver ?? {};
+  const normalized = applyFreeHelmAllowance(state);
+  const movement = normalized?.mobility?.movement ?? {};
+  const facing = normalized?.mobility?.facing ?? {};
+  const allowanceDegrees = facingAllowanceDegrees(normalized);
+  const usedDegrees = nonnegativeInt(facing.usedDegrees);
   return Object.freeze({
-    speed: Math.max(1, nonnegativeInt(state?.mobility?.speed)),
-    maneuverability: nonnegativeInt(state?.mobility?.maneuverability),
+    speed: Math.max(1, nonnegativeInt(normalized?.mobility?.speed)),
+    maneuverability: nonnegativeInt(normalized?.mobility?.maneuverability),
     movementRemaining: Math.max(0, nonnegativeInt(movement.allowance) - nonnegativeInt(movement.used)),
-    maneuverRemaining: Math.max(0, nonnegativeInt(maneuver.allowance) - nonnegativeInt(maneuver.used)),
+    facingRemainingDegrees: Math.max(0, allowanceDegrees - usedDegrees),
     movementUsed: nonnegativeInt(movement.used),
-    maneuverUsed: nonnegativeInt(maneuver.used),
+    facingUsedDegrees: usedDegrees,
     movementPurchases: nonnegativeInt(movement.purchases),
-    maneuverPurchases: nonnegativeInt(maneuver.purchases)
+    maneuverPurchases: nonnegativeInt(normalized?.mobility?.maneuver?.purchases)
   });
 }
 
 export function canChangeFacingNow(state, _round = 1) {
-  const normalized = applyFreeHelmAllowance(state);
-  const remaining = helmRemaining(normalized);
-  if (remaining.maneuverability > 0) return true;
-  return nonnegativeInt(normalized?.mobility?.maneuver?.allowance) > nonnegativeInt(normalized?.mobility?.maneuver?.used);
+  return Boolean(state?.mobility);
 }
 
-export function facingReconciliation(state) {
-  const normalized = applyFreeHelmAllowance(state);
+export function facingReconciliation(state, { includePreview = false } = {}) {
+  let normalized = applyFreeHelmAllowance(state);
+  if (includePreview) normalized = commitFacing(normalized, normalized?.mobility?.heading ?? 0, "end-turn");
+
   const maneuver = normalized?.mobility?.maneuver ?? {};
+  const facing = normalized?.mobility?.facing ?? {};
   const maneuverability = nonnegativeInt(normalized?.mobility?.maneuverability);
-  const used = nonnegativeInt(maneuver.used);
-  const allowance = nonnegativeInt(maneuver.allowance);
+  const usedDegrees = nonnegativeInt(facing.usedDegrees);
+  const freeDegrees = maneuverability * DEGREES_PER_FACING_STEP;
+  const allowanceSteps = nonnegativeInt(maneuver.allowance);
+  const allowanceDegrees = allowanceSteps * DEGREES_PER_FACING_STEP;
   const purchases = nonnegativeInt(maneuver.purchases);
-  const free = maneuverability;
-  const purchasedAllowance = maneuverability * purchases;
-  const bonusAllowance = Math.max(0, allowance - free - purchasedAllowance);
-  const uncovered = Math.max(0, used - allowance);
-  const impossible = uncovered > 0 && maneuverability <= 0;
-  const apRequired = impossible ? null : (uncovered > 0 ? Math.ceil(uncovered / maneuverability) : 0);
+  const purchasedDegrees = maneuverability * purchases * DEGREES_PER_FACING_STEP;
+  const bonusDegrees = Math.max(0, allowanceDegrees - freeDegrees - purchasedDegrees);
+  const uncoveredDegrees = Math.max(0, usedDegrees - allowanceDegrees);
+  const blockDegrees = maneuverability * DEGREES_PER_FACING_STEP;
+  const impossible = uncoveredDegrees > 0 && blockDegrees <= 0;
+  const apRequired = impossible ? null : (uncoveredDegrees > 0 ? Math.ceil(uncoveredDegrees / blockDegrees) : 0);
   const apRemaining = nonnegativeInt(normalized?.economy?.ap?.value);
 
   return Object.freeze({
     state: normalized,
-    used,
-    free,
-    allowance,
+    usedDegrees,
+    freeDegrees,
+    allowanceDegrees,
     purchases,
-    purchasedAllowance,
-    bonusAllowance,
-    uncovered,
+    purchasedDegrees,
+    bonusDegrees,
+    uncoveredDegrees,
+    blockDegrees,
     apRequired,
     apRemaining,
     impossible,
-    affordable: !impossible && Number(apRequired ?? 0) <= apRemaining
+    affordable: !impossible && Number(apRequired ?? 0) <= apRemaining,
+    committedHeading: Number(normalized?.mobility?.committedHeading ?? normalized?.mobility?.heading ?? 0),
+    previewHeading: Number(normalized?.mobility?.heading ?? 0)
   });
 }
 
-export function settleFacingCost(state) {
-  const before = facingReconciliation(state);
+export function settleFacingCost(state, { includePreview = true } = {}) {
+  const before = facingReconciliation(state, { includePreview });
   if (before.impossible) {
-    throw new Error("This ship has Maneuverability 0 and cannot pay for additional normal facing changes.");
+    throw new Error("This ship has Maneuverability 0 and cannot pay for additional committed facing.");
   }
   if (!before.affordable) {
     throw new Error(`Facing requires ${before.apRequired} AP, but only ${before.apRemaining} AP remain.`);
@@ -106,3 +121,5 @@ export function settleFacingCost(state) {
     after
   });
 }
+
+export { DEGREES_PER_FACING_STEP };
