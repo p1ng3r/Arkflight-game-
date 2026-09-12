@@ -2,15 +2,15 @@ import {
   COMBAT_ACTIONS,
   beginCombatantTurn,
   createCombatantState,
+  commitFacing,
   fireWeapon,
   facingReconciliation,
   settleFacingCost,
-  headingStepDistance,
-  normalizeHexHeading,
+  normalizeShipHeading,
+  previewFacing,
   persistentStrainPatch,
   purchaseManeuver,
   purchaseMovement,
-  recordFacingChange,
   recordMovement,
   applyHardnessToDamage,
   shipWeaponAttackBonus,
@@ -85,24 +85,24 @@ function canUserEndTurn(combatant, user = game.user, combat = game.combat) {
 
 function facingEndTurnStatus(combatant) {
   const state = combatantState(combatant);
-  return state ? facingReconciliation(state) : null;
+  return state ? facingReconciliation(state, { includePreview: true }) : null;
 }
 
 async function confirmFacingSettlement(combatant) {
   const status = facingEndTurnStatus(combatant);
   if (!status || status.apRequired === 0) return true;
   if (status.impossible) {
-    throw new Error(`${combatant.name} has Maneuverability 0 and cannot cover ${status.uncovered} additional facing step${status.uncovered === 1 ? "" : "s"}. Undo facing or use an effect that grants maneuver allowance.`);
+    throw new Error(`${combatant.name} has Maneuverability 0 and cannot cover ${status.uncoveredDegrees}° of additional committed facing. Undo facing or use an effect that grants maneuver allowance.`);
   }
   if (!status.affordable) {
-    throw new Error(`${combatant.name} used ${status.used} facing steps; ${status.apRequired} AP are required at End Turn, but only ${status.apRemaining} AP remain.`);
+    throw new Error(`${combatant.name} used ${status.usedDegrees}° of committed facing; ${status.apRequired} AP are required at End Turn, but only ${status.apRemaining} AP remain.`);
   }
 
   const DialogV2 = foundry?.applications?.api?.DialogV2;
   const esc = foundry.utils.escapeHTML;
   const content = `<div class="arkflight-facing-reconcile">
-    <p><strong>${esc(combatant.name)}</strong> used <strong>${status.used}</strong> facing step${status.used === 1 ? "" : "s"} this turn.</p>
-    <p>Free: <strong>${status.free}</strong> · Current allowance: <strong>${status.allowance}</strong> · Uncovered: <strong>${status.uncovered}</strong></p>
+    <p><strong>${esc(combatant.name)}</strong> committed <strong>${status.usedDegrees}°</strong> of turning this turn.</p>
+    <p>Free: <strong>${status.freeDegrees}°</strong> · Current allowance: <strong>${status.allowanceDegrees}°</strong> · Uncovered: <strong>${status.uncoveredDegrees}°</strong></p>
     <p>Spend <strong>${status.apRequired} AP</strong> to cover the additional facing and end the turn?</p>
   </div>`;
 
@@ -143,7 +143,7 @@ async function applyFacingSettlement(combatant) {
   const result = settleFacingCost(current);
   if (result.state !== current) await updateCombatantState(combatant, result.state);
   if (result.apSpent > 0) {
-    ui.notifications?.info(`${combatant.name}: ${result.before.used} facing steps used; ${result.apSpent} AP spent for additional facing.`);
+    ui.notifications?.info(`${combatant.name}: ${result.before.usedDegrees}° committed turning; ${result.apSpent} AP spent for additional facing.`);
   }
   Hooks.callAll("arkflightFacingReconciled", { combatant, ...result });
   return result;
@@ -307,7 +307,8 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
   if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
   // Preflight AP and reload before any roll or target mutation. The resulting
   // state is persisted only once the attack and any damage roll resolve.
-  const next = fireWeapon(combatantState(attacker), weaponKey, game.combat?.round ?? 1);
+  const committed = commitFacing(combatantState(attacker), combatantState(attacker)?.mobility?.heading, "fire");
+  const next = fireWeapon(committed, weaponKey, game.combat?.round ?? 1);
 
   const battlewatch = battlewatchActor(attacker.actor);
   const perception = perceptionModifier(battlewatch);
@@ -448,12 +449,14 @@ function tokenTurnSnapshot(combatant, combat = game.combat) {
     turn: Number(combat?.turn ?? 0),
     x: Number(token.x ?? 0),
     y: Number(token.y ?? 0),
-    rotation: normalizeHexHeading(token.rotation ?? state.mobility?.heading ?? 0),
-    heading: normalizeHexHeading(state.mobility?.heading ?? token.rotation ?? 0),
+    rotation: normalizeShipHeading(token.rotation ?? state.mobility?.heading ?? 0),
+    heading: normalizeShipHeading(state.mobility?.heading ?? token.rotation ?? 0),
     movementUsed: Math.max(0, Math.trunc(Number(state.mobility?.movement?.used) || 0)),
     movementPurchases: Math.max(0, Math.trunc(Number(state.mobility?.movement?.purchases) || 0)),
     movementAllowance: Math.max(0, Math.trunc(Number(state.mobility?.movement?.allowance) || 0)),
-    maneuverUsed: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.used) || 0)),
+    committedHeading: normalizeShipHeading(state.mobility?.committedHeading ?? state.mobility?.heading ?? token.rotation ?? 0),
+    facingUsedDegrees: Math.max(0, Math.trunc(Number(state.mobility?.facing?.usedDegrees) || 0)),
+    facingCommits: Math.max(0, Math.trunc(Number(state.mobility?.facing?.commits) || 0)),
     maneuverPurchases: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.purchases) || 0)),
     maneuverAllowance: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.allowance) || 0))
   });
@@ -476,9 +479,10 @@ function movementUndoStatus(combatant) {
   const state = combatantState(combatant);
   if (!snapshot || !token || !state) return Object.freeze({ canUndoMove: false, canUndoFacing: false, canResetPosition: false });
   const moved = Number(token.x ?? 0) !== snapshot.x || Number(token.y ?? 0) !== snapshot.y || Number(state.mobility?.movement?.used ?? 0) !== snapshot.movementUsed;
-  const turned = normalizeHexHeading(token.rotation ?? state.mobility?.heading ?? 0) !== snapshot.rotation
-    || normalizeHexHeading(state.mobility?.heading ?? 0) !== snapshot.heading
-    || Number(state.mobility?.maneuver?.used ?? 0) !== snapshot.maneuverUsed;
+  const turned = normalizeShipHeading(token.rotation ?? state.mobility?.heading ?? 0) !== snapshot.rotation
+    || normalizeShipHeading(state.mobility?.heading ?? 0) !== snapshot.heading
+    || normalizeShipHeading(state.mobility?.committedHeading ?? state.mobility?.heading ?? 0) !== snapshot.committedHeading
+    || Number(state.mobility?.facing?.usedDegrees ?? 0) !== snapshot.facingUsedDegrees;
   return Object.freeze({ canUndoMove: moved, canUndoFacing: turned, canResetPosition: moved || turned });
 }
 
@@ -528,6 +532,10 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
     mobility: Object.freeze({
       ...mobility,
       heading: facing ? snapshot.heading : mobility.heading,
+      committedHeading: facing ? snapshot.committedHeading : mobility.committedHeading,
+      facing: facing
+        ? Object.freeze({ usedDegrees: snapshot.facingUsedDegrees, commits: snapshot.facingCommits, lastReason: null })
+        : Object.freeze({ ...(mobility.facing ?? { usedDegrees: 0, commits: 0, lastReason: null }) }),
       movement: Object.freeze({
         ...movement,
         purchases: move ? snapshot.movementPurchases : Math.max(0, Math.trunc(Number(movement.purchases) || 0)),
@@ -542,7 +550,7 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
         allowance: facing
           ? Math.max(snapshot.maneuverAllowance, Math.max(0, Math.trunc(Number(maneuver.allowance) || 0)) - facingRefund * Math.max(1, Math.trunc(Number(mobility.maneuverability) || 1)))
           : Math.max(0, Math.trunc(Number(maneuver.allowance) || 0)),
-        used: facing ? snapshot.maneuverUsed : Math.max(0, Math.trunc(Number(maneuver.used) || 0))
+        used: 0
       })
     })
   });
@@ -680,18 +688,19 @@ Hooks.once("ready", () => {
       const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, spendPoints(combatantState(combatant), "rp", amount));
     },
-    async turn(steps = 1, reference = null) {
+    async turn(increments = 1, reference = null) {
       const combatant = await requireOwnedCombatant(reference);
       const state = combatantState(combatant);
-      const signedSteps = Math.trunc(Number(steps) || 0);
-      const targetHeading = normalizeHexHeading(state.mobility.heading + signedSteps * 60);
-      const next = recordFacingChange(state, Math.abs(signedSteps), targetHeading);
+      const signedIncrements = Math.trunc(Number(increments) || 0);
+      const targetHeading = normalizeShipHeading(state.mobility.heading + signedIncrements * 30);
+      const next = previewFacing(state, targetHeading);
       if (combatant.token) await combatant.token.update({ rotation: targetHeading }, { arkflightCombatFacing: true });
       return updateCombatantState(combatant, next);
     },
     async fireWeapon(weaponKey, reference = null) {
       const combatant = await requireOwnedCombatant(reference);
-      const next = fireWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
+      const state = combatantState(combatant);
+      const next = fireWeapon(commitFacing(state, state?.mobility?.heading, "fire"), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
     },
     targets(reference = null) {
@@ -805,7 +814,10 @@ Hooks.on("moveToken", async (token, movement) => {
   const total = Math.max(0, Math.trunc(Number(movement.history?.spaces) || 0));
   const delta = Math.max(0, total - state.mobility.movement.used);
   if (!delta) return;
-  try { await updateCombatantState(combatant, recordMovement(state, delta)); }
+  try {
+    const committed = commitFacing(state, state.mobility?.heading, "move");
+    await updateCombatantState(combatant, recordMovement(committed, delta));
+  }
   catch (error) { console.warn("Arkflight | Could not record ship movement", error); }
 });
 
@@ -821,13 +833,12 @@ Hooks.on("preUpdateToken", (token, changes, options) => {
   const state = combatantState(combatant);
   if (!state) return;
   const requested = Number(changes.rotation);
-  const snapped = normalizeHexHeading(requested);
+  const snapped = normalizeShipHeading(requested);
   if (((requested % 360) + 360) % 360 !== snapped) {
-    ui.notifications?.warn("Arkflight ship facing must use 60° hex headings during combat.");
+    ui.notifications?.warn("Arkflight ship heading must use 30° increments during combat.");
     return false;
   }
-  // Facing is intentionally freeform during the turn. Every 60° step is
-  // recorded by updateToken and any excess is reconciled against AP at End Turn.
+  // Rotation is preview-only. Gameplay events commit the current heading.
   return;
 });
 
@@ -838,11 +849,10 @@ Hooks.on("updateToken", async (token, changes, options) => {
   if (!combatant || combat.combatant?.id !== combatant.id) return;
   const state = combatantState(combatant);
   if (!state) return;
-  const heading = normalizeHexHeading(changes.rotation);
-  const steps = headingStepDistance(state.mobility.heading, heading);
-  if (!steps) return;
-  try { await updateCombatantState(combatant, recordFacingChange(state, steps, heading)); }
-  catch (error) { console.warn("Arkflight | Could not record ship facing", error); }
+  const heading = normalizeShipHeading(changes.rotation);
+  if (heading === Number(state.mobility?.heading ?? 0)) return;
+  try { await updateCombatantState(combatant, previewFacing(state, heading)); }
+  catch (error) { console.warn("Arkflight | Could not preview ship facing", error); }
 });
 
 
