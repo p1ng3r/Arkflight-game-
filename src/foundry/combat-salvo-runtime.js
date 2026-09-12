@@ -2,6 +2,7 @@ import {
   activeStationEffects,
   applyHardnessToDamage,
   consumeStationEffects,
+  commitFacing,
   coordinatedSalvoPlan,
   degreeOfSuccess,
   fireCoordinatedSalvo,
@@ -190,8 +191,9 @@ async function fireSalvoAtTarget(base, weaponKeys, targetReference, attackerRefe
   const targetAttackState = base.state(target);
   const attackerLevel = shipLevel(attacker.actor);
   const targetLevel = shipLevel(target.actor);
-  let attackerAfter = fireCoordinatedSalvo(attackerBefore, plan.keys, round);
-  const offense = attackEffectPlan(attackerBefore, target, signature.mount, attackerLevel);
+  const attackerCommitted = commitFacing(attackerBefore, attackerBefore?.mobility?.heading, "salvo");
+  let attackerAfter = fireCoordinatedSalvo(attackerCommitted, plan.keys, round);
+  const offense = attackEffectPlan(attackerCommitted, target, signature.mount, attackerLevel);
   const attackDefense = attackDefensePlan(targetAttackState, targetLevel);
   const battlewatch = battlewatchActor(attacker.actor);
   const perception = perceptionModifier(battlewatch);
