@@ -83,8 +83,6 @@ export function createCombatantState(ship, { derived = null, catalogs = {}, rota
       maneuverability: mobility.maneuverability,
       movement: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
       maneuver: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
-      committedHeading: normalizeShipHeading(state.mobility?.heading ?? state.mobility?.committedHeading ?? 0),
-      facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null }),
       heading: normalizeShipHeading(rotation),
       committedHeading: normalizeShipHeading(rotation),
       facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null })
@@ -266,7 +264,9 @@ export function beginCombatantTurn(state, round) {
     mobility: Object.freeze({
       ...state.mobility,
       movement: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
-      maneuver: Object.freeze({ purchases: 0, allowance: 0, used: 0 })
+      maneuver: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
+      committedHeading: normalizeShipHeading(state.mobility?.heading ?? state.mobility?.committedHeading ?? 0),
+      facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null })
     })
   });
 }
