@@ -536,18 +536,21 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         strainMax,
         strainPips: buildResourcePips(strain, strainMax, 10),
         heading: Number(state?.mobility?.heading ?? 0),
-        facingUsed: Number(facingStatus?.used ?? 0),
-        facingFree: Number(facingStatus?.free ?? 0),
-        facingAllowance: Number(facingStatus?.allowance ?? 0),
+        facingUsedDegrees: Number(facingStatus?.committedUsedDegrees ?? 0),
+        facingProjectedDegrees: Number(facingStatus?.projectedUsedDegrees ?? 0),
+        facingFreeDegrees: Number(facingStatus?.freeDegrees ?? 0),
+        facingAllowanceDegrees: Number(facingStatus?.allowanceDegrees ?? 0),
+        committedHeading: Number(facingStatus?.committedHeading ?? state?.mobility?.heading ?? 0),
+        previewHeading: Number(facingStatus?.previewHeading ?? state?.mobility?.heading ?? 0),
         facingCostLabel: facingStatus?.impossible
-          ? "Cannot cover"
+          ? "Cannot commit preview"
           : Number(facingStatus?.apRequired ?? 0) > 0
-            ? `+${facingStatus.apRequired} AP at End`
-            : Number(facingStatus?.purchases ?? 0) > 0
-              ? `${facingStatus.purchases} AP spent`
-              : Number(facingStatus?.used ?? 0) > Number(facingStatus?.free ?? 0)
-                ? "Bonus covered"
-                : `${Math.max(0, Number(facingStatus?.free ?? 0) - Number(facingStatus?.used ?? 0))} free left`,
+            ? `+${facingStatus.apRequired} AP if End`
+            : Number(facingStatus?.previewDeltaDegrees ?? 0) > 0
+              ? `Preview +${facingStatus.previewDeltaDegrees}°`
+              : Number(facingStatus?.purchases ?? 0) > 0
+                ? `${facingStatus.purchases} AP facing bought`
+                : `${Math.max(0, Number(facingStatus?.freeDegrees ?? 0) - Number(facingStatus?.committedUsedDegrees ?? 0))}° free left`,
         facingWarning: Boolean(facingStatus?.impossible || Number(facingStatus?.apRequired ?? 0) > 0)
       },
       activeTurn: Boolean(combatant && game.combat?.combatant?.id === combatant.id),
