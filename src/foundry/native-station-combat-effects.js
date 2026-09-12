@@ -2,6 +2,7 @@ import {
   activeStationEffects,
   applyHardnessToDamage,
   consumeStationEffects,
+  commitFacing,
   degreeOfSuccess,
   fireWeapon,
   reduceWeaponReload,
@@ -267,8 +268,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
 
   const round = game.combat?.round ?? 1;
-  let attackerAfter = fireWeapon(attackerBefore, weaponKey, round);
-  const offense = attackEffectPlan(attackerBefore, target, solution, attackerLevel);
+  const attackerCommitted = commitFacing(attackerBefore, attackerBefore?.mobility?.heading, "fire");
+  let attackerAfter = fireWeapon(attackerCommitted, weaponKey, round);
+  const offense = attackEffectPlan(attackerCommitted, target, solution, attackerLevel);
   const attackDefense = attackDefensePlan(targetAttackState, targetLevel);
   if (attackDefense.consumed.length && !canMutateTargetLocally && !primaryGM) {
     throw new Error("An active GM is required to consume this target's attack-defense effect.");
