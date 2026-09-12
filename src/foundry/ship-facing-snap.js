@@ -1,7 +1,7 @@
 import {
   normalizeHeading,
-  resolveHexFacingRequest,
-  snapHexHeading
+  resolveShipFacingRequest,
+  snapShipHeading
 } from "../combat/facing-input.js";
 
 const MODULE_ID = "arkflight-game";
@@ -24,7 +24,7 @@ function activeShipCombatant(token) {
 
 // Register this before combat-api.js. Foundry rotates controlled tokens using
 // Ctrl/Shift + mouse wheel in small or large degree increments. Arkflight uses
-// exactly six legal 60° headings, so convert the intent into a legal heading
+// exactly twelve legal 30° headings, so convert the intent into a legal heading
 // before combat-api records cumulative facing usage.
 Hooks.on("preUpdateToken", (token, changes, options) => {
   if (changes?.rotation == null || options?.arkflightCombatFacing || options?.arkflightHexSnap) return;
@@ -34,7 +34,7 @@ Hooks.on("preUpdateToken", (token, changes, options) => {
   if (!Number.isFinite(requested)) return;
 
   const current = Number(token.rotation ?? token.object?.rotation ?? 0);
-  const resolved = resolveHexFacingRequest(current, requested);
+  const resolved = resolveShipFacingRequest(current, requested);
   if (normalizeHeading(requested) === resolved) return;
 
   changes.rotation = resolved;
@@ -45,7 +45,7 @@ Hooks.once("ready", () => {
   game.arkflight ??= {};
   game.arkflight.hexFacing = Object.freeze({
     normalize: normalizeHeading,
-    snap: snapHexHeading,
-    resolveRequest: resolveHexFacingRequest
+    snap: snapShipHeading,
+    resolveRequest: resolveShipFacingRequest
   });
 });
