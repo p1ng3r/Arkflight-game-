@@ -4,8 +4,8 @@ import { readFileSync } from "node:fs";
 
 import {
   normalizeHeading,
-  resolveHexFacingRequest,
-  snapHexHeading
+  resolveShipFacingRequest,
+  snapShipHeading
 } from "../src/combat/facing-input.js";
 
 const source = readFileSync(new URL("../src/foundry/ship-facing-snap.js", import.meta.url), "utf8");
@@ -19,30 +19,31 @@ test("ship facing snap loads before the combat validator", () => {
   assert.ok(snapIndex < combatIndex);
 });
 
-test("arbitrary headings still snap to legal 60-degree Arkflight facings", () => {
-  assert.equal(normalizeHeading(-60), 300);
-  assert.equal(snapHexHeading(46), 60);
-  assert.equal(snapHexHeading(179), 180);
+test("arbitrary headings snap to legal 30-degree preview headings", () => {
+  assert.equal(normalizeHeading(-30), 330);
+  assert.equal(snapShipHeading(46), 60);
+  assert.equal(snapShipHeading(179), 180);
+  assert.equal(snapShipHeading(14), 0);
+  assert.equal(snapShipHeading(16), 30);
   assert.match(source, /changes\.rotation = resolved/);
-  assert.match(source, /preUpdateToken/);
-  assert.match(source, /arkflightHexSnap/);
+  assert.match(source, /resolveShipFacingRequest/);
 });
 
-test("slow Ctrl-wheel requests advance one full Arkflight facing step", () => {
-  assert.equal(resolveHexFacingRequest(0, 5), 60);
-  assert.equal(resolveHexFacingRequest(60, 65), 120);
-  assert.equal(resolveHexFacingRequest(60, 55), 0);
-  assert.equal(resolveHexFacingRequest(0, 355), 300);
+test("slow Ctrl-wheel requests advance one 30-degree preview step", () => {
+  assert.equal(resolveShipFacingRequest(0, 5), 30);
+  assert.equal(resolveShipFacingRequest(60, 65), 90);
+  assert.equal(resolveShipFacingRequest(60, 55), 30);
+  assert.equal(resolveShipFacingRequest(0, 355), 330);
 });
 
-test("small Shift-wheel requests cannot snap back to the current heading", () => {
-  assert.equal(resolveHexFacingRequest(0, 15), 60);
-  assert.equal(resolveHexFacingRequest(120, 105), 60);
-  assert.equal(resolveHexFacingRequest(300, 315), 0);
+test("15-degree Shift-wheel requests advance one 30-degree preview step", () => {
+  assert.equal(resolveShipFacingRequest(0, 15), 30);
+  assert.equal(resolveShipFacingRequest(120, 105), 90);
+  assert.equal(resolveShipFacingRequest(300, 315), 330);
 });
 
-test("larger direct rotation requests still snap to the nearest legal heading", () => {
-  assert.equal(resolveHexFacingRequest(0, 45), 60);
-  assert.equal(resolveHexFacingRequest(60, 150), 180);
-  assert.equal(resolveHexFacingRequest(300, 210), 240);
+test("larger direct rotation requests snap to the nearest 30-degree heading", () => {
+  assert.equal(resolveShipFacingRequest(0, 45), 60);
+  assert.equal(resolveShipFacingRequest(60, 150), 150);
+  assert.equal(resolveShipFacingRequest(300, 210), 210);
 });
