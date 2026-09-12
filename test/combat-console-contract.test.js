@@ -118,7 +118,7 @@ test("Command HUD can undo turn movement and facing and refund only Helm-purchas
   assert.match(combatApi, /undoFacing/);
   assert.match(combatApi, /resetTurnPosition/);
   assert.match(combatApi, /movementUsed/);
-  assert.match(combatApi, /maneuverUsed/);
+  assert.match(combatApi, /facingUsedDegrees/);
   assert.match(combatApi, /movementPurchases/);
   assert.match(combatApi, /maneuverPurchases/);
   assert.match(combatApi, /const apRefund = moveRefund \+ facingRefund/);
@@ -131,9 +131,11 @@ test("Command HUD can undo turn movement and facing and refund only Helm-purchas
 
 test("Command HUD End Turn routes through facing reconciliation before advancing initiative", () => {
   assert.match(template, /data-end-turn/);
-  assert.match(template, /resources\.facingUsed/);
-  assert.match(template, /resources\.facingFree/);
+  assert.match(template, /resources\.facingUsedDegrees/);
+  assert.match(template, /resources\.facingFreeDegrees/);
   assert.match(template, /resources\.facingCostLabel/);
+  assert.match(template, /resources\.committedHeading/);
+  assert.match(template, /resources\.previewHeading/);
   assert.match(source, /api\?\.facingStatus\?\.\(combatant\)/);
   assert.match(commandHud, /await api\.endTurn\(combatant\)/);
   assert.doesNotMatch(commandHud, /advanceCombatTurn/);
