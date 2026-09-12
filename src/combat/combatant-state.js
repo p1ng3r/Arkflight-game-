@@ -1,8 +1,8 @@
-import { COMBAT_POINT_TYPES, effectiveMobility, hullCombatProfile, normalizeHexHeading } from "./combat-schema.js";
+import { COMBAT_POINT_TYPES, effectiveMobility, headingDegreeDistance, hullCombatProfile, normalizeShipHeading } from "./combat-schema.js";
 import { normalizeWeaponUpgrades } from "./weapon-combat.js";
 import { weaponConditionModifiers } from "../ship/ship-conditions.js";
 
-export const COMBATANT_STATE_VERSION = 5;
+export const COMBATANT_STATE_VERSION = 6;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -83,7 +83,11 @@ export function createCombatantState(ship, { derived = null, catalogs = {}, rota
       maneuverability: mobility.maneuverability,
       movement: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
       maneuver: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
-      heading: normalizeHexHeading(rotation)
+      committedHeading: normalizeShipHeading(state.mobility?.heading ?? state.mobility?.committedHeading ?? 0),
+      facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null }),
+      heading: normalizeShipHeading(rotation),
+      committedHeading: normalizeShipHeading(rotation),
+      facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null })
     }),
     weapons: installedWeaponStates(ship, catalogs),
     strain: Object.freeze({ value: strainValue, max: strainMax }),
@@ -155,18 +159,45 @@ export function recordMovement(state, spaces) {
   });
 }
 
-export function recordFacingChange(state, steps, heading) {
-  const add = Math.max(0, Math.trunc(Number(steps) || 0));
-  const current = state.mobility.maneuver;
-  const used = current.used + add;
+export function previewFacing(state, heading) {
+  const nextHeading = normalizeShipHeading(heading);
+  if (nextHeading === Number(state?.mobility?.heading ?? 0)) return state;
   return Object.freeze({
     ...state,
     mobility: Object.freeze({
       ...state.mobility,
-      maneuver: Object.freeze({ ...current, used }),
-      heading: normalizeHexHeading(heading)
+      heading: nextHeading
     })
   });
+}
+
+export function commitFacing(state, heading = state?.mobility?.heading ?? 0, reason = "commit") {
+  const targetHeading = normalizeShipHeading(heading);
+  const previousHeading = normalizeShipHeading(state?.mobility?.committedHeading ?? state?.mobility?.heading ?? targetHeading);
+  const deltaDegrees = headingDegreeDistance(previousHeading, targetHeading);
+  const current = state?.mobility?.facing ?? {};
+  const usedDegrees = Math.max(0, Math.trunc(Number(current.usedDegrees) || 0)) + deltaDegrees;
+  if (deltaDegrees === 0 && targetHeading === Number(state?.mobility?.heading ?? targetHeading)) return state;
+  return Object.freeze({
+    ...state,
+    mobility: Object.freeze({
+      ...state.mobility,
+      heading: targetHeading,
+      committedHeading: targetHeading,
+      facing: Object.freeze({
+        usedDegrees,
+        commits: Math.max(0, Math.trunc(Number(current.commits) || 0)) + (deltaDegrees > 0 ? 1 : 0),
+        lastReason: deltaDegrees > 0 ? String(reason ?? "commit") : (current.lastReason ?? null)
+      })
+    })
+  });
+}
+
+// Compatibility helper: callers that explicitly "record" facing are making a
+// committed gameplay turn. The old numeric step argument is ignored because
+// committed facing is now measured from headings, not mouse/update counts.
+export function recordFacingChange(state, _steps, heading) {
+  return commitFacing(state, heading, "record-facing");
 }
 
 export function weaponReloadRemaining(weaponState, _round = null) {
