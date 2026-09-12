@@ -104,7 +104,7 @@ function resolvedStationEffect(action, actor, state) {
     "captain-brace-for-impact": `Reaction: reduce incoming Hull damage by ${3 * bonus} after Hardness.`,
 
     "engineer-vent-strain": `Reduce ship Strain by ${1 + bonus}, to a minimum of 0.`,
-    "engineer-overcharge-arkengine": `Gain another full Helm block this turn: +${speed} movement and +${maneuverability} facing step${maneuverability === 1 ? "" : "s"}. Gain 2 Strain. Once per round.`,
+    "engineer-overcharge-arkengine": `Gain another full Helm block this turn: +${speed} movement and +${60 * maneuverability}° facing allowance. Gain 2 Strain. Once per round.`,
     "engineer-emergency-repair": profile.master
       ? `Spend 2 Supplies. Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by 2 steps.`
       : `Spend 2 Supplies. Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by 1 step.`,
@@ -112,8 +112,8 @@ function resolvedStationEffect(action, actor, state) {
     "engineer-emergency-bypass": `Reaction: reduce Strain from an Engineer action by ${bonus}, to a minimum of 0.`,
 
     "navigator-move": `Gain +${speed} movement this turn (one additional Combat Speed block). May interleave movement, legal turns, and weapon fire.`,
-    "navigator-maneuver": `Gain +${maneuverability} facing step${maneuverability === 1 ? "" : "s"} this turn and may pivot in place.`,
-    "navigator-hard-turn": `Gain +${maneuverability + bonus} facing steps this turn (${maneuverability} Maneuverability + ${bonus} Station Bonus), may pivot in place, and gain 1 Rigging Strain.`,
+    "navigator-maneuver": `Gain +${60 * maneuverability}° facing allowance this turn and may pivot in place.`,
+    "navigator-hard-turn": `Gain +${60 * (maneuverability + bonus)}° facing allowance this turn (${maneuverability} Maneuverability + ${bonus} Station Bonus), may pivot in place, and gain 1 Rigging Strain.`,
     "navigator-set-attack-vector": `Choose one facing. Its weapons gain +${15 * bonus}° firing-arc tolerance until the heading changes or this ship's next turn.`,
     "navigator-evasive-maneuver": `Reaction: when targeted, gain +${bonus} AC against that attack, then gain 1 Rigging Strain.`,
 
