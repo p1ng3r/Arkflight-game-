@@ -6,6 +6,7 @@ import {
   COMBAT_ACTION_TIMING,
   activeStationEffects,
   beginStationActionTurn,
+  commitFacing,
   executeStationStateAction,
   getCoreCombatActionDefinitionsForStation,
   stationActionAvailability,
@@ -23,6 +24,7 @@ const COMBAT_SOCKET = `module.${MODULE_ID}`;
 const STATION_ACTION_REQUEST = "station-action-request";
 const STATION_ACTION_RESULT = "station-action-result";
 const ENGAGEMENT_RESOLVERS = new Set(["ramShip", "grappleShip", "breakGrapple", "boardShip"]);
+const FACING_COMMIT_RESOLVERS = new Set(["ramShip", "boardShip", "setAttackVector"]);
 const MOORED_BLOCKED_RESOLVERS = new Set(["buyMovement", "buyManeuver", "hardTurn", "overchargeArkengine", "impossibleBurn", "turnBetweenHeartbeats"]);
 
 function shipPayload(actor) {
@@ -399,7 +401,10 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     return finalState;
   }
 
-  const before = base.state(combatant);
+  let before = base.state(combatant);
+  if (FACING_COMMIT_RESOLVERS.has(resolver)) {
+    before = commitFacing(before, before?.mobility?.heading, resolver);
+  }
   let selection = actionSelection(action, options);
   const level = shipLevel(combatant.actor);
   const profile = stationEffectProfile(level);
@@ -443,11 +448,11 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (resolver === "coordinateAssault") notes.push(`Target Hardness reduced by ${profile.bonus} for ${profile.advanced ? 2 : 1} qualifying attack${profile.advanced ? "s" : ""}.`);
   if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 20% Morale; +${stationActionEconomy(action, level).strain} Strain.`);
   if (resolver === "ventStrain") notes.push(`Vents up to ${1 + profile.bonus} Strain.`);
-  if (resolver === "hardTurn") notes.push(`+${Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus} maneuver allowance; pivot permitted.`);
+  if (resolver === "hardTurn") notes.push(`+${60 * (Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus)}° facing allowance; pivot permitted.`);
   if (resolver === "impossibleBurn") notes.push(`Once per battle: +${Math.max(1, Math.ceil(Number(before?.mobility?.speed ?? 1) * 0.5))} movement allowance; +2 Strain.`);
-  if (resolver === "turnBetweenHeartbeats") notes.push("Once per battle: +2 extraordinary 60° facing steps this turn.");
-  if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${before?.mobility?.maneuverability ?? 0} maneuver allowance; +2 Strain.`);
-  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +1 maneuver allowance; +1 Strain.`);
+  if (resolver === "turnBetweenHeartbeats") notes.push("Once per battle: +120° extraordinary facing allowance this turn.");
+  if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${60 * Number(before?.mobility?.maneuverability ?? 0)}° facing allowance; +2 Strain.`);
+  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +60° facing allowance; +1 Strain.`);
   if (resolver === "redistributePower" && selection === "weapons") notes.push(`Next ${profile.advanced ? 2 : 1} weapon attack${profile.advanced ? "s" : ""} gain +${profile.bonus} damage; +1 Strain.`);
   if (resolver === "redistributePower" && selection === "lifeveil") notes.push(`Next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} gain ${2 * profile.bonus} mitigation; +1 Strain.`);
   if (resolver === "setAttackVector") notes.push(`Selected facing gains ${15 * profile.bonus}° extra firing-arc tolerance while heading is unchanged.`);
