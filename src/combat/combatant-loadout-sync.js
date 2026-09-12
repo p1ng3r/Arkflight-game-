@@ -1,4 +1,5 @@
 import { createCombatantState } from "./combatant-state.js";
+import { normalizeShipHeading } from "./combat-schema.js";
 
 function finiteNumber(value) {
   const number = Number(value);
@@ -86,11 +87,28 @@ function reconcileEconomy(fresh, current) {
 
 function reconcileMobility(fresh, current) {
   if (!validMobility(current)) return fresh;
+  const heading = normalizeShipHeading(current.heading);
+  const hasCommittedFacing = finiteNumber(current?.facing?.usedDegrees) != null;
+  const committedHeading = hasCommittedFacing
+    ? normalizeShipHeading(current.committedHeading ?? heading)
+    : heading;
+  const facing = hasCommittedFacing
+    ? Object.freeze({
+        usedDegrees: Math.max(0, Math.trunc(Number(current.facing.usedDegrees) || 0)),
+        commits: Math.max(0, Math.trunc(Number(current.facing.commits) || 0)),
+        lastReason: current.facing.lastReason == null ? null : String(current.facing.lastReason)
+      })
+    : fresh.facing;
+
   return Object.freeze({
     ...fresh,
-    heading: current.heading,
+    heading,
+    committedHeading,
+    facing,
     movement: Object.freeze({ ...current.movement }),
-    maneuver: Object.freeze({ ...current.maneuver })
+    // v5 and earlier stored every token rotation update in maneuver.used. That
+    // value is intentionally discarded; v6 tracks only committed degrees.
+    maneuver: Object.freeze({ ...current.maneuver, used: 0 })
   });
 }
 
@@ -107,7 +125,7 @@ function reconcileStrain(fresh, current) {
 /**
  * Reconcile transient Foundry combat state against the ship Actor's authoritative
  * derived build. Shipwright/refit owns physical installation and build facts;
- * combat state owns only transient facts such as spent points, heading, reload progress, movement already taken this turn, and combat history.
+ * combat state owns only transient facts such as spent points, preview/committed heading, reload progress, movement already taken this turn, and combat history.
  */
 export function reconcileCombatantState(ship, currentState, {
   derived = null,
