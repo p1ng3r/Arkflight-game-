@@ -88,6 +88,21 @@ function facingEndTurnStatus(combatant) {
   return state ? facingReconciliation(state, { includePreview: true }) : null;
 }
 
+function facingDisplayStatus(combatant) {
+  const state = combatantState(combatant);
+  if (!state) return null;
+  const committed = facingReconciliation(state);
+  const projected = facingReconciliation(state, { includePreview: true });
+  return Object.freeze({
+    ...projected,
+    committedUsedDegrees: committed.usedDegrees,
+    projectedUsedDegrees: projected.usedDegrees,
+    previewDeltaDegrees: Math.max(0, projected.usedDegrees - committed.usedDegrees),
+    committedHeading: committed.committedHeading,
+    previewHeading: committed.previewHeading
+  });
+}
+
 async function confirmFacingSettlement(combatant) {
   const status = facingEndTurnStatus(combatant);
   if (!status || status.apRequired === 0) return true;
@@ -646,7 +661,7 @@ Hooks.once("ready", () => {
     },
     facingStatus(reference = null) {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
-      return facingEndTurnStatus(combatant);
+      return facingDisplayStatus(combatant);
     },
     canOperate(reference = null, user = game.user) {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
