@@ -54,7 +54,8 @@ test("module loads the native ship Weapons UI and stylesheet", () => {
 test("player weapon fire resolves Battlewatch assignments stored as id uuid or name", () => {
   const combatApi = readFileSync(new URL("../src/foundry/combat-api.js", import.meta.url), "utf8");
   assert.match(combatApi, /actor\.uuid === reference \|\| actor\.name === reference/);
-  assert.match(combatApi, /const next = fireWeapon\(combatantState\(attacker\), weaponKey, game\.combat\?\.round \?\? 1\)/);
+  assert.match(combatApi, /const committed = commitFacing\(combatantState\(attacker\)/);
+  assert.match(combatApi, /const next = fireWeapon\(committed, weaponKey, game\.combat\?\.round \?\? 1\)/);
   assert.match(combatApi, /if \(!solution\.arc\.legal\) throw new Error/);
   assert.match(combatApi, /if \(!solution\.range\.legal\) throw new Error/);
 });
