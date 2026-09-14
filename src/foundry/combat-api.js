@@ -379,6 +379,13 @@ async function helmMove(direction, reference = null) {
 
   if (reverse) {
     next = spendPoints(next, "ap", 1);
+    next = Object.freeze({
+      ...next,
+      mobility: Object.freeze({
+        ...next.mobility,
+        specialMovementAP: Math.max(0, Math.trunc(Number(next.mobility?.specialMovementAP) || 0)) + 1
+      })
+    });
     apSpent = 1;
     next = commitFacing(next, next.mobility?.heading, "reverse-thrust");
   } else {
@@ -614,7 +621,8 @@ function tokenTurnSnapshot(combatant, combat = game.combat) {
     facingUsedDegrees: Math.max(0, Math.trunc(Number(state.mobility?.facing?.usedDegrees) || 0)),
     facingCommits: Math.max(0, Math.trunc(Number(state.mobility?.facing?.commits) || 0)),
     maneuverPurchases: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.purchases) || 0)),
-    maneuverAllowance: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.allowance) || 0))
+    maneuverAllowance: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.allowance) || 0)),
+    specialMovementAP: Math.max(0, Math.trunc(Number(state.mobility?.specialMovementAP) || 0))
   });
 }
 
@@ -634,7 +642,10 @@ function movementUndoStatus(combatant) {
   const token = combatant?.token;
   const state = combatantState(combatant);
   if (!snapshot || !token || !state) return Object.freeze({ canUndoMove: false, canUndoFacing: false, canResetPosition: false });
-  const moved = Number(token.x ?? 0) !== snapshot.x || Number(token.y ?? 0) !== snapshot.y || Number(state.mobility?.movement?.used ?? 0) !== snapshot.movementUsed;
+  const moved = Number(token.x ?? 0) !== snapshot.x
+    || Number(token.y ?? 0) !== snapshot.y
+    || Number(state.mobility?.movement?.used ?? 0) !== snapshot.movementUsed
+    || Number(state.mobility?.specialMovementAP ?? 0) !== snapshot.specialMovementAP;
   const turned = normalizeShipHeading(token.rotation ?? state.mobility?.heading ?? 0) !== snapshot.rotation
     || normalizeShipHeading(state.mobility?.heading ?? 0) !== snapshot.heading
     || normalizeShipHeading(state.mobility?.committedHeading ?? state.mobility?.heading ?? 0) !== snapshot.committedHeading
@@ -667,10 +678,13 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
   const moveRefund = move
     ? Math.max(0, Math.trunc(Number(movement.purchases) || 0) - snapshot.movementPurchases)
     : 0;
+  const specialMoveRefund = move
+    ? Math.max(0, Math.trunc(Number(mobility.specialMovementAP) || 0) - snapshot.specialMovementAP)
+    : 0;
   const facingRefund = facing
     ? Math.max(0, Math.trunc(Number(maneuver.purchases) || 0) - snapshot.maneuverPurchases)
     : 0;
-  const apRefund = moveRefund + facingRefund;
+  const apRefund = moveRefund + specialMoveRefund + facingRefund;
   const ap = state.economy?.ap ?? { value: 0, max: 0 };
   const apMax = Math.max(0, Math.trunc(Number(ap.max) || 0));
   const apValue = Math.max(0, Math.trunc(Number(ap.value) || 0));
@@ -700,6 +714,9 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
           : Math.max(0, Math.trunc(Number(movement.allowance) || 0)),
         used: move ? snapshot.movementUsed : Math.max(0, Math.trunc(Number(movement.used) || 0))
       }),
+      specialMovementAP: move
+        ? snapshot.specialMovementAP
+        : Math.max(0, Math.trunc(Number(mobility.specialMovementAP) || 0)),
       maneuver: Object.freeze({
         ...maneuver,
         purchases: facing ? snapshot.maneuverPurchases : Math.max(0, Math.trunc(Number(maneuver.purchases) || 0)),
