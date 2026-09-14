@@ -1,6 +1,8 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { shipManeuverDC, weaponReloadRemaining } from "../combat/index.js";
+import { lifeveilCondition, moraleCondition, shipConditionProfile } from "../ship/ship-conditions.js";
+import { strainRiskState } from "../ship/strain-rules.js";
 import { firingArcsVisible, firingArcWeaponVisible, redrawFiringArcs, setFiringArcsVisible, toggleWeaponFiringArc } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
@@ -230,6 +232,86 @@ function buildResourcePips(value, max, cap = 8) {
   const current = Math.max(0, Math.min(total, Math.trunc(Number(value) || 0)));
   const display = Math.max(0, Math.min(total, cap));
   return Array.from({ length: display }, (_, index) => ({ filled: index < current }));
+}
+
+function conditionTone(system, profile) {
+  const severity = Math.max(0, Number(profile?.severity ?? 0));
+  if (system === "morale") {
+    if (severity <= 1) return "is-good";
+    if (severity === 2) return "is-caution";
+    if (severity === 3) return "is-danger";
+    return "is-critical";
+  }
+  if (severity === 0) return "is-good";
+  if (severity === 1) return "is-caution";
+  if (severity === 2) return "is-danger";
+  return "is-critical";
+}
+
+function conditionTitle(system, profile) {
+  const label = profile?.label ?? "Unknown";
+  if (system === "hull") return `${label} — Effective Hardness ${Math.round(Number(profile?.hardnessMultiplier ?? 1) * 100)}%.`;
+  if (system === "drive") return `${label} — Speed −${Math.max(0, Number(profile?.speedPenalty ?? 0))}; Maneuverability −${Math.max(0, Number(profile?.maneuverPenalty ?? 0))}.`;
+  if (system === "weapons") return `${label} — Weapon attacks −${Math.max(0, Number(profile?.attackPenalty ?? 0))}; Reload +${Math.max(0, Number(profile?.reloadPenalty ?? 0))}.`;
+  if (system === "lifeveil") return `${label} — ${Math.max(0, Number(profile?.value ?? 0))}% Lifeveil.`;
+  if (system === "morale") return `${label} — ${Math.max(0, Number(profile?.value ?? 0))}% Morale.`;
+  return label;
+}
+
+function strainDangerView(value, max) {
+  const maximum = Math.max(0, Number(max) || 0);
+  if (maximum <= 0) return Object.freeze({
+    label: "—",
+    tone: "is-neutral",
+    title: "No Strain capacity is available."
+  });
+
+  const risk = strainRiskState(value, maximum);
+  const percent = Math.max(0, risk.percent);
+  if (risk.thresholdReached) return Object.freeze({
+    label: "LIMIT",
+    tone: "is-limit",
+    title: `${percent.toFixed(0)}% Strain — at the Strain Limit, new Strain causes automatic Ship Condition degradation.`
+  });
+  if (risk.flatCheckDC !== null) {
+    const tone = risk.flatCheckDC >= 15 ? "is-critical" : risk.flatCheckDC >= 10 ? "is-danger" : "is-caution";
+    return Object.freeze({
+      label: `DC ${risk.flatCheckDC}`,
+      tone,
+      title: `${percent.toFixed(0)}% Strain — gaining Strain requires a DC ${risk.flatCheckDC} flat check.`
+    });
+  }
+  return Object.freeze({
+    label: "SAFE",
+    tone: "is-good",
+    title: `${percent.toFixed(0)}% Strain — below the first danger threshold.`
+  });
+}
+
+function combatConditionView(actor, strainValue, strainMax) {
+  const ship = shipPayload(actor);
+  if (!ship) return null;
+
+  const hull = shipConditionProfile(ship, "hull");
+  const drive = shipConditionProfile(ship, "drive");
+  const weapons = shipConditionProfile(ship, "weapons");
+  const lifeveil = lifeveilCondition(ship?.resources?.lifeveil?.value ?? 0);
+  const morale = moraleCondition(ship?.resources?.morale?.value ?? 0);
+  const wrap = (system, profile) => Object.freeze({
+    id: profile?.id ?? "unknown",
+    label: profile?.label ?? "Unknown",
+    tone: conditionTone(system, profile),
+    title: conditionTitle(system, profile)
+  });
+
+  return Object.freeze({
+    hull: wrap("hull", hull),
+    drive: wrap("drive", drive),
+    weapons: wrap("weapons", weapons),
+    lifeveil: wrap("lifeveil", lifeveil),
+    morale: wrap("morale", morale),
+    strain: strainDangerView(strainValue, strainMax)
+  });
 }
 
 function compactSummary(action) {
@@ -478,6 +560,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     const rpMax = Number(state?.economy?.rp?.max ?? 0);
     const strain = Number(state?.strain?.value ?? 0);
     const strainMax = Number(state?.strain?.max ?? 0);
+    const conditions = combatConditionView(actor, strain, strainMax);
 
     return {
       ...context,
@@ -553,6 +636,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
                 : `${Math.max(0, Number(facingStatus?.freeDegrees ?? 0) - Number(facingStatus?.committedUsedDegrees ?? 0))}° free left`,
         facingWarning: Boolean(facingStatus?.impossible || Number(facingStatus?.apRequired ?? 0) > 0)
       },
+      conditions,
       activeTurn: Boolean(combatant && game.combat?.combatant?.id === combatant.id),
       currentStationLabel: stationRows.find((entry) => entry.active)?.label ?? "Battlewatch",
       lastShot: this.lastShot,

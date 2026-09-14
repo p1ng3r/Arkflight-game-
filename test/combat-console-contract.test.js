@@ -66,6 +66,24 @@ test("Command HUD permanently exposes core combat state and all five ship vitals
   assert.match(commandHud, /state\?\.strain/);
 });
 
+test("Command HUD exposes canonical Ship Conditions and live Strain danger state", () => {
+  assert.match(source, /shipConditionProfile/);
+  assert.match(source, /lifeveilCondition/);
+  assert.match(source, /moraleCondition/);
+  assert.match(source, /strainRiskState/);
+  for (const condition of ["hull", "drive", "weapons", "lifeveil", "morale", "strain"]) {
+    assert.match(template, new RegExp(`conditions\\.${condition}`));
+  }
+  assert.match(template, /afch-condition-vital drive/);
+  assert.match(template, /afch-condition-vital weapons/);
+  assert.match(template, /conditions\.strain\.label/);
+  assert.match(source, /label: "SAFE"/);
+  assert.match(source, /label: `DC \$\{risk\.flatCheckDC\}`/);
+  assert.match(source, /label: "LIMIT"/);
+  assert.match(css, /afch-condition-tag/);
+  assert.match(css, /afch-condition-vital/);
+});
+
 test("Command HUD station cards resolve exact level-based effects and expose readable rule metadata", () => {
   assert.match(commandHud, /stationEffectProfile/);
   assert.match(commandHud, /resolvedStationEffect/);
