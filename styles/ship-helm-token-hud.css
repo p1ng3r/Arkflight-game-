@@ -1,0 +1,158 @@
+/* Arkflight radial ship Helm controls.
+ * Injected into Foundry's native Token HUD so Foundry owns canvas anchoring,
+ * panning, zooming, and token-bound positioning.
+ */
+
+.arkflight-ship-token-hud {
+  overflow: visible !important;
+}
+
+.arkflight-helm-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.arkflight-helm-control {
+  position: absolute;
+  width: 58px;
+  min-width: 58px;
+  height: 46px;
+  min-height: 46px;
+  margin: 0;
+  padding: 4px 5px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  border: 1px solid rgba(87, 179, 207, .72);
+  border-radius: 13px;
+  background:
+    linear-gradient(180deg, rgba(10, 31, 43, .97), rgba(3, 14, 22, .97)),
+    radial-gradient(circle at 50% 0%, rgba(73, 180, 215, .18), transparent 60%);
+  box-shadow:
+    0 5px 14px rgba(0, 0, 0, .55),
+    inset 0 0 0 1px rgba(222, 180, 82, .12);
+  color: #e8f8ff;
+  font: inherit;
+  line-height: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.arkflight-helm-control:hover:not(:disabled) {
+  border-color: rgba(111, 222, 255, .95);
+  background: linear-gradient(180deg, rgba(18, 57, 75, .99), rgba(5, 23, 34, .99));
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, .62),
+    0 0 14px rgba(74, 194, 225, .24);
+}
+
+.arkflight-helm-control:disabled {
+  opacity: .42;
+  filter: grayscale(.5);
+  cursor: not-allowed;
+}
+
+.arkflight-helm-control.is-reverse {
+  border-color: rgba(212, 156, 74, .72);
+  background: linear-gradient(180deg, rgba(54, 37, 14, .97), rgba(22, 15, 6, .97));
+}
+
+.arkflight-helm-control.is-reverse:hover:not(:disabled) {
+  border-color: rgba(243, 190, 100, .95);
+  background: linear-gradient(180deg, rgba(78, 52, 18, .99), rgba(31, 20, 7, .99));
+}
+
+.arkflight-helm-control.is-turn {
+  width: 54px;
+  min-width: 54px;
+  border-radius: 50%;
+  border-color: rgba(148, 121, 213, .76);
+  background: linear-gradient(180deg, rgba(35, 25, 63, .97), rgba(14, 10, 31, .97));
+}
+
+.arkflight-helm-icon {
+  display: block;
+  font-size: 20px;
+  line-height: 20px;
+  transform-origin: 50% 50%;
+  color: #dff8ff;
+}
+
+.arkflight-helm-control.is-turn .arkflight-helm-icon {
+  font-size: 23px;
+  color: #d7c7ff;
+}
+
+.arkflight-helm-control.is-reverse .arkflight-helm-icon {
+  color: #ffd58d;
+}
+
+.arkflight-helm-control small {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: #9bcbd9;
+  font-size: 7px;
+  line-height: 8px;
+  letter-spacing: .025em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.arkflight-helm-control.is-reverse small {
+  color: #d9b77d;
+}
+
+.arkflight-helm-status {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  min-width: 88px;
+  max-width: 126px;
+  padding: 4px 7px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(78, 158, 185, .45);
+  border-radius: 9px;
+  background: rgba(3, 15, 23, .88);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .48);
+  color: #e9f9ff;
+  text-align: center;
+  pointer-events: none;
+}
+
+.arkflight-helm-status strong,
+.arkflight-helm-status span,
+.arkflight-helm-status small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arkflight-helm-status strong {
+  color: #f1dc99;
+  font-size: 11px;
+  line-height: 11px;
+}
+
+.arkflight-helm-status span {
+  margin-top: 2px;
+  color: #82d8ef;
+  font-size: 7.5px;
+  line-height: 8px;
+}
+
+.arkflight-helm-status small {
+  margin-top: 1px;
+  color: #8bb8c7;
+  font-size: 6.5px;
+  line-height: 7px;
+}
