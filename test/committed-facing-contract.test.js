@@ -10,6 +10,7 @@ const fireEffects = readFileSync(new URL("../src/foundry/native-station-combat-e
 const salvo = readFileSync(new URL("../src/foundry/combat-salvo-runtime.js", import.meta.url), "utf8");
 const stations = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
 const sync = readFileSync(new URL("../src/combat/combatant-loadout-sync.js", import.meta.url), "utf8");
+const helmRules = readFileSync(new URL("../src/combat/helm-rules.js", import.meta.url), "utf8");
 
 test("Arkflight visual ship heading uses 30-degree increments", () => {
   assert.match(schema, /SHIP_HEADING_INCREMENT = 30/);
@@ -46,4 +47,11 @@ test("End Turn projects the current preview once and settles degree-based AP", (
 test("legacy mouse-event facing counters are deliberately discarded", () => {
   assert.match(sync, /v5 and earlier stored every token rotation update in maneuver\.used/);
   assert.match(sync, /maneuver: Object\.freeze\(\{ \.\.\.current\.maneuver, used: 0 \}\)/);
+});
+
+
+test("Maneuverability points price facing at 30 degrees each", () => {
+  assert.match(helmRules, /DEGREES_PER_FACING_STEP = 30/);
+  assert.match(helmRules, /freeDegrees = maneuverability \* DEGREES_PER_FACING_STEP/);
+  assert.match(helmRules, /blockDegrees = maneuverability \* DEGREES_PER_FACING_STEP/);
 });
