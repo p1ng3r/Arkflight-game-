@@ -121,7 +121,8 @@ test("Command HUD can undo turn movement and facing and refund only Helm-purchas
   assert.match(combatApi, /facingUsedDegrees/);
   assert.match(combatApi, /movementPurchases/);
   assert.match(combatApi, /maneuverPurchases/);
-  assert.match(combatApi, /const apRefund = moveRefund \+ facingRefund/);
+  assert.match(combatApi, /const specialMoveRefund = move/);
+  assert.match(combatApi, /const apRefund = moveRefund \+ specialMoveRefund \+ facingRefund/);
   assert.match(combatApi, /value: Math\.min\(apMax, apValue \+ apRefund\)/);
   assert.match(template, /data-undo-move/);
   assert.match(template, /data-undo-facing/);
