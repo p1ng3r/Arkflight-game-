@@ -1,6 +1,6 @@
 import { commitFacing, purchaseManeuver } from "./combatant-state.js";
 
-const DEGREES_PER_FACING_STEP = 60;
+const DEGREES_PER_FACING_STEP = 30;
 
 function nonnegativeInt(value) {
   return Math.max(0, Math.trunc(Number(value) || 0));
