@@ -41,9 +41,11 @@ test("normal forward movement commits heading and spends one hex of movement", (
   assert.match(combatApi, /if \(remaining <= 0\)[\s\S]*purchaseMovement\(next\)/);
 });
 
-test("Reverse Thrust is a special 1 AP one-hex astern move", () => {
+test("Reverse Thrust is a special 1 AP one-hex astern move with undo bookkeeping", () => {
   assert.match(combatApi, /direction\.startsWith\("reverse"\)/);
   assert.match(combatApi, /next = spendPoints\(next, "ap", 1\)/);
+  assert.match(combatApi, /specialMovementAP/);
   assert.match(combatApi, /commitFacing\(next, next\.mobility\?\.heading, "reverse-thrust"\)/);
+  assert.match(combatApi, /specialMoveRefund/);
   assert.match(helmUi, /Reverse Thrust · 1 AP · move 1 hex astern/);
 });
