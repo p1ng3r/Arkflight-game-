@@ -105,6 +105,7 @@ function reconcileMobility(fresh, current) {
     heading,
     committedHeading,
     facing,
+    specialMovementAP: Math.max(0, Math.trunc(Number(current.specialMovementAP) || 0)),
     movement: Object.freeze({ ...current.movement }),
     // v5 and earlier stored every token rotation update in maneuver.used. That
     // value is intentionally discarded; v6 tracks only committed degrees.
