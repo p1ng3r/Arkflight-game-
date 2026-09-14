@@ -127,7 +127,7 @@ test("Command HUD can undo turn movement and facing and refund only Helm-purchas
   assert.match(template, /data-undo-move/);
   assert.match(template, /data-undo-facing/);
   assert.match(template, /data-reset-turn-position/);
-  assert.match(css, /afch-undo-controls/);
+  assert.match(template, /afch-position-menu/);\n  assert.match(css, /afch-position-popover/);
 });
 
 test("Command HUD End Turn routes through facing reconciliation before advancing initiative", () => {
