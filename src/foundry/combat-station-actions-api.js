@@ -448,11 +448,11 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   if (resolver === "coordinateAssault") notes.push(`Target Hardness reduced by ${profile.bonus} for ${profile.advanced ? 2 : 1} qualifying attack${profile.advanced ? "s" : ""}.`);
   if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 20% Morale; +${stationActionEconomy(action, level).strain} Strain.`);
   if (resolver === "ventStrain") notes.push(`Vents up to ${1 + profile.bonus} Strain.`);
-  if (resolver === "hardTurn") notes.push(`+${60 * (Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus)}° facing allowance; pivot permitted.`);
+  if (resolver === "hardTurn") notes.push(`+${30 * (Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus)}° facing allowance; pivot permitted.`);
   if (resolver === "impossibleBurn") notes.push(`Once per battle: +${Math.max(1, Math.ceil(Number(before?.mobility?.speed ?? 1) * 0.5))} movement allowance; +2 Strain.`);
-  if (resolver === "turnBetweenHeartbeats") notes.push("Once per battle: +120° extraordinary facing allowance this turn.");
-  if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${60 * Number(before?.mobility?.maneuverability ?? 0)}° facing allowance; +2 Strain.`);
-  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +60° facing allowance; +1 Strain.`);
+  if (resolver === "turnBetweenHeartbeats") notes.push("Once per battle: +60° extraordinary facing allowance this turn.");
+  if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${30 * Number(before?.mobility?.maneuverability ?? 0)}° facing allowance; +2 Strain.`);
+  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +30° facing allowance; +1 Strain.`);
   if (resolver === "redistributePower" && selection === "weapons") notes.push(`Next ${profile.advanced ? 2 : 1} weapon attack${profile.advanced ? "s" : ""} gain +${profile.bonus} damage; +1 Strain.`);
   if (resolver === "redistributePower" && selection === "lifeveil") notes.push(`Next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} gain ${2 * profile.bonus} mitigation; +1 Strain.`);
   if (resolver === "setAttackVector") notes.push(`Selected facing gains ${15 * profile.bonus}° extra firing-arc tolerance while heading is unchanged.`);
