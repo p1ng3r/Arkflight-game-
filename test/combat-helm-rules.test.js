@@ -30,7 +30,7 @@ function state(overrides = {}) {
   };
 }
 
-test("normal Helm grants Maneuverability x 60 degrees of free committed turning", () => {
+test("normal Helm grants Maneuverability x 30 degrees of free committed turning", () => {
   const next = applyFreeHelmAllowance(state());
   assert.equal(next.mobility.movement.allowance, 5);
   assert.equal(next.mobility.maneuver.allowance, 2);
@@ -38,7 +38,7 @@ test("normal Helm grants Maneuverability x 60 degrees of free committed turning"
     speed: 5,
     maneuverability: 2,
     movementRemaining: 5,
-    facingRemainingDegrees: 120,
+    facingRemainingDegrees: 60,
     movementUsed: 0,
     facingUsedDegrees: 0,
     movementPurchases: 0,
@@ -46,7 +46,7 @@ test("normal Helm grants Maneuverability x 60 degrees of free committed turning"
   });
 });
 
-test("AP maneuver purchases stack another Maneuverability-sized 60-degree block", () => {
+test("AP maneuver purchases stack another Maneuverability-sized 30-degree block", () => {
   const next = applyFreeHelmAllowance(state({
     mobility: {
       speed: 5,
@@ -61,10 +61,10 @@ test("AP maneuver purchases stack another Maneuverability-sized 60-degree block"
   assert.equal(next.mobility.movement.allowance, 10);
   assert.equal(next.mobility.maneuver.allowance, 4);
   assert.equal(helmRemaining(next).movementRemaining, 8);
-  assert.equal(helmRemaining(next).facingRemainingDegrees, 210);
+  assert.equal(helmRemaining(next).facingRemainingDegrees, 90);
 });
 
-test("temporary maneuver step bonuses convert to 60 degrees each", () => {
+test("temporary maneuver points convert to 30 degrees each", () => {
   const next = applyFreeHelmAllowance(state({
     mobility: {
       speed: 5,
@@ -77,9 +77,9 @@ test("temporary maneuver step bonuses convert to 60 degrees each", () => {
     }
   }));
   const status = facingReconciliation(next);
-  assert.equal(status.freeDegrees, 120);
-  assert.equal(status.allowanceDegrees, 240);
-  assert.equal(status.bonusDegrees, 120);
+  assert.equal(status.freeDegrees, 60);
+  assert.equal(status.allowanceDegrees, 120);
+  assert.equal(status.bonusDegrees, 60);
 });
 
 test("preview rotation is free and never accumulates facing cost", () => {
@@ -111,29 +111,29 @@ test("commits count shortest heading distance once, regardless of preview spins"
 
 test("end-turn projection commits current preview and charges the minimum AP block", () => {
   let next = applyFreeHelmAllowance(state());
-  next = previewFacing(next, 150);
+  next = previewFacing(next, 90);
   const projected = facingReconciliation(next, { includePreview: true });
-  assert.equal(projected.usedDegrees, 150);
-  assert.equal(projected.freeDegrees, 120);
+  assert.equal(projected.usedDegrees, 90);
+  assert.equal(projected.freeDegrees, 60);
   assert.equal(projected.uncoveredDegrees, 30);
   assert.equal(projected.apRequired, 1);
 
   const settled = settleFacingCost(next);
   assert.equal(settled.apSpent, 1);
   assert.equal(settled.state.economy.ap.value, 3);
-  assert.equal(settled.state.mobility.committedHeading, 150);
+  assert.equal(settled.state.mobility.committedHeading, 90);
   assert.equal(settled.state.mobility.maneuver.purchases, 1);
   assert.equal(settled.after.uncoveredDegrees, 0);
 });
 
-test("multiple committed turns can require multiple AP blocks", () => {
+test("multiple committed turns charge one AP per additional Maneuverability x 30 degree block", () => {
   let next = applyFreeHelmAllowance(state());
-  next = commitFacing(previewFacing(next, 180), 180, "fire");
-  next = commitFacing(previewFacing(next, 0), 0, "move");
+  next = commitFacing(previewFacing(next, 90), 90, "fire");
+  next = commitFacing(previewFacing(next, 180), 180, "move");
   const status = facingReconciliation(next);
-  assert.equal(status.usedDegrees, 360);
-  assert.equal(status.freeDegrees, 120);
-  assert.equal(status.uncoveredDegrees, 240);
+  assert.equal(status.usedDegrees, 180);
+  assert.equal(status.freeDegrees, 60);
+  assert.equal(status.uncoveredDegrees, 120);
   assert.equal(status.apRequired, 2);
   const settled = settleFacingCost(next, { includePreview: false });
   assert.equal(settled.apSpent, 2);
@@ -166,7 +166,7 @@ test("Maneuverability zero may preview but cannot commit unpaid normal turning",
 
 test("insufficient AP blocks end-turn facing settlement", () => {
   let next = applyFreeHelmAllowance(state({ ap: 0 }));
-  next = previewFacing(next, 150);
+  next = previewFacing(next, 90);
   const status = facingReconciliation(next, { includePreview: true });
   assert.equal(status.apRequired, 1);
   assert.equal(status.affordable, false);
