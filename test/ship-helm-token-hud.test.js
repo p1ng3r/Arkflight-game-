@@ -28,7 +28,8 @@ test("Helm HUD exposes 30-degree turn buttons and grid-ranked movement", () => {
 
 test("active player ship movement is authoritative through helmMove while GM drag remains override", () => {
   assert.match(combatApi, /async function helmMove\(direction, reference = null\)/);
-  assert.match(combatApi, /isArkflightHelmMovement\(movement\)/);
+  assert.match(combatApi, /ACTIVE_HELM_MOVES/);
+  assert.match(combatApi, /isArkflightHelmMovement\(token\)/);
   assert.match(combatApi, /use the Arkflight Helm controls to move the ship/);
   assert.match(combatApi, /if \(game\.user\?\.isGM\)[\s\S]*administrative override/);
   assert.match(combatApi, /method: "hud"/);
@@ -48,4 +49,15 @@ test("Reverse Thrust is a special 1 AP one-hex astern move with undo bookkeeping
   assert.match(combatApi, /commitFacing\(next, next\.mobility\?\.heading, "reverse-thrust"\)/);
   assert.match(combatApi, /specialMoveRefund/);
   assert.match(helmUi, /Reverse Thrust · 1 AP · move 1 hex astern/);
+});
+
+
+test("Foundry owns the real movement ID for Helm moves", () => {
+  assert.doesNotMatch(combatApi, /helmMovementId/);
+  assert.doesNotMatch(combatApi, /id:\s*["'`]arkflight-helm/);
+  assert.match(combatApi, /ACTIVE_HELM_MOVES\.add\(token\.id\)/);
+  assert.match(combatApi, /ACTIVE_HELM_MOVES\.delete\(token\.id\)/);
+  const moveCall = combatApi.match(/completed = await token\.move\([\s\S]*?\n\s*\);/)?.[0] ?? "";
+  assert.ok(moveCall, "expected Arkflight token.move call");
+  assert.doesNotMatch(moveCall, /\bid\s*:/);
 });
