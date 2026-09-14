@@ -32,6 +32,7 @@ const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const TURN_START_SNAPSHOTS = new Map();
 const COMBAT_SOCKET = `module.${MODULE_ID}`;
 const END_TURN_REQUEST = "end-turn-request";
+const ACTIVE_HELM_MOVES = new Set();
 
 function requireGM() {
   if (!game.user?.isGM) throw new Error("Only the GM may change Arkflight ship combat state.");
@@ -280,13 +281,8 @@ function tokenCenter(combatant) {
 }
 
 
-function helmMovementId(kind = "move") {
-  const random = foundry?.utils?.randomID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  return `arkflight-helm-${kind}-${random}`;
-}
-
-function isArkflightHelmMovement(movement) {
-  return String(movement?.id ?? "").startsWith("arkflight-helm-");
+function isArkflightHelmMovement(token) {
+  return Boolean(token?.id && ACTIVE_HELM_MOVES.has(token.id));
 }
 
 function helmGridGeometry(combatant) {
@@ -400,16 +396,24 @@ async function helmMove(direction, reference = null) {
     movementSpent = 1;
   }
 
-  const completed = await token.move(
-    { x: destination.x, y: destination.y, snapped: true },
-    {
-      id: helmMovementId(reverse ? "reverse" : "forward"),
-      method: "hud",
-      autoRotate: false,
-      showRuler: false,
-      pan: false
-    }
-  );
+  let completed = false;
+  ACTIVE_HELM_MOVES.add(token.id);
+  try {
+    // Let Foundry generate and validate its own movement ID. Arkflight tracks
+    // HUD-authorized movement transiently by Token ID instead of overloading
+    // Foundry's internal movement identifier.
+    completed = await token.move(
+      { x: destination.x, y: destination.y, snapped: true },
+      {
+        method: "hud",
+        autoRotate: false,
+        showRuler: false,
+        pan: false
+      }
+    );
+  } finally {
+    ACTIVE_HELM_MOVES.delete(token.id);
+  }
   if (!completed) return Object.freeze({ moved: false, direction, combatant, state: combatantState(combatant) });
 
   await updateCombatantState(combatant, next);
@@ -975,7 +979,7 @@ Hooks.on("preMoveToken", (token, movement) => {
     return false;
   }
 
-  if (isArkflightHelmMovement(movement)) {
+  if (isArkflightHelmMovement(token)) {
     movement.autoRotate = false;
     return;
   }
@@ -990,10 +994,10 @@ Hooks.on("preMoveToken", (token, movement) => {
   return false;
 });
 
-Hooks.on("moveToken", (_token, movement) => {
+Hooks.on("moveToken", (token, _movement) => {
   // Arkflight Helm movement updates ship-combat state explicitly after Foundry
   // confirms the move. GM manual movement is an administrative override.
-  if (isArkflightHelmMovement(movement)) return;
+  if (isArkflightHelmMovement(token)) return;
 });
 
 Hooks.on("preUpdateToken", (token, changes, options) => {
