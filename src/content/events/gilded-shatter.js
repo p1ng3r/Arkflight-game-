@@ -2,6 +2,9 @@ import { eventDefinition, roundDefinition, stationAction, skillChoice, riskBid }
 import { endingDefinition, rewardPackage } from "../../event/reward-engine.js";
 import { GILDED_SHATTER_ROUND_DATA } from "./gilded-shatter-data.js";
 
+const GILDED_SHATTER_OPENING_IMAGE = "assets/art/events/gilded-shatter/scenes/01-boarding/opening-gilded-shatter.webp";
+const GILDED_SHATTER_FINAL_IMAGE = "assets/art/events/gilded-shatter/scenes/01-boarding/Final-gilded-shatter.webp";
+
 export const GILDED_SHATTER_BLUEPRINT_TABLE = Object.freeze([
   Object.freeze({ id: "aether-bound-ribbing", name: "Aether-Bound Ribbing", rarity: "rare" }),
   Object.freeze({ id: "stormproof-void-sails", name: "Stormproof Void Sails", rarity: "rare" }),
@@ -97,7 +100,7 @@ const ROUNDS = GILDED_SHATTER_ROUND_DATA.map((rawRound, index) => {
     title: rawRound.title,
     situation: rawRound.situation,
     openingVignette: rawRound.opening,
-    image: "",
+    image: GILDED_SHATTER_OPENING_IMAGE,
     stationActions,
     outcomes: ROUND_OUTCOMES[index],
     narrativeHooks: {
@@ -135,7 +138,7 @@ function boardingRewards({ secureReturn = false, shortcut = false } = {}) {
 export const GILDED_SHATTER = eventDefinition({
   id: "gilded-shatter",
   title: "The Gilded Shatter — Board the Wreck",
-  image: "assets/ui/branding/arkflight_logo.webp",
+  image: GILDED_SHATTER_OPENING_IMAGE,
   openingVignette: "A dead Arkflight galleon turns slowly at the edge of a Dark Star, its broken hull bending toward the gravity maw. Fresh gold is spreading through timber, iron, rope, and bone while blue-white pulses flicker somewhere deep below decks. Before anyone can learn why, the Rum Runner has to cross a drifting debris field and hold alongside a wreck whose mass is changing by the minute. Get close, survive the Gravity Shear, establish the boarding corridor, and put the party physically onto the derelict.",
   goal: "Bring the Rum Runner alongside the gilded wreck, survive the escalating Gravity Shear, establish a stable boarding corridor, and get the PCs physically aboard for normal PF2e exploration.",
   startingState: { momentum: 0, hazards: ["gravity-shear"] },
@@ -143,6 +146,7 @@ export const GILDED_SHATTER = eventDefinition({
   endings: {
     extraordinary: endingDefinition({
       id: "gilded-shatter-boarding-extraordinary",
+      image: GILDED_SHATTER_FINAL_IMAGE,
       bands: ["criticalSuccess", "extraordinary"],
       label: "Boarding Established — Perfect Foothold",
       vignette: "The final grapnel bites and the crossing settles into an impossible moment of calm. One by one the party steps onto the wreck through a stable weather-deck breach while the Rum Runner holds almost motionless beside it. As the last PC clears the line, a blue-white pulse moves beneath the deck and thin golden branches creep farther across the planks in plain sight. The return corridor is marked, a useful route inward is already visible, and Arkflight ship play gives way to normal PF2e exploration.",
@@ -150,6 +154,7 @@ export const GILDED_SHATTER = eventDefinition({
     }),
     success: endingDefinition({
       id: "gilded-shatter-boarding-success",
+      image: GILDED_SHATTER_FINAL_IMAGE,
       bands: ["success", "strong-success", "mixed-success"],
       label: "Boarding Established — Secure Foothold",
       vignette: "The lines groan but hold long enough for the party to cross onto the dead galleon. Behind them, the Rum Runner settles into a workable holding position with a clearly marked return point at the weather-deck breach. Then a blue-white pulse climbs through the wreck and fresh gold spreads across a nearby hinge before anyone's eyes. The boarding event is complete, and normal PF2e exploration begins with a secure route back to the ship.",
@@ -157,6 +162,7 @@ export const GILDED_SHATTER = eventDefinition({
     }),
     costly: endingDefinition({
       id: "gilded-shatter-boarding-costly",
+      image: GILDED_SHATTER_FINAL_IMAGE,
       bands: ["failure"],
       label: "Boarding Established — Exposed Foothold",
       vignette: "The crossing never becomes comfortable, but the party makes it across before the lines can tear free. They land through an exposed breach where broken railings, loose debris, and the wreck's slow rotation leave the return route harder to use than anyone wanted. The Rum Runner remains alongside under load while another blue-white pulse passes below and new gold crawls across the deck around the party's boots. Boarding has succeeded at a price; normal PF2e exploration begins from a dangerous foothold.",
@@ -164,6 +170,7 @@ export const GILDED_SHATTER = eventDefinition({
     }),
     disaster: endingDefinition({
       id: "gilded-shatter-boarding-disaster",
+      image: GILDED_SHATTER_FINAL_IMAGE,
       bands: ["criticalFailure", "disaster"],
       label: "Boarding Established — Bad Crossing",
       vignette: "The final Dark Star pull hits while people are still on the boards, snapping a guide line and wrenching the Rum Runner away from the wreck. The party is forced through the nearest viable split in the derelict before the crew can haul the remaining crossing back under control. Behind them the Rum Runner is still there, but holding station is ugly and the return route is neither short nor safe. A blue-white pulse rolls through the lower decks, fresh gold flowers across the broken timber, and normal PF2e exploration begins with the crew already knowing that getting back will be harder than getting in.",

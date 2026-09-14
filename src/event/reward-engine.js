@@ -41,12 +41,12 @@ export function rewardPackage({
   });
 }
 
-export function endingDefinition({ id, label, bands, vignette, rewards = rewardPackage() }) {
+export function endingDefinition({ id, label, bands, vignette, image = "", rewards = rewardPackage() }) {
   if (!id || !label) throw new Error("Event ending requires id and label");
   if (!Array.isArray(bands) || bands.length < 1) throw new Error(`Event ending ${id} requires one or more Event Result bands`);
   const sentenceCount = String(vignette ?? "").split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length;
   if (sentenceCount < 3 || sentenceCount > 10) throw new Error(`Event ending ${id} vignette must be 3-10 sentences; received ${sentenceCount}`);
-  return Object.freeze({ id, label, bands: Object.freeze([...bands]), vignette, rewards });
+  return Object.freeze({ id, label, bands: Object.freeze([...bands]), vignette, image, rewards });
 }
 
 export function resolveEventEnding(event, eventResultId) {

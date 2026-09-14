@@ -20,6 +20,14 @@ test("Gilded Shatter remains registered as Event Manager event #2", () => {
   assert.equal(Object.keys(ARKFLIGHT_EVENTS).length, 2);
 });
 
+test("Gilded Shatter uses the opening art throughout Leg 1 and the final art for every ending", () => {
+  const opening = "assets/art/events/gilded-shatter/scenes/01-boarding/opening-gilded-shatter.webp";
+  const final = "assets/art/events/gilded-shatter/scenes/01-boarding/Final-gilded-shatter.webp";
+  assert.equal(GILDED_SHATTER.image, opening);
+  for (const round of GILDED_SHATTER.rounds) assert.equal(round.image, opening);
+  for (const ending of Object.values(GILDED_SHATTER.endings)) assert.equal(ending.image, final);
+});
+
 test("Gilded Shatter Leg 1 is exactly the three-round boarding event", () => {
   const result = validateEventDefinition(GILDED_SHATTER, { riskBenefits: RISK_BENEFIT_BY_ID });
   assert.equal(result.ok, true, JSON.stringify(result.errors, null, 2));

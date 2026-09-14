@@ -178,6 +178,8 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       isGM: game.user.isGM,
       event,
       eventImage: moduleAssetPath(round.image || event.image),
+      eventEnding: state.eventEnding ?? null,
+      eventCompleteImage: moduleAssetPath(state.eventEnding?.image || round.image || event.image),
       round,
       roundNumber: (state.roundIndex ?? 0) + 1,
       nextRoundNumber: (state.roundIndex ?? 0) + 2,
@@ -419,7 +421,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       image.setAttribute("role", "button");
       image.setAttribute("tabindex", "0");
       image.setAttribute("title", "Click to enlarge event art");
-      const open = () => openArtPopout(image.src, round?.title || event?.title || "Arkflight Event Art");
+      const open = () => openArtPopout(image.src, state?.eventEnding?.label || round?.title || event?.title || "Arkflight Event Art");
       image.addEventListener("click", open);
       image.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {

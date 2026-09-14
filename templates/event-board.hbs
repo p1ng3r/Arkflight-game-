@@ -57,7 +57,14 @@
           {{#if isGM}}<div class="arkflight-round-continue"><button type="button" class="arkflight-primary" data-ark-action="next-round">{{#if finalRound}}Finish Event{{else}}Continue to Round {{nextRoundNumber}}{{/if}} <i class="fa-solid fa-arrow-right"></i></button></div>{{/if}}
         </section>
       {{else if eventComplete}}
-        <section class="arkflight-round-result-panel"><div class="arkflight-kicker">EVENT COMPLETE</div><h2>The Glassback is Behind You</h2><p class="arkflight-event-complete-copy">The event has reached its conclusion. Current Momentum, Pressure, and Hazards remain visible above for the GM to carry into the voyage state or adjudicate before closing the event.</p></section>
+        <div class="arkflight-opening-grid arkflight-event-complete-grid">
+          <div class="arkflight-event-art"><img src="{{eventCompleteImage}}" alt="{{eventEnding.label}}" /><div class="arkflight-art-fallback">EVENT ENDING ART</div></div>
+          <article class="arkflight-vignette arkflight-event-complete-vignette">
+            <div class="arkflight-kicker">EVENT COMPLETE</div>
+            <h2>{{eventEnding.label}}</h2>
+            <p>{{eventEnding.vignette}}</p>
+          </article>
+        </div>
       {{else}}
         <div class="arkflight-station-grid">
           {{#each stations}}
