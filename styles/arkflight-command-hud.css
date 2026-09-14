@@ -285,12 +285,13 @@
   grid-area: actions;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 6px;
 }
 
 .afch-stations button,
 .afch-actions button,
+.afch-position-menu > summary,
 .afcs-drawer button,
 .afcs-drawer select {
   min-width: 0;
@@ -310,13 +311,15 @@
 
 .afch-stations button:hover,
 .afch-actions button:hover,
+.afch-position-menu > summary:hover,
 .afcs-drawer button:hover {
   border-color: rgba(100, 200, 229, .72);
   background: rgba(12, 38, 53, .98);
 }
 
 .afch-stations button.is-active,
-.afch-actions button.is-active {
+.afch-actions button.is-active,
+.afch-position-menu[open] > summary {
   border-color: rgba(100, 205, 178, .72);
   box-shadow: inset 0 0 0 1px rgba(100, 205, 178, .12);
   color: #89e0c3;
@@ -329,66 +332,61 @@
 }
 
 
-.afch-undo-controls {
-  position: absolute;
-  left: 50%;
-  bottom: 132px;
-  z-index: 34;
+.afch-position-menu {
+  position: relative;
+  min-width: 0;
+  height: 31px;
+  margin: 0;
+  padding: 0;
+}
+
+.afch-position-menu > summary {
   display: flex;
   align-items: center;
-  gap: 6px;
-  transform: translateX(-50%);
-  padding: 5px 7px;
-  border: 1px solid rgba(79, 150, 177, .48);
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
+  list-style: none;
+  cursor: pointer;
+}
+
+.afch-position-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.afch-position-popover {
+  position: absolute;
+  right: 0;
+  bottom: 38px;
+  z-index: 46;
+  width: 174px;
+  display: grid;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid rgba(79, 150, 177, .5);
   border-radius: 10px;
-  background: rgba(4, 15, 23, .97);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, .38);
-  pointer-events: auto;
+  background: rgba(4, 15, 23, .985);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .48);
 }
 
-.afch-undo-controls > span {
-  padding: 0 5px 0 2px;
-  color: #8ebfd0;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.afch-undo-controls button {
-  min-height: 28px;
-  height: 28px;
+.afch-position-popover button {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
   padding: 0 9px;
-  border: 1px solid rgba(75, 142, 168, .5);
-  border-radius: 7px;
-  background: rgba(8, 27, 39, .98);
-  color: #d9edf5;
-  font-size: 9.5px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
-.afch-undo-controls button:hover:not(:disabled) {
-  border-color: rgba(104, 205, 229, .78);
-  background: rgba(13, 43, 57, .98);
-}
-
-.afch-undo-controls button:disabled {
+.afch-position-popover button:disabled {
   opacity: .38;
   cursor: default;
 }
 
-.afch-undo-controls [data-reset-turn-position] {
+.afch-position-popover [data-reset-turn-position] {
   border-color: rgba(179, 136, 53, .58);
   color: #f0d795;
 }
 
-.afcs-shell.show-stations .afch-undo-controls,
-.afcs-shell.show-weapons .afch-undo-controls,
-.afcs-shell.show-log .afch-undo-controls {
-  display: none;
-}
 
 /* Upward drawers: deeper choices never make the command bar taller. */
 .afcs-drawer {
@@ -553,7 +551,8 @@
   }
   .afch-status { grid-template-columns: 50px 86px 82px 100px 62px; gap: 4px; }
   .afch-stations button,
-  .afch-actions button { padding: 0 4px; font-size: 9px; }
+  .afch-actions button,
+  .afch-position-menu > summary { padding: 0 4px; font-size: 9px; }
 }
 
 

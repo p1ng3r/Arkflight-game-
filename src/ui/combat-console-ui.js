@@ -518,10 +518,10 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       ),
       arcVisible,
       arcButtonLabel: arcVisible ? "Hide Weapon Arcs" : "Show Weapon Arcs",
-      canUndoMove: Boolean(game.user?.isGM && undoStatus.canUndoMove),
-      canUndoFacing: Boolean(game.user?.isGM && undoStatus.canUndoFacing),
-      canResetTurnPosition: Boolean(game.user?.isGM && undoStatus.canResetPosition),
-      showUndoControls: Boolean(undoStatus.canResetPosition),
+      canUndoMove: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canUndoMove),
+      canUndoFacing: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canUndoFacing),
+      canResetTurnPosition: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canResetPosition),
+      showUndoControls: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canResetPosition),
       resources: {
         round,
         ap,
@@ -595,7 +595,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
 
     const bindUndo = (selector, action, failureLabel) => {
       root.querySelector(selector)?.addEventListener("click", async () => {
-        if (!game.user?.isGM || !combatant || typeof api?.[action] !== "function") return;
+        if (!combatant || !api?.canOperate?.(combatant) || typeof api?.[action] !== "function") return;
         try {
           await api[action](combatant);
           this.render({ force: true });

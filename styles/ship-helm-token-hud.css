@@ -1,10 +1,15 @@
-/* Arkflight radial ship Helm controls.
- * Injected into Foundry's native Token HUD so Foundry owns canvas anchoring,
- * panning, zooming, and token-bound positioning.
+/* Compact Arkflight ship Helm controls.
+ * The active ship keeps only piloting controls around the token. Foundry's
+ * normal Token HUD columns remain available behind the small utility toggle.
  */
 
 .arkflight-ship-token-hud {
   overflow: visible !important;
+}
+
+.arkflight-ship-token-hud:not(.arkflight-native-controls-open) > .col.left,
+.arkflight-ship-token-hud:not(.arkflight-native-controls-open) > .col.right {
+  display: none !important;
 }
 
 .arkflight-helm-ring {
@@ -17,26 +22,19 @@
 
 .arkflight-helm-control {
   position: absolute;
-  width: 58px;
-  min-width: 58px;
-  height: 46px;
-  min-height: 46px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
   margin: 0;
-  padding: 4px 5px;
+  padding: 0;
   transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  border: 1px solid rgba(87, 179, 207, .72);
-  border-radius: 13px;
-  background:
-    linear-gradient(180deg, rgba(10, 31, 43, .97), rgba(3, 14, 22, .97)),
-    radial-gradient(circle at 50% 0%, rgba(73, 180, 215, .18), transparent 60%);
-  box-shadow:
-    0 5px 14px rgba(0, 0, 0, .55),
-    inset 0 0 0 1px rgba(222, 180, 82, .12);
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(87, 179, 207, .68);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(10, 31, 43, .96), rgba(3, 14, 22, .96));
+  box-shadow: 0 4px 11px rgba(0, 0, 0, .5);
   color: #e8f8ff;
   font: inherit;
   line-height: 1;
@@ -47,20 +45,18 @@
 .arkflight-helm-control:hover:not(:disabled) {
   border-color: rgba(111, 222, 255, .95);
   background: linear-gradient(180deg, rgba(18, 57, 75, .99), rgba(5, 23, 34, .99));
-  box-shadow:
-    0 6px 18px rgba(0, 0, 0, .62),
-    0 0 14px rgba(74, 194, 225, .24);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .58), 0 0 11px rgba(74, 194, 225, .22);
 }
 
 .arkflight-helm-control:disabled {
-  opacity: .42;
+  opacity: .36;
   filter: grayscale(.5);
   cursor: not-allowed;
 }
 
 .arkflight-helm-control.is-reverse {
-  border-color: rgba(212, 156, 74, .72);
-  background: linear-gradient(180deg, rgba(54, 37, 14, .97), rgba(22, 15, 6, .97));
+  border-color: rgba(212, 156, 74, .68);
+  background: linear-gradient(180deg, rgba(54, 37, 14, .96), rgba(22, 15, 6, .96));
 }
 
 .arkflight-helm-control.is-reverse:hover:not(:disabled) {
@@ -69,23 +65,25 @@
 }
 
 .arkflight-helm-control.is-turn {
-  width: 54px;
-  min-width: 54px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
   border-radius: 50%;
-  border-color: rgba(148, 121, 213, .76);
-  background: linear-gradient(180deg, rgba(35, 25, 63, .97), rgba(14, 10, 31, .97));
+  border-color: rgba(148, 121, 213, .72);
+  background: linear-gradient(180deg, rgba(35, 25, 63, .96), rgba(14, 10, 31, .96));
 }
 
 .arkflight-helm-icon {
   display: block;
-  font-size: 20px;
-  line-height: 20px;
+  font-size: 18px;
+  line-height: 18px;
   transform-origin: 50% 50%;
   color: #dff8ff;
 }
 
 .arkflight-helm-control.is-turn .arkflight-helm-icon {
-  font-size: 23px;
+  font-size: 21px;
   color: #d7c7ff;
 }
 
@@ -93,44 +91,26 @@
   color: #ffd58d;
 }
 
-.arkflight-helm-control small {
-  display: block;
-  width: 100%;
-  overflow: hidden;
-  color: #9bcbd9;
-  font-size: 7px;
-  line-height: 8px;
-  letter-spacing: .025em;
-  text-align: center;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.arkflight-helm-control.is-reverse small {
-  color: #d9b77d;
-}
-
 .arkflight-helm-status {
   position: absolute;
   left: 50%;
   top: 50%;
-  min-width: 88px;
-  max-width: 126px;
-  padding: 4px 7px;
+  min-width: 70px;
+  max-width: 86px;
+  min-height: 34px;
+  padding: 4px 22px 4px 6px;
   transform: translate(-50%, -50%);
-  border: 1px solid rgba(78, 158, 185, .45);
+  border: 1px solid rgba(78, 158, 185, .42);
   border-radius: 9px;
   background: rgba(3, 15, 23, .88);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, .48);
+  box-shadow: 0 3px 9px rgba(0, 0, 0, .45);
   color: #e9f9ff;
   text-align: center;
   pointer-events: none;
 }
 
 .arkflight-helm-status strong,
-.arkflight-helm-status span,
-.arkflight-helm-status small {
+.arkflight-helm-status > span {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -140,19 +120,42 @@
 .arkflight-helm-status strong {
   color: #f1dc99;
   font-size: 11px;
-  line-height: 11px;
+  line-height: 12px;
 }
 
-.arkflight-helm-status span {
+.arkflight-helm-status > span {
   margin-top: 2px;
   color: #82d8ef;
-  font-size: 7.5px;
+  font-size: 7px;
   line-height: 8px;
 }
 
-.arkflight-helm-status small {
-  margin-top: 1px;
-  color: #8bb8c7;
-  font-size: 6.5px;
-  line-height: 7px;
+.arkflight-helm-utilities {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 17px;
+  min-width: 17px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid rgba(92, 154, 177, .26);
+  border-radius: 0 6px 6px 0;
+  background: transparent;
+  color: #8fb9c8;
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.arkflight-helm-utilities:hover,
+.arkflight-helm-utilities[aria-expanded="true"] {
+  color: #e2f6fd;
+  background: rgba(54, 137, 166, .18);
 }

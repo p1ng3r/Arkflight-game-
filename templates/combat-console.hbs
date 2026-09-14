@@ -76,15 +76,6 @@
       </div>
     </section>
 
-    {{#if showUndoControls}}
-    <nav class="afch-undo-controls" aria-label="Undo ship movement">
-      <span><i class="fa-solid fa-clock-rotate-left"></i> Turn Position</span>
-      <button type="button" data-undo-move {{#unless canUndoMove}}disabled{{/unless}} title="Return to this turn's starting position without refunding AP"><i class="fa-solid fa-arrow-rotate-left"></i> Undo Move</button>
-      <button type="button" data-undo-facing {{#unless canUndoFacing}}disabled{{/unless}} title="Return to this turn's starting facing without refunding AP"><i class="fa-solid fa-rotate-left"></i> Undo Facing</button>
-      <button type="button" data-reset-turn-position {{#unless canResetTurnPosition}}disabled{{/unless}} title="Return both position and facing to the start of this turn"><i class="fa-solid fa-backward-fast"></i> Reset Both</button>
-    </nav>
-    {{/if}}
-
     <footer class="afcs-commandbar {{#if activeTurn}}is-active-turn{{/if}}">
       <section class="afch-ship">
         {{#if shipImg}}<img src="{{shipImg}}" alt="{{shipName}}">{{/if}}
@@ -127,6 +118,16 @@
       </nav>
 
       <nav class="afch-actions" aria-label="Combat controls">
+        {{#if showUndoControls}}
+        <details class="afch-position-menu">
+          <summary title="Undo or reset this turn's ship movement"><i class="fa-solid fa-clock-rotate-left"></i> Position</summary>
+          <div class="afch-position-popover" aria-label="Turn position controls">
+            <button type="button" data-undo-move {{#unless canUndoMove}}disabled{{/unless}} title="Return to this turn's starting position"><i class="fa-solid fa-arrow-rotate-left"></i> Undo Move</button>
+            <button type="button" data-undo-facing {{#unless canUndoFacing}}disabled{{/unless}} title="Return to this turn's starting facing"><i class="fa-solid fa-rotate-left"></i> Undo Facing</button>
+            <button type="button" data-reset-turn-position {{#unless canResetTurnPosition}}disabled{{/unless}} title="Return both position and facing to the start of this turn"><i class="fa-solid fa-backward-fast"></i> Reset Both</button>
+          </div>
+        </details>
+        {{/if}}
         <button type="button" class="{{#if openWeapons}}is-active{{/if}}" data-toggle-panel="weapons"><i class="fa-solid fa-sword"></i> Weapons</button>
         <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs title="{{arcButtonLabel}}"><i class="fa-solid fa-wave-square"></i> Weapon Arcs</button>
         <button type="button" class="{{#if openLog}}is-active{{/if}}" data-toggle-panel="log"><i class="fa-solid fa-scroll"></i> Log</button>

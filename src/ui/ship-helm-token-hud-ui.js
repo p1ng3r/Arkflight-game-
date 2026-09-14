@@ -1,4 +1,5 @@
 const MODULE_ID = "arkflight-game";
+const NATIVE_CONTROLS_OPEN = new Set();
 
 function tokenDocumentFromHud(hud) {
   const candidate = hud?.object?.document ?? hud?.object ?? hud?.document ?? null;
@@ -54,7 +55,7 @@ function button({ className, label, title, icon, disabled = false, bearing = nul
   control.dataset.tooltip = title;
   control.title = title;
   control.disabled = disabled;
-  control.innerHTML = `<span class="arkflight-helm-icon">${icon}</span><small>${label}</small>`;
+  control.innerHTML = `<span class="arkflight-helm-icon">${icon}</span>`;
   if (bearing != null) {
     placeAtBearing(control, bearing, radius);
     const arrow = control.querySelector(".arkflight-helm-icon");
@@ -96,18 +97,45 @@ function reverseTitle(status) {
   return "Reverse Thrust · 1 AP · move 1 hex astern";
 }
 
-function statusBadge(status) {
-  const badge = document.createElement("div");
-  badge.className = "arkflight-helm-status";
-  const facing = status.facing ?? {};
-  const used = Number(facing.committedUsedDegrees ?? 0);
-  const free = Number(facing.freeDegrees ?? 0);
-  const projected = Number(facing.projectedUsedDegrees ?? used);
-  const preview = projected > used ? ` · preview ${projected}°` : "";
-  badge.innerHTML = `<strong>${status.heading}°</strong><span>Move ${status.movementRemaining} · AP ${status.ap}</span><small>Facing ${used}°/${free}°${preview}</small>`;
-  return badge;
+function setNativeControlsOpen(root, tokenId, open) {
+  const expanded = Boolean(open);
+  root.classList.toggle("arkflight-native-controls-open", expanded);
+  if (expanded) NATIVE_CONTROLS_OPEN.add(tokenId);
+  else NATIVE_CONTROLS_OPEN.delete(tokenId);
+
+  const toggle = root.querySelector("[data-arkflight-native-controls]");
+  if (!toggle) return;
+  const title = expanded ? "Hide Foundry token controls" : "Show Foundry token controls";
+  toggle.setAttribute("aria-expanded", String(expanded));
+  toggle.setAttribute("aria-label", title);
+  toggle.dataset.tooltip = title;
+  toggle.title = title;
 }
 
+function statusBadge(status, root, tokenId) {
+  const badge = document.createElement("div");
+  badge.className = "arkflight-helm-status";
+  badge.innerHTML = `<strong>${status.heading}°</strong><span>AP ${status.ap} · Move ${status.movementRemaining}</span>`;
+
+  const utility = document.createElement("button");
+  utility.type = "button";
+  utility.className = "arkflight-helm-utilities";
+  utility.dataset.arkflightNativeControls = "true";
+  utility.innerHTML = '<span aria-hidden="true">•••</span>';
+  const expanded = NATIVE_CONTROLS_OPEN.has(tokenId);
+  const title = expanded ? "Hide Foundry token controls" : "Show Foundry token controls";
+  utility.setAttribute("aria-expanded", String(expanded));
+  utility.setAttribute("aria-label", title);
+  utility.dataset.tooltip = title;
+  utility.title = title;
+  utility.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setNativeControlsOpen(root, tokenId, !root.classList.contains("arkflight-native-controls-open"));
+  });
+  badge.append(utility);
+  return badge;
+}
 function attachHelmRing(hud, html = null) {
   const token = tokenDocumentFromHud(hud);
   const actor = token?.actor ?? null;
@@ -122,16 +150,17 @@ function attachHelmRing(hud, html = null) {
   const root = rootElement(hud, html);
   if (!root || root.querySelector("[data-arkflight-helm-ring]")) return;
   root.classList.add("arkflight-ship-token-hud");
+  root.classList.toggle("arkflight-native-controls-open", NATIVE_CONTROLS_OPEN.has(token.id));
 
   const ring = document.createElement("div");
   ring.className = "arkflight-helm-ring";
   ring.dataset.arkflightHelmRing = "true";
 
   const box = root.getBoundingClientRect?.() ?? { width: 100, height: 100 };
-  const radius = Math.max(72, Math.min(150, Math.max(Number(box.width) || 100, Number(box.height) || 100) / 2 + 42));
+  const radius = Math.max(62, Math.min(138, Math.max(Number(box.width) || 100, Number(box.height) || 100) / 2 + 30));
   const canUse = status.canOperate && !status.moored && status.geometry?.ok;
 
-  ring.append(statusBadge(status));
+  ring.append(statusBadge(status, root, token.id));
 
   ring.append(button({
     className: "is-turn is-turn-left",
