@@ -75,6 +75,13 @@ test("Helm HUD stays compact and keeps Foundry token utilities behind one toggle
   assert.match(css, /arkflight-helm-utilities/);
 });
 
+test("opening Foundry token controls hides Helm movement controls and collapses the center readout", () => {
+  assert.match(css, /arkflight-native-controls-open \.arkflight-helm-control[\s\S]*display:\s*none !important/);
+  assert.match(css, /arkflight-native-controls-open \.arkflight-helm-status[\s\S]*width:\s*22px/);
+  assert.match(css, /arkflight-native-controls-open \.arkflight-helm-status > strong/);
+  assert.match(css, /arkflight-native-controls-open \.arkflight-helm-utilities[\s\S]*width:\s*22px/);
+});
+
 test("movement recovery controls live in the command HUD and honor ship ownership", () => {
   assert.match(commandTemplate, /afch-position-menu/);
   assert.match(commandTemplate, /data-undo-move/);

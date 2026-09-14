@@ -159,3 +159,41 @@
   color: #e2f6fd;
   background: rgba(54, 137, 166, .18);
 }
+
+
+/* When Foundry's full/native Token HUD is open, Arkflight steps out of the
+ * way. Movement/turn controls disappear completely. The center readout
+ * collapses to the tiny utility toggle so the player can restore Helm mode
+ * without deselecting the token.
+ */
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-control {
+  display: none !important;
+}
+
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-status {
+  width: 22px;
+  min-width: 22px;
+  max-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(3, 15, 23, .92);
+  pointer-events: auto;
+}
+
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-status > strong,
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-status > span {
+  display: none !important;
+}
+
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-utilities {
+  inset: 0;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  transform: none;
+  border: 0;
+  border-radius: 50%;
+}
