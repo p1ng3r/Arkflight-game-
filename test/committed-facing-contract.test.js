@@ -30,7 +30,7 @@ test("token rotation is preview-only and cannot accumulate facing cost", () => {
 });
 
 test("meaningful gameplay events commit the current preview heading", () => {
-  assert.match(combatApi, /commitFacing\(state, state\.mobility\?\.heading, "move"\)/);
+  assert.match(combatApi, /commitFacing\((?:state|next), (?:state|next)\.mobility\?\.heading, "move"\)/);
   assert.match(combatApi, /commitFacing\(combatantState\(attacker\)[\s\S]*?"fire"\)/);
   assert.match(fireEffects, /commitFacing\(attackerBefore, attackerBefore\?\.mobility\?\.heading, "fire"\)/);
   assert.match(salvo, /commitFacing\(attackerBefore, attackerBefore\?\.mobility\?\.heading, "salvo"\)/);
