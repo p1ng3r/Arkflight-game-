@@ -143,6 +143,34 @@
   color:#f0e4c9 !important;
 }
 
+/* Native Chromium/Foundry select popups otherwise inherit the light OS menu
+ * surface while keeping Arkflight's pale text, producing the unreadable white
+ * dropdown seen during Event planning. Declare a dark color scheme and style
+ * the popup rows explicitly so Action, Skill, Risk, Signature, and actor
+ * pickers remain part of the command-deck presentation.
+ */
+.arkflight-event-board:not(.arkflight-opening-mode) select {
+  color-scheme:dark !important;
+  background-color:#0a2334 !important;
+  color:#f0e4c9 !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) select option,
+.arkflight-event-board:not(.arkflight-opening-mode) select optgroup {
+  background:#0b2638 !important;
+  color:#f2e7cf !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) select option:checked {
+  background:#24516b !important;
+  color:#fff0bd !important;
+}
+
+.arkflight-event-board:not(.arkflight-opening-mode) select option:disabled {
+  background:#0a1d2a !important;
+  color:#758b98 !important;
+}
+
 /* Footer: navy command deck. No stretched bar artwork. Compact corner art only. */
 .arkflight-event-board:not(.arkflight-opening-mode) .arkflight-planning-footer {
   background:
