@@ -74,6 +74,7 @@
     "src/foundry/arkflight.js",
     "src/foundry/arkflight-compendiums.js",
     "src/foundry/combat-reference-compendium.js",
+    "src/foundry/gilded-shatter-gm-guide.js",
     "src/foundry/weapon-compendium.js",
     "src/foundry/ship-token-authority.js",
     "src/foundry/refit-api.js",
