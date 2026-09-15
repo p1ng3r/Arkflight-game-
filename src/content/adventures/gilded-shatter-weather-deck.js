@@ -46,6 +46,83 @@ const RESET_PULSE_MACRO = [
   '}'
 ].join("\n");
 
+const BUILD_ENEMIES_MACRO = [
+  "const MODULE_ID = \"arkflight-game\";",
+  "const FOLDER_NAME = \"Gilded Shatter — Wreckbound\";",
+  "if (!game.user?.isGM) {",
+  "  ui.notifications?.warn?.(\"Only a GM can build the Gilded Shatter enemies.\");",
+  "} else {",
+  "  const actionItem = (name, actionType, actions, html) => ({",
+  "    name, type:\"action\",",
+  "    system:{ actionType:{ value:actionType }, actions:{ value:actions }, category:null, description:{ value:html }, traits:{ value:[] } }",
+  "  });",
+  "  const strikeItem = (name, bonus, damage, damageType, traits=[]) => ({",
+  "    name, type:\"melee\",",
+  "    system:{ attackEffects:{ value:[] }, bonus:{ value:bonus }, damageRolls:{ primary:{ damage, damageType } }, traits:{ value:traits } }",
+  "  });",
+  "  const skillData = (skills) => Object.fromEntries(Object.entries(skills).map(([slug,value]) => [slug,{ base:value, value, mod:value }]));",
+  "  const baseNpc = ({ id, name, level, ac, hp, perception, saves, skills, rarity=\"common\", items=[] }) => ({",
+  "    name, type:\"npc\", img:\"icons/svg/mystery-man.svg\",",
+  "    system:{",
+  "      details:{",
+  "        level:{ value:level }, alliance:null,",
+  "        publicNotes:\"<p><strong>Gilded Shatter Wreckbound</strong></p><p>A dead sailor and pieces of the wreck have been rewritten into one functioning thing by the Dark Star transmutation.</p>\",",
+  "        privateNotes:\"<p>Weather Deck encounter creature. Dark Star Pulse interactions are GM-facing and described in the embedded abilities.</p>\"",
+  "      },",
+  "      traits:{ value:[\"construct\"], rarity, size:{ value:\"med\" }, languages:{ value:[\"common\"], custom:\"\" } },",
+  "      attributes:{ ac:{ value:ac }, hp:{ value:hp, max:hp, temp:0 }, speed:{ value:25, otherSpeeds:[] } },",
+  "      perception:{ mod:perception, senses:[] },",
+  "      saves:{ fortitude:{ value:saves.fortitude }, reflex:{ value:saves.reflex }, will:{ value:saves.will } },",
+  "      skills:skillData(skills), initiative:{ statistic:\"perception\" }",
+  "    },",
+  "    items,",
+  "    flags:{ [MODULE_ID]:{ gildedShatterEnemyId:id, adventure:\"gilded-shatter\", encounter:\"weather-deck\" } }",
+  "  });",
+  "  const bosun = baseNpc({",
+  "    id:\"wreckbound-bosun\", name:\"Gilded Wreckbound Bosun\",",
+  "    level:7, ac:25, hp:125, perception:18,",
+  "    saves:{ fortitude:18, reflex:15, will:12 },",
+  "    skills:{ athletics:20, intimidation:17, acrobatics:15, crafting:15 }, rarity:\"unique\",",
+  "    items:[",
+  "      strikeItem(\"Gilded Boarding Hook\",18,\"2d10+9\",\"piercing\",[\"reach-10\",\"trip\"]),",
+  "      strikeItem(\"Chain Maul\",18,\"2d8+9\",\"bludgeoning\",[\"sweep\"]),",
+  "      actionItem(\"Bound to the Veins\",\"passive\",null,\"<p>The Bosun ignores difficult terrain created by active gilded zones on the Gilded Shatter.</p>\"),",
+  "      actionItem(\"Hook and Haul\",\"action\",1,\"<p><strong>Requirements</strong> The Bosun\\'s previous action was a successful Gilded Boarding Hook Strike against the target.</p><p>The Bosun attempts Athletics +20 against the target\\'s Fortitude DC. On a success, pull the target up to 10 feet toward the Bosun or toward an adjacent active gilded zone. On a critical success, pull up to 15 feet and the target falls prone.</p>\"),",
+  "      actionItem(\"Hold the Deck!\",\"action\",1,\"<p>The Bosun barks a fragment of its final command. Choose one Wreckbound Deckhand within 30 feet. That Deckhand can use its reaction to Step or Stride up to half its Speed.</p>\"),",
+  "      actionItem(\"Dark Star Resonance\",\"reaction\",null,\"<p><strong>Trigger</strong> A Dark Star Pulse occurs.</p><p>The Bosun gains 10 temporary Hit Points and can Step up to 10 feet. Temporary Hit Points from this ability do not stack.</p>\")",
+  "    ]",
+  "  });",
+  "  const deckhand = baseNpc({",
+  "    id:\"wreckbound-deckhand\", name:\"Wreckbound Deckhand\",",
+  "    level:4, ac:21, hp:60, perception:12,",
+  "    saves:{ fortitude:14, reflex:11, will:8 },",
+  "    skills:{ athletics:12, acrobatics:10, intimidation:10 },",
+  "    items:[",
+  "      strikeItem(\"Gilded Deck Hook\",14,\"2d8+5\",\"slashing\",[\"trip\"]),",
+  "      strikeItem(\"Belaying Pin\",14,\"2d6+5\",\"bludgeoning\",[]),",
+  "      actionItem(\"Bound to the Veins\",\"passive\",null,\"<p>The Deckhand ignores difficult terrain created by active gilded zones on the Gilded Shatter.</p>\"),",
+  "      actionItem(\"Drag to Gold\",\"action\",1,\"<p><strong>Requirements</strong> The Deckhand\\'s previous action was a successful Gilded Deck Hook Strike against the target.</p><p>The Deckhand attempts Athletics +12 against the target\\'s Fortitude DC. On a success, pull the target 5 feet toward an active gilded zone. On a critical success, pull the target 10 feet.</p>\"),",
+  "      actionItem(\"Pulse Lurch\",\"reaction\",null,\"<p><strong>Trigger</strong> A Dark Star Pulse occurs.</p><p>The Deckhand Steps up to 5 feet. If possible, it ends this movement in or adjacent to an active gilded zone.</p>\")",
+  "    ]",
+  "  });",
+  "  let folder = game.folders?.find?.((entry) => entry.type === \"Actor\" && entry.name === FOLDER_NAME);",
+  "  if (!folder) {",
+  "    const FolderClass = CONFIG?.Folder?.documentClass ?? globalThis.Folder;",
+  "    folder = await FolderClass.create({ name:FOLDER_NAME, type:\"Actor\", sorting:\"a\", color:\"#9d7436\" });",
+  "  }",
+  "  const managed = game.actors.filter((actor) => actor.flags?.[MODULE_ID]?.adventure === \"gilded-shatter\" && [\"wreckbound-bosun\",\"wreckbound-deckhand\"].includes(actor.flags?.[MODULE_ID]?.gildedShatterEnemyId));",
+  "  if (managed.length) await Actor.deleteDocuments(managed.map((actor) => actor.id));",
+  "  const created = await Actor.createDocuments([{ ...bosun, folder:folder.id }, { ...deckhand, folder:folder.id }]);",
+  "  const bosunActor = created.find((actor) => actor.flags?.[MODULE_ID]?.gildedShatterEnemyId === \"wreckbound-bosun\");",
+  "  const deckhandActor = created.find((actor) => actor.flags?.[MODULE_ID]?.gildedShatterEnemyId === \"wreckbound-deckhand\");",
+  "  if (bosunActor) await bosunActor.update({ \"prototypeToken.disposition\":-1, \"prototypeToken.name\":\"Gilded Wreckbound Bosun\", \"prototypeToken.bar1.attribute\":\"attributes.hp\" });",
+  "  if (deckhandActor) await deckhandActor.update({ \"prototypeToken.disposition\":-1, \"prototypeToken.name\":\"Wreckbound Deckhand\", \"prototypeToken.bar1.attribute\":\"attributes.hp\" });",
+  "  const summary = \"<article><h2>Gilded Shatter Enemies Built</h2><p><strong>Gilded Wreckbound Bosun</strong> — Level 7<br><strong>Wreckbound Deckhand</strong> — Level 4</p><p><strong>5 PCs:</strong> 1 Bosun + 2 Deckhands = 100 XP (Moderate).</p><p><strong>6 PCs:</strong> 1 Bosun + 3 Deckhands = 120 XP (Moderate).</p><p>The Actor templates are in the <strong>\" + FOLDER_NAME + \"</strong> folder. Drag the Bosun once and the Deckhand the appropriate number of times onto the Weather Deck. Keep them hidden until the first major Dark Star Pulse.</p></article>\";",
+  "  await ChatMessage.create({ speaker:ChatMessage.getSpeaker(), content:summary });",
+  "  ui.notifications?.info?.(\"Gilded Shatter Wreckbound enemies built.\");",
+  "}"
+].join("\n");
+
 export const GILDED_SHATTER_WEATHER_DECK_GUIDE = Object.freeze({
   id: "gilded-shatter-weather-deck",
   level: 6,
@@ -216,11 +293,14 @@ export const GILDED_SHATTER_WEATHER_DECK_GUIDE = Object.freeze({
             <li><strong>Transition:</strong> the PCs choose when to leave the weather deck and descend.</li>
           </ol>
         `),
-        p("Optional Combat Slot", `
-          <h1>Optional Combat Slot</h1>
-          <p>The weather deck is designed so a combat encounter can be inserted after the players understand at least one clue. Do not begin with the fight; let the mystery breathe first.</p>
-          <p>The best enemy should feel like a consequence of the wreck rather than a random boarder: partially gilded crew, a damaged guardian, an aetheric scavenger, or another threat tied to the transmutation. Keep the Dark Star Pulse active as the environmental complication.</p>
-          <p><strong>Encounter design is intentionally left open here</strong> until the exact creature package is chosen. The hazard and investigation scene work with or without combat.</p>
+        p("Weather Deck Combat", `
+          <h1>Weather Deck Combat: The Wreckbound</h1>
+          <p>After the party has learned at least one truth about the spreading gold, use the first major Dark Star Pulse to wake the wreck's former deck crew.</p>
+          <p><strong>Gilded Wreckbound Bosun — Level 7.</strong> The former bosun has been rewritten together with hooks, chain, rope, railings, and pieces of the ship. It controls position with Hook and Haul, commands Deckhands with Hold the Deck!, and reacts to Dark Star Pulses.</p>
+          <p><strong>Wreckbound Deckhand — Level 4.</strong> These transformed sailors drag intruders toward active gilded zones and move with the pulse.</p>
+          <h2>Encounter Size</h2>
+          <ul><li><strong>5 level-6 PCs:</strong> 1 Bosun + 2 Deckhands = 100 XP, Moderate.</li><li><strong>6 level-6 PCs:</strong> 1 Bosun + 3 Deckhands = 120 XP, Moderate.</li></ul>
+          <p>Run <strong>Gilded Shatter — Build Wreckbound Enemies</strong> from the GM Macros compendium to create fresh PF2e Actor templates. Drag the Bosun once and the Deckhand the appropriate number of times onto the Weather Deck, then hide them until the pulse reveal.</p>
         `),
         p("Descent Vignette", `
           <h1>Going Below</h1>
@@ -232,6 +312,7 @@ export const GILDED_SHATTER_WEATHER_DECK_GUIDE = Object.freeze({
   ]),
   macros: Object.freeze([
     Object.freeze({ id: "gilded-shatter-dark-star-pulse", name: "Gilded Shatter — Dark Star Pulse", command: PULSE_MACRO, img: "icons/svg/explosion.svg" }),
-    Object.freeze({ id: "gilded-shatter-reset-dark-star-pulses", name: "Gilded Shatter — Reset Dark Star Pulses", command: RESET_PULSE_MACRO, img: "icons/svg/clockwork.svg" })
+    Object.freeze({ id: "gilded-shatter-reset-dark-star-pulses", name: "Gilded Shatter — Reset Dark Star Pulses", command: RESET_PULSE_MACRO, img: "icons/svg/clockwork.svg" }),
+    Object.freeze({ id: "gilded-shatter-build-wreckbound-enemies", name: "Gilded Shatter — Build Wreckbound Enemies", command: BUILD_ENEMIES_MACRO, img: "icons/svg/skull.svg" })
   ])
 });
