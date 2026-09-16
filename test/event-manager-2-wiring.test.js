@@ -13,7 +13,7 @@ test("Event Manager 2.0 exposes package lifecycle and launch API", () => {
   assert.match(runtime, /registerPackage/);
   assert.match(runtime, /sync,/);
   assert.match(runtime, /launch,/);
-  assert.match(runtime, /completeStage/);\n  assert.match(runtime, /resetProgress/);
+  assert.match(runtime, /completeStage/);\n  assert.match(runtime, /resetProgress/);\n  assert.match(runtime, /pkg\\.runtime\\?\\.launch/);\n  assert.match(runtime, /config\\.system = game\\.system\\.id/);
   assert.match(runtime, /arkflightContentReady/);
 });
 
