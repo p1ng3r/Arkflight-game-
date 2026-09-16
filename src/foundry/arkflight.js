@@ -18,6 +18,8 @@ import { installMasteryOpportunityUI } from "../ui/mastery-opportunity-ui.js";
 import { installOpeningScreenUI } from "../ui/opening-screen-ui.js";
 import { installShipwrightUX } from "../ui/shipwright-ux.js";
 import { isArkflightShip, markVehicleAsArkflightShip, registerArkflightShipSheet } from "../ui/ship-sheet-app.js";
+import { degreeOfSuccess } from "../combat/check-resolution.js";
+import { SHIP_DAMAGE_CHARACTER_HP_RATIO, shipDamageToCharacterHp, characterDamageToShipHull, scaleDamageSummary } from "../combat/scale-damage.js";
 
 const MODULE_ID = "arkflight-game";
 const SOCKET = `module.${MODULE_ID}`;
@@ -257,6 +259,16 @@ Hooks.once("init", () => {
 
   game.arkflight = {
     events: ARKFLIGHT_EVENTS,
+    catalogs: SHIP_CATALOGS,
+    rules: Object.freeze({
+      degreeOfSuccess,
+      scaleDamage: Object.freeze({
+        ratio: SHIP_DAMAGE_CHARACTER_HP_RATIO,
+        shipToCharacter: shipDamageToCharacterHp,
+        characterToShip: characterDamageToShipHull,
+        summary: scaleDamageSummary
+      })
+    }),
     stationOptions: stationOptionsForShip(),
     get controller() { return controller; },
     get gmOperations() { return ensureGMOperations(); },
