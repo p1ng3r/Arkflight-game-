@@ -274,6 +274,17 @@ function createContentApi(registry) {
     return writePackageState(registry, packageId, { completedStages, currentStageId });
   }
 
+  async function resetProgress(packageId, { preserveFlags = true } = {}) {
+    const pkg = registry.get(packageId);
+    if (!pkg) throw new Error(`Unknown Arkflight content package: ${packageId}`);
+    const state = packageState(registry, packageId);
+    return writePackageState(registry, packageId, {
+      currentStageId: pkg.adventure.stages[0]?.id ?? null,
+      completedStages: [],
+      flags: preserveFlags ? clone(state.flags) : {}
+    });
+  }
+
   return Object.freeze({
     registerPackage: (definition, options = {}) => registry.register(definition, options),
     unregisterPackage: (packageId) => {
@@ -292,6 +303,7 @@ function createContentApi(registry) {
     openResource,
     setStage,
     completeStage,
+    resetProgress,
     onChange: (callback) => registry.onChange(callback)
   });
 }
