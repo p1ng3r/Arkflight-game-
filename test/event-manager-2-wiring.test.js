@@ -16,6 +16,8 @@ test("Event Manager 2.0 exposes package lifecycle and launch API", () => {
   assert.match(runtime, /completeStage/);
   assert.match(runtime, /resetProgress/);
   assert.match(runtime, /pkg\.runtime\?\.launch/);
+  assert.match(runtime, /bindVoyageShip/);
+  assert.match(runtime, /shipReference: shipActor/);
   assert.match(runtime, /config\.system = game\.system\.id/);
   assert.match(runtime, /arkflightContentReady/);
 });
@@ -38,4 +40,17 @@ test("GM entry points route into Event Manager 2.0 instead of hardcoding Glassba
   assert.match(arkflight, /openEventManager/);
   assert.doesNotMatch(arkflight, /try \{ await game\.arkflight\.openEvent\("glassback-cinderwake"\)/);
   assert.match(gmOperations, /open-event-manager/);
+});
+
+
+test("Event Manager launches use the Foundry v14 vessel picker instead of guessing a ship", () => {
+  assert.match(arkflight, /DialogV2\.input/);
+  assert.match(arkflight, /name="shipUuid"/);
+  assert.match(arkflight, /chooseVoyageShip/);
+  assert.match(arkflight, /bindVoyageShip/);
+  assert.doesNotMatch(arkflight, /if \(ships\.length === 1\) return ships\[0\]/);
+  assert.doesNotMatch(arkflight, /Multiple commissioned Arkflight vessels are available/);
+  assert.match(runtime, /await bindVoyageShip\(shipReference/);
+  assert.match(runtime, /pkg\.runtime\.launch\(\{ package: pkg, state: packageProgress, stage: currentStage, shipReference: shipActor \}\)/);
+  assert.match(runtime, /game\.arkflight\.openEvent\(targetEventId, shipActor\)/);
 });
