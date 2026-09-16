@@ -12,6 +12,8 @@ function cloneList(value) {
 
 export function rewardPackage({
   gold = 0,
+  pf2eXp = 0,
+  shipXp = 0,
   aetherScrap = 0,
   valuables = [],
   pf2eItems = [],
@@ -23,12 +25,16 @@ export function rewardPackage({
   edgeCards = []
 } = {}) {
   const normalizedGold = Math.max(0, Number(gold) || 0);
+  const normalizedPf2eXp = Math.max(0, Math.trunc(Number(pf2eXp) || 0));
+  const normalizedShipXp = Math.max(0, Math.trunc(Number(shipXp) || 0));
   const normalizedAetherScrap = Math.max(0, Math.trunc(Number(aetherScrap) || 0));
   for (const tacticId of edgeCards) {
     if (!getCrewEdgeCard(tacticId)) throw new Error(`Unknown Crew Tactic: ${tacticId}`);
   }
   return Object.freeze({
     gold: normalizedGold,
+    pf2eXp: normalizedPf2eXp,
+    shipXp: normalizedShipXp,
     aetherScrap: normalizedAetherScrap,
     valuables: Object.freeze(cloneList(valuables)),
     pf2eItems: Object.freeze(cloneList(pf2eItems)),
@@ -132,6 +138,8 @@ export function applyRewardPackageToState(state, rewards, { eventResultId = null
 export function rewardRows(rewards) {
   if (!rewards) return [];
   const rows = [];
+  if (Number(rewards.pf2eXp ?? 0) > 0) rows.push({ type: "pf2e-xp", label: `${Math.trunc(Number(rewards.pf2eXp))} PF2e XP`, detail: "Award to each participating PC / selected PF2e party" });
+  if (Number(rewards.shipXp ?? 0) > 0) rows.push({ type: "ship-xp", label: `${Math.trunc(Number(rewards.shipXp))} Ship XP`, detail: "Award to the active Arkflight vessel" });
   if (Number(rewards.gold ?? 0) > 0) rows.push({ type: "gold", label: `${Number(rewards.gold)} gp`, detail: "Coin / liquid reward" });
   if (Number(rewards.aetherScrap ?? 0) > 0) rows.push({ type: "aether-scrap", label: `${Math.trunc(Number(rewards.aetherScrap))} Aether Scrap`, detail: "Arkflight ship refit currency" });
   for (const entry of rewards.valuables ?? []) rows.push({ type: "valuable", label: entry.name ?? "Valuable", detail: entry.valueGp ? `${entry.valueGp} gp value` : entry.description ?? "" });
