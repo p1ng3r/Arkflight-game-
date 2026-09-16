@@ -59,6 +59,51 @@ function eligibleRecipient(actor) {
   return actor && ["character", "loot", "party"].includes(actor.type) && typeof actor.createEmbeddedDocuments === "function";
 }
 
+async function partyCharacterMembers(actor) {
+  const direct = (() => {
+    try { return [...(actor?.members ?? [])].filter((member) => member?.type === "character"); }
+    catch (_error) { return []; }
+  })();
+  if (direct.length) return direct;
+
+  const refs = actor?.system?.details?.members ?? actor?.system?.members ?? [];
+  const members = [];
+  for (const entry of Array.isArray(refs) ? refs : []) {
+    const reference = typeof entry === "string" ? entry : (entry?.uuid ?? entry?.id ?? null);
+    if (!reference) continue;
+    let member = game.actors?.get?.(reference) ?? null;
+    if (!member && typeof fromUuid === "function") {
+      try { member = await fromUuid(reference); } catch (_error) { member = null; }
+    }
+    if (member?.type === "character") members.push(member);
+  }
+  return members;
+}
+
+async function experienceRecipients(actor) {
+  if (actor?.type === "character") return [actor];
+  if (actor?.type === "party") {
+    const members = await partyCharacterMembers(actor);
+    if (members.length) return members;
+    throw new Error(`${actor.name} has no PF2e character members available for XP.`);
+  }
+  throw new Error("PF2e XP rewards require a character or party recipient.");
+}
+
+async function grantExperience(actor, amount) {
+  const xp = Math.max(0, Math.trunc(Number(amount) || 0));
+  if (!xp) return Object.freeze([]);
+  const recipients = await experienceRecipients(actor);
+  const results = [];
+  for (const member of recipients) {
+    const before = Math.max(0, Math.trunc(Number(member.system?.details?.xp?.value) || 0));
+    const after = before + xp;
+    await member.update({ "system.details.xp.value": after });
+    results.push(Object.freeze({ actorId: member.id, actorName: member.name, before, after, amount: xp }));
+  }
+  return Object.freeze(results);
+}
+
 async function addGold(actor, quantity) {
   const amount = Math.max(0, Math.floor(Number(quantity) || 0));
   if (!amount) return [];
@@ -79,6 +124,7 @@ export async function grantPf2eRewards({ actor, rewards }) {
   if (!rewards) throw new Error("No Arkflight reward package is available.");
 
   const created = [];
+  const xpAwards = await grantExperience(actor, rewards.pf2eXp);
   created.push(...await addGold(actor, rewards.gold));
 
   const sources = [];
@@ -93,13 +139,15 @@ export async function grantPf2eRewards({ actor, rewards }) {
     actorName: actor.name,
     createdItemIds: created.map((item) => item.id),
     createdItemNames: created.map((item) => item.name),
-    gold: Math.max(0, Math.floor(Number(rewards.gold) || 0))
+    gold: Math.max(0, Math.floor(Number(rewards.gold) || 0)),
+    pf2eXp: Math.max(0, Math.trunc(Number(rewards.pf2eXp) || 0)),
+    xpAwards
   };
 }
 
-export function pf2eRewardRecipients() {
+export function pf2eRewardRecipients({ requireExperience = false } = {}) {
   return game.actors.contents
-    .filter(eligibleRecipient)
+    .filter((actor) => eligibleRecipient(actor) && (!requireExperience || ["character", "party"].includes(actor.type)))
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((actor) => ({ id: actor.id, name: actor.name, type: actor.type }));
 }

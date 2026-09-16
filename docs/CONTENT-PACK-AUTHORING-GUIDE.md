@@ -500,6 +500,29 @@ Example boundary:
 Core resolves gaining Strain and degradation.
 The pack decides that a Void Dragon attack causes 2 Strain.
 
+### Cross-scale damage
+
+Arkflight uses a fixed cross-scale conversion when ship weapons interact with ordinary PF2e Hit Points:
+
+- ship weapon → ship: use listed Ship Damage normally;
+- ship weapon → character-scale creature: **1 Ship Damage = 10 HP**;
+- character-scale attack → ship: ordinary attacks do not damage Hull; when an attack is genuinely structural, every full 10 post-mitigation character damage converts to 1 Hull.
+
+Use `game.arkflight.rules.scaleDamage` rather than reimplementing the ratio inside a package. `game.arkflight.rules.shipWeaponAttackBonus` and `weaponDamageProfile` are available for special package encounters that bring a ship weapon to bear on a creature.
+
+### XP rewards
+
+Reward packages may include:
+
+~~~js
+{
+  pf2eXp: 160,
+  shipXp: 300
+}
+~~~
+
+PF2e XP is granted through the selected PF2e character/party recipient. Ship XP is granted to the active Arkflight vessel through Core progression. External packages may use `game.arkflight.rewards` for reward rows and grants instead of writing character XP or ship progression directly.
+
 ## 25. Optional automation
 
 Optional visual modules should enhance presentation, not own mechanics.

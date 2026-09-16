@@ -18,6 +18,12 @@ import { installMasteryOpportunityUI } from "../ui/mastery-opportunity-ui.js";
 import { installOpeningScreenUI } from "../ui/opening-screen-ui.js";
 import { installShipwrightUX } from "../ui/shipwright-ux.js";
 import { isArkflightShip, markVehicleAsArkflightShip, registerArkflightShipSheet } from "../ui/ship-sheet-app.js";
+import { degreeOfSuccess } from "../combat/check-resolution.js";
+import { shipWeaponAttackBonus, weaponDamageProfile } from "../combat/weapon-combat.js";
+import { SHIP_DAMAGE_CHARACTER_HP_RATIO, shipDamageToCharacterHp, characterDamageToShipHull, scaleDamageSummary } from "../combat/scale-damage.js";
+import { grantPf2eRewards, pf2eRewardRecipients } from "../pf2e/reward-granter.js";
+import { grantCampaignRewards, grantShipExperience, grantShipRewards } from "./campaign-rewards.js";
+import { rewardRows } from "../event/reward-engine.js";
 
 const MODULE_ID = "arkflight-game";
 const SOCKET = `module.${MODULE_ID}`;
@@ -257,11 +263,36 @@ Hooks.once("init", () => {
 
   game.arkflight = {
     events: ARKFLIGHT_EVENTS,
+    catalogs: SHIP_CATALOGS,
+    rules: Object.freeze({
+      degreeOfSuccess,
+      shipWeaponAttackBonus,
+      weaponDamageProfile,
+      scaleDamage: Object.freeze({
+        ratio: SHIP_DAMAGE_CHARACTER_HP_RATIO,
+        shipToCharacter: shipDamageToCharacterHp,
+        characterToShip: characterDamageToShipHull,
+        summary: scaleDamageSummary
+      })
+    }),
+    rewards: Object.freeze({
+      rows: rewardRows,
+      recipients: pf2eRewardRecipients,
+      grantPf2e: grantPf2eRewards,
+      grantShipXp: grantShipExperience,
+      grantShip: grantShipRewards,
+      grantCampaign: grantCampaignRewards
+    }),
     stationOptions: stationOptionsForShip(),
     get controller() { return controller; },
     get gmOperations() { return ensureGMOperations(); },
     get activeShip() { return activeVoyageShip(); },
     get commissionedShips() { return commissionedShips(); },
+    deriveShip(actor = activeVoyageShip()) {
+      const ship = shipPayload(actor);
+      if (!ship) return null;
+      return deriveShip(ship, SHIP_CATALOGS);
+    },
     chooseVoyageShip: (options = {}) => chooseVoyageShip(options),
     bindVoyageShip: (reference = null, options = {}) => bindVoyageShip(reference, options),
     openBoard() { renderBoard(); return board; },

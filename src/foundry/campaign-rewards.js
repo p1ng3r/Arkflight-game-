@@ -1,4 +1,5 @@
 import { SHIP_CATALOGS } from "../content/index.js";
+import { addShipExperience, shipExperienceView } from "../ship/ship-xp.js";
 
 const MODULE_ID = "arkflight-game";
 const SETTING = "campaignRewardLedger";
@@ -79,6 +80,19 @@ export function shipRewardPlan(rewards = {}) {
   return Object.freeze({ direct: Object.freeze(direct), pending: Object.freeze(pending) });
 }
 
+export async function grantShipExperience(actor, amount) {
+  const xp = Math.max(0, Math.trunc(Number(amount) || 0));
+  if (!xp) return null;
+  if (!actor) throw new Error("No active Arkflight ship is bound for Ship XP.");
+  const ship = structuredClone(actor.flags?.[MODULE_ID]?.ship ?? {});
+  if (!ship?.hull?.chassisId) throw new Error(`${actor.name} is not a commissioned Arkflight vessel.`);
+  const before = shipExperienceView(ship);
+  const next = addShipExperience(ship, xp);
+  const after = shipExperienceView(next);
+  await actor.update({ [`flags.${MODULE_ID}.ship`]: next });
+  return Object.freeze({ actorId: actor.id, actorName: actor.name, amount: xp, before, after });
+}
+
 export async function grantShipRewards(actor, rewards = {}) {
   const plan = shipRewardPlan(rewards);
   const granted = [];
@@ -138,6 +152,7 @@ Hooks.once("ready", () => {
   game.arkflight.campaignRewards = Object.freeze({
     get: campaignRewardLedger,
     grant: grantCampaignRewards,
+    grantShipExperience,
     grantShipRewards,
     planShipRewards: shipRewardPlan
   });

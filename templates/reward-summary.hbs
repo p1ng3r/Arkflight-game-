@@ -48,6 +48,9 @@
                   </select>
                 </label>
               {{/if}}
+              {{#if hasShipXpReward}}
+                <div class="arkflight-reward-scrap-target"><strong>Ship XP → {{#if activeShipName}}{{activeShipName}}{{else}}No active ship bound{{/if}}</strong></div>
+              {{/if}}
               {{#if hasAetherScrapReward}}
                 <div class="arkflight-reward-scrap-target"><strong>Aether Scrap → {{#if activeShipName}}{{activeShipName}}{{else}}No active ship bound{{/if}}</strong></div>
               {{/if}}
@@ -58,7 +61,7 @@
                 <div class="arkflight-reward-scrap-target"><strong>Route knowledge / faction favor / boons → Campaign Ledger</strong></div>
               {{/if}}
               <button type="button" class="arkflight-primary" data-ark-action="grant-pf2e-rewards"><i class="fa-solid fa-box-open"></i> Grant Event Rewards</button>
-              <small>PF2e treasure goes to the selected recipient. Aether Scrap, direct blueprints, and physical ship components go to the active ship. Route knowledge, faction rewards, and boons persist to the world campaign ledger. Unresolved ship reward tables/choices are queued for Recovery.</small>
+              <small>PF2e XP and treasure go to the selected character/party recipient. Ship XP, Aether Scrap, direct blueprints, and physical ship components go to the active ship. Route knowledge, faction rewards, and boons persist to the world campaign ledger. Unresolved ship reward tables/choices are queued for Recovery.</small>
             </div>
           {{/if}}
         {{/if}}
@@ -83,7 +86,7 @@
     </section>
 
     <footer class="arkflight-reward-note">
-      Character treasure is granted through PF2e Item documents. Aether Scrap, direct blueprints, and physical components belong to the active Arkflight ship. Route knowledge, faction rewards, and boons belong to the Arkflight campaign ledger. Crew Tactics remain in the shared Crew Tactics pool.
+      PF2e XP and character treasure are granted through the selected PF2e recipient. Ship XP, Aether Scrap, direct blueprints, and physical components belong to the active Arkflight ship. Route knowledge, faction rewards, and boons belong to the Arkflight campaign ledger. Crew Tactics remain in the shared Crew Tactics pool.
     </footer>
   {{/if}}
 </section>
