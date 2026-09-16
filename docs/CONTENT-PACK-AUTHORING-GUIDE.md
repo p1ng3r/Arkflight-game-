@@ -622,6 +622,8 @@ Copy its architecture, not its adventure-specific rules.
 
 ~~~text
 game.arkflight.openEventManager()
+game.arkflight.chooseVoyageShip(options)
+game.arkflight.bindVoyageShip(shipReference, options)
 
 game.arkflight.content.registerPackage(definition, options)
 game.arkflight.content.unregisterPackage(packageId)
