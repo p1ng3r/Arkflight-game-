@@ -136,6 +136,12 @@ export class PlanningController {
   }
 
   async restartCurrentEvent() { this.#requireGM(); const event = this.getEvent(); if (!event) throw new Error("No Arkflight Event is active."); let next = restartEvent(this.state, { roundId: event.rounds[0]?.id, preserveAssignments: false, preserveCrewEdgeHand: true, preserveMastery: false }); next = { ...next, availableMasteries: this.#currentMasteryAvailability() }; next = initializeEncounter(event, next); return this.#persistAndBroadcast(next); }
+  async closeCurrentEvent({ force = false } = {}) {
+    this.#requireGM();
+    if (!this.state?.eventId) return null;
+    if (!force && this.state.phase !== "event-complete") throw new Error("Only a completed Arkflight Event may be closed without force.");
+    return this.#persistAndBroadcast(null);
+  }
   async command(command) { if (!command?.type) throw new Error("Planning command requires a type."); if (game.user.isGM) return this.#applyCommand(command, game.user.id); game.socket.emit(SOCKET, { type: "command", command, sourceUserId: game.user.id }); return null; }
   async beginPlanning() { return this.command({ type: "begin-planning" }); }
   async lockPlan() { this.#requireGM(); return this.command({ type: "lock-plan" }); }
