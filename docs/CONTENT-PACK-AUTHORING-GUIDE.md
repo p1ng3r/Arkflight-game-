@@ -489,7 +489,7 @@ await game.arkflight.openEvent("example-event", shipActor);
 
 The Event Manager UI itself does not use that bypass; normal GM launches always ask which vessel to use.
 
-## 25. Ship integration
+## 24. Ship integration
 
 Call Arkflight Core for reusable ship rules.
 
