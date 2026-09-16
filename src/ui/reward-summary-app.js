@@ -1,13 +1,14 @@
 import { crewEdgeHandRows, rewardRows } from "../event/reward-engine.js";
 import { grantPf2eRewards, pf2eRewardRecipients } from "../pf2e/reward-granter.js";
-import { campaignRewardEntries, grantCampaignRewards, grantShipRewards, shipRewardPlan } from "../foundry/campaign-rewards.js";
+import { campaignRewardEntries, grantCampaignRewards, grantShipExperience, grantShipRewards, shipRewardPlan } from "../foundry/campaign-rewards.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const HandlebarsApplication = HandlebarsApplicationMixin(ApplicationV2);
 
 function hasPf2eGrantableRewards(rewards) {
   if (!rewards) return false;
-  return Number(rewards.gold ?? 0) > 0
+  return Number(rewards.pf2eXp ?? 0) > 0
+    || Number(rewards.gold ?? 0) > 0
     || (rewards.valuables?.length ?? 0) > 0
     || (rewards.salvage?.length ?? 0) > 0
     || (rewards.pf2eItems?.length ?? 0) > 0;
@@ -15,6 +16,10 @@ function hasPf2eGrantableRewards(rewards) {
 
 function hasAetherScrapReward(rewards) {
   return Number(rewards?.aetherScrap ?? 0) > 0;
+}
+
+function hasShipXpReward(rewards) {
+  return Number(rewards?.shipXp ?? 0) > 0;
 }
 
 function hasCampaignRewards(rewards) {
@@ -68,14 +73,15 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
       hasRewards: rows.length > 0,
       hasPf2eGrantableRewards: hasPf2e,
       hasAetherScrapReward: hasScrap,
+      hasShipXpReward: hasShipXp,
       hasCampaignRewards: hasCampaign,
       hasShipRewards: hasShip,
-      hasGrantableRewards: hasPf2e || hasScrap || hasCampaign || hasShip,
+      hasGrantableRewards: hasPf2e || hasScrap || hasShipXp || hasCampaign || hasShip,
       isGM: game.user.isGM,
       rewardsGranted: Boolean(rewards?.granted),
       rewardRecipientName: rewards?.recipientActorName ?? null,
       activeShipName: game.arkflight?.activeShip?.name ?? null,
-      recipients: pf2eRewardRecipients()
+      recipients: pf2eRewardRecipients({ requireExperience: Number(rewards?.pf2eXp ?? 0) > 0 })
     };
   }
 
@@ -89,7 +95,8 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
       const rewards = this.controller.state?.eventRewards;
       const needsPf2eRecipient = hasPf2eGrantableRewards(rewards);
       const scrapAmount = Math.max(0, Math.trunc(Number(rewards?.aetherScrap) || 0));
-      const needsShip = scrapAmount > 0 || hasShipRewards(rewards);
+      const shipXpAmount = Math.max(0, Math.trunc(Number(rewards?.shipXp) || 0));
+      const needsShip = scrapAmount > 0 || shipXpAmount > 0 || hasShipRewards(rewards);
       const needsCampaign = hasCampaignRewards(rewards);
       const select = this.element.querySelector("[data-ark-reward-recipient]");
       const actor = select?.value ? game.actors.get(select.value) : null;
@@ -111,6 +118,8 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
         let pf2eResult = null;
         if (needsPf2eRecipient) pf2eResult = await grantPf2eRewards({ actor, rewards });
 
+        const shipXpResult = shipXpAmount > 0 ? await grantShipExperience(ship, shipXpAmount) : null;
+
         if (scrapAmount > 0) {
           const grantScrap = game.arkflight?.refit?.grantAetherScrap;
           if (typeof grantScrap !== "function") throw new Error("Arkflight Aether Scrap grant API is unavailable.");
@@ -130,7 +139,11 @@ export class ArkflightRewardSummary extends HandlebarsApplication {
         });
 
         const parts = [];
-        if (pf2eResult) parts.push(`PF2e rewards granted to ${pf2eResult.actorName}`);
+        if (pf2eResult) {
+          parts.push(`PF2e rewards granted to ${pf2eResult.actorName}`);
+          if (pf2eResult.pf2eXp > 0) parts.push(`${pf2eResult.pf2eXp} XP awarded to ${pf2eResult.xpAwards.length} PF2e character${pf2eResult.xpAwards.length === 1 ? "" : "s"}`);
+        }
+        if (shipXpResult) parts.push(`${shipXpResult.amount} Ship XP added to ${ship.name}`);
         if (scrapAmount > 0) parts.push(`${scrapAmount} Aether Scrap added to ${ship.name}`);
         if (shipResult?.granted?.length) parts.push(`${shipResult.granted.length} ship reward${shipResult.granted.length === 1 ? "" : "s"} added to ${ship.name}`);
         if (shipResult?.pending?.length) parts.push(`${shipResult.pending.length} ship reward choice${shipResult.pending.length === 1 ? "" : "s"} queued for Recovery`);
