@@ -105,7 +105,7 @@ Use:
 
 ```js
 await game.arkflight.content.setStage("dead-planet-finale", "void-dragon");
-await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");
+await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");\nawait game.arkflight.content.resetProgress("dead-planet-finale");
 ```
 
 ## Runtime API
@@ -122,7 +122,7 @@ await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");
 - `game.arkflight.content.launch(id, { eventId, shipReference })`
 - `game.arkflight.content.openResource(id, kind)`
 - `game.arkflight.content.setStage(id, stageId)`
-- `game.arkflight.content.completeStage(id, stageId)`
+- `game.arkflight.content.completeStage(id, stageId)`\n- `game.arkflight.content.resetProgress(id, { preserveFlags })`
 
 ## Compatibility rule
 
