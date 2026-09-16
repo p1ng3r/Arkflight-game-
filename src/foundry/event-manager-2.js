@@ -95,7 +95,9 @@ async function ensurePack(pkg, kind, folder) {
   if (!pack) {
     const CompendiumClass = foundry?.documents?.collections?.CompendiumCollection ?? globalThis.CompendiumCollection;
     if (!CompendiumClass?.createCompendium) throw new Error("Foundry CompendiumCollection API is unavailable.");
-    pack = await CompendiumClass.createCompendium({ name, label: `Arkflight — ${pkg.title} — ${definition.label}`, type: definition.documentName, package: "world" });
+    const config = { name, label: `Arkflight — ${pkg.title} — ${definition.label}`, type: definition.documentName, package: "world" };
+    if (definition.documentName === "Actor" && game.system?.id) config.system = game.system.id;
+    pack = await CompendiumClass.createCompendium(config);
   }
   if (folder && typeof pack.setFolder === "function") {
     const currentFolderId = typeof pack.folder === "string" ? pack.folder : pack.folder?.id;
