@@ -19,6 +19,7 @@ import { installOpeningScreenUI } from "../ui/opening-screen-ui.js";
 import { installShipwrightUX } from "../ui/shipwright-ux.js";
 import { isArkflightShip, markVehicleAsArkflightShip, registerArkflightShipSheet } from "../ui/ship-sheet-app.js";
 import { degreeOfSuccess } from "../combat/check-resolution.js";
+import { shipWeaponAttackBonus, weaponDamageProfile } from "../combat/weapon-combat.js";
 import { SHIP_DAMAGE_CHARACTER_HP_RATIO, shipDamageToCharacterHp, characterDamageToShipHull, scaleDamageSummary } from "../combat/scale-damage.js";
 import { grantPf2eRewards, pf2eRewardRecipients } from "../pf2e/reward-granter.js";
 import { grantCampaignRewards, grantShipExperience, grantShipRewards } from "./campaign-rewards.js";
@@ -265,6 +266,8 @@ Hooks.once("init", () => {
     catalogs: SHIP_CATALOGS,
     rules: Object.freeze({
       degreeOfSuccess,
+      shipWeaponAttackBonus,
+      weaponDamageProfile,
       scaleDamage: Object.freeze({
         ratio: SHIP_DAMAGE_CHARACTER_HP_RATIO,
         shipToCharacter: shipDamageToCharacterHp,
