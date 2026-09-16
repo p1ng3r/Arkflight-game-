@@ -226,8 +226,10 @@ function createContentApi(registry) {
     if (!pkg) throw new Error(`Unknown Arkflight content package: ${packageId}`);
     const status = packageStatus(registry, packageId);
     if (!status.ready) throw new Error(status.blockers.join(" "));
-    const targetEventId = eventId ?? pkg.adventure.entryPoint;
-    if (!targetEventId) throw new Error(`${pkg.title} has no launchable Arkflight Event entry point.`);
+    const packageProgress = packageState(registry, packageId);
+    const currentStage = pkg.adventure.stages.find((stage) => stage.id === packageProgress.currentStageId) ?? null;
+    const targetEventId = eventId ?? currentStage?.eventId ?? (pkg.adventure.stages.length ? null : pkg.adventure.entryPoint);
+    if (!targetEventId) throw new Error(`${pkg.title}'s current stage is not a launchable Arkflight Event. Use its package resources or advance the stage when that activity is complete.`);
     const active = game.arkflight?.controller?.state?.eventId ?? null;
     if (active) {
       if (active === targetEventId) { game.arkflight.openBoard?.(); return game.arkflight.controller?.state ?? null; }
@@ -261,6 +263,12 @@ function createContentApi(registry) {
     const index = pkg.adventure.stages.findIndex((stage) => stage.id === stageId);
     if (index < 0) throw new Error(`Unknown stage ${stageId} for ${packageId}.`);
     const state = packageState(registry, packageId);
+    const stage = pkg.adventure.stages[index];
+    const controllerState = game.arkflight?.controller?.state ?? null;
+    if (stage.eventId && controllerState?.eventId === stage.eventId) {
+      if (controllerState.phase !== "event-complete") throw new Error(`${stage.label} cannot be completed while its Arkflight Event is still in progress.`);
+      await game.arkflight.controller.closeCurrentEvent();
+    }
     const completedStages = [...new Set([...state.completedStages, stageId])];
     const currentStageId = pkg.adventure.stages[index + 1]?.id ?? stageId;
     return writePackageState(registry, packageId, { completedStages, currentStageId });
