@@ -229,7 +229,12 @@ function createContentApi(registry) {
     const packageProgress = packageState(registry, packageId);
     const currentStage = pkg.adventure.stages.find((stage) => stage.id === packageProgress.currentStageId) ?? null;
     const targetEventId = eventId ?? currentStage?.eventId ?? (pkg.adventure.stages.length ? null : pkg.adventure.entryPoint);
-    if (!targetEventId) throw new Error(`${pkg.title}'s current stage is not a launchable Arkflight Event. Use its package resources or advance the stage when that activity is complete.`);
+    if (!targetEventId && typeof pkg.runtime?.launch === "function") {
+      const result = await pkg.runtime.launch({ package: pkg, state: packageProgress, stage: currentStage, shipReference });
+      Hooks.callAll("arkflightContentPackageLaunched", { packageId, package: pkg, eventId: null, stageId: currentStage?.id ?? null, state: packageProgress, result });
+      return result;
+    }
+    if (!targetEventId) throw new Error(`${pkg.title}'s current stage is not a launchable Arkflight Event and the package did not register a runtime launch handler.`);
     const active = game.arkflight?.controller?.state?.eventId ?? null;
     if (active) {
       if (active === targetEventId) { game.arkflight.openBoard?.(); return game.arkflight.controller?.state ?? null; }
