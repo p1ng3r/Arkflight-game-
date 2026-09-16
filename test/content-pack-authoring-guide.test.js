@@ -2,6 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { spawnSync } from "node:child_process";
 
 const guide = fs.readFileSync(
   new URL("../docs/CONTENT-PACK-AUTHORING-GUIDE.md", import.meta.url),
@@ -43,4 +44,15 @@ test("starter pack requires Arkflight and PF2e and registers through Event Manag
   assert.match(starter, /content\.registerPackage/);
   assert.match(starter, /content\.sync/);
   assert.match(starter, /content\.resetProgress/);
+});
+
+
+test("starter pack validator passes", () => {
+  const result = spawnSync(
+    process.execPath,
+    ["examples/content-pack-starter/tests/validate.mjs"],
+    { encoding: "utf8" }
+  );
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /PASS: Arkflight content pack starter validation/);
 });
