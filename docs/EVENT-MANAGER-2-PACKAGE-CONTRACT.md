@@ -105,7 +105,8 @@ Use:
 
 ```js
 await game.arkflight.content.setStage("dead-planet-finale", "void-dragon");
-await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");\nawait game.arkflight.content.resetProgress("dead-planet-finale");
+await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");
+await game.arkflight.content.resetProgress("dead-planet-finale");
 ```
 
 
@@ -137,8 +138,13 @@ Event Manager 2.0 will expose **Open Adventure** for these packages. Event-backe
 - `game.arkflight.content.launch(id, { eventId, shipReference })`
 - `game.arkflight.content.openResource(id, kind)`
 - `game.arkflight.content.setStage(id, stageId)`
-- `game.arkflight.content.completeStage(id, stageId)`\n- `game.arkflight.content.resetProgress(id, { preserveFlags })`
+- `game.arkflight.content.completeStage(id, stageId)`
+- `game.arkflight.content.resetProgress(id, { preserveFlags })`
 
 ## Compatibility rule
 
 The existing Event Board remains authoritative for station-based events. Event Manager 2.0 is the content/discovery/orchestration layer above it; packages do not reimplement the round engine.
+
+## Authoring guide
+
+For the complete workflow, conventions, testing standard, migration rules, and starter template, see [CONTENT-PACK-AUTHORING-GUIDE.md](CONTENT-PACK-AUTHORING-GUIDE.md).

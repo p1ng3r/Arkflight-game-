@@ -1,0 +1,35 @@
+{
+  "id": "arkflight-example-adventure",
+  "title": "Arkflight — Example Adventure",
+  "description": "Starter Event Manager 2.0 content package.",
+  "version": "0.1.0",
+  "authors": [
+    {
+      "name": "Arkflight"
+    }
+  ],
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "pf2e",
+        "type": "system"
+      }
+    ],
+    "requires": [
+      {
+        "id": "arkflight-game",
+        "type": "module"
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/package.js"
+  ],
+  "styles": [
+    "styles/package.css"
+  ]
+}
