@@ -77,7 +77,17 @@ export class ArkflightEventManager2 extends HandlebarsApplication {
       try {
         button.disabled = true;
         if (action === "launch") await game.arkflight.content.launch(packageId);
-        else if (action === "resume") game.arkflight.openBoard?.();
+        else if (action === "resume") {
+          if (!game.arkflight?.activeShip) {
+            const pkg = game.arkflight.content.get(packageId);
+            const shipActor = await game.arkflight.bindVoyageShip?.(null, {
+              title: `Choose Vessel — ${pkg?.title ?? "Arkflight Event"}`,
+              confirmLabel: "Resume Event"
+            });
+            if (!shipActor) return;
+          }
+          game.arkflight.openBoard?.();
+        }
         else if (action === "sync") await game.arkflight.content.sync(packageId);
         else if (action === "rebuild") await game.arkflight.content.sync(packageId, { force: true });
         else if (action === "open-resource") await game.arkflight.content.openResource(packageId, button.dataset.resourceKind);

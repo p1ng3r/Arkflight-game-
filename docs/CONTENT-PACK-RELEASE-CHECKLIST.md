@@ -26,6 +26,8 @@ Use this as the short pre-release companion to the full Content Pack Authoring G
 - [ ] Hybrid/non-Event gameplay uses runtime.launch.
 - [ ] Package-specific state is owned by the package.
 - [ ] Event Manager state changes only through public APIs.
+- [ ] Event Manager launch always presents the commissioned-vessel picker.
+- [ ] Package runtime uses the supplied shipReference/bound Actor and never searches for a specific vessel name.
 - [ ] content.scenes is not assumed to auto-install Scenes.
 
 ## Managed content

@@ -28,11 +28,15 @@ test("content pack authoring guide documents the supported Event Manager archite
   assert.match(guide, /runtime\.launch is package-level/);
   assert.match(guide, /does \*\*not yet synchronize Scene documents\*\*/);
   assert.match(guide, /game\.arkflight\.content\.resetProgress/);
+  assert.match(guide, /always show the commissioned-vessel picker/);
+  assert.match(guide, /never search for a campaign-specific vessel name/);
   assert.match(guide, /Definition of Done/);
 });
 
 test("content pack release checklist covers migration, optional modules, and validation", () => {
   assert.match(checklist, /Legacy migration targets only documents owned by this package/);
+  assert.match(checklist, /commissioned-vessel picker/);
+  assert.match(checklist, /never searches for a specific vessel name/);
   assert.match(checklist, /optional modules disabled/);
   assert.match(checklist, /Core CI/);
 });
@@ -44,6 +48,7 @@ test("starter pack requires Arkflight and PF2e and registers through Event Manag
   assert.match(starter, /content\.registerPackage/);
   assert.match(starter, /content\.sync/);
   assert.match(starter, /content\.resetProgress/);
+  assert.match(starter, /if \(!shipReference\) throw new Error/);
 });
 
 

@@ -124,9 +124,17 @@ runtime: {
 
 Event Manager 2.0 will expose **Open Adventure** for these packages. Event-backed stages continue to use the normal Arkflight Event Board.
 
+## Vessel selection
+
+Event Manager 2.0 always asks the GM to choose a commissioned Arkflight vessel before a normal package launch, even if only one vessel is available. It binds that Actor and passes it to runtime packages as `shipReference`.
+
+Packages must not search for a campaign-specific vessel name. Automation that already has an Actor/UUID may explicitly provide `shipReference` to bypass the picker.
+
 ## Runtime API
 
 - `game.arkflight.openEventManager()`
+- `game.arkflight.chooseVoyageShip(options)`
+- `game.arkflight.bindVoyageShip(shipReference, options)`
 - `game.arkflight.content.registerPackage(definition, options)`
 - `game.arkflight.content.unregisterPackage(id)`
 - `game.arkflight.content.list()`

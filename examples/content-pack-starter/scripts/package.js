@@ -53,6 +53,8 @@ function buildPackageDefinition() {
 }
 
 async function openAdventure({ state, stage, shipReference } = {}) {
+  if (!shipReference) throw new Error("Event Manager did not provide the selected Arkflight vessel.");
+
   console.info("Arkflight | Example Adventure opened", {
     state,
     stage,

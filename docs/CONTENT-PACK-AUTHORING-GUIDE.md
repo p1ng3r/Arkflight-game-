@@ -464,7 +464,32 @@ game.arkflight.exampleAdventure = Object.freeze({
 
 This keeps macros small and provides one authoritative entry point for debugging and integrations.
 
-## 23. Ship integration
+## 23. Vessel selection contract
+
+Event Manager 2.0 owns vessel selection for content-pack launches.
+
+When the GM clicks **Launch Event** or **Open Adventure**, Event Manager must always show the commissioned-vessel picker, even when only one valid vessel exists. The selected Actor is then bound as the active Voyage ship and passed to the package runtime as `shipReference`.
+
+A package must:
+
+- use the Actor supplied through `shipReference` or Arkflight's bound active ship;
+- never search for a campaign-specific vessel name;
+- never silently guess a ship from a hardcoded name;
+- never auto-select the only ship as a substitute for the Event Manager picker.
+
+Programmatic automation may intentionally bypass the picker by supplying an explicit Actor/UUID:
+
+~~~js
+await game.arkflight.content.launch("example-adventure", {
+  shipReference: shipActor
+});
+
+await game.arkflight.openEvent("example-event", shipActor);
+~~~
+
+The Event Manager UI itself does not use that bypass; normal GM launches always ask which vessel to use.
+
+## 24. Ship integration
 
 Call Arkflight Core for reusable ship rules.
 
@@ -475,7 +500,7 @@ Example boundary:
 Core resolves gaining Strain and degradation.
 The pack decides that a Void Dragon attack causes 2 Strain.
 
-## 24. Optional automation
+## 25. Optional automation
 
 Optional visual modules should enhance presentation, not own mechanics.
 
@@ -495,13 +520,13 @@ async function playOptionalEffect() {
 
 The mechanical result still needs to be visible through standard Arkflight/Foundry UI.
 
-## 25. Narrative vignettes
+## 26. Narrative vignettes
 
 Use vignettes for important transitions: opening, phase change, boss reveal, escape threshold, and ending.
 
 Keep cinematic text separate from required mechanical instructions.
 
-## 26. Migration rules
+## 27. Migration rules
 
 When updating an existing pack:
 
@@ -515,7 +540,7 @@ When updating an existing pack:
 
 Never solve migration by deleting unrelated world content.
 
-## 27. Testing standard
+## 28. Testing standard
 
 Every external pack should ship a validator.
 
@@ -535,7 +560,7 @@ At minimum validate:
 
 Test clean install, resync, Foundry restart, reset/replay, upgrade from previous version, and behavior with optional modules disabled.
 
-## 28. Development workflow
+## 29. Development workflow
 
 1. Write the package pitch: level, session count, fantasy, beginning, ending.
 2. Define stages before automation.
@@ -546,7 +571,7 @@ Test clean install, resync, Foundry restart, reset/replay, upgrade from previous
 7. Add optional VFX integrations last.
 8. Test clean install, upgrade, replay, and missing optional modules.
 
-## 29. Release checklist
+## 30. Release checklist
 
 Before release verify:
 
@@ -567,7 +592,7 @@ Before release verify:
 
 See CONTENT-PACK-RELEASE-CHECKLIST.md for the short checkbox version.
 
-## 30. Anti-patterns
+## 31. Anti-patterns
 
 Do not build another package manager.
 
@@ -585,7 +610,7 @@ Do not wipe compendiums for updates.
 
 Do not write to Core private settings.
 
-## 31. Reference implementation
+## 32. Reference implementation
 
 Escape From the Dead Planet v0.2.0 is the first full external Event Manager 2.0 reference package.
 
@@ -593,10 +618,12 @@ It demonstrates hybrid runtime finale structure, managed Journals/Macros/RollTab
 
 Copy its architecture, not its adventure-specific rules.
 
-## 32. Current public API
+## 33. Current public API
 
 ~~~text
 game.arkflight.openEventManager()
+game.arkflight.chooseVoyageShip(options)
+game.arkflight.bindVoyageShip(shipReference, options)
 
 game.arkflight.content.registerPackage(definition, options)
 game.arkflight.content.unregisterPackage(packageId)
@@ -623,7 +650,7 @@ game.arkflight.content.onChange(callback)
 
 Treat this as the supported package surface. If a pack needs a generic operation not represented here, extend Core deliberately instead of reaching into Event Manager internals.
 
-## 33. Definition of Done
+## 34. Definition of Done
 
 An Arkflight content pack is done when a GM can:
 

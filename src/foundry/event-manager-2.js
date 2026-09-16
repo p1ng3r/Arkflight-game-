@@ -231,19 +231,28 @@ function createContentApi(registry) {
     const packageProgress = packageState(registry, packageId);
     const currentStage = pkg.adventure.stages.find((stage) => stage.id === packageProgress.currentStageId) ?? null;
     const targetEventId = eventId ?? currentStage?.eventId ?? (pkg.adventure.stages.length ? null : pkg.adventure.entryPoint);
-    if (!targetEventId && typeof pkg.runtime?.launch === "function") {
-      const result = await pkg.runtime.launch({ package: pkg, state: packageProgress, stage: currentStage, shipReference });
-      Hooks.callAll("arkflightContentPackageLaunched", { packageId, package: pkg, eventId: null, stageId: currentStage?.id ?? null, state: packageProgress, result });
-      return result;
-    }
-    if (!targetEventId) throw new Error(`${pkg.title}'s current stage is not a launchable Arkflight Event and the package did not register a runtime launch handler.`);
     const active = game.arkflight?.controller?.state?.eventId ?? null;
-    if (active) {
+    if (targetEventId && active) {
       if (active === targetEventId) { game.arkflight.openBoard?.(); return game.arkflight.controller?.state ?? null; }
       throw new Error(`Arkflight Event ${active} is already active. Finish or restart it before launching ${pkg.title}.`);
     }
-    const state = await game.arkflight.openEvent(targetEventId, shipReference);
-    Hooks.callAll("arkflightContentPackageLaunched", { packageId, package: pkg, eventId: targetEventId, state });
+
+    const bindVoyageShip = game.arkflight?.bindVoyageShip;
+    if (typeof bindVoyageShip !== "function") throw new Error("Arkflight vessel selection is unavailable. Update Arkflight Core.");
+    const shipActor = await bindVoyageShip(shipReference, {
+      title: `Choose Vessel — ${pkg.title}`,
+      confirmLabel: targetEventId ? "Launch Event" : "Open Adventure"
+    });
+    if (!shipActor) return null;
+
+    if (!targetEventId && typeof pkg.runtime?.launch === "function") {
+      const result = await pkg.runtime.launch({ package: pkg, state: packageProgress, stage: currentStage, shipReference: shipActor });
+      Hooks.callAll("arkflightContentPackageLaunched", { packageId, package: pkg, eventId: null, stageId: currentStage?.id ?? null, state: packageProgress, shipActor, result });
+      return result;
+    }
+    if (!targetEventId) throw new Error(`${pkg.title}'s current stage is not a launchable Arkflight Event and the package did not register a runtime launch handler.`);
+    const state = await game.arkflight.openEvent(targetEventId, shipActor);
+    Hooks.callAll("arkflightContentPackageLaunched", { packageId, package: pkg, eventId: targetEventId, shipActor, state });
     return state;
   }
 
