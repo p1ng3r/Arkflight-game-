@@ -276,16 +276,14 @@ Hooks.once("ready", async () => {
 Hooks.on("getSceneControlButtons", (controls) => {
   if (!controls.tokens?.tools) return;
   controls.tokens.tools.arkflightEvent = {
-    name: "arkflightEvent", title: "Arkflight Event Board", icon: "fa-solid fa-compass", order: Object.keys(controls.tokens.tools).length, button: true, visible: true,
+    name: "arkflightEvent", title: game.user.isGM ? "Arkflight Event Manager 2.0" : "Arkflight Event Board", icon: "fa-solid fa-compass", order: Object.keys(controls.tokens.tools).length, button: true, visible: true,
     onChange: async () => {
       if (!controller) return;
-      if (!controller.state?.eventId) {
-        if (!game.user.isGM) { ui.notifications?.info("Waiting for the GM to launch an Arkflight Event."); return; }
-        try { await game.arkflight.openEvent("glassback-cinderwake"); } catch (error) { ui.notifications?.warn(error.message); }
+      if (game.user.isGM) {
+        game.arkflight.openEventManager?.();
         return;
       }
-      if (game.user.isGM && !activeVoyageShip()) await bindExistingEventShipIfNeeded();
-      if (game.user.isGM) broadcastEventBoardOpen(controller.state.eventId);
+      if (!controller.state?.eventId) { ui.notifications?.info("Waiting for the GM to launch an Arkflight Event."); return; }
       renderBoard();
     }
   };
