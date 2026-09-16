@@ -280,6 +280,7 @@ Hooks.on("getSceneControlButtons", (controls) => {
     onChange: async () => {
       if (!controller) return;
       if (game.user.isGM) {
+        if (game.user.isGM) broadcastEventBoardOpen(controller.state?.eventId);
         game.arkflight.openEventManager?.();
         return;
       }
