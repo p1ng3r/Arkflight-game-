@@ -142,3 +142,4 @@ Event Manager 2.0 will expose **Open Adventure** for these packages. Event-backe
 ## Compatibility rule
 
 The existing Event Board remains authoritative for station-based events. Event Manager 2.0 is the content/discovery/orchestration layer above it; packages do not reimplement the round engine.
+\n## Authoring guide\n\nFor the complete workflow, conventions, testing standard, migration rules, and starter template, see [CONTENT-PACK-AUTHORING-GUIDE.md](CONTENT-PACK-AUTHORING-GUIDE.md).\n
