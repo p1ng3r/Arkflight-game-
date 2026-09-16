@@ -285,6 +285,11 @@ Hooks.once("init", () => {
     get gmOperations() { return ensureGMOperations(); },
     get activeShip() { return activeVoyageShip(); },
     get commissionedShips() { return commissionedShips(); },
+    deriveShip(actor = activeVoyageShip()) {
+      const ship = shipPayload(actor);
+      if (!ship) return null;
+      return deriveShip(ship, SHIP_CATALOGS);
+    },
     chooseVoyageShip: (options = {}) => chooseVoyageShip(options),
     bindVoyageShip: (reference = null, options = {}) => bindVoyageShip(reference, options),
     openBoard() { renderBoard(); return board; },
