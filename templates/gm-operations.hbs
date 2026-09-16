@@ -132,8 +132,8 @@
 
       {{#if operations}}
         {{#if activeEvent}}
-          <article class="arkflight-gm-panel arkflight-gm-active-operation"><div><div class="arkflight-gm-kicker">ACTIVE VOYAGE</div><h2>{{activeEvent.name}}</h2><p>Round {{activeEvent.round}} · {{activeEvent.phase}}</p></div><button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-compass"></i> Resume Event</button></article>
-        {{else}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><i class="fa-solid fa-compass"></i><h2>No active Voyage</h2><p>Event selection and launch controls will be added here next.</p></article>{{/if}}
+          <article class="arkflight-gm-panel arkflight-gm-active-operation"><div><div class="arkflight-gm-kicker">ACTIVE VOYAGE</div><h2>{{activeEvent.name}}</h2><p>Round {{activeEvent.round}} · {{activeEvent.phase}}</p></div><div class="arkflight-gm-command-actions"><button type="button" class="arkflight-gm-primary" data-action="resume-event"><i class="fa-solid fa-compass"></i> Resume Event</button><button type="button" data-action="open-event-manager"><i class="fa-solid fa-boxes-stacked"></i> Event Manager</button></div></article>
+        {{else}}<article class="arkflight-gm-panel arkflight-gm-empty-state"><i class="fa-solid fa-compass-drafting"></i><h2>Event Manager 2.0</h2><p>Browse built-in adventures and installed Arkflight content packages.</p><button type="button" class="arkflight-gm-primary" data-action="open-event-manager"><i class="fa-solid fa-boxes-stacked"></i> Open Event Manager</button></article>{{/if}}
         {{#if combatActive}}<article class="arkflight-gm-panel"><h2>Active Ship Combat</h2><p>Combat controls will connect to the authoritative Arkflight combat API.</p></article>{{/if}}
       {{/if}}
 

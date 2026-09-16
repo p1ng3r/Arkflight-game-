@@ -57,6 +57,7 @@
     "styles/shipwright-nav-compact.css",
     "styles/ship-portrait.css",
     "styles/gm-operations.css",
+    "styles/event-manager-2.css",
     "styles/ship-operational-status.css",
     "styles/ship-header-layout.css",
     "styles/ship-sheet-visual-boards.css",
@@ -72,6 +73,7 @@
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
+    "src/foundry/event-manager-2.js",
     "src/foundry/arkflight-compendiums.js",
     "src/foundry/combat-reference-compendium.js",
     "src/foundry/gilded-shatter-gm-guide.js",

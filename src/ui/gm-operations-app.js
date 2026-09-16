@@ -208,6 +208,7 @@ export class ArkflightGMOperations extends HandlebarsApplication {
       this.render({ force: true });
     });
     for (const button of this.element.querySelectorAll("[data-action='resume-event']")) button.addEventListener("click", () => game.arkflight?.openBoard?.());
+    for (const button of this.element.querySelectorAll("[data-action='open-event-manager']")) button.addEventListener("click", () => game.arkflight?.openEventManager?.());
     this.element.querySelector("[data-action='open-operations']")?.addEventListener("click", () => { this.activeSection = "operations"; this.render({ force: true }); });
     for (const button of this.element.querySelectorAll("[data-roster-ship-id]")) button.addEventListener("click", () => { this.selectedRosterShipId = button.dataset.rosterShipId; this.render({ force: true }); });
     this.element.querySelector("[data-action='open-ship-sheet']")?.addEventListener("click", () => { if (this.selectedRosterShipId) game.arkflight?.ships?.openSheet?.(this.selectedRosterShipId); });
