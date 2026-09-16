@@ -39,3 +39,4 @@ The playable loop is the product. Infrastructure exists only to support it.
 The first milestone is one complete encounter that is enjoyable in Foundry from planning through closeout. Large persistence, replay, recovery, provenance, and campaign subsystems are not prerequisites for proving the game.
 
 See [GAME-DESIGN.md](GAME-DESIGN.md) for the core game loop and [docs/SHIP-CONDITION-STRAIN-CONTRACT.md](docs/SHIP-CONDITION-STRAIN-CONTRACT.md) for the authoritative persistent ship-damage rules.
+\n## Content Pack Authoring\n\nArkflight adventures and external Event Manager 2.0 packages should follow [docs/CONTENT-PACK-AUTHORING-GUIDE.md](docs/CONTENT-PACK-AUTHORING-GUIDE.md). Use [docs/CONTENT-PACK-RELEASE-CHECKLIST.md](docs/CONTENT-PACK-RELEASE-CHECKLIST.md) before release and [examples/content-pack-starter/](examples/content-pack-starter/) as the copyable starting point.\n
