@@ -22,6 +22,8 @@ Use this as the short pre-release companion to the full Content Pack Authoring G
 ## Architecture
 
 - [ ] Core rules are called through Arkflight APIs rather than copied into the pack.
+- [ ] Cross-scale damage uses Core's 10:1 scale API rather than package-local math.
+- [ ] PF2e XP / Ship XP rewards use Core reward APIs rather than direct progression writes.
 - [ ] Five-station gameplay uses the Event Board.
 - [ ] Hybrid/non-Event gameplay uses runtime.launch.
 - [ ] Package-specific state is owned by the package.
