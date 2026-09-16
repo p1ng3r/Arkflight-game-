@@ -69,7 +69,10 @@ export function defineContentPackage(definition = {}) {
       actors: freeze(rows(content.actors)),
       scenes: freeze(rows(content.scenes))
     }),
-    resources: freeze({ ...(definition.resources ?? {}) })
+    resources: freeze({ ...(definition.resources ?? {}) }),
+    runtime: freeze({
+      launch: typeof definition.runtime?.launch === "function" ? definition.runtime.launch : null
+    })
   });
 }
 

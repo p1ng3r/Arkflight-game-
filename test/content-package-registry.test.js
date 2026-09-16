@@ -41,3 +41,10 @@ test("registry rejects event ownership collisions", () => {
   registry.register(packageDefinition("first-package"));
   assert.throws(() => registry.register(packageDefinition("second-package")), /already owned/);
 });
+
+
+test("content package preserves an optional runtime launch handler", () => {
+  const launch = async () => "launched";
+  const pkg = defineContentPackage({ ...packageDefinition(), runtime: { launch } });
+  assert.equal(pkg.runtime.launch, launch);
+});

@@ -95,7 +95,9 @@ async function ensurePack(pkg, kind, folder) {
   if (!pack) {
     const CompendiumClass = foundry?.documents?.collections?.CompendiumCollection ?? globalThis.CompendiumCollection;
     if (!CompendiumClass?.createCompendium) throw new Error("Foundry CompendiumCollection API is unavailable.");
-    pack = await CompendiumClass.createCompendium({ name, label: `Arkflight — ${pkg.title} — ${definition.label}`, type: definition.documentName, package: "world" });
+    const config = { name, label: `Arkflight — ${pkg.title} — ${definition.label}`, type: definition.documentName, package: "world" };
+    if (definition.documentName === "Actor" && game.system?.id) config.system = game.system.id;
+    pack = await CompendiumClass.createCompendium(config);
   }
   if (folder && typeof pack.setFolder === "function") {
     const currentFolderId = typeof pack.folder === "string" ? pack.folder : pack.folder?.id;
@@ -229,7 +231,12 @@ function createContentApi(registry) {
     const packageProgress = packageState(registry, packageId);
     const currentStage = pkg.adventure.stages.find((stage) => stage.id === packageProgress.currentStageId) ?? null;
     const targetEventId = eventId ?? currentStage?.eventId ?? (pkg.adventure.stages.length ? null : pkg.adventure.entryPoint);
-    if (!targetEventId) throw new Error(`${pkg.title}'s current stage is not a launchable Arkflight Event. Use its package resources or advance the stage when that activity is complete.`);
+    if (!targetEventId && typeof pkg.runtime?.launch === "function") {
+      const result = await pkg.runtime.launch({ package: pkg, state: packageProgress, stage: currentStage, shipReference });
+      Hooks.callAll("arkflightContentPackageLaunched", { packageId, package: pkg, eventId: null, stageId: currentStage?.id ?? null, state: packageProgress, result });
+      return result;
+    }
+    if (!targetEventId) throw new Error(`${pkg.title}'s current stage is not a launchable Arkflight Event and the package did not register a runtime launch handler.`);
     const active = game.arkflight?.controller?.state?.eventId ?? null;
     if (active) {
       if (active === targetEventId) { game.arkflight.openBoard?.(); return game.arkflight.controller?.state ?? null; }
@@ -274,6 +281,17 @@ function createContentApi(registry) {
     return writePackageState(registry, packageId, { completedStages, currentStageId });
   }
 
+  async function resetProgress(packageId, { preserveFlags = true } = {}) {
+    const pkg = registry.get(packageId);
+    if (!pkg) throw new Error(`Unknown Arkflight content package: ${packageId}`);
+    const state = packageState(registry, packageId);
+    return writePackageState(registry, packageId, {
+      currentStageId: pkg.adventure.stages[0]?.id ?? null,
+      completedStages: [],
+      flags: preserveFlags ? clone(state.flags) : {}
+    });
+  }
+
   return Object.freeze({
     registerPackage: (definition, options = {}) => registry.register(definition, options),
     unregisterPackage: (packageId) => {
@@ -292,6 +310,7 @@ function createContentApi(registry) {
     openResource,
     setStage,
     completeStage,
+    resetProgress,
     onChange: (callback) => registry.onChange(callback)
   });
 }

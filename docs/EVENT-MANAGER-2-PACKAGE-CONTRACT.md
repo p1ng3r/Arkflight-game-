@@ -105,8 +105,23 @@ Use:
 
 ```js
 await game.arkflight.content.setStage("dead-planet-finale", "void-dragon");
-await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");
+await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");\nawait game.arkflight.content.resetProgress("dead-planet-finale");
 ```
+
+
+## Package-owned launch handlers
+
+Not every Arkflight adventure stage is a five-station Event. A package may register a runtime launch handler for hybrid PF2e encounters, exploration packages, finales, or other custom flows:
+
+```js
+runtime: {
+  launch: async ({ package: pkg, state, stage, shipReference }) => {
+    return game.arkflight.deadPlanetFinale.openControlPanel();
+  }
+}
+```
+
+Event Manager 2.0 will expose **Open Adventure** for these packages. Event-backed stages continue to use the normal Arkflight Event Board.
 
 ## Runtime API
 
@@ -122,7 +137,7 @@ await game.arkflight.content.completeStage("dead-planet-finale", "void-dragon");
 - `game.arkflight.content.launch(id, { eventId, shipReference })`
 - `game.arkflight.content.openResource(id, kind)`
 - `game.arkflight.content.setStage(id, stageId)`
-- `game.arkflight.content.completeStage(id, stageId)`
+- `game.arkflight.content.completeStage(id, stageId)`\n- `game.arkflight.content.resetProgress(id, { preserveFlags })`
 
 ## Compatibility rule
 

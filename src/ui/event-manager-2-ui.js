@@ -33,8 +33,9 @@ export class ArkflightEventManager2 extends HandlebarsApplication {
       const compendiums = { ...(pkg.resources?.compendiums ?? {}), ...(state.packs ?? {}) };
       const managedCount = ["journals", "macros", "tables", "actors"].reduce((sum, key) => sum + Number(pkg.content?.[key]?.length ?? 0), 0);
       const currentStageEventId = currentStage?.eventId ?? (pkg.adventure.stages.length ? null : pkg.adventure.entryPoint);
+      const hasRuntimeLaunch = typeof pkg.runtime?.launch === "function";
       const canResume = active;
-      const canLaunchStage = status.ready && Boolean(currentStageEventId) && !anotherEventActive;
+      const canLaunchStage = status.ready && Boolean(currentStageEventId || hasRuntimeLaunch) && !anotherEventActive;
       return {
         ...pkg,
         source,
@@ -47,7 +48,7 @@ export class ArkflightEventManager2 extends HandlebarsApplication {
         completedCount: state.completedStages.length,
         canLaunch: canResume || canLaunchStage,
         primaryAction: active ? "resume" : "launch",
-        launchLabel: active ? "Resume Event" : (currentStageEventId ? (state.completedStages.length ? "Launch Current Stage" : "Launch Adventure") : "Stage Uses Package Tools"),
+        launchLabel: active ? "Resume Event" : (hasRuntimeLaunch ? "Open Adventure" : (currentStageEventId ? (state.completedStages.length ? "Launch Current Stage" : "Launch Adventure") : "Stage Uses Package Tools")),
         hasManagedContent: managedCount > 0,
         compendiums,
         resourceKinds: Object.entries(compendiums).filter(([, id]) => Boolean(id)).map(([kind, id]) => ({ kind, id, label: titleCase(kind) })),
