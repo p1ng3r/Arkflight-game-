@@ -59,7 +59,7 @@ const POSITIONS = Object.freeze({
 });
 
 function shipFlag(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
-function isShip(actor) { return actor?.type === "vehicle" && Boolean(shipFlag(actor)); }
+function isShip(actor) { return actor?.type === "vehicle" && (actor?.flags?.[MODULE_ID]?.isArkflightShip === true || Boolean(shipFlag(actor))); }
 function service(actor) { const value = actor?.getFlag?.(MODULE_ID, SERVICE_FLAG); return ["crew","dock","shipyard"].includes(value) ? value : "crew"; }
 function serviceLabel(mode) { return mode === "shipyard" ? "Shipyard" : mode === "dock" ? "Docked" : "Crew Refit"; }
 function familyFor(group) { return group === "arkengine" ? "arkengineMod" : group === "ship" ? "shipMod" : "weapon"; }
