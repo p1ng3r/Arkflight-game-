@@ -1,0 +1,70 @@
+<section class="arkflight-em2-shell">
+  <header class="arkflight-em2-header">
+    <div>
+      <div class="arkflight-em2-kicker">ARKFLIGHT CONTENT PLATFORM</div>
+      <h1>Event Manager 2.0</h1>
+      <p>Launch built-in adventures and registered content packages from one authoritative manager.</p>
+    </div>
+    <div class="arkflight-em2-summary">
+      <span><strong>{{packageCount}}</strong> packages</span>
+      <span><strong>{{readyCount}}</strong> ready</span>
+    </div>
+  </header>
+
+  {{#if activePackage}}
+    <section class="arkflight-em2-active">
+      <div><span>ACTIVE EVENT</span><strong>{{activePackage.title}}</strong><small>{{activeEventId}}</small></div>
+      <button type="button" data-em2-action="resume" data-package-id="{{activePackage.id}}"><i class="fa-solid fa-compass"></i> Resume Event Board</button>
+    </section>
+  {{/if}}
+
+  <main class="arkflight-em2-grid">
+    {{#each packages}}
+      <article class="arkflight-em2-card {{#if active}}is-active{{/if}}">
+        {{#if imageUrl}}<div class="arkflight-em2-art"><img src="{{imageUrl}}" alt=""></div>{{/if}}
+        <div class="arkflight-em2-card-body">
+          <div class="arkflight-em2-card-head">
+            <div>
+              <span class="arkflight-em2-category">{{category}}</span>
+              <h2>{{title}}</h2>
+              <small>v{{version}} · {{#if builtIn}}Arkflight Core{{else}}{{source}}{{/if}}</small>
+            </div>
+            <span class="arkflight-em2-status {{#if status.ready}}ready{{else}}blocked{{/if}}">{{#if status.ready}}READY{{else}}BLOCKED{{/if}}</span>
+          </div>
+          <p class="arkflight-em2-description">{{description}}</p>
+
+          <div class="arkflight-em2-meta">
+            {{#if recommendedLevel}}<span><i class="fa-solid fa-arrow-up-right-dots"></i> Level {{recommendedLevel}}</span>{{/if}}
+            {{#if playerCount}}<span><i class="fa-solid fa-users"></i> {{playerCount}}</span>{{/if}}
+            {{#if duration}}<span><i class="fa-regular fa-clock"></i> {{duration}}</span>{{/if}}
+            <span><i class="fa-solid fa-list-check"></i> {{completedCount}}/{{stageCount}} stages</span>
+          </div>
+
+          {{#unless status.ready}}
+            <div class="arkflight-em2-blockers">{{#each status.blockers}}<span><i class="fa-solid fa-triangle-exclamation"></i> {{this}}</span>{{/each}}</div>
+          {{/unless}}
+
+          {{#if currentStage}}
+            <section class="arkflight-em2-stage">
+              <span>CURRENT STAGE</span>
+              <strong>{{currentStage.label}}</strong>
+              {{#if currentStage.description}}<small>{{currentStage.description}}</small>{{/if}}
+              <div class="arkflight-em2-stage-actions">
+                <button type="button" data-em2-action="complete-stage" data-package-id="{{id}}" data-stage-id="{{currentStage.id}}"><i class="fa-solid fa-check"></i> Complete Stage</button>
+              </div>
+            </section>
+          {{/if}}
+
+          <div class="arkflight-em2-tags">{{#each tags}}<span>{{this}}</span>{{/each}}</div>
+          <div class="arkflight-em2-actions">
+            <button type="button" class="primary" data-em2-action="{{primaryAction}}" data-package-id="{{id}}" {{#unless canLaunch}}disabled{{/unless}}><i class="fa-solid fa-play"></i> {{launchLabel}}</button>
+            {{#if hasManagedContent}}<button type="button" data-em2-action="sync" data-package-id="{{id}}"><i class="fa-solid fa-arrows-rotate"></i> Sync Content</button>{{/if}}
+            {{#each resourceKinds}}<button type="button" data-em2-action="open-resource" data-package-id="{{../id}}" data-resource-kind="{{kind}}"><i class="fa-solid fa-folder-open"></i> {{label}}</button>{{/each}}
+          </div>
+        </div>
+      </article>
+    {{else}}
+      <section class="arkflight-em2-empty"><i class="fa-solid fa-box-open"></i><h2>No Arkflight content packages registered</h2><p>Enable a package module or register one through <code>game.arkflight.content.registerPackage()</code>.</p></section>
+    {{/each}}
+  </main>
+</section>

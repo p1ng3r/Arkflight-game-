@@ -36,14 +36,113 @@ test("Weapons tab is native and no longer injects or hides vessel-sheet sections
   assert.doesNotMatch(ui, /Hooks\.on\("renderActorSheet"/);
 });
 
-test("all crew can inspect Weapons but only assigned Battlewatch controls fire and reload", () => {
+test("shared ship owners can Reload while Battlewatch retains firing and Work the Guns", () => {
   assert.match(ui, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
+  assert.match(ui, /stationActionControl\?\.\("common-reload-weapon"/);
   assert.match(ui, /stationActionControl\?\.\("battlewatch-reload-weapon"/);
-  assert.match(ui, /View only — assigned Battlewatch crew controls weapons/);
+  assert.match(ui, /Reload · 1 AP/);
+  assert.match(ui, /Work the Guns · 20% Morale · \+1 Strain/);
   assert.match(ui, /Battlewatch Only/);
 });
 
 test("module loads the native ship Weapons UI and stylesheet", () => {
   assert.ok(moduleJson.esmodules.includes("src/ui/ship-weapons-tab-ui.js"));
   assert.ok(moduleJson.styles.includes("styles/ship-weapons-tab.css"));
+});
+
+
+test("player weapon fire resolves Battlewatch assignments stored as id uuid or name", () => {
+  const combatApi = readFileSync(new URL("../src/foundry/combat-api.js", import.meta.url), "utf8");
+  assert.match(combatApi, /actor\.uuid === reference \|\| actor\.name === reference/);
+  assert.match(combatApi, /const committed = commitFacing\(combatantState\(attacker\)/);
+  assert.match(combatApi, /const next = fireWeapon\(committed, weaponKey, game\.combat\?\.round \?\? 1\)/);
+  assert.match(combatApi, /if \(!solution\.arc\.legal\) throw new Error/);
+  assert.match(combatApi, /if \(!solution\.range\.legal\) throw new Error/);
+});
+
+
+test("legacy weapon controls do not force GM-only fire resolution", () => {
+  const legacy = readFileSync(new URL("../src/ui/weapon-combat-station-ui.js", import.meta.url), "utf8");
+  assert.match(legacy, /stationAction\("battlewatch-fire-weapon"/);
+  assert.match(legacy, /stationAction\("common-reload-weapon"/);
+  assert.match(legacy, /stationAction\("battlewatch-reload-weapon"/);
+  assert.match(legacy, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
+  assert.doesNotMatch(legacy, /GM Fire Control/);
+  assert.doesNotMatch(legacy, /combat resolution is currently GM-authoritative/);
+  assert.doesNotMatch(legacy, /api\.fireAtTarget\(weaponState\.key, target\.id, combatant\)/);
+});
+
+
+test("native station combat effects use Foundry v14 chat-applied ship damage", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(effects, /userCanResolveShipState\(game\.user, attacker\)/);
+  assert.match(effects, /TARGET_EFFECT_REQUEST = "attack-target-effect-consume-request"/);
+  assert.match(effects, /flags:[\s\S]*?shipDamage/);
+  assert.match(effects, /Hooks\.on\("renderChatMessageHTML"/);
+  assert.match(effects, /Apply \$\{base\}/);
+  assert.match(effects, /Half \$\{Math\.floor\(base \/ 2\)\}/);
+  assert.match(effects, /Double \$\{base \* 2\}/);
+  assert.doesNotMatch(effects, /TARGET_MUTATION_REQUEST/);
+  assert.doesNotMatch(effects, /Only the GM may resolve Arkflight ship combat attacks/);
+});
+
+
+test("enhanced fire keeps Battlewatch ownership while player authors the roll", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(effects, /actor\.uuid === reference \|\| actor\.name === reference/);
+  assert.match(effects, /Only the assigned Battlewatch owner may fire this ship's weapons/);
+  assert.match(effects, /user: requester\?\.id \?\? requesterUserId/);
+  assert.match(effects, /speaker: ChatMessage\.getSpeaker\(\{ actor: battlewatch \}\)/);
+});
+
+
+test("Reload and Work the Guns resolve locally for shared ship owners", () => {
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  const consoleUi = readFileSync(new URL("../src/ui/combat-console-ui.js", import.meta.url), "utf8");
+  assert.match(stationApi, /userOwnsShip/);
+  assert.match(stationApi, /userCanResolveShipState/);
+  assert.match(stationApi, /if \(userCanResolveShipState\(game\.user, control\.combatant\)\)/);
+  assert.match(stationApi, /resolver === "reloadWeapon"[\s\S]*?reloadWeapon\(before, options\.weaponKey, round\)/);
+  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
+  assert.match(stationApi, /STATION_ACTION_REQUEST/);
+  assert.match(consoleUi, /stationAction\("common-reload-weapon"/);
+  assert.match(consoleUi, /stationAction\("battlewatch-reload-weapon"/);
+  assert.match(consoleUi, /buttonLabel = "Work the Guns"/);
+});
+
+
+test("ship damage is not automatically written to the target during fire resolution", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  const fireStart = effects.indexOf("async function enhancedFireAtTarget");
+  const applyStart = effects.indexOf("async function applyShipDamageMessage");
+  const fireBody = effects.slice(fireStart, applyStart);
+  assert.doesNotMatch(fireBody, /target\.actor\.update\(\{ \[`flags\.\$\{MODULE_ID\}\.ship\.resources\.hull\.value/);
+  assert.match(effects, /async function applyShipDamageMessage/);
+  assert.match(effects, /chatDamageApplications/);
+  assert.match(effects, /async function undoShipDamageMessage/);
+});
+
+
+test("all target-side ship damage consequences wait for chat Apply Damage", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  const flow = readFileSync(new URL("../src/foundry/combat-flow-usability.js", import.meta.url), "utf8");
+  const conditions = readFileSync(new URL("../src/foundry/combat-condition-consequences.js", import.meta.url), "utf8");
+  assert.match(effects, /resolveDeferredDamageConsequences/);
+  assert.match(effects, /resolveShipStrainGain/);
+  assert.match(effects, /Critical hit: \+1 Strain/);
+  assert.doesNotMatch(effects, /applyWeaponSystemThreat/);
+  assert.match(effects, /arkflightShipDamageStateChanged/);
+  assert.doesNotMatch(flow, /Hooks\.on\("arkflightNativeShipAttackResolved", damageConsequences\)/);
+  assert.doesNotMatch(conditions, /Hooks\.on\("arkflightNativeShipAttackResolved"/);
+});
+
+test("GM Operations uses the same fixed-fire Reload and Work the Guns rules as players", () => {
+  const gm = readFileSync(new URL("../src/ui/gm-operations-combat-ui.js", import.meta.url), "utf8");
+  assert.match(gm, /1 AP fire/);
+  assert.match(gm, /Reload · 1 AP/);
+  assert.match(gm, /Work the Guns · 20% Morale · \+1 Strain/);
+  assert.match(gm, /stationAction\("common-reload-weapon"/);
+  assert.match(gm, /stationAction\("battlewatch-reload-weapon"/);
+  assert.doesNotMatch(gm, /combat\.workTheGuns\(/);
+  assert.doesNotMatch(gm, /Need \$\{weaponState\.fireAP\} AP/);
 });

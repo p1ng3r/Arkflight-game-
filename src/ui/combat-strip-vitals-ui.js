@@ -31,7 +31,7 @@ function decorateVitals(app) {
 
   const hull = safeResource(ship.resources?.hull);
   const lifeveil = safeResource(ship.resources?.lifeveil);
-  const morale = safeResource(ship.resources?.morale, 5);
+  const morale = safeResource(ship.resources?.morale, 100);
 
   let vitals = strip.querySelector(".afcs-vitals");
   if (!vitals) {

@@ -5,6 +5,7 @@ import fs from "node:fs";
 const appSource = fs.readFileSync(new URL("../../src/ui/event-board-app.js", import.meta.url), "utf8");
 const moduleManifest = JSON.parse(fs.readFileSync(new URL("../../module.json", import.meta.url), "utf8"));
 const cssSource = fs.readFileSync(new URL("../../styles/event-board-planning-restoration.css", import.meta.url), "utf8");
+const navyCssSource = fs.readFileSync(new URL("../../styles/event-board-navy-bars-fix.css", import.meta.url), "utf8");
 
 test("authoritative Event Board restores left rail and selected station detail during planning", () => {
   assert.match(appSource, /#restorePlanningBoardLayout\(\)/);
@@ -27,4 +28,13 @@ test("restored planning stylesheet is loaded without legacy player-action styles
   assert.match(cssSource, /arkflight-board-footer/);
   for (const legacy of moduleManifest.styles) assert.doesNotMatch(legacy, /player-action-board|player-action-command-bar/);
   for (const legacy of moduleManifest.esmodules) assert.doesNotMatch(legacy, /player-action-board|player-action-command-bar/);
+});
+
+
+test("Event planning dropdowns use a dark native popup palette", () => {
+  assert.match(navyCssSource, /color-scheme:dark !important/);
+  assert.match(navyCssSource, /select option,/);
+  assert.match(navyCssSource, /background:#0b2638 !important/);
+  assert.match(navyCssSource, /select option:checked/);
+  assert.match(navyCssSource, /select option:disabled/);
 });

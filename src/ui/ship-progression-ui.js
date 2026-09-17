@@ -1,6 +1,7 @@
 import { deriveShip, syncResourceMaxima } from "../ship/derive-ship.js";
 import { progressionView, clampShipLevel, validateProgression } from "../ship/progression.js";
 import { shipModSlotClass, shipModSlotRows } from "../ship/ship-mod-slots.js";
+import { SHIP_SPECIALIZATION_DEFINITIONS } from "../ship/specialization-rules.js";
 import { hullCombatProfile } from "../combat/combat-schema.js";
 import { SHIP_TALENT_TIERS, SHIP_TALENTS } from "../content/ship-talents.js";
 import { SHIP_CATALOGS } from "../content/index.js";
@@ -302,6 +303,12 @@ export class ArkflightShipProgressionApp extends HandlebarsApplication {
     const ship = shipFlag(this.actor);
     this.selectedTalentId = this._defaultSelection(ship);
     const progression = progressionView(ship);
+    const specializationId = ship?.progression?.specializationId ?? null;
+    const specializations = Object.values(SHIP_SPECIALIZATION_DEFINITIONS).map((entry) => ({
+      ...entry,
+      selected: entry.id === specializationId,
+      canChoose: progression.level >= 5 && (game.user.isGM || !specializationId)
+    }));
     const selection = this.selectedTalentId ? selectionPreview(ship, this.selectedTalentId) : null;
     const changedKeys = new Set(selection?.changes?.map((row) => row.key) ?? []);
     const currentData = statSnapshot(ship);
@@ -315,6 +322,10 @@ export class ArkflightShipProgressionApp extends HandlebarsApplication {
         levelPercent: Math.max(5, Math.round((progression.level / 20) * 100)),
         nextLevel: progression.level < 20 ? progression.level + 1 : null
       },
+      specializationId,
+      specializationUnlocked: progression.level >= 5,
+      specializationLockedForPlayer: Boolean(specializationId && !game.user.isGM),
+      specializations,
       tiers: talentRows(ship, this.selectedTalentId),
       filters: FILTERS,
       preview: statPreview(currentData, ship, changedKeys),
@@ -377,6 +388,28 @@ export class ArkflightShipProgressionApp extends HandlebarsApplication {
       }
       await this._saveShip(ship);
     });
+
+    for (const button of root.querySelectorAll("[data-choose-specialization]")) {
+      button.addEventListener("click", async (event) => {
+        event.preventDefault();
+        if (!(this.actor?.isOwner || game.user.isGM)) return;
+        const ship = structuredClone(shipFlag(this.actor));
+        ship.progression ??= { level: 1, talentIds: [], arkcraftUpgrades: {} };
+        if (Number(ship.progression.level ?? 1) < 5) {
+          ui.notifications?.warn("Ship Specialization unlocks at level 5.");
+          return;
+        }
+        const id = event.currentTarget.dataset.chooseSpecialization;
+        if (!SHIP_SPECIALIZATION_DEFINITIONS[id]) return;
+        if (ship.progression.specializationId && !game.user.isGM) {
+          ui.notifications?.warn("A ship's Specialization is permanent once chosen. A GM may respec it.");
+          return;
+        }
+        if (ship.progression.specializationId !== id) ship.progression.specializationConfig = {};
+        ship.progression.specializationId = id;
+        await this._saveShip(ship);
+      });
+    }
 
     for (const button of root.querySelectorAll("[data-preview-talent]")) {
       button.addEventListener("click", (event) => {

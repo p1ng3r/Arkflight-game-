@@ -1,0 +1,199 @@
+/* Compact Arkflight ship Helm controls.
+ * The active ship keeps only piloting controls around the token. Foundry's
+ * normal Token HUD columns remain available behind the small utility toggle.
+ */
+
+.arkflight-ship-token-hud {
+  overflow: visible !important;
+}
+
+.arkflight-ship-token-hud:not(.arkflight-native-controls-open) > .col.left,
+.arkflight-ship-token-hud:not(.arkflight-native-controls-open) > .col.right {
+  display: none !important;
+}
+
+.arkflight-helm-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.arkflight-helm-control {
+  position: absolute;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(87, 179, 207, .68);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(10, 31, 43, .96), rgba(3, 14, 22, .96));
+  box-shadow: 0 4px 11px rgba(0, 0, 0, .5);
+  color: #e8f8ff;
+  font: inherit;
+  line-height: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.arkflight-helm-control:hover:not(:disabled) {
+  border-color: rgba(111, 222, 255, .95);
+  background: linear-gradient(180deg, rgba(18, 57, 75, .99), rgba(5, 23, 34, .99));
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .58), 0 0 11px rgba(74, 194, 225, .22);
+}
+
+.arkflight-helm-control:disabled {
+  opacity: .36;
+  filter: grayscale(.5);
+  cursor: not-allowed;
+}
+
+.arkflight-helm-control.is-reverse {
+  border-color: rgba(212, 156, 74, .68);
+  background: linear-gradient(180deg, rgba(54, 37, 14, .96), rgba(22, 15, 6, .96));
+}
+
+.arkflight-helm-control.is-reverse:hover:not(:disabled) {
+  border-color: rgba(243, 190, 100, .95);
+  background: linear-gradient(180deg, rgba(78, 52, 18, .99), rgba(31, 20, 7, .99));
+}
+
+.arkflight-helm-control.is-turn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  border-color: rgba(148, 121, 213, .72);
+  background: linear-gradient(180deg, rgba(35, 25, 63, .96), rgba(14, 10, 31, .96));
+}
+
+.arkflight-helm-icon {
+  display: block;
+  font-size: 18px;
+  line-height: 18px;
+  transform-origin: 50% 50%;
+  color: #dff8ff;
+}
+
+.arkflight-helm-control.is-turn .arkflight-helm-icon {
+  font-size: 21px;
+  color: #d7c7ff;
+}
+
+.arkflight-helm-control.is-reverse .arkflight-helm-icon {
+  color: #ffd58d;
+}
+
+.arkflight-helm-status {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  min-width: 70px;
+  max-width: 86px;
+  min-height: 34px;
+  padding: 4px 22px 4px 6px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(78, 158, 185, .42);
+  border-radius: 9px;
+  background: rgba(3, 15, 23, .88);
+  box-shadow: 0 3px 9px rgba(0, 0, 0, .45);
+  color: #e9f9ff;
+  text-align: center;
+  pointer-events: none;
+}
+
+.arkflight-helm-status strong,
+.arkflight-helm-status > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arkflight-helm-status strong {
+  color: #f1dc99;
+  font-size: 11px;
+  line-height: 12px;
+}
+
+.arkflight-helm-status > span {
+  margin-top: 2px;
+  color: #82d8ef;
+  font-size: 7px;
+  line-height: 8px;
+}
+
+.arkflight-helm-utilities {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 17px;
+  min-width: 17px;
+  height: 20px;
+  min-height: 20px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid rgba(92, 154, 177, .26);
+  border-radius: 0 6px 6px 0;
+  background: transparent;
+  color: #8fb9c8;
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.arkflight-helm-utilities:hover,
+.arkflight-helm-utilities[aria-expanded="true"] {
+  color: #e2f6fd;
+  background: rgba(54, 137, 166, .18);
+}
+
+
+/* When Foundry's full/native Token HUD is open, Arkflight steps out of the
+ * way. Movement/turn controls disappear completely. The center readout
+ * collapses to the tiny utility toggle so the player can restore Helm mode
+ * without deselecting the token.
+ */
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-control {
+  display: none !important;
+}
+
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-status {
+  width: 22px;
+  min-width: 22px;
+  max-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(3, 15, 23, .92);
+  pointer-events: auto;
+}
+
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-status > strong,
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-status > span {
+  display: none !important;
+}
+
+.arkflight-ship-token-hud.arkflight-native-controls-open .arkflight-helm-utilities {
+  inset: 0;
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+  min-height: 22px;
+  transform: none;
+  border: 0;
+  border-radius: 50%;
+}

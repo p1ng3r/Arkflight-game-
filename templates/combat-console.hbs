@@ -60,7 +60,7 @@
               {{#each weapons}}
                 <article class="afcs-weapon-row {{#unless ready}}is-reloading{{/unless}} {{#unless legal}}is-illegal{{/unless}}">
                   <div class="afcs-weapon-text"><strong>{{name}}</strong><span>{{mountLabel}} {{mountIndex}} · {{damage}} · {{fireAP}} AP</span><small>{{solution}}</small></div>
-                  <div class="afcs-weapon-meta"><em>{{statusLabel}}</em><button type="button" class="afcs-weapon-row-arc {{#if arcVisible}}is-active{{/if}}" data-toggle-weapon-arc="{{key}}" title="{{arcButtonLabel}} for {{name}}"><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>{{#if ready}}<button type="button" data-fire-weapon="{{key}}" {{#unless canFire}}disabled{{/unless}} title="{{#if canFire}}Fire this weapon{{else}}Battlewatch crew only, during this ship's active turn, with a legal target and enough AP{{/if}}">Fire</button>{{else}}<button type="button" data-work-weapon="{{key}}" {{#unless canReload}}disabled{{/unless}} title="{{#if canReload}}Spend 1 AP to reduce remaining reload by 1 round{{else}}Battlewatch crew only, during this ship's active turn, with enough AP{{/if}}"><i class="fa-solid fa-rotate"></i> Reload</button>{{/if}}</div>
+                  <div class="afcs-weapon-meta"><em>{{statusLabel}}</em><button type="button" class="afcs-weapon-row-arc {{#if arcVisible}}is-active{{/if}}" data-toggle-weapon-arc="{{key}}" title="{{arcButtonLabel}} for {{name}}"><i class="fa-solid fa-wave-square"></i> {{arcButtonLabel}}</button>{{#if ready}}<button type="button" data-fire-weapon="{{key}}" {{#unless canFire}}disabled{{/unless}} title="{{#if canFire}}Fire this weapon{{else}}Battlewatch crew only, during this ship's active turn, with a legal target and enough AP{{/if}}">Fire</button>{{else}}<button type="button" data-work-weapon="{{key}}" {{#unless canReload}}disabled{{/unless}} title="{{#if canReload}}Common action: spend 1 AP to reduce remaining Reload by 1 round{{else}}Ship Owners only, during this ship's active turn, with enough AP{{/if}}"><i class="fa-solid fa-rotate"></i> Reload</button>{{#if showWorkGuns}}<button type="button" data-work-guns="{{key}}" {{#unless canWorkGuns}}disabled{{/unless}} title="{{#if canWorkGuns}}Battlewatch, once per round: spend 20% Morale and gain 1 Strain to immediately ready this weapon for 0 AP{{else}}Work the Guns has already been used this round or Morale is unavailable{{/if}}"><i class="fa-solid fa-burst"></i> Work the Guns</button>{{/if}}{{/if}}</div>
                 </article>
               {{/each}}
             </section>
@@ -76,15 +76,6 @@
       </div>
     </section>
 
-    {{#if showUndoControls}}
-    <nav class="afch-undo-controls" aria-label="Undo ship movement">
-      <span><i class="fa-solid fa-clock-rotate-left"></i> Turn Position</span>
-      <button type="button" data-undo-move {{#unless canUndoMove}}disabled{{/unless}} title="Return to this turn's starting position without refunding AP"><i class="fa-solid fa-arrow-rotate-left"></i> Undo Move</button>
-      <button type="button" data-undo-facing {{#unless canUndoFacing}}disabled{{/unless}} title="Return to this turn's starting facing without refunding AP"><i class="fa-solid fa-rotate-left"></i> Undo Facing</button>
-      <button type="button" data-reset-turn-position {{#unless canResetTurnPosition}}disabled{{/unless}} title="Return both position and facing to the start of this turn"><i class="fa-solid fa-backward-fast"></i> Reset Both</button>
-    </nav>
-    {{/if}}
-
     <footer class="afcs-commandbar {{#if activeTurn}}is-active-turn{{/if}}">
       <section class="afch-ship">
         {{#if shipImg}}<img src="{{shipImg}}" alt="{{shipName}}">{{/if}}
@@ -98,8 +89,10 @@
         <div class="afch-stat"><label>Round</label><strong>{{resources.round}}</strong></div>
         <div class="afch-stat ap"><label>Action Points</label><strong>AP {{resources.ap}} / {{resources.apMax}}</strong></div>
         <div class="afch-stat rp"><label>Reaction Points</label><strong>RP {{resources.rp}} / {{resources.rpMax}}</strong></div>
-        <div class="afch-stat strain"><label>Strain</label><strong>{{resources.strain}} / {{resources.strainMax}}</strong></div>
+        <div class="afch-stat strain {{conditions.strain.tone}}" title="{{conditions.strain.title}}"><label>Strain</label><strong>{{resources.strain}} / {{resources.strainMax}}</strong><small>{{conditions.strain.label}}</small></div>
         <div class="afch-stat"><label>Heading</label><strong>{{resources.heading}}°</strong></div>
+        <div class="afch-stat facing {{#if resources.facingWarning}}is-warning{{/if}}" title="Committed {{resources.committedHeading}}° · Preview {{resources.previewHeading}}° · If turn ended now: {{resources.facingProjectedDegrees}}° total"><label>Facing</label><strong>{{resources.facingUsedDegrees}}° / {{resources.facingFreeDegrees}}°</strong><small>{{resources.facingCostLabel}}</small></div>
+        {{#if engagement.moored}}<div class="afch-stat engagement {{#if engagement.boarding}}is-boarding{{/if}}"><label>{{engagement.label}}</label><strong>{{engagement.partnerName}}</strong></div>{{/if}}
       </section>
 
       <section class="afch-target">
@@ -110,11 +103,13 @@
 
       <button type="button" class="afch-close" data-afch-close title="Close combat HUD" aria-label="Close combat HUD"><i class="fa-solid fa-xmark"></i></button>
 
-      <section class="afch-vitals" aria-label="Ship resources">
-        <div class="afch-vital hull" data-afch-vital="hull"><label>Hull</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
-        <div class="afch-vital lifeveil" data-afch-vital="lifeveil"><label>Lifeveil</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
-        <div class="afch-vital morale" data-afch-vital="morale"><label>Morale</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
-        <div class="afch-vital strain" data-afch-vital="strain"><label>Strain</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+      <section class="afch-vitals" aria-label="Ship resources and conditions">
+        <div class="afch-vital hull" data-afch-vital="hull" title="{{conditions.hull.title}}"><label>Hull <small class="afch-condition-tag {{conditions.hull.tone}}">{{conditions.hull.label}}</small></label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+        <div class="afch-condition-vital drive {{conditions.drive.tone}}" title="{{conditions.drive.title}}"><label>Drive</label><strong>{{conditions.drive.label}}</strong></div>
+        <div class="afch-condition-vital weapons {{conditions.weapons.tone}}" title="{{conditions.weapons.title}}"><label>Weapons</label><strong>{{conditions.weapons.label}}</strong></div>
+        <div class="afch-vital lifeveil" data-afch-vital="lifeveil" title="{{conditions.lifeveil.title}}"><label>Lifeveil <small class="afch-condition-tag {{conditions.lifeveil.tone}}">{{conditions.lifeveil.label}}</small></label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+        <div class="afch-vital morale" data-afch-vital="morale" title="{{conditions.morale.title}}"><label>Morale <small class="afch-condition-tag {{conditions.morale.tone}}">{{conditions.morale.label}}</small></label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
+        <div class="afch-vital strain" data-afch-vital="strain" title="{{conditions.strain.title}}"><label>Strain <small class="afch-condition-tag {{conditions.strain.tone}}">{{conditions.strain.label}}</small></label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
         <div class="afch-vital supplies" data-afch-vital="supplies"><label>Supplies</label><div class="afch-meter"><i></i></div><strong>— / —</strong></div>
       </section>
 
@@ -125,6 +120,16 @@
       </nav>
 
       <nav class="afch-actions" aria-label="Combat controls">
+        {{#if showUndoControls}}
+        <details class="afch-position-menu">
+          <summary title="Undo or reset this turn's ship movement"><i class="fa-solid fa-clock-rotate-left"></i> Position</summary>
+          <div class="afch-position-popover" aria-label="Turn position controls">
+            <button type="button" data-undo-move {{#unless canUndoMove}}disabled{{/unless}} title="Return to this turn's starting position"><i class="fa-solid fa-arrow-rotate-left"></i> Undo Move</button>
+            <button type="button" data-undo-facing {{#unless canUndoFacing}}disabled{{/unless}} title="Return to this turn's starting facing"><i class="fa-solid fa-rotate-left"></i> Undo Facing</button>
+            <button type="button" data-reset-turn-position {{#unless canResetTurnPosition}}disabled{{/unless}} title="Return both position and facing to the start of this turn"><i class="fa-solid fa-backward-fast"></i> Reset Both</button>
+          </div>
+        </details>
+        {{/if}}
         <button type="button" class="{{#if openWeapons}}is-active{{/if}}" data-toggle-panel="weapons"><i class="fa-solid fa-sword"></i> Weapons</button>
         <button type="button" class="{{#if arcVisible}}is-active{{/if}}" data-toggle-all-arcs title="{{arcButtonLabel}}"><i class="fa-solid fa-wave-square"></i> Weapon Arcs</button>
         <button type="button" class="{{#if openLog}}is-active{{/if}}" data-toggle-panel="log"><i class="fa-solid fa-scroll"></i> Log</button>

@@ -1,6 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
-import { shipWeaponAttackBonus, weaponDamageProfile } from "../combat/index.js";
+import { shipWeaponAttackBonus, weaponDamageProfile, weaponReloadRemaining } from "../combat/index.js";
 import { firingArcsVisible, redrawFiringArcs, toggleFiringArcs } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
@@ -140,7 +140,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
   shell.innerHTML = `<section class="arkflight-weapon-station arkflight-weapon-station-sheet">
     <div class="arkflight-weapon-station-head">
       <div><span>BATTLEWATCH FIRE CONTROL</span><h3>Weapons</h3></div>
-      <small>All crew may inspect fire control. Only the player assigned to Battlewatch, or the GM, can fire or reload.</small>
+      <small>Ship Owners may Reload for 1 AP. Battlewatch controls firing and may use Work the Guns as a once-per-round special action.</small>
     </div>
   </section>`;
   const station = shell.querySelector(".arkflight-weapon-station");
@@ -155,7 +155,10 @@ export function renderArkflightWeaponsTab(app, root, actor) {
   const weapons = Object.values(state?.weapons ?? {});
   const round = Math.max(1, Number(game.combat?.round ?? 1));
   const battlewatchControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
-  const reloadControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? battlewatchControl;
+  const reloadControl = api.stationActionControl?.("common-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
+  const reloadAvailability = api.stationActionAvailability?.("common-reload-weapon", combatant) ?? { ok: true };
+  const workGunsControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? battlewatchControl;
+  const workGunsAvailability = api.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: true };
 
   station.insertAdjacentHTML("beforeend", `<div class="arkflight-weapon-toolbar">
     <div class="arkflight-weapon-combat-state">
@@ -227,11 +230,11 @@ export function renderArkflightWeaponsTab(app, root, actor) {
     const combat = weapon.data?.combat ?? {};
     const damage = weaponDamageProfile(weapon, { upgrades: weaponState.upgrades });
     const attack = attackProfile(actor, weaponState);
-    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const remaining = weaponReloadRemaining(weaponState);
     const row = document.createElement("article");
     row.className = "arkflight-weapon-control-row";
     row.innerHTML = `<div class="arkflight-weapon-identity"><strong>${esc(weaponState.name)}</strong><span>${titleCase(weaponState.mount ?? "fore")} Mount ${Number(weaponState.mountIndex ?? 0) + 1} · ${titleCase(combat.arcTemplate ?? "wide")} arc</span></div>
-      <div class="arkflight-weapon-stats"><strong>Attack ${attack.bonus == null ? "—" : signed(attack.bonus)}</strong> · <strong>Damage ${esc(damage.dice ?? "—")} ${esc(titleCase(damage.type))}</strong> · ${Number(weaponState.fireAP ?? 1)} AP · Reload ${Number(weaponState.reloadRounds ?? 0)} · Range ${combat.rangeHexes?.min ?? "—"}/${combat.rangeHexes?.optimalMin ?? "—"}–${combat.rangeHexes?.optimalMax ?? "—"}/${combat.rangeHexes?.max ?? "—"}</div>
+      <div class="arkflight-weapon-stats"><strong>Attack ${attack.bonus == null ? "—" : signed(attack.bonus)}</strong> · <strong>Damage ${esc(damage.dice ?? "—")} ${esc(titleCase(damage.type))}</strong> · 1 AP · Reload ${Number(weaponState.reloadRounds ?? 0)} · Range ${combat.rangeHexes?.min ?? "—"}/${combat.rangeHexes?.optimalMin ?? "—"}–${combat.rangeHexes?.optimalMax ?? "—"}/${combat.rangeHexes?.max ?? "—"}</div>
       <div class="arkflight-weapon-solution" data-native-weapon-solution>Choose a target.</div>
       <div class="arkflight-weapon-row-actions"></div>`;
 
@@ -243,14 +246,16 @@ export function renderArkflightWeaponsTab(app, root, actor) {
     actions.append(fireButton);
 
     let reloadButton = null;
+    let workGunsButton = null;
     if (remaining > 0) {
       reloadButton = document.createElement("button");
       reloadButton.type = "button";
       reloadButton.innerHTML = '<i class="fa-solid fa-rotate"></i> Reload · 1 AP';
+      reloadButton.title = "Common action: reduce this weapon's remaining Reload by 1.";
       reloadButton.addEventListener("click", async () => {
         try {
           reloadButton.disabled = true;
-          await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
+          await api.stationAction("common-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
           app.render?.({ force: true });
         } catch (error) {
           ui.notifications?.error(error?.message ?? "Reload failed.");
@@ -258,11 +263,29 @@ export function renderArkflightWeaponsTab(app, root, actor) {
         }
       });
       actions.append(reloadButton);
+
+      if (remaining <= 2) {
+        workGunsButton = document.createElement("button");
+        workGunsButton.type = "button";
+        workGunsButton.innerHTML = '<i class="fa-solid fa-burst"></i> Work the Guns · 20% Morale · +1 Strain';
+        workGunsButton.title = "Battlewatch, once per round: immediately ready this weapon for 0 AP.";
+        workGunsButton.addEventListener("click", async () => {
+          try {
+            workGunsButton.disabled = true;
+            await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
+            app.render?.({ force: true });
+          } catch (error) {
+            ui.notifications?.error(error?.message ?? "Work the Guns failed.");
+            workGunsButton.disabled = false;
+          }
+        });
+        actions.append(workGunsButton);
+      }
     }
 
     const update = () => {
       const targetId = targetSelect.value;
-      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(weaponState.fireAP ?? 1);
+      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= 1;
       let legal = false;
       if (!targetId) {
         solutionNode.textContent = "No target selected.";
@@ -283,13 +306,19 @@ export function renderArkflightWeaponsTab(app, root, actor) {
       if (!battlewatchControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-eye"></i> Battlewatch Only';
       else if (attack.bonus == null) fireButton.innerHTML = '<i class="fa-solid fa-user-xmark"></i> Assign Battlewatch';
       else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reload ${remaining}`;
-      else if (!enoughAP) fireButton.innerHTML = `<i class="fa-solid fa-bolt"></i> Need ${weaponState.fireAP} AP`;
+      else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Out of Range / Arc';
       else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Roll Attack &amp; Damage';
 
       if (reloadButton) {
-        reloadButton.disabled = !reloadControl.ok || Number(state?.economy?.ap?.value ?? 0) < 1;
-        if (!reloadControl.ok) reloadButton.title = "Only the assigned Battlewatch player or GM may reload.";
+        reloadButton.disabled = !reloadControl.ok || !reloadAvailability.ok || Number(state?.economy?.ap?.value ?? 0) < 1;
+        if (!reloadControl.ok) reloadButton.title = "Reload is available to Users with OWNER permission on this ship.";
+        else if (!reloadAvailability.ok) reloadButton.title = `Reload unavailable: ${reloadAvailability.reason ?? "unavailable"}.`;
+      }
+      if (workGunsButton) {
+        workGunsButton.disabled = !workGunsControl.ok || !workGunsAvailability.ok;
+        if (!workGunsControl.ok) workGunsButton.title = "Only the assigned Battlewatch player or GM may use Work the Guns.";
+        else if (!workGunsAvailability.ok) workGunsButton.title = `Work the Guns unavailable: ${workGunsAvailability.reason ?? "unavailable"}.`;
       }
     };
 

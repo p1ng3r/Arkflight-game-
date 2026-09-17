@@ -55,15 +55,33 @@ test("Command HUD exposes all five permanent combat stations with upward station
 });
 
 test("Command HUD permanently exposes core combat state and all five ship vitals", () => {
-  for (const label of ["Round", "Action Points", "Reaction Points", "Strain", "Heading", "Target"]) {
+  for (const label of ["Round", "Action Points", "Reaction Points", "Strain", "Heading", "Facing", "Target"]) {
     assert.match(template, new RegExp(label));
   }
   for (const vital of ["hull", "lifeveil", "morale", "strain", "supplies"]) {
     assert.match(template, new RegExp(`data-afch-vital="${vital}"`));
   }
   assert.match(commandHud, /deriveShip/);
-  assert.match(commandHud, /supplyCapacity/);
+  assert.match(commandHud, /cargoCapacity/);
   assert.match(commandHud, /state\?\.strain/);
+});
+
+test("Command HUD exposes canonical Ship Conditions and live Strain danger state", () => {
+  assert.match(source, /shipConditionProfile/);
+  assert.match(source, /lifeveilCondition/);
+  assert.match(source, /moraleCondition/);
+  assert.match(source, /strainRiskState/);
+  for (const condition of ["hull", "drive", "weapons", "lifeveil", "morale", "strain"]) {
+    assert.match(template, new RegExp(`conditions\\.${condition}`));
+  }
+  assert.match(template, /afch-condition-vital drive/);
+  assert.match(template, /afch-condition-vital weapons/);
+  assert.match(template, /conditions\.strain\.label/);
+  assert.match(source, /label: "SAFE"/);
+  assert.match(source, /label: `DC \$\{risk\.flatCheckDC\}`/);
+  assert.match(source, /label: "LIMIT"/);
+  assert.match(css, /afch-condition-tag/);
+  assert.match(css, /afch-condition-vital/);
 });
 
 test("Command HUD station cards resolve exact level-based effects and expose readable rule metadata", () => {
@@ -105,6 +123,9 @@ test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and toke
   assert.match(template, /Weapon Arcs/);
   assert.match(template, /afcs-drawer-log/);
   assert.match(template, /data-work-weapon="\{\{key\}\}"[^>]*>[^<]*(?:<i[^>]*><\/i>\s*)?Reload/);
+  assert.match(template, /data-work-guns="\{\{key\}\}"/);
+  assert.match(source, /stationAction\("common-reload-weapon"/);
+  assert.match(source, /Work the Guns/);
   assert.match(source, /Open Arkflight Combat Strip/);
 });
 
@@ -115,27 +136,37 @@ test("Command HUD can undo turn movement and facing and refund only Helm-purchas
   assert.match(combatApi, /undoFacing/);
   assert.match(combatApi, /resetTurnPosition/);
   assert.match(combatApi, /movementUsed/);
-  assert.match(combatApi, /maneuverUsed/);
+  assert.match(combatApi, /facingUsedDegrees/);
   assert.match(combatApi, /movementPurchases/);
   assert.match(combatApi, /maneuverPurchases/);
-  assert.match(combatApi, /const apRefund = moveRefund \+ facingRefund/);
+  assert.match(combatApi, /const specialMoveRefund = move/);
+  assert.match(combatApi, /const apRefund = moveRefund \+ specialMoveRefund \+ facingRefund/);
   assert.match(combatApi, /value: Math\.min\(apMax, apValue \+ apRefund\)/);
   assert.match(template, /data-undo-move/);
   assert.match(template, /data-undo-facing/);
   assert.match(template, /data-reset-turn-position/);
-  assert.match(css, /afch-undo-controls/);
+  assert.match(template, /afch-position-menu/);
+  assert.match(css, /afch-position-popover/);
 });
 
-test("Command HUD End Turn advances Foundry initiative and follows the active Arkflight ship", () => {
+test("Command HUD End Turn routes through facing reconciliation before advancing initiative", () => {
   assert.match(template, /data-end-turn/);
-  assert.match(commandHud, /combat\.nextTurn\(\)/);
-  assert.match(commandHud, /waitForCombatAdvance/);
-  assert.match(commandHud, /nextTurnCoordinates/);
-  assert.match(commandHud, /combat\.update\(\{ round: fallback\.round, turn: fallback\.turn \}\)/);
+  assert.match(template, /resources\.facingUsedDegrees/);
+  assert.match(template, /resources\.facingFreeDegrees/);
+  assert.match(template, /resources\.facingCostLabel/);
+  assert.match(template, /resources\.committedHeading/);
+  assert.match(template, /resources\.previewHeading/);
+  assert.match(source, /api\?\.facingStatus\?\.\(combatant\)/);
+  assert.match(commandHud, /await api\.endTurn\(combatant\)/);
+  assert.doesNotMatch(commandHud, /advanceCombatTurn/);
+  assert.doesNotMatch(commandHud, /combat\.nextTurn\(\)/);
   assert.match(commandHud, /stopImmediatePropagation/);
-  assert.match(commandHud, /app\.setReference\?\.\(next\.actor\)/);
   assert.match(commandHud, /arkflightCombatTurnChanged/);
   assert.match(commandHud, /followActiveShip/);
+  assert.match(combatApi, /confirmFacingSettlement/);
+  assert.match(combatApi, /applyFacingSettlement/);
+  assert.match(combatApi, /facingStatus\(reference = null\)/);
+  assert.match(combatApi, /preUpdateCombat/);
 });
 
 
@@ -156,19 +187,24 @@ test("active ship owners can end their turn through the GM-validated combat rela
 });
 
 
-test("all players can view every station while only assigned station crew can use its actions", () => {
+test("ship owners can use common actions while station actions still require assigned crew", () => {
   assert.match(source, /stationActionControl\?\.\(action\.id, combatant\)/);
   assert.match(source, /control\.ok && availability\.ok/);
   assert.match(source, /"not-your-station": "Assigned Crew Only"/);
+  assert.match(source, /"not-ship-owner": "Ship Owner Only"/);
   assert.doesNotMatch(source, /reason = "GM Resolve"/);
   assert.match(stationApi, /function stationControl/);
   assert.match(stationApi, /testUserPermission\?\.\(user, "OWNER"\)/);
+  assert.match(stationApi, /function userOwnsShip/);
+  assert.match(stationApi, /reason: "not-ship-owner"/);
   assert.match(stationApi, /reason: "not-your-station"/);
+  assert.match(stationApi, /userCanResolveShipState/);
   assert.match(stationApi, /STATION_ACTION_REQUEST/);
   assert.match(stationApi, /requestStationAction/);
   assert.match(stationApi, /handleStationActionSocket/);
   assert.match(stationApi, /canUseStationAction/);
   assert.match(source, /api\.stationAction\("battlewatch-fire-weapon"/);
+  assert.match(source, /api\.stationAction\("common-reload-weapon"/);
   assert.match(source, /api\.stationAction\("battlewatch-reload-weapon"/);
   assert.match(template, /data-station="{{id}}"/);
   assert.doesNotMatch(template, /data-station="{{id}}"[^>]*disabled/);
@@ -187,4 +223,29 @@ test("combat console uses only the authoritative weapon arc renderer", () => {
   assert.doesNotMatch(source, /function removeConsoleArcGraphics/);
   assert.match(source, /redrawFiringArcs/);
   assert.match(source, /setFiringArcsVisible/);
+});
+
+
+test("shared ship owners resolve own combat-state helpers without a GM guard", () => {
+  assert.match(combatApi, /function canUserOperateCombatant/);
+  assert.match(combatApi, /async function requireOwnedCombatant/);
+  for (const method of ["buyMovement", "buyManeuver", "spendAP", "spendRP", "turn", "fireWeapon", "reloadWeapon"]) {
+    assert.match(combatApi, new RegExp(`async ${method}\\([^]*?requireOwnedCombatant`));
+  }
+});
+
+
+test("combat HUD exposes Maneuver defense and Moored Boarding state", () => {
+  assert.match(source, /shipManeuverDC/);
+  assert.match(source, /combatEngagement/);
+  assert.match(template, /engagement\.moored/);
+  assert.match(template, /engagement\.boarding/);
+  assert.match(template, /engagement\.partnerName/);
+  assert.match(source, /Moored — Break Grapple/);
+});
+
+
+test("combat UIs resolve capability-gated station actions against the acting combatant", () => {
+  assert.match(source, /stationActions\?\.\(station, combatant\)/);
+  assert.match(source, /stationActions\?\.\(this\.selectedStation, combatant\)/);
 });

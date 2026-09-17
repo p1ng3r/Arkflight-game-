@@ -23,7 +23,7 @@ function fixSupplyLedger(root, actor) {
   const ship = shipFlag(actor);
   if (!ship) return;
   const derived = deriveShip(ship, SHIP_CATALOGS);
-  const derivedMax = Math.max(0, Number(derived?.stats?.supplyCapacity ?? 0));
+  const derivedMax = Math.max(0, Number(derived?.stats?.cargoCapacity ?? 0) * 10);
   const storedMax = Math.max(0, Number(ship?.resources?.supplies?.max ?? 0));
   const max = derivedMax > 0 ? derivedMax : storedMax;
   const value = Math.max(0, Number(ship?.resources?.supplies?.value ?? 0));

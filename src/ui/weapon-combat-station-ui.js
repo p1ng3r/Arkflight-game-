@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { weaponArcCheck } from "../combat/weapon-targeting.js";
+import { weaponReloadRemaining } from "../combat/index.js";
 
 const MODULE_ID = "arkflight-game";
 const DEG_TO_RAD = Math.PI / 180;
@@ -34,6 +35,23 @@ function esc(value) {
 
 function titleCase(value) {
   return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function stationActionBlockerLabel(reason) {
+  const labels = {
+    "not-this-ships-turn": "Not this ship's turn",
+    "insufficient-ap": "Need 1 AP",
+    "insufficient-supplies": "Need 1 Supply",
+    "insufficient-morale": "Need 20% Morale",
+    "once-per-round": "Used this round",
+    "crew-unassigned": "No crew assigned",
+    "not-assigned-crew": "Assigned crew only",
+    "not-ship-owner": "Ship owner only",
+    "station-unassigned": "Battlewatch unassigned",
+    "not-your-station": "Battlewatch only",
+    "missing-state-or-action": "Combat state unavailable"
+  };
+  return labels[reason] ?? titleCase(reason || "Unavailable");
 }
 
 function isArkflightShip(actor) {
@@ -229,7 +247,7 @@ function weaponStatText(weaponState, weapon) {
   const combat = weapon?.data?.combat ?? {};
   const range = combat.rangeHexes ?? {};
   const damage = weapon?.data?.damageProfile ?? {};
-  return `${damage.dice ?? "—"} ${titleCase(damage.type)} · ${weaponState.fireAP ?? 1} AP · Reload ${weaponState.reloadRounds ?? 0} · Range ${range.min ?? "—"} / ${range.optimalMin ?? "—"}–${range.optimalMax ?? "—"} / ${range.max ?? "—"}`;
+  return `${damage.dice ?? "—"} ${titleCase(damage.type)} · 1 AP · Reload ${weaponState.reloadRounds ?? 0} · Range ${range.min ?? "—"} / ${range.optimalMin ?? "—"}–${range.optimalMax ?? "—"} / ${range.max ?? "—"}`;
 }
 
 function notifyFireResult(result, targetName, weaponName) {
@@ -318,7 +336,7 @@ function buildShipWeaponStation(app, actor) {
   for (const weaponState of weapons) {
     const weapon = SHIP_CATALOGS.weapons?.[weaponState.id] ?? null;
     const combat = weapon?.data?.combat ?? {};
-    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const remaining = weaponReloadRemaining(weaponState);
     const row = document.createElement("article");
     row.className = "arkflight-weapon-control-row";
     row.innerHTML = `
@@ -335,22 +353,52 @@ function buildShipWeaponStation(app, actor) {
     actions.append(fireButton);
 
     if (remaining > 0) {
-      const workButton = document.createElement("button");
-      workButton.type = "button";
-      workButton.innerHTML = '<i class="fa-solid fa-rotate"></i> Work the Guns · 1 AP';
-      workButton.disabled = !game.user?.isGM || Number(state?.economy?.ap?.value ?? 0) < 1;
-      workButton.addEventListener("click", async () => {
+      const reloadButton = document.createElement("button");
+      reloadButton.type = "button";
+      const reloadControl = api.stationActionControl?.("common-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
+      const reloadAvailability = api.stationActionAvailability?.("common-reload-weapon", combatant) ?? { ok: true, reason: null };
+      const reloadBlocker = !reloadControl.ok ? reloadControl.reason : !reloadAvailability.ok ? reloadAvailability.reason : null;
+      reloadButton.disabled = Boolean(reloadBlocker);
+      reloadButton.innerHTML = reloadBlocker
+        ? `<i class="fa-solid fa-lock"></i> ${esc(stationActionBlockerLabel(reloadBlocker))}`
+        : '<i class="fa-solid fa-rotate"></i> Reload · 1 AP';
+      reloadButton.title = reloadBlocker
+        ? `Reload unavailable: ${stationActionBlockerLabel(reloadBlocker)}.`
+        : "Common action: spend 1 AP to reduce this weapon's remaining Reload by 1.";
+      reloadButton.addEventListener("click", async () => {
         try {
-          await api.workTheGuns(weaponState.key, combatant);
-          app.render(false);
-        } catch (error) { ui.notifications?.error(error?.message ?? "Work the Guns failed."); }
+          const result = await api.stationAction("common-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
+          if (!result?.requested) app.render(false);
+        } catch (error) { ui.notifications?.error(error?.message ?? "Reload failed."); }
       });
-      actions.append(workButton);
+      actions.append(reloadButton);
+
+      if (remaining <= 2) {
+        const workButton = document.createElement("button");
+        workButton.type = "button";
+        const workControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
+        const workAvailability = api.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: true, reason: null };
+        const workBlocker = !workControl.ok ? workControl.reason : !workAvailability.ok ? workAvailability.reason : null;
+        workButton.disabled = Boolean(workBlocker);
+        workButton.innerHTML = workBlocker
+          ? `<i class="fa-solid fa-lock"></i> Work the Guns · ${esc(stationActionBlockerLabel(workBlocker))}`
+          : '<i class="fa-solid fa-burst"></i> Work the Guns · 20% Morale · +1 Strain';
+        workButton.title = workBlocker
+          ? `Work the Guns unavailable: ${stationActionBlockerLabel(workBlocker)}.`
+          : "Battlewatch, once per round: spend 20% Morale and gain 1 Strain to immediately ready this weapon for 0 AP.";
+        workButton.addEventListener("click", async () => {
+          try {
+            const result = await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
+            if (!result?.requested) app.render(false);
+          } catch (error) { ui.notifications?.error(error?.message ?? "Work the Guns failed."); }
+        });
+        actions.append(workButton);
+      }
     }
 
     const update = () => {
       const targetId = targetSelect.value;
-      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(weaponState.fireAP ?? 1);
+      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= 1;
       let legal = false;
       if (!targetId) {
         solutionNode.textContent = "No target selected.";
@@ -367,19 +415,28 @@ function buildShipWeaponStation(app, actor) {
         }
       }
 
-      fireButton.disabled = !game.user?.isGM || remaining > 0 || !enoughAP || !legal;
-      if (!game.user?.isGM) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> GM Fire Control';
-      else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reloading · ${remaining} round${remaining === 1 ? "" : "s"}`;
-      else if (!enoughAP) fireButton.innerHTML = `<i class="fa-solid fa-bolt"></i> Need ${weaponState.fireAP} AP`;
+      const fireControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
+      fireButton.disabled = !fireControl.ok || remaining > 0 || !enoughAP || !legal;
+      if (!fireControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> Battlewatch Only';
+      else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reload ${remaining}`;
+      else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Target Illegal';
-      else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Apply Damage';
+      else fireButton.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Roll Damage';
     };
 
     fireButton.addEventListener("click", async () => {
       const target = targets.find((entry) => entry.id === targetSelect.value);
       if (!target) return ui.notifications?.warn("Select a target ship first.");
       try {
-        const result = await api.fireAtTarget(weaponState.key, target.id, combatant);
+        const result = await api.stationAction("battlewatch-fire-weapon", {
+          weaponKey: weaponState.key,
+          targetId: target.id,
+          selection: target.id
+        }, combatant);
+        if (result?.requested) {
+          app.render(false);
+          return;
+        }
         notifyFireResult(result, target.name, weaponState.name);
         redrawFiringArcs(combatant);
         app.render(false);
@@ -410,7 +467,8 @@ function buildShipWeaponStation(app, actor) {
 
   section.append(list);
   updateAll();
-  if (!game.user?.isGM) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Arkflight combat resolution is currently GM-authoritative; owners can inspect targets and firing arcs here.</p>');
+  const battlewatchControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
+  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Fire control is Battlewatch-only. Reload is a common action available to ship Owners.</p>');
   return section;
 }
 
@@ -466,7 +524,7 @@ function enhanceGMWeaponConsole(app) {
     });
   }
   for (const button of consoleNode.querySelectorAll("[data-fire-weapon]")) {
-    if (button.textContent?.trim() === "Fire Weapon") button.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Apply Damage';
+    if (button.textContent?.trim() === "Fire Weapon") button.innerHTML = '<i class="fa-solid fa-crosshairs"></i> Fire &amp; Roll Damage';
     button.title = "Resolve attack, damage, target Hardness, and Hull reduction automatically.";
   }
 }
@@ -491,6 +549,14 @@ Hooks.on("renderApplicationV2", (app) => enhanceGMWeaponConsole(app));
 Hooks.on("updateToken", () => setTimeout(refreshVisibleFiringArcs, 0));
 Hooks.on("updateCombatant", () => setTimeout(refreshVisibleFiringArcs, 0));
 Hooks.on("updateCombat", () => setTimeout(refreshVisibleFiringArcs, 0));
+Hooks.on("arkflightStationActionRemoteResult", (payload) => {
+  if (!["common-reload-weapon", "battlewatch-reload-weapon"].includes(payload?.actionId)) return;
+  for (const app of Object.values(ui.windows ?? {})) {
+    const actor = app?.actor ?? app?.document?.actor ?? (app?.document?.documentName === "Actor" ? app.document : null);
+    const combatant = actor ? combatantForActor(actor) : null;
+    if (combatant?.id === payload.combatantId) app.render?.(false);
+  }
+});
 Hooks.on("deleteCombat", () => { ARC_VISIBLE.clear(); clearArcGraphics(); });
 Hooks.on("canvasReady", () => refreshVisibleFiringArcs());
 Hooks.on("tearDownCanvas", () => clearArcGraphics());

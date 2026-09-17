@@ -126,7 +126,7 @@ test("core weapon catalog contains sixteen distinct combat-ready weapons", () =>
     assert.ok(weapon.data.allowedMounts.length > 0, `${weapon.name} mounts`);
     for (const mount of weapon.data.allowedMounts) assert.ok(WEAPON_MOUNTS.includes(mount), `${weapon.name} mount ${mount}`);
     assert.ok(WEAPON_ARC_TEMPLATES.includes(combat.arcTemplate), `${weapon.name} arc ${combat.arcTemplate}`);
-    assert.ok(Number.isInteger(combat.fireAP) && combat.fireAP >= 1, `${weapon.name} fire AP`);
+    assert.equal(combat.fireAP, 1, `${weapon.name} fire AP`);
     assert.ok(Number.isInteger(combat.reloadRounds) && combat.reloadRounds >= 0, `${weapon.name} reload`);
     assert.ok(combat.rangeHexes.min >= 1, `${weapon.name} minimum range`);
     assert.ok(combat.rangeHexes.optimalMin >= combat.rangeHexes.min, `${weapon.name} optimal minimum`);

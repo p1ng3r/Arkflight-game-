@@ -28,10 +28,59 @@ test("weapon station supports target lock and Foundry canvas targeting", () => {
   assert.match(source, /targetingSolution/);
 });
 
-test("weapon fire control explicitly resolves and applies target damage", () => {
-  assert.match(source, /Fire &amp; Apply Damage/);
-  assert.match(source, /fireAtTarget/);
-  assert.match(combatApi, /applyHardnessToDamage/);
-  assert.match(combatApi, /ship\.resources\.hull\.value/);
-  assert.match(combatApi, /target\.actor\.update/);
+test("weapon fire stays station-authorized and applies Hull from the damage chat card", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(source, /Fire &amp; Roll Damage/);
+  assert.match(source, /stationAction\("battlewatch-fire-weapon"/);
+  assert.match(source, /stationActionControl\?\.\("battlewatch-fire-weapon"/);
+  assert.doesNotMatch(source, /api\.fireAtTarget\(weaponState\.key, target\.id, combatant\)/);
+  assert.match(effects, /shipDamage/);
+  assert.match(effects, /renderChatMessageHTML/);
+  assert.match(effects, /applyShipDamageMessage/);
+  assert.match(effects, /undoShipDamageMessage/);
+  assert.match(effects, /await attacker\.update/);
+  assert.doesNotMatch(effects, /TARGET_MUTATION_REQUEST/);
+});
+
+
+test("player reload UI separates common Reload from Battlewatch Work the Guns", () => {
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  assert.match(source, /stationActionAvailability\?\.\("common-reload-weapon"/);
+  assert.match(source, /Reload · 1 AP/);
+  assert.match(source, /Work the Guns · 20% Morale · \+1 Strain/);
+  assert.match(source, /remaining <= 2/);
+  assert.match(source, /arkflightStationActionRemoteResult/);
+  assert.match(stationApi, /resolver === "reloadWeapon"/);
+  assert.match(stationApi, /resolver === "workTheGuns"/);
+  assert.match(stationApi, /maxReloadRemaining/);
+  assert.match(stationApi, /reduceWeaponReload\(rawAfter, selection, round, workTheGunsRemaining\)/);
+  assert.match(stationApi, /STATION_ACTION_RESULT = "station-action-result"/);
+});
+
+
+test("shared-owner reload logic has one authoritative Foundry runtime", () => {
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  assert.ok(!moduleJson.esmodules.includes("src/foundry/combat-balance-runtime.js"));
+  assert.match(stationApi, /reduceWeaponReload/);
+  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
+  assert.match(stationApi, /applyPersistentAction/);
+});
+
+
+test("player-owned station actions preserve the initiating user in chat", () => {
+  const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(stationApi, /user: userId/);
+  assert.match(stationApi, /requesterUserId: game\.user\?\.id/);
+  assert.match(effects, /user: requester\?\.id \?\? requesterUserId/);
+});
+
+
+test("chat damage application consumes recorded Ward and Brace effects only when applied", () => {
+  const effects = readFileSync(new URL("../src/foundry/native-station-combat-effects.js", import.meta.url), "utf8");
+  assert.match(effects, /Ward and Brace effects are not consumed yet/);
+  assert.match(effects, /damageEffectIds/);
+  assert.match(effects, /effectSnapshots/);
+  assert.match(effects, /consumeStationEffects\(beforeState, effectIds\)/);
+  assert.match(effects, /restoreConsumedEffects/);
 });

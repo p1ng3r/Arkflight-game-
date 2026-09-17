@@ -1,12 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createShip, AREA_STATES } from "../src/ship/ship-schema.js";
+import { createShip } from "../src/ship/ship-schema.js";
 import { SHIP_CATALOGS } from "../src/content/index.js";
 import { deriveShip } from "../src/ship/derive-ship.js";
 import {
-  AREA_STATION_PENALTIES,
   SHIP_SHEET_TABS,
-  buildAreaViews,
+  buildConditionViews,
   buildInstalledFittings,
   buildRefitInventory,
   buildShipSheetView
@@ -16,24 +15,16 @@ test("vessel sheet uses native Overview Hold Combat and Weapons tabs", () => {
   assert.deepEqual(SHIP_SHEET_TABS, ["overview", "hold", "combat", "weapons"]);
 });
 
-test("five persistent Areas own the visible station penalty ladder", () => {
-  assert.deepEqual(AREA_STATION_PENALTIES, {
-    stable: 0,
-    stressed: -1,
-    damaged: -3,
-    critical: -5,
-    disabled: -10
+test("sheet exposes five named Ship Conditions without a universal station penalty ladder", () => {
+  const ship = createShip({
+    shipConditions: { hull: "battered", drive: "faltering", weapons: "malfunctioning" },
+    resources: { lifeveil: { value: 70, max: 100 }, morale: { value: 45, max: 100 } }
   });
-  const ship = createShip({ areas: {
-    hull: { state: AREA_STATES.STABLE },
-    arkengine: { state: AREA_STATES.STRESSED },
-    rigging: { state: AREA_STATES.DAMAGED },
-    lifeveil: { state: AREA_STATES.CRITICAL },
-    morale: { state: AREA_STATES.DISABLED }
-  }});
-  const rows = buildAreaViews(ship);
-  assert.deepEqual(rows.map((row) => row.station), ["battlewatch", "engineer", "navigator", "veilwarden", "captain"]);
-  assert.deepEqual(rows.map((row) => row.penalty), [0, -1, -3, -5, -10]);
+  const rows = buildConditionViews(ship);
+  assert.deepEqual(rows.map((row) => row.key), ["hull", "drive", "weapons", "lifeveil", "morale"]);
+  assert.deepEqual(rows.map((row) => row.stateLabel), ["Battered", "Faltering", "Malfunctioning", "Degraded", "Shaken"]);
+  assert.deepEqual(rows.map((row) => row.effectLabel), ["Hardness", "Speed / Maneuverability", "Attack / Reload", "Integrity %", "Crew Resolve %"]);
+  assert.equal(rows.every((row) => row.penalty === 0), true);
   assert.equal(rows.some((row) => row.stationLabel === "Watchmaster"), false);
 });
 

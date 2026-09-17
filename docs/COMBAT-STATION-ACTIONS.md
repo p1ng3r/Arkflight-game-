@@ -41,8 +41,8 @@ The minimum core menu is now **4 Actions + 1 Reaction per station**. Ship talent
 | Type | Ability | Cost | Role |
 | --- | --- | ---: | --- |
 | Action | Acquire Target | 1 AP | Establish a precise firing solution. |
-| Action | Fire Weapon | Weapon AP | Resolve a legal installed weapon attack. |
-| Action | Work the Guns | 1 AP | Reduce one weapon's reload time. |
+| Action | Fire Weapon | 1 AP | Resolve a legal installed weapon attack. All installed weapons cost exactly 1 AP to fire. |
+| Special | Work the Guns | 0 AP + 1 Morale + 1 Strain | Once per round, immediately Ready one installed weapon with 2 or fewer Reload rounds remaining. |
 | Action | Ready Broadside | 1 AP | Coordinate a Port or Starboard battery. |
 | Reaction | Spoil Their Aim | 1 RP | Disrupt an enemy firing solution against the ship. |
 
@@ -61,6 +61,6 @@ The minimum core menu is now **4 Actions + 1 Reaction per station**. Ship talent
 - These are **combat actions**, not Voyage/Event station actions.
 - AP and RP are shared by the vessel.
 - Reactions use RP and have authored triggers; they are not free Actions taken during the ship's turn.
-- `Fire Weapon` uses the installed weapon's own AP cost.
+- `Fire Weapon` always costs 1 AP. Weapon identity is expressed through damage, range, arc, crew, traits, and Reload rather than variable firing AP.
 - Core action definitions live in `src/content/combat-actions.js` and are exposed through `game.arkflight.combat.actions`.
 - The action definitions carry declarative resolver contracts so the Foundry combat UI and combat engine can implement each effect without creating a second duplicate action list.

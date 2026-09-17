@@ -1,10 +1,15 @@
 .arkflight-shipwright-workspace .window-content {
+  min-height: 0;
   padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   background: #090b0c;
 }
 
 .arkflight-workspace-shell {
   min-height: 100%;
+  height: auto;
   padding: 10px;
   color: #e8dfc9;
   background: linear-gradient(180deg, rgba(10,14,16,.98), rgba(4,7,8,.99));
@@ -199,8 +204,10 @@
 .arkflight-workspace-board-layout {
   display: grid;
   grid-template-columns: minmax(0,1.45fr) minmax(290px,.55fr);
+  align-items: start;
   gap: 10px;
   margin-top: 8px;
+  padding-bottom: 16px;
 }
 
 .arkflight-workspace-board-panel {
@@ -785,3 +792,77 @@
   color: #819ba1;
   font-size: 8px;
 }
+
+
+/* The three fitting boards can be taller than the ApplicationV2 viewport.
+   Keep the entire Shipwright page reachable instead of clipping below the window. */
+.arkflight-shipwright-workspace .window-content > .arkflight-workspace-shell {
+  overflow: visible;
+}
+
+.arkflight-workspace-board-panel,
+.arkflight-workspace-sidecol {
+  align-self: start;
+}
+
+.arkflight-workspace-inventory-list,
+.arkflight-workspace-work-list,
+.arkflight-workspace-blueprint-list {
+  scrollbar-width: thin;
+}
+
+.arkflight-workspace-inventory-list {
+  max-height: 360px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.arkflight-workspace-work-list {
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+
+/* Authoritative category-window scrolling: Ship Mods, Arkengine Mods, Weapons */
+.arkflight-workspace-board-layout {
+  max-height: calc(100vh - 235px);
+  overflow-y: scroll;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  padding-right: 8px;
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar,
+.arkflight-workspace-inventory-list::-webkit-scrollbar,
+.arkflight-workspace-work-list::-webkit-scrollbar,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar {
+  width: 12px;
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar-track,
+.arkflight-workspace-inventory-list::-webkit-scrollbar-track,
+.arkflight-workspace-work-list::-webkit-scrollbar-track,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar-track {
+  background: rgba(8, 11, 12, .85);
+  border-left: 1px solid rgba(105, 86, 50, .4);
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar-thumb,
+.arkflight-workspace-inventory-list::-webkit-scrollbar-thumb,
+.arkflight-workspace-work-list::-webkit-scrollbar-thumb,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(126, 104, 59, .95), rgba(69, 88, 92, .95));
+  border: 2px solid rgba(8, 11, 12, .9);
+  border-radius: 8px;
+}
+
+.arkflight-workspace-board-layout::-webkit-scrollbar-thumb:hover,
+.arkflight-workspace-inventory-list::-webkit-scrollbar-thumb:hover,
+.arkflight-workspace-work-list::-webkit-scrollbar-thumb:hover,
+.arkflight-workspace-blueprint-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(163, 132, 70, .98), rgba(83, 123, 132, .98));
+}
+
+.arkflight-raider-pursuit-config{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,420px);gap:14px;align-items:center;padding:10px 14px;margin:0 0 10px;border:1px solid rgba(119,166,184,.45);background:rgba(7,20,26,.88)}
+.arkflight-raider-pursuit-config>div{display:flex;flex-direction:column;gap:3px}.arkflight-raider-pursuit-config span{font-size:9px;letter-spacing:.12em;color:#8fc7d8}.arkflight-raider-pursuit-config strong{font-size:13px;color:#e5dac1}.arkflight-raider-pursuit-config small,.arkflight-raider-pursuit-config em{font-size:10px;color:#9f988a;font-style:normal}.arkflight-raider-pursuit-config select{min-height:34px;width:100%}

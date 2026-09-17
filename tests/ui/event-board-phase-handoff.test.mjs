@@ -44,3 +44,11 @@ test("authoritative Event Board owns both Lock Plan and Resolution", () => {
   assert.match(templateSource, /resolve-active-station/);
   assert.match(eventBoardAppSource, /case "lock-plan": await this\.controller\.lockPlan\(\)/);
 });
+
+test("Event Board renders authored ending art and ending copy instead of a hard-coded event ending", () => {
+  assert.match(eventBoardAppSource, /eventCompleteImage: moduleAssetPath\(state\.eventEnding\?\.image/);
+  assert.match(templateSource, /src="{{eventCompleteImage}}"/);
+  assert.match(templateSource, /\{\{eventEnding\.label\}\}/);
+  assert.match(templateSource, /\{\{eventEnding\.vignette\}\}/);
+  assert.doesNotMatch(templateSource, /The Glassback is Behind You/);
+});

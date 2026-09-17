@@ -4,17 +4,20 @@ import assert from "node:assert/strict";
 import {
   beginCombatantTurn,
   createCombatantState,
+  commitFacing,
   fireWeapon,
+  headingDegreeDistance,
   headingStepDistance,
   hullCombatProfile,
   normalizeHexHeading,
+  normalizeShipHeading,
   persistentStrainPatch,
+  previewFacing,
   purchaseManeuver,
   purchaseMovement,
-  recordFacingChange,
   recordMovement,
   weaponReloadRemaining,
-  workTheGuns
+  reloadWeapon
 } from "../src/combat/index.js";
 
 function ship(hullId = "brigantine", strain = 0, strainMax = 10) {
@@ -76,46 +79,60 @@ test("Move spends 1 AP and buys one Combat Speed allowance", () => {
   assert.deepEqual(state.mobility.movement, { purchases: 2, allowance: 10, used: 3 });
 });
 
-test("Maneuver spends 1 AP and buys Maneuverability facing steps", () => {
+test("Maneuver spends 1 AP and buys another Maneuverability turning block", () => {
   let state = createCombatantState(ship(), { derived, catalogs });
   state = purchaseManeuver(state);
   assert.equal(state.economy.ap.value, 3);
   assert.deepEqual(state.mobility.maneuver, { purchases: 1, allowance: 2, used: 0 });
-  state = recordFacingChange(state, 1, 60);
-  assert.equal(state.mobility.heading, 60);
-  assert.equal(state.mobility.maneuver.used, 1);
-  state = recordFacingChange(state, 1, 120);
-  assert.equal(state.mobility.maneuver.used, 2);
-  assert.throws(() => recordFacingChange(state, 1, 180), /Facing change exceeds Maneuver allowance/);
+  state = previewFacing(state, 30);
+  assert.equal(state.mobility.heading, 30);
+  assert.equal(state.mobility.facing.usedDegrees, 0);
+  state = commitFacing(state, 30, "test");
+  assert.equal(state.mobility.committedHeading, 30);
+  assert.equal(state.mobility.facing.usedDegrees, 30);
 });
 
-test("hex headings snap to six directions and measure shortest facing change", () => {
+test("hex helpers remain six-directional while ship headings support 30-degree facing", () => {
   assert.equal(normalizeHexHeading(359), 0);
   assert.equal(normalizeHexHeading(61), 60);
-  assert.equal(normalizeHexHeading(181), 180);
   assert.equal(headingStepDistance(0, 300), 1);
-  assert.equal(headingStepDistance(60, 240), 3);
+  assert.equal(normalizeShipHeading(44), 30);
+  assert.equal(normalizeShipHeading(46), 60);
+  assert.equal(headingDegreeDistance(0, 330), 30);
+  assert.equal(headingDegreeDistance(30, 210), 180);
 });
 
-test("weapon fire spends weapon AP and creates a separate reload clock", () => {
+test("weapon fire always spends exactly 1 AP and creates active Reload work", () => {
   let state = createCombatantState(ship(), { derived, catalogs });
   const weaponKey = Object.keys(state.weapons)[0];
   state = fireWeapon(state, weaponKey, 1);
-  assert.equal(state.economy.ap.value, 2);
+  assert.equal(state.weapons[weaponKey].fireAP, 1);
+  assert.equal(state.economy.ap.value, 3);
   assert.equal(state.weapons[weaponKey].lastFiredRound, 1);
-  assert.equal(state.weapons[weaponKey].readyRound, 3);
-  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 2), 1);
-  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 3), 0);
+  assert.equal(state.weapons[weaponKey].reloadRemaining, 1);
+  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 1), 1);
+  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 99), 1);
   assert.throws(() => fireWeapon(state, weaponKey, 2), /still reloading/);
 });
 
-test("Work the Guns spends 1 AP to shorten reload by one round", () => {
+test("starting a new turn never passively reloads a weapon", () => {
   let state = createCombatantState(ship(), { derived, catalogs });
   const weaponKey = Object.keys(state.weapons)[0];
   state = fireWeapon(state, weaponKey, 1);
-  state = workTheGuns(state, weaponKey, 1);
-  assert.equal(state.economy.ap.value, 1);
-  assert.equal(state.weapons[weaponKey].readyRound, 2);
+  state = beginCombatantTurn(state, 2);
+  assert.equal(state.economy.ap.value, 4);
+  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 2), 1);
+  state = beginCombatantTurn(state, 7);
+  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 7), 1);
+});
+
+test("common Reload spends 1 AP to reduce Reload by one", () => {
+  let state = createCombatantState(ship(), { derived, catalogs });
+  const weaponKey = Object.keys(state.weapons)[0];
+  state = fireWeapon(state, weaponKey, 1);
+  state = reloadWeapon(state, weaponKey, 1);
+  assert.equal(state.economy.ap.value, 2);
+  assert.equal(state.weapons[weaponKey].reloadRemaining, 0);
   assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 2), 0);
 });
 
@@ -124,13 +141,15 @@ test("native turn refresh refills AP RP and clears movement purchases", () => {
   state = purchaseMovement(state);
   state = purchaseManeuver(state);
   state = recordMovement(state, 4);
-  state = recordFacingChange(state, 1, 60);
+  state = commitFacing(previewFacing(state, 60), 60, "test");
   state = beginCombatantTurn(state, 2);
   assert.deepEqual(state.economy.ap, { value: 4, max: 4 });
   assert.deepEqual(state.economy.rp, { value: 1, max: 1 });
   assert.deepEqual(state.mobility.movement, { purchases: 0, allowance: 0, used: 0 });
   assert.deepEqual(state.mobility.maneuver, { purchases: 0, allowance: 0, used: 0 });
   assert.equal(state.mobility.heading, 60);
+  assert.equal(state.mobility.committedHeading, 60);
+  assert.equal(state.mobility.facing.usedDegrees, 0);
 });
 
 test("combat Strain can still be written back to the persistent ship", () => {

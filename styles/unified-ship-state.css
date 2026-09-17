@@ -50,21 +50,113 @@
   bottom: 3px;
 }
 
+.arkflight-area-row.is-sound,
+.arkflight-area-row.is-responsive,
+.arkflight-area-row.is-ready,
 .arkflight-area-row.is-stable,
+.arkflight-area-row.is-inspired,
+.arkflight-area-row.is-confident,
+.arkflight-area-row.is-steady,
+.arkflight-persistent-status.is-sound,
+.arkflight-persistent-status.is-responsive,
+.arkflight-persistent-status.is-ready,
 .arkflight-persistent-status.is-stable,
-.arkflight-persistent-state-inline.is-stable { border-color: rgba(132, 176, 143, .55); }
+.arkflight-persistent-status.is-inspired,
+.arkflight-persistent-status.is-confident,
+.arkflight-persistent-status.is-steady,
+.arkflight-persistent-state-inline.is-sound,
+.arkflight-persistent-state-inline.is-responsive,
+.arkflight-persistent-state-inline.is-ready,
+.arkflight-persistent-state-inline.is-stable,
+.arkflight-persistent-state-inline.is-inspired,
+.arkflight-persistent-state-inline.is-confident,
+.arkflight-persistent-state-inline.is-steady {
+  border-color: rgba(132, 176, 143, .55);
+}
+
+.arkflight-area-row.is-battered,
+.arkflight-area-row.is-sluggish,
+.arkflight-area-row.is-fouled,
+.arkflight-area-row.is-degraded,
+.arkflight-area-row.is-shaken,
 .arkflight-area-row.is-stressed,
+.arkflight-persistent-status.is-battered,
+.arkflight-persistent-status.is-sluggish,
+.arkflight-persistent-status.is-fouled,
+.arkflight-persistent-status.is-degraded,
+.arkflight-persistent-status.is-shaken,
 .arkflight-persistent-status.is-stressed,
-.arkflight-persistent-state-inline.is-stressed { border-color: rgba(207, 162, 67, .65); }
-.arkflight-area-row.is-damaged,
-.arkflight-persistent-status.is-damaged,
-.arkflight-persistent-state-inline.is-damaged { border-color: rgba(197, 125, 77, .72); }
+.arkflight-persistent-state-inline.is-battered,
+.arkflight-persistent-state-inline.is-sluggish,
+.arkflight-persistent-state-inline.is-fouled,
+.arkflight-persistent-state-inline.is-degraded,
+.arkflight-persistent-state-inline.is-shaken,
+.arkflight-persistent-state-inline.is-stressed {
+  border-color: rgba(207, 162, 67, .70);
+}
+
+.arkflight-area-row.is-breached,
+.arkflight-area-row.is-faltering,
+.arkflight-area-row.is-malfunctioning,
 .arkflight-area-row.is-critical,
+.arkflight-area-row.is-damaged,
+.arkflight-persistent-status.is-breached,
+.arkflight-persistent-status.is-faltering,
+.arkflight-persistent-status.is-malfunctioning,
 .arkflight-persistent-status.is-critical,
-.arkflight-persistent-state-inline.is-critical { border-color: rgba(194, 78, 70, .82); }
+.arkflight-persistent-status.is-damaged,
+.arkflight-persistent-state-inline.is-breached,
+.arkflight-persistent-state-inline.is-faltering,
+.arkflight-persistent-state-inline.is-malfunctioning,
+.arkflight-persistent-state-inline.is-critical,
+.arkflight-persistent-state-inline.is-damaged {
+  border-color: rgba(194, 92, 70, .82);
+}
+
+.arkflight-area-row.is-shattered,
+.arkflight-area-row.is-unresponsive,
+.arkflight-area-row.is-barely-operable,
+.arkflight-area-row.is-collapsed,
+.arkflight-area-row.is-broken,
 .arkflight-area-row.is-disabled,
+.arkflight-persistent-status.is-shattered,
+.arkflight-persistent-status.is-unresponsive,
+.arkflight-persistent-status.is-barely-operable,
+.arkflight-persistent-status.is-collapsed,
+.arkflight-persistent-status.is-broken,
 .arkflight-persistent-status.is-disabled,
-.arkflight-persistent-state-inline.is-disabled { border-color: rgba(130, 130, 130, .72); opacity: .72; }
+.arkflight-persistent-state-inline.is-shattered,
+.arkflight-persistent-state-inline.is-unresponsive,
+.arkflight-persistent-state-inline.is-barely-operable,
+.arkflight-persistent-state-inline.is-collapsed,
+.arkflight-persistent-state-inline.is-broken,
+.arkflight-persistent-state-inline.is-disabled {
+  border-color: rgba(150, 55, 55, .92);
+}
+
+.arkflight-strain-danger {
+  display: block;
+  margin-top: 3px;
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  opacity: .82;
+}
+
+.arkflight-resource-card[data-strain-risk="dc-5"] .arkflight-strain-danger,
+[data-strain-risk="dc-5"] .arkflight-strain-danger {
+  font-weight: 700;
+}
+
+.arkflight-resource-card[data-strain-risk="dc-10"] .arkflight-strain-danger,
+.arkflight-resource-card[data-strain-risk="dc-15"] .arkflight-strain-danger,
+.arkflight-resource-card[data-strain-risk="limit"] .arkflight-strain-danger,
+[data-strain-risk="dc-10"] .arkflight-strain-danger,
+[data-strain-risk="dc-15"] .arkflight-strain-danger,
+[data-strain-risk="limit"] .arkflight-strain-danger {
+  font-weight: 800;
+}
 
 .arkflight-station-responsibility {
   display: block;

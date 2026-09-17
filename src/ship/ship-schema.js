@@ -1,37 +1,5 @@
-export const SHIP_SCHEMA_VERSION = 6;
-
-export const SHIP_AREA_KEYS = Object.freeze([
-  "hull",
-  "arkengine",
-  "rigging",
-  "lifeveil",
-  "morale"
-]);
-
-export const AREA_STATES = Object.freeze({
-  STABLE: "stable",
-  STRESSED: "stressed",
-  DAMAGED: "damaged",
-  CRITICAL: "critical",
-  DISABLED: "disabled"
-});
-
-// Deprecated compatibility exports. New code should use SHIP_AREA_KEYS / AREA_STATES.
-export const SHIP_SYSTEM_KEYS = Object.freeze([
-  "hull",
-  "arkengine",
-  "lifeveil",
-  "helm",
-  "rigging",
-  "command",
-  "weapons"
-]);
-export const SYSTEM_STATES = Object.freeze({
-  FUNCTIONAL: "functional",
-  DAMAGED: "damaged",
-  DISABLED: "disabled",
-  DESTROYED: "destroyed"
-});
+import { normalizeShipConditions } from "./ship-conditions.js";
+export const SHIP_SCHEMA_VERSION = 8;
 
 export const STATION_KEYS = Object.freeze([
   "captain",
@@ -44,27 +12,21 @@ export const STATION_KEYS = Object.freeze([
 export const LEGACY_STATION_ALIASES = Object.freeze({ watchmaster: "battlewatch" });
 
 function resource(value = 0, max = 0) { return { value, max }; }
+function clampPercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+function normalizePercentageResource(source, defaultValue = 0) {
+  if (!source || typeof source !== "object") return resource(clampPercent(defaultValue), 100);
+  const value = Number(source.value ?? defaultValue);
+  const max = Number(source.max ?? 100);
+  if (Number.isFinite(max) && max > 0 && max !== 100) {
+    return resource(clampPercent((value / max) * 100), 100);
+  }
+  return resource(clampPercent(value), 100);
+}
 function counter(value = 0) { return { value: Math.max(0, Math.trunc(Number(value) || 0)) }; }
-function area(state = AREA_STATES.STABLE) { return { state }; }
-
-function legacySystemToAreaState(value) {
-  if (value === "destroyed" || value === "disabled") return AREA_STATES.DISABLED;
-  if (value === "damaged") return AREA_STATES.DAMAGED;
-  return AREA_STATES.STABLE;
-}
-
-function migrateAreas(ship = {}) {
-  const existing = ship.areas ?? {};
-  const systems = ship.systems ?? {};
-  return {
-    hull: { ...area(), ...(existing.hull ?? {}), state: existing.hull?.state ?? legacySystemToAreaState(systems.hull) },
-    arkengine: { ...area(), ...(existing.arkengine ?? {}), state: existing.arkengine?.state ?? legacySystemToAreaState(systems.arkengine) },
-    rigging: { ...area(), ...(existing.rigging ?? {}), state: existing.rigging?.state ?? legacySystemToAreaState(systems.rigging ?? systems.helm) },
-    lifeveil: { ...area(), ...(existing.lifeveil ?? {}), state: existing.lifeveil?.state ?? legacySystemToAreaState(systems.lifeveil) },
-    morale: { ...area(), ...(existing.morale ?? {}), state: existing.morale?.state ?? legacySystemToAreaState(systems.command) }
-  };
-}
-
 function migrateStations(stations = {}) {
   const next = { ...stations };
   if (!next.battlewatch && next.watchmaster) next.battlewatch = next.watchmaster;
@@ -78,10 +40,14 @@ function normalizeProgression(progression = {}) {
   const specializationId = typeof progression.specializationId === "string" && progression.specializationId.trim()
     ? progression.specializationId.trim()
     : null;
+  const specializationConfig = progression.specializationConfig && typeof progression.specializationConfig === "object"
+    ? structuredClone(progression.specializationConfig)
+    : {};
   return {
     level,
     xp: level >= 20 ? Math.min(1000, xp) : Math.min(999, xp),
     specializationId,
+    specializationConfig,
     talentIds: [...new Set(progression.talentIds ?? [])],
     arkcraftUpgrades: { ...(progression.arkcraftUpgrades ?? {}) }
   };
@@ -123,13 +89,19 @@ function normalizeRefit(refit = {}) {
   };
 }
 
+function normalizeRewardState(rewards = {}) {
+  return {
+    pendingShip: (rewards.pendingShip ?? []).filter((entry) => entry && typeof entry === "object").map((entry) => ({ ...entry }))
+  };
+}
+
 function normalizeResources(resources = {}) {
   return {
     hull: { ...resource(), ...(resources.hull ?? {}) },
-    lifeveil: { ...resource(), ...(resources.lifeveil ?? {}) },
+    lifeveil: normalizePercentageResource(resources.lifeveil, 100),
     strain: { ...resource(), ...(resources.strain ?? {}) },
     supplies: { ...resource(), ...(resources.supplies ?? {}) },
-    morale: { ...resource(3, 5), ...(resources.morale ?? {}) },
+    morale: normalizePercentageResource(resources.morale, 60),
     salvageParts: counter(resources.salvageParts?.value ?? resources.salvageParts ?? 0)
   };
 }
@@ -144,11 +116,12 @@ export function createShip(overrides = {}) {
     rooms: [], shipMods: [], weapons: [],
     crew: { stations: Object.fromEntries(STATION_KEYS.map((key) => [key, null])), specialists: [] },
     cargo: { used: 0, notes: "" },
-    resources: { hull: resource(), lifeveil: resource(), strain: resource(), supplies: resource(), morale: resource(3, 5), salvageParts: counter() },
+    resources: { hull: resource(), lifeveil: resource(100, 100), strain: resource(), supplies: resource(), morale: resource(60, 100), salvageParts: counter() },
     blueprints: { shipModIds: [], arkengineModIds: [], weaponIds: [] },
     inventory: { shipMods: {}, arkengineMods: {}, weapons: {} },
     refit: { workOrders: [] },
-    areas: Object.fromEntries(SHIP_AREA_KEYS.map((key) => [key, area()])),
+    rewards: { pendingShip: [] },
+    shipConditions: normalizeShipConditions(),
     progression: normalizeProgression(),
     conditions: []
   };
@@ -164,11 +137,13 @@ export function normalizeShip(ship = {}) {
     blueprints: normalizeBlueprints(ship.blueprints),
     inventory: normalizeInventory(ship.inventory),
     refit: normalizeRefit(ship.refit),
-    areas: migrateAreas(ship),
+    rewards: normalizeRewardState(ship.rewards),
+    shipConditions: normalizeShipConditions(ship),
     progression: normalizeProgression(ship.progression),
     conditions: [...(ship.conditions ?? [])]
   };
   delete base.systems;
+  delete base.areas;
   return base;
 }
 
@@ -197,11 +172,13 @@ function mergeShip(base, overrides) {
       weapons: { ...base.inventory.weapons, ...(overrides.inventory?.weapons ?? {}) }
     },
     refit: { ...base.refit, ...(overrides.refit ?? {}), workOrders: [...(overrides.refit?.workOrders ?? base.refit.workOrders)] },
-    areas: { ...base.areas, ...(overrides.areas ?? {}) },
+    rewards: { ...base.rewards, ...(overrides.rewards ?? {}), pendingShip: [...(overrides.rewards?.pendingShip ?? base.rewards.pendingShip)] },
+    shipConditions: normalizeShipConditions({ ...base, ...overrides, shipConditions: { ...(base.shipConditions ?? {}), ...(overrides.shipConditions ?? {}) } }),
     progression: {
       ...base.progression,
       ...(overrides.progression ?? {}),
       specializationId: overrides.progression?.specializationId ?? base.progression.specializationId ?? null,
+      specializationConfig: structuredClone(overrides.progression?.specializationConfig ?? base.progression.specializationConfig ?? {}),
       talentIds: [...(overrides.progression?.talentIds ?? base.progression.talentIds)],
       arkcraftUpgrades: { ...base.progression.arkcraftUpgrades, ...(overrides.progression?.arkcraftUpgrades ?? {}) }
     },

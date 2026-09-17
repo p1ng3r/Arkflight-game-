@@ -1,3 +1,4 @@
+import { shipConditionProfile } from "../ship/ship-conditions.js";
 const MODULE_ID = "arkflight-game";
 const pendingRepairTargets = new Map();
 
@@ -74,29 +75,23 @@ function decorateResourceShortcuts(root, actor, ship) {
 }
 
 function decorateAreaShortcuts(root, actor, ship) {
-  const areaCards = [...root.querySelectorAll(".arkflight-area-card")];
-  for (const card of areaCards) {
+  const cards = [...root.querySelectorAll(".arkflight-area-card")];
+  for (const card of cards) {
     const heading = card.querySelector(".arkflight-area-heading");
     if (!heading || heading.querySelector(".arkflight-repair-shortcut")) continue;
     const label = heading.querySelector("strong")?.textContent?.trim().toLowerCase() ?? "";
-    const key = label === "hull" ? "hull"
-      : label === "arkengine" ? "arkengine"
-      : label === "rigging" ? "rigging"
-      : label === "lifeveil" ? "lifeveil"
-      : label === "morale" ? "morale"
-      : null;
+    const key = label === "hull" ? "hull" : label === "drive" ? "drive" : label === "weapons" ? "weapons" : null;
     if (!key) continue;
-    const state = String(ship.areas?.[key]?.state ?? "stable").toLowerCase();
-    if (state === "stable") continue;
-    heading.append(makeShortcut(actor, "area", key, `Repair ${label}`));
+    if (shipConditionProfile(ship, key).severity <= 0) continue;
+    heading.append(makeShortcut(actor, "condition", key, `Repair ${label}`));
   }
 
   for (const row of root.querySelectorAll(".arkflight-area-row[data-arkflight-area]")) {
     if (row.querySelector(".arkflight-repair-shortcut")) continue;
     const key = row.dataset.arkflightArea;
-    const state = String(ship.areas?.[key]?.state ?? "stable").toLowerCase();
-    if (state === "stable") continue;
-    row.append(makeShortcut(actor, "area", key, `Repair ${key}`));
+    if (!["hull", "drive", "weapons"].includes(key)) continue;
+    if (shipConditionProfile(ship, key).severity <= 0) continue;
+    row.append(makeShortcut(actor, "condition", key, `Repair ${key}`));
   }
 }
 

@@ -8,6 +8,8 @@ const moduleJson = JSON.parse(fs.readFileSync(new URL("../module.json", import.m
 const uiPath = new URL("../src/ui/shipwright-refit-inventory-ui.js", import.meta.url);
 const uiSource = fs.readFileSync(uiPath, "utf8");
 const cssSource = fs.readFileSync(new URL("../styles/shipwright-refit-inventory.css", import.meta.url), "utf8");
+const workOrderSource = fs.readFileSync(new URL("../src/ui/shipwright-refit-work-order-ui.js", import.meta.url), "utf8");
+const authoritySource = fs.readFileSync(new URL("../src/ui/shipwright-refit-authority-ui.js", import.meta.url), "utf8");
 
 test("Part 4 Shipwright UI assets are loaded by module.json", () => {
   assert.ok(moduleJson.esmodules.includes("src/ui/shipwright-refit-inventory-ui.js"));
@@ -38,4 +40,13 @@ test("Ship socket compatibility uses canonical refit slotClass", () => {
   assert.match(uiSource, /shipModSlotRows/);
   assert.match(uiSource, /is-category-compatible/);
   assert.match(uiSource, /is-category-incompatible/);
+});
+
+
+test("shared ship Owners can manage Shipwright gameplay operations", () => {
+  assert.match(uiSource, /!game\.user\?\.isGM && !actor\?\.isOwner/);
+  assert.match(workOrderSource, /!game\.user\?\.isGM && !actor\.isOwner/);
+  assert.match(authoritySource, /!game\.user\?\.isGM && !actor\.isOwner/);
+  assert.doesNotMatch(workOrderSource, /Only the GM can resolve Refit installations/);
+  assert.doesNotMatch(uiSource, /Only the GM can complete blueprint construction/);
 });

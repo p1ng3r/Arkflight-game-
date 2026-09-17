@@ -33,10 +33,10 @@ const entries = [
     ruleModifiers: [{ kind: "engine-strain-spike-reduction", value: 4 }, { kind: "threshold-overflow-damping", value: 3 }],
     upgradeChain: { requiresArkengineMods: ["worldheart-pressure-dynamo"] },
     coreRuleException: {
-      rule: "suppress-one-arkengine-area-threshold-degradation",
-      trigger: "A Strain threshold would degrade the Arkengine Area.",
+      rule: "suppress-one-drive-condition-degradation",
+      trigger: "A Strain consequence would worsen the Drive Condition.",
       usage: "once-per-event",
-      limit: "Only the Arkengine Area degradation is suppressed; Strain threshold consumption and retained overflow still resolve normally."
+      limit: "Only the Drive Condition worsening is suppressed; Strain Limit consumption and retained overflow still resolve normally."
     },
     tags: ["pressure", "stability", "threshold", "upgrade"]
   }),
@@ -48,10 +48,10 @@ const entries = [
     upgradeChain: { requiresArkengineMods: ["aegis-sun-veil-reactor"] },
     synergies: [{ id: "firmament-aegis-concordance", requiresArkengineMods: [], requiresShipMods: ["veil-of-the-first-firmament", "sevenfold-prismatic-aegis"], effects: [{ target: "lifeveilCapacity", mode: "add", value: 20 }], capabilities: ["mythic-veil-concordance"] }],
     coreRuleException: {
-      rule: "sustain-lifeveil-with-disabled-arkengine",
-      trigger: "The Arkengine Area becomes Disabled while Lifeveil remains above 0.",
+      rule: "sustain-lifeveil-with-unresponsive-drive",
+      trigger: "The Drive Condition becomes Unresponsive while Lifeveil remains above 0%.",
       usage: "once-per-event",
-      limit: "Lifeveil projection continues for one round only; this does not restore Arkengine functions or repair either Area.",
+      limit: "Lifeveil projection continues for one round only; this does not improve Drive or restore Lifeveil.",
       cost: "Lose 10 Lifeveil when the emergency projection begins."
     },
     tags: ["lifeveil", "emergency", "set", "upgrade"]
@@ -68,7 +68,7 @@ const entries = [
       trigger: "The crew declares a Hard Burn before its Strain cost is applied.",
       usage: "once-per-event",
       limit: "Only the base Hard Burn Strain cost is ignored; authored consequences and other Strain sources still apply.",
-      cost: "The next Arkengine-threatening Strain contribution in the same event gains +2 Strain."
+      cost: "The next Strain contribution caused by an Engineer or Drive action in the same event gains +2 Strain."
     },
     tags: ["hard-burn", "governor", "set", "upgrade"]
   }),
@@ -80,11 +80,11 @@ const entries = [
     upgradeChain: { requiresArkengineMods: ["archon-overburn-forge"] },
     synergies: [{ id: "godspark-cooling-triad", requiresArkengineMods: ["winterstar-recirculation-crown"], requiresShipMods: ["arkengine-sovereign-distribution-grid"], ruleModifiers: [{ kind: "emergency-cycle-strain-reduction", value: 1 }], capabilities: ["contained-godspark-cycle"] }],
     coreRuleException: {
-      rule: "operate-disabled-arkengine",
-      trigger: "The Arkengine Area is Disabled and the crew needs powered movement or one Arkengine-dependent action.",
+      rule: "operate-unresponsive-drive",
+      trigger: "The Drive Condition is Unresponsive and the crew needs powered movement or one Arkengine-dependent action.",
       usage: "once-per-event",
-      limit: "The Arkengine functions for one round only and remains Disabled afterward.",
-      cost: "+3 Strain threatening the Arkengine immediately after the emergency round."
+      limit: "The Drive functions for one round only and remains Unresponsive afterward.",
+      cost: "+3 ship-wide Strain immediately after the emergency round."
     },
     tags: ["emergency", "disabled", "power", "set", "upgrade"]
   }),

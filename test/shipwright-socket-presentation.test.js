@@ -10,6 +10,7 @@ const visualBoardsCss = readFileSync(new URL("../styles/ship-sheet-visual-boards
 const armory = readFileSync(new URL("../src/ui/armory-ux.js", import.meta.url), "utf8");
 const armoryCss = readFileSync(new URL("../styles/armory-ux.css", import.meta.url), "utf8");
 const bayCss = readFileSync(new URL("../styles/shipwright-bay.css", import.meta.url), "utf8");
+const refitApi = readFileSync(new URL("../src/foundry/refit-api.js", import.meta.url), "utf8");
 
 test("Shipwright weapon sockets expose facing-specific art and mount rules", () => {
   for (const type of ["prow", "broadside", "stern", "deck", "flexible"]) assert.match(workspace, new RegExp(`socket_weapon_${type}\\.webp`));
@@ -105,4 +106,39 @@ test("Shipwright selected sockets and hover cards stay visually readable near bo
   assert.match(workspaceCss, /arkflight-workspace-socket\.is-label-above \.arkflight-workspace-socket-effect/);
   assert.match(workspaceCss, /bottom:\s*calc\(100% \+ 34px\)/);
   assert.match(workspaceCss, /arkflight-workspace-blueprint-list/);
+});
+
+
+test("Shipwright fitting boards remain fully reachable with vertical scrolling", () => {
+  assert.match(workspaceCss, /arkflight-shipwright-workspace \.window-content[\s\S]*?overflow-y:\s*auto/);
+  assert.match(workspaceCss, /scrollbar-gutter:\s*stable/);
+  assert.match(workspaceCss, /arkflight-workspace-inventory-list[\s\S]*?overflow-y:\s*auto/);
+  assert.match(workspaceCss, /arkflight-workspace-work-list[\s\S]*?overflow-y:\s*auto/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout[\s\S]*?padding-bottom:\s*16px/);
+});
+
+
+test("Shipwright category windows show an explicit vertical scrollbar", () => {
+  assert.match(workspaceCss, /arkflight-workspace-board-layout[\s\S]*?overflow-y:\s*scroll/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout[\s\S]*?max-height:\s*calc\(100vh - 235px\)/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout::\-webkit-scrollbar[\s\S]*?width:\s*12px/);
+  assert.match(workspaceCss, /arkflight-workspace-board-layout::\-webkit-scrollbar-thumb/);
+});
+
+
+test("Shipwright exposes specialized Explorer Expedition and Raider socket rules", () => {
+  assert.match(workspace, /socketType/);
+  assert.match(workspace, /shipModFitsSocketType/);
+  assert.match(workspace, /raiderPursuitWeapon/);
+  assert.match(template, /RAIDER — PURSUIT WEAPON INTEGRATION/);
+  assert.match(template, /data-raider-pursuit-mount/);
+  assert.match(template, /Shipyard to configure/);
+});
+
+
+test("Raider pursuit mount is a shipyard-only refit configuration", () => {
+  assert.match(refitApi, /configureRaiderPursuitMount/);
+  assert.match(refitApi, /mode !== "shipyard"/);
+  assert.match(refitApi, /SHIP_SPECIALIZATIONS\.RAIDER/);
+  assert.match(workspace, /configureRaiderPursuitMount/);
 });

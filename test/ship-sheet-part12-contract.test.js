@@ -69,7 +69,7 @@ test("live ship sheet exposes native Overview Hold Combat Weapons plus Shipwrigh
 });
 
 test("live ship sheet never presents Watchmaster to players", () => {
-  assert.doesNotMatch(template, /Watchmaster/); assert.doesNotMatch(appSource, /Watchmaster/); assert.match(template, /Ship Areas/); assert.match(template, /Stations &amp; Crew/);
+  assert.doesNotMatch(template, /Watchmaster/); assert.doesNotMatch(appSource, /Watchmaster/); assert.match(template, /Ship Conditions/); assert.match(template, /Stations &amp; Crew/);
 });
 
 test("structured operational stats are human-readable", () => {
@@ -77,11 +77,12 @@ test("structured operational stats are human-readable", () => {
   assert.equal(rows.find((row) => row.key === "crew")?.value, "3 / 6 / 12"); assert.equal(rows.find((row) => row.key === "weaponMounts")?.value, "2 mount types"); assert.equal(rows.find((row) => row.key === "resistances")?.value, "Fire 10 · Piercing 4");
 });
 
-test("Hull cargo establishes a real Supply capacity", () => {
+test("Supply uses Cargo instead of a separate player-facing capacity stat", () => {
   const ship = createShip({ hull: { chassisId: "brigantine", patternId: "standard" }, arkengine: { chassisId: "tidewake-arkengine", patternId: "standard", modIds: [] } });
   const derived = deriveShip(ship, SHIP_CATALOGS);
   assert.equal(derived.stats.cargoCapacity, 40);
-  assert.equal(derived.stats.supplyCapacity, 400);
+  const operational = buildStatPresentation(derived.stats).operational;
+  assert.equal(operational.some((row) => row.key === "supplyCapacity"), false);
 });
 
 test("duplicate installed fittings are grouped for readable presentation", () => {

@@ -1,4 +1,4 @@
-import { AREA_STATES } from "./ship-schema.js";
+import { driveConditionPenalties, effectiveHullHardness, weaponConditionModifiers } from "./ship-conditions.js";
 import { applyTalentProgression, clampShipLevel, progressionView, shipDefenseProgressionBonus } from "./progression.js";
 import { resolveInstalledModTalentSynergies } from "./mod-talent-synergy.js";
 import { applyShipSpecialization } from "./specialization-rules.js";
@@ -20,7 +20,6 @@ function applyEffect(stats, effect) {
   throw new Error(`Unsupported Arkflight effect mode: ${effect.mode}`);
 }
 function lookup(catalog, id) { return id ? catalog?.[id] ?? null : null; }
-function areaOperational(ship, area) { return (ship.areas?.[area]?.state ?? AREA_STATES.STABLE) !== AREA_STATES.DISABLED; }
 function freezeModifier(modifier, source = {}) { return Object.freeze({ ...modifier, ...source }); }
 
 function installedComponents(ship, catalogs) {
@@ -31,9 +30,9 @@ function installedComponents(ship, catalogs) {
   const enginePattern = lookup(catalogs.arkenginePatterns, ship.arkengine.patternId);
   if (hull) components.push(hull);
   if (hullPattern) components.push(hullPattern);
-  if (arkengine && areaOperational(ship, "arkengine")) components.push(arkengine);
-  if (enginePattern && areaOperational(ship, "arkengine")) components.push(enginePattern);
-  for (const id of ship.arkengine.modIds ?? []) { const item = lookup(catalogs.arkengineMods, id); if (item && areaOperational(ship, "arkengine")) components.push(item); }
+  if (arkengine) components.push(arkengine);
+  if (enginePattern) components.push(enginePattern);
+  for (const id of ship.arkengine.modIds ?? []) { const item = lookup(catalogs.arkengineMods, id); if (item) components.push(item); }
   for (const id of ship.rooms ?? []) { const item = lookup(catalogs.rooms, id); if (item) components.push(item); }
   for (const id of ship.shipMods ?? []) { const item = lookup(catalogs.shipMods, id); if (item) components.push(item); }
   for (const install of ship.weapons ?? []) { const id = typeof install === "string" ? install : install.id; const item = lookup(catalogs.weapons, id); if (item) components.push(item); }
@@ -112,6 +111,12 @@ export function deriveShip(ship, catalogs = {}) {
   // resistances remain active through deriveResistanceProfile.
   derived.resistances = deriveResistanceProfile(baseStats.physicalResistances, components);
   const normalizedStats = normalizeDerivedStats(derived);
+  const drive = driveConditionPenalties(ship);
+  const weaponsCondition = weaponConditionModifiers(ship);
+  normalizedStats.hardness = effectiveHullHardness(normalizedStats.hardness, ship);
+  normalizedStats.combatSpeed = Math.max(0, Number(normalizedStats.combatSpeed ?? 0) - drive.speedPenalty);
+  normalizedStats.maneuverability = Math.max(0, Number(normalizedStats.maneuverability ?? 0) - drive.maneuverPenalty);
+  normalizedStats.weaponAttackBonus = Number(normalizedStats.weaponAttackBonus ?? 0) - weaponsCondition.attackPenalty;
 
   const frozenStationCapabilities = Object.fromEntries(Object.entries(stationCapabilities).map(([station, values]) => [station, Object.freeze({ masteries: Object.freeze([...values.masteries]), combatActions: Object.freeze([...values.combatActions]), passiveEffects: Object.freeze([...values.passiveEffects]) })]));
   const progression = progressionView(ship);
@@ -126,19 +131,14 @@ export function deriveShip(ship, catalogs = {}) {
 }
 
 export function syncResourceMaxima(ship, derived) {
-  const existingSupplyMax = Number(ship.resources?.supplies?.max ?? 0);
-  const derivedSupplyMax = Number(derived.stats?.supplyCapacity ?? 0);
-  const supplyMax = derivedSupplyMax > 0 ? derivedSupplyMax : existingSupplyMax;
-  const existingMoraleMax = Number(ship.resources?.morale?.max ?? 5);
-  const derivedMoraleMax = Number(derived.stats?.moraleCapacity ?? 0);
-  const moraleMax = derivedMoraleMax > 0 ? derivedMoraleMax : existingMoraleMax;
   const hullValue = ship.resources?.hull?.value;
-  const lifeveilValue = ship.resources?.lifeveil?.value;
+  const supplyMax = Math.max(0, Number(derived.stats?.cargoCapacity ?? 0) * 10);
+  const clampPercent = (value, fallback) => Math.max(0, Math.min(100, Math.round(Number(value ?? fallback) || 0)));
   return { ...ship, resources: { ...ship.resources,
     hull: { value: Math.min(hullValue ?? derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
-    lifeveil: { value: Math.min(lifeveilValue ?? derived.stats.lifeveilCapacity, derived.stats.lifeveilCapacity), max: derived.stats.lifeveilCapacity },
+    lifeveil: { value: clampPercent(ship.resources?.lifeveil?.value, 100), max: 100 },
     strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity },
-    morale: { value: Math.min(ship.resources.morale?.value ?? moraleMax, moraleMax), max: moraleMax },
-    supplies: { value: Math.min(ship.resources.supplies?.value ?? 0, supplyMax || Number.MAX_SAFE_INTEGER), max: supplyMax }
+    morale: { value: clampPercent(ship.resources?.morale?.value, 60), max: 100 },
+    supplies: { value: Math.max(0, Number(ship.resources.supplies?.value ?? 0)), max: supplyMax }
   } };
 }

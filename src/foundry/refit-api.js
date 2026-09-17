@@ -14,7 +14,9 @@ import { REFIT_COMPONENT_FAMILIES, grantSalvageParts, salvageParts, spendSalvage
 import { AETHER_SCRAP_GP_VALUE, REFIT_VALUE_RATES, componentEconomyQuote } from "../ship/refit-value.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { REFIT_JOB_TYPES, REFIT_METHODS } from "../ship/refit-rules.js";
-import { findAvailableRefitSocketAssignment, validateRefitSocketAssignment } from "../ship/refit-sockets.js";
+import { findAvailableRefitSocketAssignment, validateRefitSocketAssignment, weaponMountSocketRows } from "../ship/refit-sockets.js";
+import { SHIP_SPECIALIZATIONS, specializationActive } from "../ship/specialization-rules.js";
+import { shipAllowsRefitMode } from "../ship/operational-status.js";
 import {
   queueInstallDraft,
   queueBuildJob,
@@ -141,6 +143,28 @@ Hooks.once("init", () => {
     async breakdownComponent(actor, family, componentId, quantity = 1) { const target = targetForRefit(actor); return persistResult(target, breakdownIntactComponent(shipPayload(target), family, componentId, quantity)); },
     async learnBlueprint(actor, family, componentId) { requireGM(); const target = requireShipActor(actor); return persistResult(target, learnBlueprint(shipPayload(target), family, componentId)); },
     async acquireComponent(actor, family, componentId, quantity = 1) { requireGM(); const target = requireShipActor(actor); return persistResult(target, acquireIntactComponent(shipPayload(target), family, componentId, quantity)); },
+    async configureRaiderPursuitMount(actor, mount = {}, options = {}) {
+      const target = targetForRefit(actor);
+      const ship = shipPayload(target);
+      const mode = serviceMode(options);
+      if (mode !== "shipyard" || !shipAllowsRefitMode(ship, "shipyard")) {
+        throw new Error("Raider Pursuit Weapon Integration can be reconfigured only while the vessel has Shipyard service.");
+      }
+      if (!specializationActive(ship, SHIP_SPECIALIZATIONS.RAIDER)) {
+        throw new Error("Only a level-5+ Raider may configure Pursuit Weapon Integration.");
+      }
+      const mounts = weaponMountSocketRows(ship, SHIP_CATALOGS);
+      const belowLarge = mounts.filter((entry) => entry.maxSize !== "large");
+      const candidates = belowLarge.length ? belowLarge : mounts;
+      const selected = candidates.find((entry) => entry.facing === String(mount.facing) && entry.mountIndex === Math.max(0, Math.trunc(Number(mount.mountIndex) || 0)));
+      if (!selected) throw new Error("Choose an eligible existing Raider weapon mount.");
+      const next = structuredClone(ship);
+      next.progression ??= {};
+      next.progression.specializationConfig ??= {};
+      next.progression.specializationConfig.raiderPursuitMount = { facing: selected.facing, mountIndex: selected.mountIndex };
+      await persistShip(target, next);
+      return Object.freeze({ ok: true, mount: Object.freeze({ facing: selected.facing, mountIndex: selected.mountIndex, maxSize: selected.maxSize }), ship: next });
+    },
     async buildFromBlueprint(actor, family, componentId, quantity = 1) { const target = targetForRefit(actor); return persistResult(target, buildComponentFromBlueprint(shipPayload(target), family, componentId, quantity)); },
     async beginInstallDraft(actor, draft, options = {}) {
       const target = targetForRefit(actor);

@@ -27,7 +27,7 @@ test("every current weapon carries complete Arkflight combat metadata", () => {
     assert.equal(result.ok, true, `${weapon.id} missing: ${result.missing.join(", ")}`);
     assert.ok(weapon.data.crewRequired >= 1, weapon.id);
     assert.ok(weapon.data.allowedMounts.length >= 1, weapon.id);
-    assert.ok(weapon.data.combat.fireAP >= 1, weapon.id);
+    assert.equal(weapon.data.combat.fireAP, 1, weapon.id);
     assert.ok(weapon.data.combat.reloadRounds >= 0, weapon.id);
     assert.ok(weapon.data.combat.arcTemplate, weapon.id);
     assert.ok(weapon.data.combat.rangeHexes.max >= weapon.data.combat.rangeHexes.min, weapon.id);

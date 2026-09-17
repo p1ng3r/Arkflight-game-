@@ -1,8 +1,7 @@
-import { applyFreeHelmAllowance, canChangeFacingNow, helmRemaining } from "../combat/helm-rules.js";
+import { applyFreeHelmAllowance, helmRemaining } from "../combat/helm-rules.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
-const AREAS = ["stable", "stressed", "damaged", "critical", "disabled"];
 const ATTACK_REACTIONS = ["navigator-evasive-maneuver", "battlewatch-spoil-their-aim"];
 const DAMAGE_REACTIONS = ["captain-brace-for-impact", "veilwarden-emergency-ward"];
 const ENERGY = new Set(["fire", "cold", "electricity", "acid", "sonic", "force"]);
@@ -97,7 +96,7 @@ async function promptAttackReaction(base, weaponKey, targetRef, attackerRef = nu
   const esc = foundry.utils.escapeHTML;
   const content = `<div class="arkflight-reaction-prompt"><p><strong>${esc(attacker.name)}</strong> declares fire with <strong>${esc(solution.weapon.name)}</strong> against <strong>${esc(target.name)}</strong>.</p><p>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)}</p><hr>${choices.map((c) => `<p><strong>${esc(c.action.name)}</strong> — ${esc(c.action.summary ?? c.action.description)}</p>`).join("")}</div>`;
   const id = await chooseReaction(`Attack Reaction — ${target.name}`, content, choices);
-  if (id && choices.some((c) => c.id === id)) await base.stationAction(id, {}, target);
+  if (id && choices.some((c) => c.id === id)) await base.stationAction(id, { suppressChat: true, reactionContext: "ship-attack" }, target);
   return id;
 }
 
@@ -127,57 +126,11 @@ async function maybePromptEngineerBypass(base, actionId, options, reference) {
   const esc = foundry.utils.escapeHTML;
   const content = `<div class="arkflight-reaction-prompt"><p><strong>${esc(action.name)}</strong> will add Strain to <strong>${esc(combatant.name)}</strong>.</p><p><strong>${esc(choices[0].action.name)}</strong> — ${esc(choices[0].action.summary ?? choices[0].action.description)}</p></div>`;
   const id = await chooseReaction(`Engineer Reaction — ${combatant.name}`, content, choices);
-  if (id === bypassId) await base.stationAction(bypassId, {}, combatant);
-}
-
-function idx(value) { const i = AREAS.indexOf(String(value ?? "stable")); return i < 0 ? 0 : i; }
-function worse(current, desired) { return AREAS[Math.max(idx(current), idx(desired))]; }
-function degrade(current) { return AREAS[Math.min(AREAS.length - 1, idx(current) + 1)]; }
-function hullState(value, max) {
-  const pct = Math.max(0, Math.min(1, Number(value) / Math.max(1, Number(max) || 1)));
-  return pct <= 0 ? "disabled" : pct <= .25 ? "critical" : pct <= .5 ? "damaged" : pct <= .75 ? "stressed" : "stable";
-}
-
-async function damageConsequences({ target, solution, degree, damage }) {
-  if (!game.user?.isGM || !target?.actor || !damage || Number(damage.hullDamage) <= 0) return;
-  const actor = target.actor;
-  const data = ship(actor);
-  if (!data) return;
-  const patches = {};
-  const notes = [];
-  const hullNow = data.areas?.hull?.state ?? "stable";
-  const hullNext = worse(hullNow, hullState(damage.after, data.resources?.hull?.max ?? damage.before));
-  if (hullNext !== hullNow) { patches[`flags.${MODULE_ID}.ship.areas.hull.state`] = hullNext; notes.push(`Hull ${hullNow} → ${hullNext}`); }
-  if (Number(degree) === 2) {
-    const threat = String(solution?.weapon?.data?.systemThreat ?? "hull").toLowerCase();
-    if (["arkengine", "rigging", "lifeveil"].includes(threat)) {
-      const current = data.areas?.[threat]?.state ?? "stable";
-      const next = degrade(current);
-      if (next !== current) { patches[`flags.${MODULE_ID}.ship.areas.${threat}.state`] = next; notes.push(`${threat} ${current} → ${next}`); }
-    }
-    const morale = Math.max(0, Number(data.resources?.morale?.value) || 0);
-    if (morale > 0) { patches[`flags.${MODULE_ID}.ship.resources.morale.value`] = morale - 1; notes.push(`Morale ${morale} → ${morale - 1}`); }
-  }
-  if (!Object.keys(patches).length) return;
-  await actor.update(patches);
-  ui.notifications?.warn(`${actor.name}: ${notes.join(" · ")}`);
-  Hooks.callAll("arkflightShipDamageStateChanged", { actor, target, solution, degree, damage, notes });
+  if (id === bypassId) await base.stationAction(bypassId, { suppressChat: true, reactionContext: "engineer-bypass" }, combatant);
 }
 
 Hooks.on("arkflightCombatTurnChanged", queueHelm);
 Hooks.on("updateCombat", (_combat, changes) => { if (Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn")) queueHelm(); });
-Hooks.on("arkflightNativeShipAttackResolved", damageConsequences);
-Hooks.on("preUpdateToken", (token, changes, options) => {
-  if (changes?.rotation == null || options?.arkflightCombatFacing || !game.combat) return;
-  const c = combatantFor(token);
-  if (!c || game.combat.combatant?.id !== c.id || !isShip(c.actor)) return;
-  const s = stateOf(c);
-  if (s && !canChangeFacingNow(s, game.combat.round ?? 1)) {
-    ui.notifications?.warn(`${c.name}: move at least 1 hex before using the free facing allowance, or spend AP on an exceptional maneuver.`);
-    return false;
-  }
-});
-
 Hooks.once("ready", () => {
   const base = game.arkflight?.combat;
   if (!base) return;
@@ -198,9 +151,6 @@ Hooks.once("ready", () => {
     },
     initializeHelm(ref = null) { const c = ref ? base.findCombatant(ref) : game.combat?.combatant; return ensureHelm(c); },
     async turn(steps = 1, ref = null) {
-      const c = ref ? base.findCombatant(ref) : game.combat?.combatant;
-      const s = c ? base.state(c) : null;
-      if (c && s && !canChangeFacingNow(s, game.combat?.round ?? 1)) throw new Error(`${c.name} must move at least 1 hex before using its free facing allowance. Purchase Extra Maneuver or use an exceptional propulsion maneuver to pivot.`);
       return turn(steps, ref);
     },
     async fireAtTarget(weaponKey, targetRef, attackerRef = null) {

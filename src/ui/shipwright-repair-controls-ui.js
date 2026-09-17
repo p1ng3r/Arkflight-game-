@@ -1,10 +1,11 @@
 import { REPAIR_PACKAGES } from "../ship/repair-rules.js";
 import { shipAllowsRefitMode, shipOperationalStatus } from "../ship/operational-status.js";
+import { shipConditionProfile } from "../ship/ship-conditions.js";
 
 const MODULE_ID = "arkflight-game";
 const WORKBENCH = `/modules/${MODULE_ID}/assets/ui/shipwright/workbench`;
 const SCRAP_GP_VALUE = 10;
-const AREA_LABELS = Object.freeze({ hull: "Hull Area", arkengine: "Arkengine", rigging: "Rigging", lifeveil: "Lifeveil Area", morale: "Morale" });
+const CONDITION_LABELS = Object.freeze({ hull: "Hull Condition", drive: "Drive Condition", weapons: "Weapons Condition" });
 const { DialogV2 } = foundry.applications.api;
 
 function shipFlag(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
@@ -168,15 +169,15 @@ function renderRepairCard(actor, card) {
   card.classList.add("arkflight-repair-controls-card");
   card.innerHTML = `
     <h3><i class="fa-solid fa-hammer"></i> Ship Repairs</h3>
-    <p>Repair numeric ship damage or restore damaged ship areas. Crew repairs are field repairs and may be performed while underway; Dock and Shipyard repairs are professional.</p>
+    <p>Repair Hull/Lifeveil resources or improve persistent Ship Conditions. Crew repairs are field repairs and may be performed while underway; Dock and Shipyard repairs are professional.</p>
     <div class="arkflight-repair-section">
       <h4>Resource Repairs</h4>
       <article class="arkflight-repair-target" data-repair-target-type="resource" data-repair-target-key="hull"><header><strong>Hull Integrity</strong><span>${Number(ship.resources?.hull?.value ?? 0)} / ${Number(ship.resources?.hull?.max ?? 0)}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"resource","hull")}</div></article>
       <article class="arkflight-repair-target" data-repair-target-type="resource" data-repair-target-key="lifeveil"><header><strong>Lifeveil</strong><span>${Number(ship.resources?.lifeveil?.value ?? 0)} / ${Number(ship.resources?.lifeveil?.max ?? 0)}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"resource","lifeveil")}</div></article>
     </div>
     <div class="arkflight-repair-section">
-      <h4>System &amp; Area Repairs</h4>
-      ${Object.entries(AREA_LABELS).map(([key,label])=>`<article class="arkflight-repair-target" data-repair-target-type="area" data-repair-target-key="${key}"><header><strong>${escape(label)}</strong><span>${escape(title(ship.areas?.[key]?.state ?? "stable"))}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"area",key)}</div></article>`).join("")}
+      <h4>Ship Condition Repairs</h4>
+      ${Object.entries(CONDITION_LABELS).map(([key,label])=>{ const condition=shipConditionProfile(ship,key); return `<article class="arkflight-repair-target" data-repair-target-type="condition" data-repair-target-key="${key}"><header><strong>${escape(label)}</strong><span>${escape(condition.label)}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"condition",key)}</div></article>`; }).join("")}
     </div>
     <div class="arkflight-repair-service-note">Crew field repair: full Scrap cost · Dock: 25% less · Shipyard: 50% less</div>`;
 

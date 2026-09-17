@@ -48,6 +48,19 @@ function action({
 // Veilwarden changes magical defense. Station Bonus remains bounded at +1/+2/+3
 // so ship-level progression adds capability without breaking PF2e-style math.
 const CORE_ACTIONS = [
+  // COMMON — baseline ship actions available to any ship Owner.
+  action({
+    id: "common-reload-weapon",
+    station: "common",
+    name: "Reload",
+    description: "Spend 1 AP to reduce one installed weapon's remaining Reload by 1 round. Any Owner of the ship may perform this action.",
+    summary: "Spend 1 AP to reduce one weapon's Reload by 1 round.",
+    ap: 1,
+    category: COMBAT_ACTION_CATEGORIES.RELOAD,
+    tags: ["core", "common", "weapon", "reload", "interleavable"],
+    rules: { resolver: "reloadWeapon", minimumReload: 0, chooseWeapon: true, interleavable: true }
+  }),
+
   // CAPTAIN — tempo, morale, coordination, broad defense.
   action({
     id: "captain-issue-order",
@@ -64,12 +77,12 @@ const CORE_ACTIONS = [
     id: "captain-rally-crew",
     station: "captain",
     name: "Rally Crew",
-    description: "Restore Morale equal to the Station Bonus, or improve a degraded Morale area by one step. At ship level 15+, improving the Morale area also restores Morale equal to the Station Bonus.",
-    summary: "Recover Morale or improve the Morale area one step.",
+    description: "Restore 20% Morale × Station Bonus, up to 100%.",
+    summary: "Restore 20% Morale × Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
     tags: ["core", "command", "morale", "recovery"],
-    rules: { resolver: "rallyCrew", area: "morale", scaledRecovery: true }
+    rules: { resolver: "rallyCrew", scaledRecovery: true }
   }),
   action({
     id: "captain-drive-the-crew",
@@ -80,7 +93,7 @@ const CORE_ACTIONS = [
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.COMMAND,
     tags: ["core", "command", "strain", "action-economy", "risk-reward"],
-    rules: { resolver: "driveCrew", gainAP: 2, strain: 2, strainArea: "morale", oncePerRound: true, masterReducedStrain: true, legendaryNoStrain: true }
+    rules: { resolver: "driveCrew", gainAP: 2, strain: 2, oncePerRound: true, masterReducedStrain: true, legendaryNoStrain: true }
   }),
   action({
     id: "captain-coordinate-assault",
@@ -122,19 +135,19 @@ const CORE_ACTIONS = [
     id: "engineer-overcharge-arkengine",
     station: "engineer",
     name: "Overcharge Arkengine",
-    description: "Gain one additional full Helm block this turn: movement equal to Combat Speed and facing steps equal to Maneuverability. Gain 1 Strain. Once per round.",
+    description: "Gain one additional full Helm block this turn: movement equal to Combat Speed and facing allowance equal to Maneuverability × 30°. Gain 1 Strain. Once per round.",
     summary: "+Combat Speed movement and +Maneuverability turns; +1 Strain.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
     tags: ["core", "arkengine", "strain", "overcharge", "risk-reward"],
-    rules: { resolver: "overchargeArkengine", strain: 1, strainArea: "arkengine", fullHelmBlock: true, oncePerRound: true }
+    rules: { resolver: "overchargeArkengine", strain: 1, fullHelmBlock: true, oncePerRound: true }
   }),
   action({
     id: "engineer-emergency-repair",
     station: "engineer",
     name: "Emergency Repair",
-    description: "Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by one step. At ship level 15+, improve it by two steps instead.",
-    summary: "Improve one damaged ship area; two steps at level 15+.",
+    description: "Choose Hull, Drive, Weapons, or Lifeveil. Improve that Ship Condition by one step, or restore 25% Lifeveil. At ship level 15+, improve/restore two steps instead.",
+    summary: "Improve one Ship Condition; two steps at level 15+.",
     ap: 2,
     category: COMBAT_ACTION_CATEGORIES.ENGINEERING,
     tags: ["core", "repair", "damage-control", "high-impact"],
@@ -180,8 +193,8 @@ const CORE_ACTIONS = [
     id: "navigator-maneuver",
     station: "navigator",
     name: "Extra Maneuver",
-    description: "Spend 1 AP to gain additional facing changes equal to effective Maneuverability. This exceptional maneuver allowance permits an in-place pivot.",
-    summary: "Gain another Maneuverability worth of facing steps; may pivot.",
+    description: "Spend 1 AP to gain additional facing allowance equal to effective Maneuverability × 30°. This exceptional maneuver allowance permits an in-place pivot.",
+    summary: "Gain another Maneuverability × 30° of facing allowance; may pivot.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
     tags: ["core", "maneuver", "facing", "interleavable", "extra-helm"],
@@ -191,12 +204,12 @@ const CORE_ACTIONS = [
     id: "navigator-hard-turn",
     station: "navigator",
     name: "Hard Turn",
-    description: "Gain additional facing steps equal to Maneuverability + Station Bonus this turn, and you may pivot in place. Gain 1 Strain against Rigging.",
-    summary: "+Maneuverability + Station Bonus turns; may pivot; +1 Strain.",
+    description: "Gain additional facing allowance equal to (Maneuverability + Station Bonus) × 30° this turn, and you may pivot in place. Gain 1 Strain.",
+    summary: "+(Maneuverability + Station Bonus) × 30° facing; may pivot; +1 Strain.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.MANEUVER,
     tags: ["core", "maneuver", "facing", "strain", "risk-reward"],
-    rules: { resolver: "hardTurn", scaledFacingSteps: true, includeManeuverability: true, strain: 1, strainArea: "rigging", permitsPivot: true }
+    rules: { resolver: "hardTurn", scaledFacingSteps: true, includeManeuverability: true, strain: 1, permitsPivot: true }
   }),
   action({
     id: "navigator-set-attack-vector",
@@ -213,7 +226,7 @@ const CORE_ACTIONS = [
     id: "navigator-evasive-maneuver",
     station: "navigator",
     name: "Evasive Maneuver",
-    description: "Reaction — Trigger: this ship is targeted by a weapon attack. Increase this ship's AC against that attack by the Station Bonus, then gain 1 Strain against Rigging.",
+    description: "Reaction — Trigger: this ship is targeted by a weapon attack. Increase this ship's AC against that attack by the Station Bonus, then gain 1 ship-wide Strain.",
     summary: "Reaction: +Station Bonus AC vs this attack; +1 Strain.",
     rp: 1,
     timing: COMBAT_ACTION_TIMING.REACTION,
@@ -238,22 +251,22 @@ const CORE_ACTIONS = [
     id: "battlewatch-fire-weapon",
     station: "battlewatch",
     name: "Fire Weapon",
-    description: "Fire one ready installed weapon at a legal target. Arkflight resolves range, arc, station effects, attack, damage, mitigation, Hardness, Hull damage, and reload.",
-    summary: "Resolve a legal installed weapon attack.",
+    description: "Spend 1 AP to fire one ready installed weapon at a legal target. Arkflight resolves range, arc, station effects, attack, damage, mitigation, Hardness, Hull damage, and reload.",
+    summary: "Spend 1 AP to resolve a legal installed weapon attack.",
+    ap: 1,
     category: COMBAT_ACTION_CATEGORIES.WEAPON,
     tags: ["core", "weapon", "interleavable"],
-    rules: { resolver: "fireAtTarget", costSource: "weapon.fireAP", requiresReadyWeapon: true, requiresRange: true, requiresArc: true, interleavable: true, startsReload: true }
+    rules: { resolver: "fireAtTarget", requiresReadyWeapon: true, requiresRange: true, requiresArc: true, interleavable: true, startsReload: true }
   }),
   action({
     id: "battlewatch-reload-weapon",
     station: "battlewatch",
     name: "Work the Guns",
-    description: "Reduce one installed weapon's remaining reload time by the Station Bonus in rounds, to a minimum of 0.",
-    summary: "Reduce selected weapon reload by Station Bonus rounds.",
-    ap: 1,
+    description: "Once per round, spend 20% Morale and gain 1 Strain to immediately ready one installed weapon with 2 or fewer rounds of Reload remaining. This action costs 0 AP.",
+    summary: "Once/round: 20% Morale +1 Strain; ready a weapon at Reload 2 or less for 0 AP.",
     category: COMBAT_ACTION_CATEGORIES.RELOAD,
-    tags: ["core", "weapon", "reload", "interleavable"],
-    rules: { resolver: "workTheGuns", scaledReloadReduction: true, minimumReload: 0, chooseWeapon: true, interleavable: true }
+    tags: ["core", "weapon", "reload", "battlewatch", "risk-reward", "interleavable"],
+    rules: { resolver: "workTheGuns", maxReloadRemaining: 2, readyWeapon: true, chooseWeapon: true, interleavable: true, oncePerRound: true, strain: 1, strainArea: "morale" }
   }),
   action({
     id: "battlewatch-ready-broadside",
@@ -295,8 +308,8 @@ const CORE_ACTIONS = [
     id: "veilwarden-mend-lifeveil",
     station: "veilwarden",
     name: "Mend Lifeveil",
-    description: "Restore 5 × Station Bonus Lifeveil, up to the vessel's current maximum.",
-    summary: "Restore 5 × Station Bonus Lifeveil.",
+    description: "Restore 5% × Station Bonus Lifeveil, up to the vessel's current maximum.",
+    summary: "Restore 5% × Station Bonus Lifeveil.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.LIFEVEIL,
     tags: ["core", "lifeveil", "recovery"],
@@ -306,7 +319,7 @@ const CORE_ACTIONS = [
     id: "veilwarden-focus-ward",
     station: "veilwarden",
     name: "Focus Ward",
-    description: "Choose a ship area or energy type. The next matching hit reduces incoming damage by 3 × Station Bonus before Hardness. From ship level 5, this protects against the next two matching hits before the ship's next turn.",
+    description: "Choose a Ship Condition system or energy type. The next matching hit reduces incoming damage by 3 × Station Bonus before Hardness. From ship level 5, this protects against the next two matching hits before the ship's next turn.",
     summary: "Choose a threat; matching hit(s) reduce damage by 3 × Station Bonus.",
     ap: 1,
     category: COMBAT_ACTION_CATEGORIES.LIFEVEIL,
@@ -338,7 +351,77 @@ const CORE_ACTIONS = [
   })
 ];
 
-export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries(CORE_ACTIONS.map((entry) => [entry.id, entry])));
+const ADDITIONAL_ACTIONS = [
+  action({
+    id: "navigator-impossible-burn",
+    station: "navigator",
+    name: "Impossible Burn",
+    description: "Once per battle, overburn the Arkengine to add 50% of current Combat Speed to this turn's movement allowance. Gain 2 Strain.",
+    summary: "Once/battle: +50% Speed movement this turn; +2 Strain.",
+    ap: 0,
+    category: COMBAT_ACTION_CATEGORIES.MOVEMENT,
+    tags: ["progression", "mythic", "movement", "strain", "interleavable"],
+    rules: { resolver: "impossibleBurn", oncePerBattle: true, requiresCapability: "impossible-burn", strain: 2, strainArea: "arkengine", interleavable: true }
+  }),
+  action({
+    id: "navigator-turn-between-heartbeats",
+    station: "navigator",
+    name: "Turn Between Heartbeats",
+    description: "Once per battle, gain 60° of extraordinary facing allowance this turn. This does not consume the ship's normal Maneuverability allowance.",
+    summary: "Once/battle: gain 60° extraordinary facing allowance this turn.",
+    ap: 0,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["progression", "mythic", "maneuver", "facing", "interleavable"],
+    rules: { resolver: "turnBetweenHeartbeats", oncePerBattle: true, requiresCapability: "turn-between-heartbeats", extraFacingSteps: 2, interleavable: true, permitsPivot: true }
+  }),
+
+  action({
+    id: "navigator-ram-ship",
+    station: "navigator",
+    name: "Ram",
+    description: "Spend 2 AP after moving at least 1 hex this turn to ram an adjacent ship. The target makes a Maneuver Save against this ship's Collision DC. Collision damage scales with hull class and approach momentum; the ramming ship can suffer recoil damage.",
+    summary: "2 AP: ram an adjacent ship; target makes a Maneuver Save.",
+    ap: 2,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["core", "maneuver", "collision", "target", "risk-reward"],
+    rules: { resolver: "ramShip", chooseTarget: true, requiresAdjacency: true, requiresMovementThisTurn: true }
+  }),
+  action({
+    id: "navigator-grapple-ship",
+    station: "navigator",
+    name: "Grapple Ship",
+    description: "Spend 1 AP to throw lines and grapples across an adjacent ship. The target makes a Maneuver Save against this ship's Grapple DC. On a failed save the ships become Moored; on a critical failure the target also exposes a boarding opportunity.",
+    summary: "1 AP: adjacent target saves or becomes Moored.",
+    ap: 1,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["core", "maneuver", "grapple", "boarding", "target"],
+    rules: { resolver: "grappleShip", chooseTarget: true, requiresAdjacency: true }
+  }),
+  action({
+    id: "navigator-break-grapple",
+    station: "navigator",
+    name: "Break Grapple",
+    description: "Spend 1 AP while Moored to wrench the ship free. Make this ship's Maneuver Save against the other vessel's Grapple DC. On a success the Moored condition ends for both ships.",
+    summary: "1 AP: Maneuver Save to break an existing grapple.",
+    ap: 1,
+    category: COMBAT_ACTION_CATEGORIES.MANEUVER,
+    tags: ["core", "maneuver", "grapple", "escape"],
+    rules: { resolver: "breakGrapple", chooseTarget: true, requiresMoored: true }
+  }),
+  action({
+    id: "captain-board-ship",
+    station: "captain",
+    name: "Board Ship",
+    description: "Once two ships are Moored, establish boarding between them at 0 AP. Ship combat keeps the vessels Moored while character-scale fighting proceeds using normal PF2e rules.",
+    summary: "0 AP: establish boarding with a Moored ship.",
+    ap: 0,
+    category: COMBAT_ACTION_CATEGORIES.COMMAND,
+    tags: ["core", "boarding", "grapple", "pf2e-handoff"],
+    rules: { resolver: "boardShip", chooseTarget: true, requiresMoored: true }
+  })
+];
+
+export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries([...CORE_ACTIONS, ...ADDITIONAL_ACTIONS].map((entry) => [entry.id, entry])));
 
 export const CORE_COMBAT_ACTIONS_BY_STATION = Object.freeze(
   Object.fromEntries(

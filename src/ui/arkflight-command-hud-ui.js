@@ -54,9 +54,9 @@ function vitalPair(actor, state, key) {
 
   const map = {
     hull: ["hull", "hullIntegrity"],
-    lifeveil: ["lifeveil", "lifeveilCapacity"],
-    morale: ["morale", "moraleCapacity"],
-    supplies: ["supplies", "supplyCapacity"]
+    lifeveil: ["lifeveil", null],
+    morale: ["morale", null],
+    supplies: ["supplies", "cargoCapacity"]
   };
   const [resourceKey, statKey] = map[key] ?? [key, null];
   const resource = resources[resourceKey] ?? {};
@@ -97,14 +97,14 @@ function resolvedStationEffect(action, actor, state) {
   const effects = {
     "captain-issue-order": `Chosen station's next qualifying check or attack: +${bonus} circumstance bonus. Expires after that roll or before this ship's next turn.`,
     "captain-rally-crew": profile.master
-      ? `Spend 1 Supply. Restore ${bonus} Morale OR improve the Morale area 1 step; if you improve the area, also restore ${bonus} Morale.`
-      : `Spend 1 Supply. Restore ${bonus} Morale OR improve the Morale area 1 damage step.`,
-    "captain-drive-the-crew": `Gain 1 AP this turn. Spend 1 Morale and gain ${cost.strain} Strain. Once per round.`,
+      ? `Spend 1 Supply. Restore ${20 * bonus}% Morale OR restore Morale; if you improve the area, also restore ${20 * bonus}% Morale.`
+      : `Spend 1 Supply. Restore ${20 * bonus}% Morale OR improve the Morale 1 damage step.`,
+    "captain-drive-the-crew": `Gain 1 AP this turn. Spend 20% Morale and gain ${cost.strain} Strain. Once per round.`,
     "captain-coordinate-assault": `Mark one hostile vessel. Its Hardness is reduced by ${bonus} against the next ${charges} qualifying weapon attack${charges === 1 ? "" : "s"} before this ship's next turn.`,
     "captain-brace-for-impact": `Reaction: reduce incoming Hull damage by ${3 * bonus} after Hardness.`,
 
     "engineer-vent-strain": `Reduce ship Strain by ${1 + bonus}, to a minimum of 0.`,
-    "engineer-overcharge-arkengine": `Gain another full Helm block this turn: +${speed} movement and +${maneuverability} facing step${maneuverability === 1 ? "" : "s"}. Gain 2 Strain. Once per round.`,
+    "engineer-overcharge-arkengine": `Gain another full Helm block this turn: +${speed} movement and +${30 * maneuverability}° facing allowance. Gain 2 Strain. Once per round.`,
     "engineer-emergency-repair": profile.master
       ? `Spend 2 Supplies. Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by 2 steps.`
       : `Spend 2 Supplies. Choose Hull, Arkengine, Rigging, or Lifeveil and improve that area's damage state by 1 step.`,
@@ -112,8 +112,8 @@ function resolvedStationEffect(action, actor, state) {
     "engineer-emergency-bypass": `Reaction: reduce Strain from an Engineer action by ${bonus}, to a minimum of 0.`,
 
     "navigator-move": `Gain +${speed} movement this turn (one additional Combat Speed block). May interleave movement, legal turns, and weapon fire.`,
-    "navigator-maneuver": `Gain +${maneuverability} facing step${maneuverability === 1 ? "" : "s"} this turn and may pivot in place.`,
-    "navigator-hard-turn": `Gain +${maneuverability + bonus} facing steps this turn (${maneuverability} Maneuverability + ${bonus} Station Bonus), may pivot in place, and gain 1 Rigging Strain.`,
+    "navigator-maneuver": `Gain +${30 * maneuverability}° facing allowance this turn and may pivot in place.`,
+    "navigator-hard-turn": `Gain +${30 * (maneuverability + bonus)}° facing allowance this turn (${maneuverability} Maneuverability + ${bonus} Station Bonus), may pivot in place, and gain 1 Rigging Strain.`,
     "navigator-set-attack-vector": `Choose one facing. Its weapons gain +${15 * bonus}° firing-arc tolerance until the heading changes or this ship's next turn.`,
     "navigator-evasive-maneuver": `Reaction: when targeted, gain +${bonus} AC against that attack, then gain 1 Rigging Strain.`,
 
@@ -143,14 +143,13 @@ function actionRuleChips(action, actor) {
   const chips = [];
 
   if (action.id === "captain-drive-the-crew") chips.push({ label: "+1 AP", tone: "free" });
-  else if (rules.costSource === "weapon.fireAP") chips.push({ label: "Weapon AP", tone: "cost" });
   else {
     if (cost.ap > 0) chips.push({ label: `${cost.ap} AP`, tone: "cost" });
     if (cost.rp > 0) chips.push({ label: `${cost.rp} RP`, tone: "reaction" });
   }
-  if (cost.morale > 0) chips.push({ label: `−${cost.morale} Morale`, tone: "morale" });
+  if (cost.morale > 0) chips.push({ label: `−${cost.morale}% Morale`, tone: "morale" });
   if (cost.supplies > 0) chips.push({ label: `−${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`, tone: "supply" });
-  if (cost.lifeveil > 0) chips.push({ label: `−${cost.lifeveil} Lifeveil`, tone: "lifeveil" });
+  if (cost.lifeveil > 0) chips.push({ label: `−${cost.lifeveil}% Lifeveil`, tone: "lifeveil" });
   if (cost.strain > 0) chips.push({ label: `+${cost.strain} Strain`, tone: "strain" });
   if (!chips.length) chips.push({ label: "No fixed cost", tone: "free" });
 
@@ -225,14 +224,13 @@ function decorateActionCards(app, root) {
       const cost = stationActionEconomy(action, shipLevel(actor));
       const parts = [];
       if (action.id === "captain-drive-the-crew") parts.push("+1 AP");
-      else if (action.rules?.costSource === "weapon.fireAP") parts.push("Weapon AP");
       else {
         if (cost.ap) parts.push(`${cost.ap} AP`);
         if (cost.rp) parts.push(`${cost.rp} RP`);
       }
-      if (cost.morale) parts.push(`−${cost.morale} Morale`);
+      if (cost.morale) parts.push(`−${cost.morale}% Morale`);
       if (cost.supplies) parts.push(`−${cost.supplies} Supply`);
-      if (cost.lifeveil) parts.push(`−${cost.lifeveil} Lifeveil`);
+      if (cost.lifeveil) parts.push(`−${cost.lifeveil}% Lifeveil`);
       if (cost.strain) parts.push(`+${cost.strain} Strain`);
       metaCost.textContent = parts.join(" · ") || "No cost";
     }
@@ -277,52 +275,6 @@ function bindClose(app, root) {
   });
 }
 
-function waitForCombatAdvance(combat, previousTurn, previousRound, timeout = 350) {
-  return new Promise((resolve) => {
-    const started = performance.now();
-    const check = () => {
-      if (combat.turn !== previousTurn || combat.round !== previousRound) return resolve(true);
-      if (performance.now() - started >= timeout) return resolve(false);
-      requestAnimationFrame(check);
-    };
-    check();
-  });
-}
-
-function nextTurnCoordinates(combat, previousTurn, previousRound) {
-  const turns = [...(combat.turns ?? [])];
-  if (turns.length < 2) return null;
-
-  const currentIndex = Number.isInteger(previousTurn) && previousTurn >= 0
-    ? Math.min(previousTurn, turns.length - 1)
-    : Math.max(0, turns.findIndex((entry) => entry.id === combat.combatant?.id));
-  const nextIndex = (currentIndex + 1) % turns.length;
-  const nextRound = nextIndex === 0 ? Math.max(1, Number(previousRound) || 1) + 1 : Math.max(1, Number(previousRound) || 1);
-  return { turn: nextIndex, round: nextRound };
-}
-
-async function advanceCombatTurn(combat) {
-  const previousTurn = Number(combat.turn);
-  const previousRound = Number(combat.round);
-  const previousId = combat.combatant?.id ?? null;
-  const fallback = nextTurnCoordinates(combat, previousTurn, previousRound);
-  if (!fallback) throw new Error("There is no other combatant in initiative to advance to.");
-
-  await combat.nextTurn();
-  let advanced = await waitForCombatAdvance(combat, previousTurn, previousRound);
-
-  if (!advanced) {
-    await combat.update({ round: fallback.round, turn: fallback.turn });
-    advanced = await waitForCombatAdvance(combat, previousTurn, previousRound);
-  }
-
-  const next = combat.combatant ?? combat.turns?.[combat.turn] ?? null;
-  if (!advanced || !next || next.id === previousId) {
-    throw new Error("Foundry combat turn did not advance after the fallback update.");
-  }
-  return next;
-}
-
 function bindEndTurn(app, root) {
   const button = root.querySelector("[data-end-turn]");
   if (!button || button.dataset.afchTurnBound === "true") return;
@@ -350,12 +302,16 @@ function bindEndTurn(app, root) {
 
     button.disabled = true;
     try {
+      const advanced = await api.endTurn(combatant);
+      if (advanced === false) {
+        button.disabled = false;
+        app.render?.({ force: true });
+        return;
+      }
       if (game.user?.isGM) {
-        const next = await advanceCombatTurn(combat);
-        if (shipPayload(next.actor)) app.setReference?.(next.actor);
+        const next = combat.combatant ?? null;
+        if (next?.actor && shipPayload(next.actor)) app.setReference?.(next.actor);
         else app.render?.({ force: true });
-      } else {
-        await api.endTurn(combatant);
       }
     } catch (error) {
       console.error("Arkflight | End Turn failed", error);

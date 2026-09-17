@@ -54,7 +54,7 @@ const D = Object.freeze({
     mountType: "medium",
     systemThreat: "rigging",
     cargo: 2,
-    combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
   }),
   "light-swivel-cannon": Object.freeze({
     name: "Light Swivel Cannon",
@@ -86,7 +86,7 @@ const D = Object.freeze({
     mountType: "medium",
     systemThreat: "hull",
     cargo: 2,
-    combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
   }),
   "light-deck-culverin": Object.freeze({
     name: "Light Deck Culverin",
@@ -118,7 +118,7 @@ const D = Object.freeze({
     mountType: "medium",
     systemThreat: "hull",
     cargo: 2,
-    combat: { fireAP: 2, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
+    combat: { fireAP: 1, reloadRounds: 1, arcTemplate: "line", rangeHexes: { min: 2, optimalMin: 4, optimalMax: 7, max: 10 } }
   }),
   "light-broadside-cannon": Object.freeze({
     name: "Light Broadside Cannon",
@@ -150,7 +150,7 @@ const D = Object.freeze({
     mountType: "medium",
     systemThreat: "hull",
     cargo: 3,
-    combat: { fireAP: 2, reloadRounds: 2, arcTemplate: "broadside", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 5, max: 7 } }
+    combat: { fireAP: 1, reloadRounds: 2, arcTemplate: "broadside", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 5, max: 7 } }
   }),
   "heavy-bombard": Object.freeze({
     name: "Heavy Bombard",
@@ -166,7 +166,7 @@ const D = Object.freeze({
     mountType: "large",
     systemThreat: "hull",
     cargo: 5,
-    combat: { fireAP: 3, reloadRounds: 3, arcTemplate: "wide", rangeHexes: { min: 3, optimalMin: 5, optimalMax: 8, max: 11 } }
+    combat: { fireAP: 1, reloadRounds: 3, arcTemplate: "wide", rangeHexes: { min: 3, optimalMin: 5, optimalMax: 8, max: 11 } }
   }),
   "stormglass-lance": Object.freeze({
     name: "Stormglass Lance",
@@ -182,7 +182,7 @@ const D = Object.freeze({
     mountType: "large",
     systemThreat: "lifeveil",
     cargo: 3,
-    combat: { fireAP: 3, reloadRounds: 2, arcTemplate: "line", rangeHexes: { min: 3, optimalMin: 4, optimalMax: 8, max: 12 } }
+    combat: { fireAP: 1, reloadRounds: 2, arcTemplate: "line", rangeHexes: { min: 3, optimalMin: 4, optimalMax: 8, max: 12 } }
   }),
   "grapnel-harpoon": Object.freeze({
     name: "Grapnel Harpoon",
@@ -214,7 +214,7 @@ const D = Object.freeze({
     mountType: "medium",
     systemThreat: "hull",
     cargo: 2,
-    combat: { fireAP: 2, reloadRounds: 2, arcTemplate: "line", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
+    combat: { fireAP: 1, reloadRounds: 2, arcTemplate: "line", rangeHexes: { min: 1, optimalMin: 1, optimalMax: 3, max: 5 } }
   }),
   "light-deck-scattergun": Object.freeze({
     name: "Light Deck Scattergun",
@@ -262,7 +262,7 @@ const D = Object.freeze({
     mountType: "medium",
     systemThreat: "arkengine",
     cargo: 3,
-    combat: { fireAP: 2, reloadRounds: 2, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 4, max: 6 } }
+    combat: { fireAP: 1, reloadRounds: 2, arcTemplate: "wide", rangeHexes: { min: 1, optimalMin: 2, optimalMax: 4, max: 6 } }
   })
 });
 

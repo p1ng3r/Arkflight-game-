@@ -1,5 +1,8 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
+import { shipManeuverDC, weaponReloadRemaining } from "../combat/index.js";
+import { lifeveilCondition, moraleCondition, shipConditionProfile } from "../ship/ship-conditions.js";
+import { strainRiskState } from "../ship/strain-rules.js";
 import { firingArcsVisible, firingArcWeaponVisible, redrawFiringArcs, setFiringArcsVisible, toggleWeaponFiringArc } from "./weapon-combat-station-ui.js";
 
 const MODULE_ID = "arkflight-game";
@@ -26,7 +29,10 @@ const REFRESH_HOOKS = [
   "updateToken",
   "targetToken",
   "arkflightStationActionResolved",
-  "arkflightStationActionsRefreshed"
+  "arkflightStationActionsRefreshed",
+  "arkflightStationActionRemoteResult",
+  "arkflightCombatEngagementChanged",
+  "arkflightBoardingEstablished"
 ];
 let combatConsole = null;
 let refreshQueued = false;
@@ -95,7 +101,7 @@ function crewName(api, combatant, station) {
 }
 
 function costLabel(action) {
-  if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
+  if (action.id === "battlewatch-reload-weapon") return "1 Morale · +1 Strain";
   const parts = [];
   if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
   if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
@@ -109,10 +115,16 @@ function unavailableLabel(reason) {
     "not-this-ships-turn": "Wait for Turn",
     "insufficient-ap": "Not Enough AP",
     "insufficient-rp": "Not Enough RP",
+    "insufficient-morale": "Not Enough Morale",
+    "crew-unassigned": "Assign Crew",
+    "not-assigned-crew": "Assigned Crew Only",
     "once-per-round": "Used This Round",
     "reaction-readied": "Reaction Readied",
     "combatant-required": "Combat Offline",
-    "not-your-station": "Assigned Crew Only"
+    "not-your-station": "Assigned Crew Only",
+    "not-ship-owner": "Ship Owner Only",
+    "moored": "Moored — Break Grapple",
+    "capability-required": "Requires Ship Talent"
   })[reason] ?? "Unavailable";
 }
 
@@ -122,8 +134,21 @@ function choiceOptions(action, api, combatant, actor, targets, weapons) {
     return STATIONS.filter((entry) => entry.id !== action.station)
       .map((entry) => ({ value: entry.id, label: entry.label }));
   }
-  if (rules.chooseTarget) return targets.map((target) => ({ value: target.id, label: target.name }));
-  if (rules.chooseWeapon) return weapons.map((weapon) => ({ value: weapon.key, label: weapon.name }));
+  if (rules.chooseTarget) {
+    const engagementResolvers = new Set(["ramShip", "grappleShip", "breakGrapple", "boardShip"]);
+    const candidates = engagementResolvers.has(rules.resolver)
+      ? (game.arkflight?.combatEngagement?.eligibleTargets?.(rules.resolver, combatant) ?? [])
+      : targets;
+    return candidates.map((target) => ({ value: target.id, label: target.name }));
+  }
+  if (rules.chooseWeapon) {
+    let choices = weapons.filter((weapon) => !weapon.ready);
+    if (rules.resolver === "workTheGuns") {
+      const maxRemaining = Math.max(1, Number(rules.maxReloadRemaining) || 2);
+      choices = choices.filter((weapon) => Number(weapon.remaining ?? 0) <= maxRemaining);
+    }
+    return choices.map((weapon) => ({ value: weapon.key, label: `${weapon.name} · Reload ${weapon.remaining}` }));
+  }
   if (Array.isArray(rules.choices)) return rules.choices.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseSystem) return ["hull", "arkengine", "rigging", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
   if (Array.isArray(rules.chooseFacing)) return rules.chooseFacing.map((value) => ({ value, label: titleCase(value) }));
@@ -160,6 +185,7 @@ function targetSummary(target, selectedWeaponKey, attacker) {
     name: target.name,
     img: target.token?.texture?.src ?? target.actor?.img ?? "icons/svg/mystery-man.svg",
     armorClass: Math.max(0, Number(derived?.stats?.armorClass) || 0),
+    maneuverDC: derived ? shipManeuverDC({ ship, derived }) : 0,
     hardness: Math.max(0, Number(derived?.stats?.hardness) || 0),
     hullValue,
     hullMax,
@@ -173,8 +199,8 @@ function targetSummary(target, selectedWeaponKey, attacker) {
     legal: Boolean(solution?.legal),
     arcLegal: Boolean(solution?.arc?.legal),
     solutionText: solution
-      ? `${Number(solution.distanceHexes).toFixed(1)} hex · ${solution.range.label} · ${solution.arc.legal ? "IN ARC" : "OUT OF ARC"}`
-      : "Choose a weapon for a firing solution."
+      ? `${Number(solution.distanceHexes).toFixed(1)} hex · ${solution.range.label} · ${solution.arc.legal ? "IN ARC" : "OUT OF ARC"} · AC ${Math.max(0, Number(derived?.stats?.armorClass) || 0)} · Maneuver DC ${derived ? shipManeuverDC({ ship, derived }) : "—"}`
+      : `AC ${Math.max(0, Number(derived?.stats?.armorClass) || 0)} · Maneuver DC ${derived ? shipManeuverDC({ ship, derived }) : "—"}`
   };
 }
 
@@ -183,7 +209,7 @@ function buildWeapons(state, round) {
     const definition = SHIP_CATALOGS.weapons?.[weaponState.id] ?? null;
     const combat = definition?.data?.combat ?? {};
     const damage = definition?.data?.damageProfile ?? {};
-    const remaining = Math.max(0, Number(weaponState.readyRound ?? 0) - round);
+    const remaining = weaponReloadRemaining(weaponState);
     return {
       key: weaponState.key,
       id: weaponState.id,
@@ -192,7 +218,7 @@ function buildWeapons(state, round) {
       mountLabel: titleCase(weaponState.mount ?? "fore"),
       mountIndex: Number(weaponState.mountIndex ?? 0) + 1,
       arc: titleCase(combat.arcTemplate ?? "wide"),
-      fireAP: Math.max(1, Number(weaponState.fireAP ?? combat.fireAP ?? 1)),
+      fireAP: 1,
       damage: `${damage.dice ?? "—"} ${titleCase(damage.type ?? "damage")}`,
       remaining,
       ready: remaining <= 0,
@@ -208,6 +234,86 @@ function buildResourcePips(value, max, cap = 8) {
   return Array.from({ length: display }, (_, index) => ({ filled: index < current }));
 }
 
+function conditionTone(system, profile) {
+  const severity = Math.max(0, Number(profile?.severity ?? 0));
+  if (system === "morale") {
+    if (severity <= 1) return "is-good";
+    if (severity === 2) return "is-caution";
+    if (severity === 3) return "is-danger";
+    return "is-critical";
+  }
+  if (severity === 0) return "is-good";
+  if (severity === 1) return "is-caution";
+  if (severity === 2) return "is-danger";
+  return "is-critical";
+}
+
+function conditionTitle(system, profile) {
+  const label = profile?.label ?? "Unknown";
+  if (system === "hull") return `${label} — Effective Hardness ${Math.round(Number(profile?.hardnessMultiplier ?? 1) * 100)}%.`;
+  if (system === "drive") return `${label} — Speed −${Math.max(0, Number(profile?.speedPenalty ?? 0))}; Maneuverability −${Math.max(0, Number(profile?.maneuverPenalty ?? 0))}.`;
+  if (system === "weapons") return `${label} — Weapon attacks −${Math.max(0, Number(profile?.attackPenalty ?? 0))}; Reload +${Math.max(0, Number(profile?.reloadPenalty ?? 0))}.`;
+  if (system === "lifeveil") return `${label} — ${Math.max(0, Number(profile?.value ?? 0))}% Lifeveil.`;
+  if (system === "morale") return `${label} — ${Math.max(0, Number(profile?.value ?? 0))}% Morale.`;
+  return label;
+}
+
+function strainDangerView(value, max) {
+  const maximum = Math.max(0, Number(max) || 0);
+  if (maximum <= 0) return Object.freeze({
+    label: "—",
+    tone: "is-neutral",
+    title: "No Strain capacity is available."
+  });
+
+  const risk = strainRiskState(value, maximum);
+  const percent = Math.max(0, risk.percent);
+  if (risk.thresholdReached) return Object.freeze({
+    label: "LIMIT",
+    tone: "is-limit",
+    title: `${percent.toFixed(0)}% Strain — at the Strain Limit, new Strain causes automatic Ship Condition degradation.`
+  });
+  if (risk.flatCheckDC !== null) {
+    const tone = risk.flatCheckDC >= 15 ? "is-critical" : risk.flatCheckDC >= 10 ? "is-danger" : "is-caution";
+    return Object.freeze({
+      label: `DC ${risk.flatCheckDC}`,
+      tone,
+      title: `${percent.toFixed(0)}% Strain — gaining Strain requires a DC ${risk.flatCheckDC} flat check.`
+    });
+  }
+  return Object.freeze({
+    label: "SAFE",
+    tone: "is-good",
+    title: `${percent.toFixed(0)}% Strain — below the first danger threshold.`
+  });
+}
+
+function combatConditionView(actor, strainValue, strainMax) {
+  const ship = shipPayload(actor);
+  if (!ship) return null;
+
+  const hull = shipConditionProfile(ship, "hull");
+  const drive = shipConditionProfile(ship, "drive");
+  const weapons = shipConditionProfile(ship, "weapons");
+  const lifeveil = lifeveilCondition(ship?.resources?.lifeveil?.value ?? 0);
+  const morale = moraleCondition(ship?.resources?.morale?.value ?? 0);
+  const wrap = (system, profile) => Object.freeze({
+    id: profile?.id ?? "unknown",
+    label: profile?.label ?? "Unknown",
+    tone: conditionTone(system, profile),
+    title: conditionTitle(system, profile)
+  });
+
+  return Object.freeze({
+    hull: wrap("hull", hull),
+    drive: wrap("drive", drive),
+    weapons: wrap("weapons", weapons),
+    lifeveil: wrap("lifeveil", lifeveil),
+    morale: wrap("morale", morale),
+    strain: strainDangerView(strainValue, strainMax)
+  });
+}
+
 function compactSummary(action) {
   return action.summary
     ?? action.shortDescription
@@ -218,7 +324,7 @@ function compactSummary(action) {
 function buildStationActions(api, combatant, actor, station, targets, weapons, selectedWeaponKey, selectedTargetId) {
   const state = api?.state?.(combatant) ?? null;
   const selectedWeapon = weapons.find((entry) => entry.key === selectedWeaponKey) ?? null;
-  return [...(api?.stationActions?.(station) ?? [])].map((action) => {
+  return [...(api?.stationActions?.(station, combatant) ?? [])].map((action) => {
     const choices = choiceOptions(action, api, combatant, actor, targets, weapons);
     const availability = api.stationActionAvailability?.(action.id, combatant)
       ?? { ok: false, reason: "combatant-required" };
@@ -235,19 +341,18 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
         try { legal = Boolean(api.targetingSolution(selectedWeapon.key, selectedTargetId, combatant)?.legal); }
         catch (_error) { legal = false; }
       }
-      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= Number(selectedWeapon?.fireAP ?? 99);
+      const enoughAP = Number(state?.economy?.ap?.value ?? 0) >= 1;
       usable = Boolean(control.ok && availability.ok && selectedWeapon?.ready && selectedTargetId && legal && enoughAP);
       buttonLabel = "Fire";
       if (!selectedWeapon) reason = "Choose Weapon";
       else if (!selectedTargetId) reason = "Choose Target";
       else if (!selectedWeapon.ready) reason = `Reload ${selectedWeapon.remaining}`;
       else if (!legal) reason = "Illegal Shot";
-      else if (!enoughAP) reason = `Need ${selectedWeapon.fireAP} AP`;
+      else if (!enoughAP) reason = "Need 1 AP";
     } else if (resolver === "workTheGuns") {
-      usable = Boolean(control.ok && availability.ok && selectedWeapon && !selectedWeapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
-      buttonLabel = "Work Guns";
-      if (!selectedWeapon) reason = "Choose Weapon";
-      else if (selectedWeapon.ready) reason = "Weapon Ready";
+      usable = Boolean(control.ok && availability.ok && choices.length > 0);
+      buttonLabel = "Work the Guns";
+      if (!choices.length) reason = "No weapon at Reload 2 or less";
     } else if (choices.length === 0 && (
       action.rules?.chooseStation || action.rules?.chooseTarget || action.rules?.chooseWeapon
       || action.rules?.chooseSystem || action.rules?.chooseFacing || action.rules?.chooseAreaOrEnergy
@@ -407,9 +512,15 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     const targetCombatant = targets.find((entry) => entry.id === this.selectedTargetId) ?? null;
     const target = targetSummary(targetCombatant, this.selectedWeaponKey, combatant);
     const battlewatchFireControl = combatant ? api?.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: false } : { ok: false };
-    const battlewatchReloadControl = combatant ? api?.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const commonReloadControl = combatant ? api?.stationActionControl?.("common-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const commonReloadAvailability = combatant ? api?.stationActionAvailability?.("common-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const workGunsControl = combatant ? api?.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
+    const workGunsAvailability = combatant ? api?.stationActionAvailability?.("battlewatch-reload-weapon", combatant) ?? { ok: false } : { ok: false };
     const arcVisible = Boolean(combatant && firingArcsVisible(combatant));
+    const engagement = combatant ? game.arkflight?.combatEngagement?.state?.(combatant) ?? null : null;
+    const mooredCombatant = engagement?.mooredTo ? targets.find((entry) => entry.id === engagement.mooredTo) ?? null : null;
     const undoStatus = combatant ? api?.movementUndoStatus?.(combatant) ?? {} : {};
+    const facingStatus = combatant ? api?.facingStatus?.(combatant) ?? null : null;
     const stationRows = STATIONS.map((entry) => ({
       ...entry,
       active: entry.id === this.selectedStation,
@@ -437,8 +548,10 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         weapon.solution = "No target";
       }
       weapon.statusLabel = weapon.ready ? "Ready" : `Reload ${weapon.remaining}`;
-      weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= weapon.fireAP);
-      weapon.canReload = Boolean(battlewatchReloadControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
+      weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= 1);
+      weapon.canReload = Boolean(commonReloadControl.ok && commonReloadAvailability.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
+      weapon.showWorkGuns = Boolean(workGunsControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(weapon.remaining ?? 0) <= 2);
+      weapon.canWorkGuns = Boolean(weapon.showWorkGuns && workGunsAvailability.ok);
     }
 
     const ap = Number(state?.economy?.ap?.value ?? 0);
@@ -447,6 +560,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     const rpMax = Number(state?.economy?.rp?.max ?? 0);
     const strain = Number(state?.strain?.value ?? 0);
     const strainMax = Number(state?.strain?.max ?? 0);
+    const conditions = combatConditionView(actor, strain, strainMax);
 
     return {
       ...context,
@@ -466,6 +580,13 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       hasTargets: targets.length > 0,
       target,
       targetName: target?.name ?? "No Target",
+      engagement: engagement ? {
+        moored: Boolean(engagement.mooredTo),
+        boarding: Boolean(engagement.boardingActive),
+        boardingOpportunity: Boolean(engagement.boardingOpportunity),
+        partnerName: mooredCombatant?.name ?? (engagement.mooredTo ? "Moored Vessel" : ""),
+        label: engagement.boardingActive ? "BOARDING" : engagement.mooredTo ? "MOORED" : ""
+      } : null,
       weapons,
       weaponGroups: groupWeapons(weapons),
       hasWeapons: weapons.length > 0,
@@ -476,14 +597,14 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         && game.combat?.combatant?.id === combatant.id
         && target?.legal
         && weapons.find((entry) => entry.key === this.selectedWeaponKey)?.ready
-        && Number(state?.economy?.ap?.value ?? 0) >= Number(weapons.find((entry) => entry.key === this.selectedWeaponKey)?.fireAP ?? 99)
+        && Number(state?.economy?.ap?.value ?? 0) >= 1
       ),
       arcVisible,
       arcButtonLabel: arcVisible ? "Hide Weapon Arcs" : "Show Weapon Arcs",
-      canUndoMove: Boolean(game.user?.isGM && undoStatus.canUndoMove),
-      canUndoFacing: Boolean(game.user?.isGM && undoStatus.canUndoFacing),
-      canResetTurnPosition: Boolean(game.user?.isGM && undoStatus.canResetPosition),
-      showUndoControls: Boolean(undoStatus.canResetPosition),
+      canUndoMove: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canUndoMove),
+      canUndoFacing: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canUndoFacing),
+      canResetTurnPosition: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canResetPosition),
+      showUndoControls: Boolean(combatant && api?.canOperate?.(combatant) && undoStatus.canResetPosition),
       resources: {
         round,
         ap,
@@ -497,8 +618,25 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         strain,
         strainMax,
         strainPips: buildResourcePips(strain, strainMax, 10),
-        heading: Number(state?.mobility?.heading ?? 0)
+        heading: Number(state?.mobility?.heading ?? 0),
+        facingUsedDegrees: Number(facingStatus?.committedUsedDegrees ?? 0),
+        facingProjectedDegrees: Number(facingStatus?.projectedUsedDegrees ?? 0),
+        facingFreeDegrees: Number(facingStatus?.freeDegrees ?? 0),
+        facingAllowanceDegrees: Number(facingStatus?.allowanceDegrees ?? 0),
+        committedHeading: Number(facingStatus?.committedHeading ?? state?.mobility?.heading ?? 0),
+        previewHeading: Number(facingStatus?.previewHeading ?? state?.mobility?.heading ?? 0),
+        facingCostLabel: facingStatus?.impossible
+          ? "Cannot commit preview"
+          : Number(facingStatus?.apRequired ?? 0) > 0
+            ? `+${facingStatus.apRequired} AP if End`
+            : Number(facingStatus?.previewDeltaDegrees ?? 0) > 0
+              ? `Preview +${facingStatus.previewDeltaDegrees}°`
+              : Number(facingStatus?.purchases ?? 0) > 0
+                ? `${facingStatus.purchases} AP facing bought`
+                : `${Math.max(0, Number(facingStatus?.freeDegrees ?? 0) - Number(facingStatus?.committedUsedDegrees ?? 0))}° free left`,
+        facingWarning: Boolean(facingStatus?.impossible || Number(facingStatus?.apRequired ?? 0) > 0)
       },
+      conditions,
       activeTurn: Boolean(combatant && game.combat?.combatant?.id === combatant.id),
       currentStationLabel: stationRows.find((entry) => entry.active)?.label ?? "Battlewatch",
       lastShot: this.lastShot,
@@ -541,7 +679,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
 
     const bindUndo = (selector, action, failureLabel) => {
       root.querySelector(selector)?.addEventListener("click", async () => {
-        if (!game.user?.isGM || !combatant || typeof api?.[action] !== "function") return;
+        if (!combatant || !api?.canOperate?.(combatant) || typeof api?.[action] !== "function") return;
         try {
           await api[action](combatant);
           this.render({ force: true });
@@ -613,10 +751,24 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         const key = button.dataset.workWeapon;
         if (!key) return;
         try {
+          await api.stationAction("common-reload-weapon", { weaponKey: key, selection: key }, combatant);
+          this.render({ force: true });
+        } catch (error) {
+          console.error("Arkflight combat console reload failed", error);
+          ui.notifications?.error(error?.message ?? "Reload failed.");
+        }
+      });
+    }
+
+    for (const button of root.querySelectorAll("[data-work-guns]")) {
+      button.addEventListener("click", async () => {
+        const key = button.dataset.workGuns;
+        if (!key) return;
+        try {
           await api.stationAction("battlewatch-reload-weapon", { weaponKey: key, selection: key }, combatant);
           this.render({ force: true });
         } catch (error) {
-          console.error("Arkflight combat console work guns failed", error);
+          console.error("Arkflight combat console Work the Guns failed", error);
           ui.notifications?.error(error?.message ?? "Work the Guns failed.");
         }
       });
@@ -625,7 +777,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
     for (const button of root.querySelectorAll("[data-station-action]")) {
       button.addEventListener("click", async () => {
         const actionId = button.dataset.stationAction;
-        const action = api?.actions?.[actionId] ?? [...(api?.stationActions?.(this.selectedStation) ?? [])].find((entry) => entry.id === actionId);
+        const action = api?.actions?.[actionId] ?? [...(api?.stationActions?.(this.selectedStation, combatant) ?? [])].find((entry) => entry.id === actionId);
         if (!action) return;
         const card = button.closest("[data-action-card]");
         const selection = card?.querySelector("[data-action-choice]")?.value ?? null;
@@ -635,8 +787,9 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
             if (!this.selectedWeaponKey || !this.selectedTargetId) throw new Error("Choose a weapon and target first.");
             await api.stationAction(actionId, { selection, weaponKey: this.selectedWeaponKey, targetId: this.selectedTargetId }, combatant);
           } else if (action.rules?.resolver === "workTheGuns") {
-            if (!this.selectedWeaponKey) throw new Error("Choose an installed weapon first.");
-            await api.stationAction(actionId, { selection, weaponKey: this.selectedWeaponKey }, combatant);
+            const weaponKey = selection || this.selectedWeaponKey;
+            if (!weaponKey) throw new Error("Choose an installed weapon first.");
+            await api.stationAction(actionId, { selection: weaponKey, weaponKey }, combatant);
           } else await api.stationAction(actionId, { selection }, combatant);
           this.render({ force: true });
         } catch (error) {

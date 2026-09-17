@@ -64,10 +64,10 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
         level: ship.progression?.level ?? 1,
         resources: [
           resourceView(ship, "hull", "Hull", "fa-shield-halved", stats.hullIntegrity),
-          resourceView(ship, "lifeveil", "Lifeveil", "fa-sparkles", stats.lifeveilCapacity),
+          resourceView(ship, "lifeveil", "Lifeveil", "fa-sparkles", 100),
           resourceView(ship, "strain", "Strain", "fa-gauge-high", stats.strainCapacity),
-          resourceView(ship, "supplies", "Supplies", "fa-boxes-stacked", stats.supplyCapacity),
-          resourceView(ship, "morale", "Morale", "fa-flag", stats.moraleCapacity)
+          resourceView(ship, "supplies", "Supplies", "fa-boxes-stacked", statValue(stats.cargoCapacity) * 10),
+          resourceView(ship, "morale", "Morale", "fa-flag", 100)
         ],
         cargoUsed: statValue(ship.cargo?.used), cargoCapacity: statValue(stats.cargoCapacity),
         view: sheetView, tags: [...(derived.tags ?? [])], capabilities: [...(derived.capabilities ?? [])], conditions: [...(ship.conditions ?? [])],
@@ -84,7 +84,7 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       if (!this.actor.isOwner) return;
       const key = event.currentTarget.dataset.resource; const ship = shipFlag(this.actor); if (!ship?.resources?.[key]) return;
       const derived = deriveShip(ship, SHIP_CATALOGS);
-      const dynamicMax = key === "supplies" ? derived.stats.supplyCapacity : key === "morale" ? derived.stats.moraleCapacity : key === "hull" ? derived.stats.hullIntegrity : key === "lifeveil" ? derived.stats.lifeveilCapacity : key === "strain" ? derived.stats.strainCapacity : ship.resources[key].max;
+      const dynamicMax = key === "supplies" ? Number(derived.stats.cargoCapacity ?? 0) * 10 : key === "morale" ? 100 : key === "hull" ? derived.stats.hullIntegrity : key === "lifeveil" ? 100 : key === "strain" ? derived.stats.strainCapacity : ship.resources[key].max;
       const max = statValue(dynamicMax); const requested = statValue(event.currentTarget.value); const value = max > 0 ? Math.max(0, Math.min(requested, max)) : Math.max(0, requested);
       await this.actor.update({ [`flags.${MODULE_ID}.ship.resources.${key}.value`]: value, [`flags.${MODULE_ID}.ship.resources.${key}.max`]: max });
     });

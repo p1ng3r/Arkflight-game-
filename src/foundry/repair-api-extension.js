@@ -1,4 +1,5 @@
-import { improveAreaState, repairPackage, repairScrapCost, repairTargetLabel, resourceRepairAmount, validRepairTarget } from "../ship/repair-rules.js";
+import { improveConditionState, repairPackage, repairScrapCost, repairTargetLabel, resourceRepairAmount, validRepairTarget } from "../ship/repair-rules.js";
+import { setShipCondition, shipConditionProfile } from "../ship/ship-conditions.js";
 
 const MODULE_ID = "arkflight-game";
 
@@ -20,6 +21,10 @@ async function persistShip(actor, ship) {
   return ship;
 }
 
+function canonicalRepairType(targetType) {
+  return targetType === "area" ? "condition" : targetType;
+}
+
 Hooks.once("ready", () => {
   const base = game.arkflight?.refit;
   if (!base || base.queueRepairPackage) return;
@@ -29,30 +34,52 @@ Hooks.once("ready", () => {
     repairPackages: Object.freeze(["patch", "standard", "full"]),
     quoteRepair(actor, targetType, targetKey, packageId = "patch", serviceMode = "crew") {
       const ship = shipPayload(actor);
-      if (!ship || !validRepairTarget(targetType, targetKey)) return { ok: false, reason: "invalid-repair-target" };
+      const type = canonicalRepairType(targetType);
+      if (!ship || !validRepairTarget(type, targetKey)) return { ok: false, reason: "invalid-repair-target" };
       const pack = repairPackage(packageId);
       const partsCost = repairScrapCost(packageId, serviceMode);
-      if (targetType === "resource") {
-        const resource = ship.resources?.[targetKey] ?? { value: 0, max: 0 };
-        const amount = resourceRepairAmount(resource.max, packageId);
-        return Object.freeze({ ok: true, targetType, targetKey, targetLabel: repairTargetLabel(targetType, targetKey), packageId: pack.id, packageLabel: pack.label, partsCost, durationHours: pack.hours, craftingDC: pack.dc, current: Number(resource.value ?? 0), max: Number(resource.max ?? 0), restoreAmount: amount, after: Math.min(Number(resource.max ?? 0), Number(resource.value ?? 0) + amount) });
+
+      if (type === "resource") {
+        const resource = ship.resources?.[targetKey] ?? { value: 0, max: targetKey === "lifeveil" ? 100 : 0 };
+        const max = targetKey === "lifeveil" ? 100 : Math.max(0, Number(resource.max ?? 0));
+        const amount = resourceRepairAmount(max, packageId);
+        return Object.freeze({
+          ok: true, targetType: type, targetKey,
+          targetLabel: repairTargetLabel(type, targetKey),
+          packageId: pack.id, packageLabel: pack.label,
+          partsCost, durationHours: pack.hours, craftingDC: pack.dc,
+          current: Number(resource.value ?? 0), max,
+          restoreAmount: amount,
+          after: Math.min(max, Number(resource.value ?? 0) + amount)
+        });
       }
-      const currentState = ship.areas?.[targetKey]?.state ?? "stable";
-      const afterState = improveAreaState(currentState, packageId);
-      return Object.freeze({ ok: true, targetType, targetKey, targetLabel: repairTargetLabel(targetType, targetKey), packageId: pack.id, packageLabel: pack.label, partsCost, durationHours: pack.hours, craftingDC: pack.dc, currentState, afterState });
+
+      const current = shipConditionProfile(ship, targetKey);
+      const afterState = improveConditionState(targetKey, current.id, packageId);
+      return Object.freeze({
+        ok: true, targetType: type, targetKey,
+        targetLabel: repairTargetLabel(type, targetKey),
+        packageId: pack.id, packageLabel: pack.label,
+        partsCost, durationHours: pack.hours, craftingDC: pack.dc,
+        currentState: current.id,
+        currentLabel: current.label,
+        afterState
+      });
     },
+
     async queueRepairPackage(actor, targetType, targetKey, packageId = "patch", options = {}) {
+      const type = canonicalRepairType(targetType);
       const serviceMode = ["crew", "dock", "shipyard"].includes(options.serviceMode) ? options.serviceMode : "crew";
       const paymentMethod = options.paymentMethod === "gold" ? "gold" : "scrap";
-      const quote = extended.quoteRepair(actor, targetType, targetKey, packageId, serviceMode);
+      const quote = extended.quoteRepair(actor, type, targetKey, packageId, serviceMode);
       if (!quote.ok) return quote;
-      if (targetType === "resource" && quote.current >= quote.max) return { ok: false, reason: "already-fully-repaired", quote };
-      if (targetType === "area" && quote.currentState === quote.afterState) return { ok: false, reason: "already-stable", quote };
+      if (type === "resource" && quote.current >= quote.max) return { ok: false, reason: "already-fully-repaired", quote };
+      if (type === "condition" && quote.currentState === quote.afterState) return { ok: false, reason: "already-sound", quote };
 
       const partsCost = Math.max(0, Number(options.partsCostOverride ?? quote.partsCost));
       const goldCost = Math.max(0, Number(options.goldCost ?? 0));
       const queued = await base.queueRepair(actor, {
-        componentFamily: `repair:${targetType}`,
+        componentFamily: `repair:${type}`,
         componentId: targetKey,
         durationHours: quote.durationHours,
         craftingDC: quote.craftingDC,
@@ -71,7 +98,7 @@ Hooks.once("ready", () => {
           paymentMethod,
           ...(paymentMethod === "gold" ? { goldCost } : {}),
           repair: {
-            targetType,
+            targetType: type,
             targetKey,
             targetLabel: quote.targetLabel,
             packageId: quote.packageId,
@@ -85,6 +112,7 @@ Hooks.once("ready", () => {
       await persistShip(actor, next);
       return { ...queued, ship: next, job: taggedJob, quote };
     },
+
     async completeWork(actor, jobId, options = {}) {
       const completed = await base.completeWork(actor, jobId, options);
       if (!completed?.ok || completed.job?.type !== "repair") return completed;
@@ -92,15 +120,16 @@ Hooks.once("ready", () => {
       const repair = completed.job?.result?.repair;
       if (!repair || !validRepairTarget(repair.targetType, repair.targetKey)) return completed;
 
-      const next = clone(completed.ship);
+      let next = clone(completed.ship);
       if (repair.targetType === "resource") {
         const resource = next.resources?.[repair.targetKey];
         if (!resource) return completed;
+        const max = repair.targetKey === "lifeveil" ? 100 : Math.max(0, Number(resource.max ?? 0));
         const amount = Math.max(0, Number(repair.restoreAmount ?? 0));
-        resource.value = Math.min(Number(resource.max ?? 0), Number(resource.value ?? 0) + amount);
+        resource.value = Math.min(max, Number(resource.value ?? 0) + amount);
+        resource.max = max;
       } else {
-        next.areas ??= {};
-        next.areas[repair.targetKey] = { ...(next.areas[repair.targetKey] ?? {}), state: repair.afterState ?? improveAreaState(next.areas?.[repair.targetKey]?.state, repair.packageId) };
+        next = setShipCondition(next, repair.targetKey, repair.afterState ?? improveConditionState(repair.targetKey, shipConditionProfile(next, repair.targetKey).id, repair.packageId));
       }
       await persistShip(actor, next);
       return { ...completed, ship: next, repairApplied: true };

@@ -13,7 +13,7 @@ const PACK_ID = `world.${PACK_NAME}`;
 const FOLDER_NAME = "Arkflight";
 const FLAG_SCOPE = "arkflight";
 const FLAG_KEY = "combatReference";
-const STATIONS = Object.freeze(["captain", "battlewatch", "navigator", "engineer", "veilwarden"]);
+const STATIONS = Object.freeze(["common", "captain", "battlewatch", "navigator", "engineer", "veilwarden"]);
 const FUNDAMENTALS_KEY = "fundamentals";
 
 function clone(value) {
@@ -46,7 +46,6 @@ function stableHash(value) {
 }
 
 function costLabel(action) {
-  if (action.rules?.costSource === "weapon.fireAP") return "Installed weapon Fire AP";
   const cost = stationActionEconomy(action, 1);
   const parts = [];
   if (action.id === "captain-drive-the-crew") parts.push("Gain +1 AP");
@@ -54,9 +53,9 @@ function costLabel(action) {
     if (cost.ap > 0) parts.push(`${cost.ap} AP`);
     if (cost.rp > 0) parts.push(`${cost.rp} RP`);
   }
-  if (cost.morale > 0) parts.push(`${cost.morale} Morale`);
+  if (cost.morale > 0) parts.push(`${cost.morale}% Morale`);
   if (cost.supplies > 0) parts.push(`${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`);
-  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil} Lifeveil`);
+  if (cost.lifeveil > 0) parts.push(`${cost.lifeveil}% Lifeveil`);
   if (cost.strain > 0) parts.push(`+${cost.strain} Strain`);
   return parts.length ? parts.join(" + ") : "No fixed cost";
 }
@@ -68,15 +67,12 @@ function chip(label, tone = "default") {
 function actionChips(action) {
   const cost = stationActionEconomy(action, 1);
   const chips = [];
-  if (action.rules?.costSource === "weapon.fireAP") chips.push(chip("Weapon AP", "ap"));
-  else {
-    if (action.id === "captain-drive-the-crew") chips.push(chip("+1 AP", "gain"));
-    else if (cost.ap > 0) chips.push(chip(`${cost.ap} AP`, "ap"));
-    if (cost.rp > 0) chips.push(chip(`${cost.rp} RP`, "rp"));
-  }
-  if (cost.morale > 0) chips.push(chip(`-${cost.morale} Morale`, "morale"));
+  if (action.id === "captain-drive-the-crew") chips.push(chip("+1 AP", "gain"));
+  else if (cost.ap > 0) chips.push(chip(`${cost.ap} AP`, "ap"));
+  if (cost.rp > 0) chips.push(chip(`${cost.rp} RP`, "rp"));
+  if (cost.morale > 0) chips.push(chip(`-${cost.morale}% Morale`, "morale"));
   if (cost.supplies > 0) chips.push(chip(`-${cost.supplies} ${cost.supplies === 1 ? "Supply" : "Supplies"}`, "supplies"));
-  if (cost.lifeveil > 0) chips.push(chip(`-${cost.lifeveil} Lifeveil`, "lifeveil"));
+  if (cost.lifeveil > 0) chips.push(chip(`-${cost.lifeveil}% Lifeveil`, "lifeveil"));
   if (cost.strain > 0) chips.push(chip(`+${cost.strain} Strain`, "strain"));
   chips.push(chip(labelize(action.timing), action.timing === "reaction" ? "reaction" : "timing"));
   return chips.join("");
@@ -119,7 +115,7 @@ function actionPageHtml(action) {
 
   return codexPage({
     title: action.name,
-    subtitle: `${labelize(action.station)} Station Action`,
+    subtitle: action.station === "common" ? "Common Ship Action" : `${labelize(action.station)} Station Action`,
     station: action.station,
     chips: actionChips(action),
     body: [
@@ -162,23 +158,27 @@ function fundamentalsResourcesHtml(identities) {
 }
 
 function fundamentalsStrainHtml() {
-  const areas = [
-    ["Drive the Crew", "Morale"],
-    ["Overcharge Arkengine", "Arkengine"],
-    ["Redistribute Power", "Arkengine"],
-    ["Hard Turn", "Rigging"],
-    ["Evasive Maneuver", "Rigging"]
+  const table = [
+    ["1", "Hull"],
+    ["2", "Morale"],
+    ["3", "Drive"],
+    ["4", "Drive"],
+    ["5", "Lifeveil"],
+    ["6", "Hull"],
+    ["7", "Weapons"],
+    ["8", "Players choose"]
   ];
   return codexPage({
     kicker: "Arkflight Combat Fundamentals",
-    title: "Strain Limit",
+    title: "Strain & Ship Conditions",
     subtitle: "Push the ship hard enough and something gives",
     station: "fundamentals",
-    chips: `${chip("Stable", "safe")}${chip("Stressed", "warning")}${chip("Damaged", "warning")}${chip("Critical", "danger")}${chip("Disabled", "danger")}`,
+    chips: `${chip("50–74%: DC 5", "warning")}${chip("75–89%: DC 10", "warning")}${chip("90–99%: DC 15", "danger")}${chip("100%+: Auto d8", "danger")}`,
     body: [
-      section("Threshold Rule", `<p class="afcr-quick-text">${escapeHtml(STRAIN_THRESHOLD_DEFINITION)}</p>`, "callout"),
-      section("Threatened Areas", `<div class="afcr-threat-list">${areas.map(([action, area]) => `<div><strong>${escapeHtml(action)}</strong><span>${escapeHtml(area)}</span></div>`).join("")}</div>`, "meta"),
-      section("When the Limit Is Crossed", `<p>The threatened Area degrades one step: <strong>Stable → Stressed → Damaged → Critical → Disabled</strong>. One Strain Limit is then subtracted from current Strain and overflow remains. A single station action can degrade at most one Area from its Strain crossing. If the threatened Area is already Disabled, it cannot degrade further, but the threshold is still consumed.</p>`, "rules")
+      section("Strain Rule", `<p class="afcr-quick-text">${escapeHtml(STRAIN_THRESHOLD_DEFINITION)}</p>`, "callout"),
+      section("Ship Conditions", `<p><strong>Hull:</strong> Sound → Battered → Breached → Shattered.<br><strong>Drive:</strong> Responsive → Sluggish → Faltering → Unresponsive.<br><strong>Weapons:</strong> Ready → Fouled → Malfunctioning → Barely Operable.<br><strong>Lifeveil</strong> and <strong>Morale</strong> derive their condition directly from their 0–100% resources.</p>`, "rules"),
+      section("Failed Check / Strain Limit — 1d8", `<div class="afcr-threat-list">${table.map(([roll, target]) => `<div><strong>${escapeHtml(roll)}</strong><span>${escapeHtml(target)}</span></div>`).join("")}</div>`, "meta"),
+      section("One Consequence Per Resolution", `<p>A single triggering resolution can worsen at most one Ship Condition. If that resolution already worsened a condition, its Strain cannot cause another degradation. At 100% Strain, skip the flat check, roll the degradation d8 automatically, subtract one full Strain capacity, and retain overflow.</p>`, "rules")
     ].join("")
   });
 }
@@ -220,14 +220,17 @@ function stationOverviewHtml(station, actions) {
     <div class="afcr-chip-row is-compact">${actionChips(action)}</div>
   </article>`).join("");
 
+  const common = station === "common";
   return codexPage({
-    title: `${labelize(station)} Station`,
-    subtitle: "Combat actions, duties, and tactical reference",
+    title: common ? "Common Actions" : `${labelize(station)} Station`,
+    subtitle: common ? "Baseline ship actions available to any ship Owner" : "Combat actions, duties, and tactical reference",
     station,
     body: [
-      section("Station Role", `<p>This journal is the full rules reference for the <strong>${escapeHtml(labelize(station))}</strong> station. During combat, the Command HUD resolves the ship's current level-scaled values; use these pages for the complete authored rules.</p>`, "callout"),
-      section("Station Bonus", `<p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>`, "rules"),
-      section("Station Actions", `<div class="afcr-action-list">${cards}</div>`, "actions")
+      section(common ? "Common Action Role" : "Station Role", common
+        ? "<p>Common actions may be used by any User with OWNER permission on this ship. They spend the ship's shared combat economy normally and do not require a specific station.</p>"
+        : `<p>This journal is the full rules reference for the <strong>${escapeHtml(labelize(station))}</strong> station. During combat, the Command HUD resolves the ship's current level-scaled values; use these pages for the complete authored rules.</p>`, "callout"),
+      ...(common ? [] : [section("Station Bonus", `<p>${escapeHtml(STATION_BONUS_DEFINITION)}</p>`, "rules")]),
+      section(common ? "Common Actions" : "Station Actions", `<div class="afcr-action-list">${cards}</div>`, "actions")
     ].join("")
   });
 }
@@ -238,7 +241,7 @@ function stationJournal(station) {
   const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText), style: "arkflight-codex-v3" };
   const sourceHash = stableHash(source);
   return {
-    name: `Arkflight Combat — ${labelize(station)}`,
+    name: station === "common" ? "Arkflight Combat — Common Actions" : `Arkflight Combat — ${labelize(station)}`,
     pages: [
       {
         name: "Overview",

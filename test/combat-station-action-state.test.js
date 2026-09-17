@@ -49,19 +49,25 @@ test("Station Bonus stays bounded at +1 / +2 / +3 and has a player-facing defini
 
 test("station action economy gives powerful actions meaningful secondary costs", () => {
   assert.deepEqual(stationActionEconomy(getCombatAction("captain-drive-the-crew"), 1), {
-    ap: 0, rp: 0, morale: 1, supplies: 0, lifeveil: 0, strain: 2
+    ap: 0, rp: 0, morale: 20, supplies: 0, lifeveil: 0, strain: 2
   });
   assert.equal(stationActionEconomy(getCombatAction("engineer-emergency-repair"), 1).supplies, 2);
-  assert.equal(stationActionEconomy(getCombatAction("battlewatch-reload-weapon"), 1).supplies, 1);
+  assert.deepEqual(stationActionEconomy(getCombatAction("common-reload-weapon"), 1), {
+    ap: 1, rp: 0, morale: 0, supplies: 0, lifeveil: 0, strain: 0
+  });
+  assert.deepEqual(stationActionEconomy(getCombatAction("battlewatch-reload-weapon"), 1), {
+    ap: 0, rp: 0, morale: 20, supplies: 0, lifeveil: 0, strain: 1
+  });
   assert.equal(stationActionEconomy(getCombatAction("battlewatch-ready-broadside"), 1).supplies, 1);
   assert.equal(stationActionEconomy(getCombatAction("veilwarden-reinforce-lifeveil"), 1).lifeveil, 5);
   assert.equal(stationActionEconomy(getCombatAction("veilwarden-focus-ward"), 1).lifeveil, 10);
   assert.equal(stationActionEconomy(getCombatAction("veilwarden-emergency-ward"), 1).lifeveil, 5);
   assert.equal(stationActionEconomy(getCombatAction("engineer-overcharge-arkengine"), 1).strain, 2);
   assert.equal(stationActionEconomy(getCombatAction("engineer-redistribute-power"), 1).strain, 1);
-  assert.equal(stationActionStrainArea(getCombatAction("captain-drive-the-crew")), "morale");
-  assert.equal(stationActionStrainArea(getCombatAction("engineer-overcharge-arkengine")), "arkengine");
-  assert.equal(stationActionStrainArea(getCombatAction("navigator-hard-turn")), "rigging");
+  assert.equal(stationActionStrainArea(getCombatAction("captain-drive-the-crew")), null);
+  assert.equal(stationActionStrainArea(getCombatAction("engineer-overcharge-arkengine")), null);
+  assert.equal(stationActionStrainArea(getCombatAction("navigator-hard-turn")), null);
+  assert.equal(stationActionStrainArea(getCombatAction("battlewatch-reload-weapon")), null);
 });
 
 test("Drive the Crew spends no AP up front and grants exactly one temporary AP", () => {
@@ -161,4 +167,38 @@ test("station Reactions spend shared RP and remain active until consumed or next
 
   const refreshed = beginStationActionTurn(next, 2);
   assert.equal(activeStationEffects(refreshed, { station: "captain" }).length, 0);
+});
+
+
+test("Work the Guns costs 0 AP, adds 1 Strain, and locks after one use in a round", () => {
+  const base = combatState(1);
+  const action = getCombatAction("battlewatch-reload-weapon");
+  const next = executeStationStateAction(base, action, { round: 1, selection: "test-weapon", shipLevel: 1 });
+
+  assert.equal(next.economy.ap.value, base.economy.ap.value);
+  assert.equal(next.strain.value, base.strain.value + 1);
+  assert.equal(stationActionAvailability(next, action, { round: 1, shipLevel: 1 }).reason, "once-per-round");
+
+  const refreshed = beginStationActionTurn(next, 2);
+  assert.equal(stationActionAvailability(refreshed, action, { round: 2, shipLevel: 1 }).ok, true);
+});
+
+
+test("Mythic movement abilities remain spent across later combat rounds", () => {
+  const base = combatState(20);
+  const burn = getCombatAction("navigator-impossible-burn");
+  const turned = getCombatAction("navigator-turn-between-heartbeats");
+
+  const burned = executeStationStateAction(base, burn, { round: 1, shipLevel: 20 });
+  assert.equal(burned.economy.ap.value, base.economy.ap.value);
+  assert.equal(burned.mobility.movement.allowance, base.mobility.movement.allowance + Math.ceil(base.mobility.speed * 0.5));
+  assert.equal(burned.strain.value, base.strain.value + 2);
+  assert.equal(stationActionAvailability(burned, burn, { round: 1, shipLevel: 20 }).reason, "once-per-battle");
+
+  const refreshed = beginStationActionTurn(burned, 2);
+  assert.equal(stationActionAvailability(refreshed, burn, { round: 2, shipLevel: 20 }).reason, "once-per-battle");
+
+  const heartbeat = executeStationStateAction(refreshed, turned, { round: 2, shipLevel: 20 });
+  assert.equal(heartbeat.mobility.maneuver.allowance, refreshed.mobility.maneuver.allowance + 2);
+  assert.equal(stationActionAvailability(heartbeat, turned, { round: 2, shipLevel: 20 }).reason, "once-per-battle");
 });

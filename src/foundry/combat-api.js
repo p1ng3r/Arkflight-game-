@@ -1,23 +1,27 @@
 import {
   COMBAT_ACTIONS,
+  applyFreeHelmAllowance,
   beginCombatantTurn,
   createCombatantState,
+  commitFacing,
   fireWeapon,
-  headingStepDistance,
-  normalizeHexHeading,
+  facingReconciliation,
+  settleFacingCost,
+  normalizeShipHeading,
+  previewFacing,
   persistentStrainPatch,
   purchaseManeuver,
   purchaseMovement,
-  recordFacingChange,
   recordMovement,
   applyHardnessToDamage,
   shipWeaponAttackBonus,
   spendPoints,
+  shipHelmDirections,
   targetBearing,
   weaponDamageProfile,
   weaponReloadRemaining,
   weaponTargetingSolution,
-  workTheGuns
+  reloadWeapon
 } from "../combat/index.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
@@ -28,6 +32,7 @@ const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const TURN_START_SNAPSHOTS = new Map();
 const COMBAT_SOCKET = `module.${MODULE_ID}`;
 const END_TURN_REQUEST = "end-turn-request";
+const ACTIVE_HELM_MOVES = new Set();
 
 function requireGM() {
   if (!game.user?.isGM) throw new Error("Only the GM may change Arkflight ship combat state.");
@@ -45,8 +50,30 @@ function activePrimaryGM() {
 
 function userOwnsCombatant(user, combatant) {
   if (!user || !combatant?.actor) return false;
+  if (user.isGM) return true;
   try { return combatant.actor.testUserPermission?.(user, "OWNER") === true; }
   catch (_error) { return false; }
+}
+
+function userCanUpdateDocument(user, document) {
+  if (!user || !document) return false;
+  if (user.isGM) return true;
+  try {
+    if (typeof document.canUserModify === "function") return document.canUserModify(user, "update") === true;
+    return document.testUserPermission?.(user, "OWNER") === true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function canUserOperateCombatant(combatant, user = game.user) {
+  if (!userOwnsCombatant(user, combatant) || !userCanUpdateDocument(user, combatant?.actor)) return false;
+  try {
+    return typeof combatant?.canUserModify !== "function"
+      || combatant.canUserModify(user, "update") === true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 function canUserEndTurn(combatant, user = game.user, combat = game.combat) {
@@ -56,6 +83,88 @@ function canUserEndTurn(combatant, user = game.user, combat = game.combat) {
     && combat.combatant?.id === combatant.id
     && (user?.isGM || userOwnsCombatant(user, combatant))
   );
+}
+
+
+function facingEndTurnStatus(combatant) {
+  const state = combatantState(combatant);
+  return state ? facingReconciliation(state, { includePreview: true }) : null;
+}
+
+function facingDisplayStatus(combatant) {
+  const state = combatantState(combatant);
+  if (!state) return null;
+  const committed = facingReconciliation(state);
+  const projected = facingReconciliation(state, { includePreview: true });
+  return Object.freeze({
+    ...projected,
+    committedUsedDegrees: committed.usedDegrees,
+    projectedUsedDegrees: projected.usedDegrees,
+    previewDeltaDegrees: Math.max(0, projected.usedDegrees - committed.usedDegrees),
+    committedHeading: committed.committedHeading,
+    previewHeading: committed.previewHeading
+  });
+}
+
+async function confirmFacingSettlement(combatant) {
+  const status = facingEndTurnStatus(combatant);
+  if (!status || status.apRequired === 0) return true;
+  if (status.impossible) {
+    throw new Error(`${combatant.name} has Maneuverability 0 and cannot cover ${status.uncoveredDegrees}° of additional committed facing. Undo facing or use an effect that grants maneuver allowance.`);
+  }
+  if (!status.affordable) {
+    throw new Error(`${combatant.name} used ${status.usedDegrees}° of committed facing; ${status.apRequired} AP are required at End Turn, but only ${status.apRemaining} AP remain.`);
+  }
+
+  const DialogV2 = foundry?.applications?.api?.DialogV2;
+  const esc = foundry.utils.escapeHTML;
+  const content = `<div class="arkflight-facing-reconcile">
+    <p><strong>${esc(combatant.name)}</strong> committed <strong>${status.usedDegrees}°</strong> of turning this turn.</p>
+    <p>Free: <strong>${status.freeDegrees}°</strong> · Current allowance: <strong>${status.allowanceDegrees}°</strong> · Uncovered: <strong>${status.uncoveredDegrees}°</strong></p>
+    <p>Spend <strong>${status.apRequired} AP</strong> to cover the additional facing and end the turn?</p>
+  </div>`;
+
+  if (DialogV2?.wait) {
+    const choice = await DialogV2.wait({
+      window: { title: `Facing Cost — ${combatant.name}` },
+      content,
+      buttons: [
+        { action: "spend", label: `Spend ${status.apRequired} AP & End Turn`, icon: "fa-solid fa-check", callback: () => true },
+        { action: "return", label: "Return to Turn", icon: "fa-solid fa-rotate-left", default: true, callback: () => false }
+      ],
+      close: () => false
+    });
+    return choice === true;
+  }
+
+  if (globalThis.Dialog) {
+    return new Promise((resolve) => {
+      new Dialog({
+        title: `Facing Cost — ${combatant.name}`,
+        content,
+        buttons: {
+          spend: { label: `Spend ${status.apRequired} AP & End Turn`, callback: () => resolve(true) },
+          return: { label: "Return to Turn", callback: () => resolve(false) }
+        },
+        default: "return",
+        close: () => resolve(false)
+      }).render(true);
+    });
+  }
+
+  return false;
+}
+
+async function applyFacingSettlement(combatant) {
+  const current = combatantState(combatant);
+  if (!current) throw new Error("Arkflight combat state is unavailable.");
+  const result = settleFacingCost(current);
+  if (result.state !== current) await updateCombatantState(combatant, result.state);
+  if (result.apSpent > 0) {
+    ui.notifications?.info(`${combatant.name}: ${result.before.usedDegrees}° committed turning; ${result.apSpent} AP spent for additional facing.`);
+  }
+  Hooks.callAll("arkflightFacingReconciled", { combatant, ...result });
+  return result;
 }
 
 async function handleCombatSocket(payload = {}) {
@@ -71,8 +180,10 @@ async function handleCombatSocket(payload = {}) {
   const requester = game.users?.get?.(payload.userId) ?? null;
   if (!requester || !requester.active || !canUserEndTurn(combatant, requester, combat)) return;
 
-  try { await combat.nextTurn(); }
-  catch (error) {
+  try {
+    await applyFacingSettlement(combatant);
+    await combat.nextTurn();
+  } catch (error) {
     console.error("Arkflight | Player End Turn request failed", error);
   }
 }
@@ -84,7 +195,13 @@ async function endTurnForUser(reference = null) {
   if (!isArkflightCombatant(combatant)) throw new Error("Choose an Arkflight ship Combatant.");
   if (!canUserEndTurn(combatant)) throw new Error("You may only end the active turn for a ship you own.");
 
-  if (game.user?.isGM) return combat.nextTurn();
+  const confirmed = await confirmFacingSettlement(combatant);
+  if (!confirmed) return false;
+
+  if (game.user?.isGM) {
+    await applyFacingSettlement(combatant);
+    return combat.nextTurn();
+  }
 
   const primary = activePrimaryGM();
   if (!primary) throw new Error("An active GM is required to advance Foundry combat.");
@@ -137,8 +254,12 @@ function shipToken(shipActor) {
 }
 
 function battlewatchActor(shipActor) {
-  const actorId = shipPayload(shipActor)?.crew?.stations?.battlewatch ?? null;
-  return actorId ? game.actors?.get(actorId) ?? null : null;
+  const reference = shipPayload(shipActor)?.crew?.stations?.battlewatch ?? null;
+  if (!reference) return null;
+  if (reference?.documentName === "Actor") return reference;
+  return game.actors?.get?.(reference)
+    ?? game.actors?.contents?.find?.((actor) => actor.uuid === reference || actor.name === reference)
+    ?? null;
 }
 
 function perceptionModifier(actor) {
@@ -157,6 +278,155 @@ function tokenCenter(combatant) {
   const token = combatant?.token;
   const size = Number(canvas?.grid?.size ?? canvas?.scene?.grid?.size ?? 100) || 100;
   return { x: Number(token?.x ?? 0) + Number(token?.width ?? 1) * size / 2, y: Number(token?.y ?? 0) + Number(token?.height ?? 1) * size / 2 };
+}
+
+
+function isArkflightHelmMovement(token) {
+  return Boolean(token?.id && ACTIVE_HELM_MOVES.has(token.id));
+}
+
+function helmGridGeometry(combatant) {
+  const token = combatant?.token ?? null;
+  const state = combatantState(combatant);
+  const grid = canvas?.grid ?? null;
+  if (!token || !state || !grid?.isHexagonal) {
+    return Object.freeze({ ok: false, reason: "Arkflight Helm movement requires an active hex grid.", forward: [], reverse: [] });
+  }
+
+  const origin = tokenCenter(combatant);
+  let offsets = [];
+  try { offsets = grid.getAdjacentOffsets(origin) ?? []; }
+  catch (_error) { offsets = []; }
+  const candidates = offsets.map((offset) => {
+    const center = grid.getCenterPoint(offset);
+    return Object.freeze({ offset, center: Object.freeze({ x: Number(center.x), y: Number(center.y) }) });
+  });
+  if (!candidates.length) {
+    return Object.freeze({ ok: false, reason: "Foundry could not resolve adjacent hexes for this token.", forward: [], reverse: [] });
+  }
+
+  const ranked = shipHelmDirections(origin, candidates, state.mobility?.heading ?? token.rotation ?? 0);
+  const withTokenPosition = (entry) => Object.freeze({
+    id: entry.id,
+    side: entry.side,
+    bearing: entry.bearing,
+    x: Number(token.x ?? 0) + (entry.center.x - origin.x),
+    y: Number(token.y ?? 0) + (entry.center.y - origin.y)
+  });
+  return Object.freeze({
+    ok: true,
+    reason: null,
+    heading: ranked.heading,
+    forward: Object.freeze(ranked.forward.map(withTokenPosition)),
+    reverse: Object.freeze(ranked.reverse.map(withTokenPosition))
+  });
+}
+
+function helmControlState(combatant) {
+  const raw = combatantState(combatant);
+  if (!raw) return null;
+  const state = applyFreeHelmAllowance(raw);
+  const geometry = helmGridGeometry(combatant);
+  const movement = state.mobility?.movement ?? {};
+  const movementRemaining = Math.max(0, Math.trunc(Number(movement.allowance) || 0) - Math.trunc(Number(movement.used) || 0));
+  const ap = Math.max(0, Math.trunc(Number(state.economy?.ap?.value) || 0));
+  const moored = Boolean(game.arkflight?.combatEngagement?.isMoored?.(combatant));
+  const facing = facingDisplayStatus(combatant);
+  return Object.freeze({
+    geometry,
+    heading: Number(state.mobility?.heading ?? 0),
+    committedHeading: Number(state.mobility?.committedHeading ?? state.mobility?.heading ?? 0),
+    movementRemaining,
+    speed: Math.max(0, Math.trunc(Number(state.mobility?.speed) || 0)),
+    ap,
+    moored,
+    canOperate: canUserOperateCombatant(combatant),
+    forwardCostAP: movementRemaining > 0 ? 0 : 1,
+    canForward: geometry.ok && !moored && (movementRemaining > 0 || ap > 0),
+    reverseCostAP: 1,
+    canReverse: geometry.ok && !moored && ap > 0,
+    facing
+  });
+}
+
+async function helmMove(direction, reference = null) {
+  const combatant = await requireOwnedCombatant(reference);
+  if (game.combat?.combatant?.id !== combatant.id) throw new Error("Only the active Arkflight ship may use Helm movement.");
+  if (game.arkflight?.combatEngagement?.isMoored?.(combatant)) {
+    throw new Error(`${combatant.name} is Moored. Use Break Grapple first.`);
+  }
+
+  const geometry = helmGridGeometry(combatant);
+  if (!geometry.ok) throw new Error(geometry.reason);
+  const options = direction.startsWith("reverse") ? geometry.reverse : geometry.forward;
+  const destination = options.find((entry) => entry.id === direction)
+    ?? (options.length === 1 && ["forward", "reverse"].includes(direction) ? options[0] : null);
+  if (!destination) {
+    const available = options.map((entry) => entry.id).join(", ");
+    throw new Error(`That Helm direction is unavailable at ${geometry.heading}°. Available: ${available || "none"}.`);
+  }
+
+  const token = combatant.token;
+  if (!token?.move) throw new Error("Foundry token movement API is unavailable.");
+  let next = applyFreeHelmAllowance(combatantState(combatant));
+  let apSpent = 0;
+  let movementSpent = 0;
+  const reverse = direction.startsWith("reverse");
+
+  if (reverse) {
+    next = spendPoints(next, "ap", 1);
+    next = Object.freeze({
+      ...next,
+      mobility: Object.freeze({
+        ...next.mobility,
+        specialMovementAP: Math.max(0, Math.trunc(Number(next.mobility?.specialMovementAP) || 0)) + 1
+      })
+    });
+    apSpent = 1;
+    next = commitFacing(next, next.mobility?.heading, "reverse-thrust");
+  } else {
+    const movement = next.mobility?.movement ?? {};
+    const remaining = Math.max(0, Math.trunc(Number(movement.allowance) || 0) - Math.trunc(Number(movement.used) || 0));
+    if (remaining <= 0) {
+      next = purchaseMovement(next);
+      apSpent = 1;
+    }
+    next = commitFacing(next, next.mobility?.heading, "move");
+    next = recordMovement(next, 1);
+    movementSpent = 1;
+  }
+
+  let completed = false;
+  ACTIVE_HELM_MOVES.add(token.id);
+  try {
+    // Let Foundry generate and validate its own movement ID. Arkflight tracks
+    // HUD-authorized movement transiently by Token ID instead of overloading
+    // Foundry's internal movement identifier.
+    completed = await token.move(
+      { x: destination.x, y: destination.y, snapped: true },
+      {
+        method: "hud",
+        autoRotate: false,
+        showRuler: false,
+        pan: false
+      }
+    );
+  } finally {
+    ACTIVE_HELM_MOVES.delete(token.id);
+  }
+  if (!completed) return Object.freeze({ moved: false, direction, combatant, state: combatantState(combatant) });
+
+  await updateCombatantState(combatant, next);
+  Hooks.callAll("arkflightHelmMoved", {
+    combatant,
+    direction,
+    destination,
+    reverse,
+    apSpent,
+    movementSpent,
+    state: next
+  });
+  return Object.freeze({ moved: true, direction, combatant, destination, reverse, apSpent, movementSpent, state: next });
 }
 
 function tokenDistanceHexes(source, target) {
@@ -196,8 +466,7 @@ function degreeOfSuccess(total, die, dc) {
 const DEGREE_LABEL = Object.freeze({ "-1": "Critical Failure", 0: "Failure", 1: "Success", 2: "Critical Success" });
 
 async function fireAtTarget(weaponKey, targetReference, attackerReference = null) {
-  requireGM();
-  const attacker = await requireCombatant(attackerReference);
+  const attacker = await requireOwnedCombatant(attackerReference);
   const target = findCombatant(targetReference);
   if (!target) throw new Error("Choose a target ship in the current combat.");
   const solution = targetSolution(attacker, target, weaponKey);
@@ -205,7 +474,8 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
   if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
   // Preflight AP and reload before any roll or target mutation. The resulting
   // state is persisted only once the attack and any damage roll resolve.
-  const next = fireWeapon(combatantState(attacker), weaponKey, game.combat?.round ?? 1);
+  const committed = commitFacing(combatantState(attacker), combatantState(attacker)?.mobility?.heading, "fire");
+  const next = fireWeapon(committed, weaponKey, game.combat?.round ?? 1);
 
   const battlewatch = battlewatchActor(attacker.actor);
   const perception = perceptionModifier(battlewatch);
@@ -228,13 +498,37 @@ async function fireAtTarget(weaponKey, targetReference, attackerReference = null
     damage = Object.freeze({ ...reduced, roll: damageRoll, before, after, type: profile.type ?? "damage" });
   }
   await updateCombatantState(attacker, next);
-  if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
   const esc = foundry.utils.escapeHTML;
   const damageLine = damage ? `<br><strong>Damage:</strong> ${damage.incoming} ${esc(damage.type)} − ${damage.absorbed} Hardness = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})` : "";
   await attack.toMessage({
+    user: game.user?.id ?? null,
     speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
     flavor: `<strong>${esc(attacker.name)} fires ${esc(solution.weapon.name)} at ${esc(target.name)}</strong><br>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)} · ${esc(solution.weaponState.mount ?? "fore")} ${esc(solution.arc.arcTemplate)} arc<br>Attack ${attack.total} vs AC ${ac}: <strong>${DEGREE_LABEL[degree]}</strong>${damageLine}`
   });
+  if (damage) {
+    await damage.roll.toMessage({
+      user: game.user?.id ?? null,
+      speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
+      flavor: `<strong>${esc(solution.weapon.name)} Damage — ${esc(target.name)}</strong><br>${damage.incoming} ${esc(damage.type)} − ${damage.absorbed} Hardness = <strong>${damage.hullDamage} Hull</strong>`,
+      flags: {
+        [MODULE_ID]: {
+          shipDamage: {
+            combatId: game.combat?.id ?? null,
+            attackerId: attacker.id,
+            targetId: target.id,
+            targetActorId: target.actor?.id ?? null,
+            targetName: target.name,
+            weaponName: solution.weapon.name,
+            degree,
+            systemThreat: solution.weapon.data?.systemThreat ?? "hull",
+            hullDamage: damage.hullDamage,
+            effectIds: [],
+            effectSnapshots: []
+          }
+        }
+      }
+    });
+  }
   return Object.freeze({ state: next, attack, attackBonus, ac, degree, solution, damage });
 }
 
@@ -322,14 +616,17 @@ function tokenTurnSnapshot(combatant, combat = game.combat) {
     turn: Number(combat?.turn ?? 0),
     x: Number(token.x ?? 0),
     y: Number(token.y ?? 0),
-    rotation: normalizeHexHeading(token.rotation ?? state.mobility?.heading ?? 0),
-    heading: normalizeHexHeading(state.mobility?.heading ?? token.rotation ?? 0),
+    rotation: normalizeShipHeading(token.rotation ?? state.mobility?.heading ?? 0),
+    heading: normalizeShipHeading(state.mobility?.heading ?? token.rotation ?? 0),
     movementUsed: Math.max(0, Math.trunc(Number(state.mobility?.movement?.used) || 0)),
     movementPurchases: Math.max(0, Math.trunc(Number(state.mobility?.movement?.purchases) || 0)),
     movementAllowance: Math.max(0, Math.trunc(Number(state.mobility?.movement?.allowance) || 0)),
-    maneuverUsed: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.used) || 0)),
+    committedHeading: normalizeShipHeading(state.mobility?.committedHeading ?? state.mobility?.heading ?? token.rotation ?? 0),
+    facingUsedDegrees: Math.max(0, Math.trunc(Number(state.mobility?.facing?.usedDegrees) || 0)),
+    facingCommits: Math.max(0, Math.trunc(Number(state.mobility?.facing?.commits) || 0)),
     maneuverPurchases: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.purchases) || 0)),
-    maneuverAllowance: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.allowance) || 0))
+    maneuverAllowance: Math.max(0, Math.trunc(Number(state.mobility?.maneuver?.allowance) || 0)),
+    specialMovementAP: Math.max(0, Math.trunc(Number(state.mobility?.specialMovementAP) || 0))
   });
 }
 
@@ -349,16 +646,20 @@ function movementUndoStatus(combatant) {
   const token = combatant?.token;
   const state = combatantState(combatant);
   if (!snapshot || !token || !state) return Object.freeze({ canUndoMove: false, canUndoFacing: false, canResetPosition: false });
-  const moved = Number(token.x ?? 0) !== snapshot.x || Number(token.y ?? 0) !== snapshot.y || Number(state.mobility?.movement?.used ?? 0) !== snapshot.movementUsed;
-  const turned = normalizeHexHeading(token.rotation ?? state.mobility?.heading ?? 0) !== snapshot.rotation
-    || normalizeHexHeading(state.mobility?.heading ?? 0) !== snapshot.heading
-    || Number(state.mobility?.maneuver?.used ?? 0) !== snapshot.maneuverUsed;
+  const moved = Number(token.x ?? 0) !== snapshot.x
+    || Number(token.y ?? 0) !== snapshot.y
+    || Number(state.mobility?.movement?.used ?? 0) !== snapshot.movementUsed
+    || Number(state.mobility?.specialMovementAP ?? 0) !== snapshot.specialMovementAP;
+  const turned = normalizeShipHeading(token.rotation ?? state.mobility?.heading ?? 0) !== snapshot.rotation
+    || normalizeShipHeading(state.mobility?.heading ?? 0) !== snapshot.heading
+    || normalizeShipHeading(state.mobility?.committedHeading ?? state.mobility?.heading ?? 0) !== snapshot.committedHeading
+    || Number(state.mobility?.facing?.usedDegrees ?? 0) !== snapshot.facingUsedDegrees;
   return Object.freeze({ canUndoMove: moved, canUndoFacing: turned, canResetPosition: moved || turned });
 }
 
 async function restoreTurnStart(combatant, { move = false, facing = false } = {}) {
-  requireGM();
   if (!combatant?.id) throw new Error("Choose an Arkflight ship Combatant.");
+  if (!canUserOperateCombatant(combatant)) throw new Error(`You must own ${combatant.name} to undo its movement or facing.`);
   const snapshot = TURN_START_SNAPSHOTS.get(combatant.id);
   if (!snapshot) throw new Error("No turn-start position has been recorded for this ship.");
   const token = combatant.token;
@@ -381,10 +682,13 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
   const moveRefund = move
     ? Math.max(0, Math.trunc(Number(movement.purchases) || 0) - snapshot.movementPurchases)
     : 0;
+  const specialMoveRefund = move
+    ? Math.max(0, Math.trunc(Number(mobility.specialMovementAP) || 0) - snapshot.specialMovementAP)
+    : 0;
   const facingRefund = facing
     ? Math.max(0, Math.trunc(Number(maneuver.purchases) || 0) - snapshot.maneuverPurchases)
     : 0;
-  const apRefund = moveRefund + facingRefund;
+  const apRefund = moveRefund + specialMoveRefund + facingRefund;
   const ap = state.economy?.ap ?? { value: 0, max: 0 };
   const apMax = Math.max(0, Math.trunc(Number(ap.max) || 0));
   const apValue = Math.max(0, Math.trunc(Number(ap.value) || 0));
@@ -402,6 +706,10 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
     mobility: Object.freeze({
       ...mobility,
       heading: facing ? snapshot.heading : mobility.heading,
+      committedHeading: facing ? snapshot.committedHeading : mobility.committedHeading,
+      facing: facing
+        ? Object.freeze({ usedDegrees: snapshot.facingUsedDegrees, commits: snapshot.facingCommits, lastReason: null })
+        : Object.freeze({ ...(mobility.facing ?? { usedDegrees: 0, commits: 0, lastReason: null }) }),
       movement: Object.freeze({
         ...movement,
         purchases: move ? snapshot.movementPurchases : Math.max(0, Math.trunc(Number(movement.purchases) || 0)),
@@ -410,13 +718,16 @@ async function restoreTurnStart(combatant, { move = false, facing = false } = {}
           : Math.max(0, Math.trunc(Number(movement.allowance) || 0)),
         used: move ? snapshot.movementUsed : Math.max(0, Math.trunc(Number(movement.used) || 0))
       }),
+      specialMovementAP: move
+        ? snapshot.specialMovementAP
+        : Math.max(0, Math.trunc(Number(mobility.specialMovementAP) || 0)),
       maneuver: Object.freeze({
         ...maneuver,
         purchases: facing ? snapshot.maneuverPurchases : Math.max(0, Math.trunc(Number(maneuver.purchases) || 0)),
         allowance: facing
           ? Math.max(snapshot.maneuverAllowance, Math.max(0, Math.trunc(Number(maneuver.allowance) || 0)) - facingRefund * Math.max(1, Math.trunc(Number(mobility.maneuverability) || 1)))
           : Math.max(0, Math.trunc(Number(maneuver.allowance) || 0)),
-        used: facing ? snapshot.maneuverUsed : Math.max(0, Math.trunc(Number(maneuver.used) || 0))
+        used: 0
       })
     })
   });
@@ -470,6 +781,14 @@ async function requireCombatant(reference = null) {
   return combatant;
 }
 
+async function requireOwnedCombatant(reference = null, user = game.user) {
+  const combatant = await requireCombatant(reference);
+  if (!canUserOperateCombatant(combatant, user)) {
+    throw new Error(`You must be an Owner of ${combatant.name} with update permission to change its ship combat state.`);
+  }
+  return combatant;
+}
+
 async function beginTurn(combatant, round) {
   if (!isArkflightCombatant(combatant)) return null;
   const current = combatantState(combatant) ?? freshState(combatant.actor, combatant.token);
@@ -502,6 +821,18 @@ Hooks.once("ready", () => {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
       return canUserEndTurn(combatant);
     },
+    facingStatus(reference = null) {
+      const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return facingDisplayStatus(combatant);
+    },
+    helmControls(reference = null) {
+      const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return combatant ? helmControlState(combatant) : null;
+    },
+    canOperate(reference = null, user = game.user) {
+      const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
+      return canUserOperateCombatant(combatant, user);
+    },
     async endTurn(reference = null) {
       return endTurnForUser(reference);
     },
@@ -523,39 +854,37 @@ Hooks.once("ready", () => {
       return Object.freeze({ combat, combatant, state: combatantState(combatant), initiative });
     },
     async buyMovement(reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, purchaseMovement(combatantState(combatant)));
     },
     async buyManeuver(reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, purchaseManeuver(combatantState(combatant)));
     },
     async spendAP(amount = 1, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, spendPoints(combatantState(combatant), "ap", amount));
     },
     async spendRP(amount = 1, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return updateCombatantState(combatant, spendPoints(combatantState(combatant), "rp", amount));
     },
-    async turn(steps = 1, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
+    async turn(increments = 1, reference = null) {
+      const combatant = await requireOwnedCombatant(reference);
       const state = combatantState(combatant);
-      const signedSteps = Math.trunc(Number(steps) || 0);
-      const targetHeading = normalizeHexHeading(state.mobility.heading + signedSteps * 60);
-      const next = recordFacingChange(state, Math.abs(signedSteps), targetHeading);
+      const signedIncrements = Math.trunc(Number(increments) || 0);
+      const targetHeading = normalizeShipHeading(state.mobility.heading + signedIncrements * 30);
+      const next = previewFacing(state, targetHeading);
       if (combatant.token) await combatant.token.update({ rotation: targetHeading }, { arkflightCombatFacing: true });
       return updateCombatantState(combatant, next);
     },
+    async helmMove(direction, reference = null) {
+      return helmMove(String(direction ?? "forward"), reference);
+    },
     async fireWeapon(weaponKey, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
-      const next = fireWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
+      const combatant = await requireOwnedCombatant(reference);
+      const state = combatantState(combatant);
+      const next = fireWeapon(commitFacing(state, state?.mobility?.heading, "fire"), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
     },
     targets(reference = null) {
@@ -568,11 +897,14 @@ Hooks.once("ready", () => {
       return targetSolution(attacker, target, weaponKey);
     },
     fireAtTarget,
-    async workTheGuns(weaponKey, reference = null) {
-      requireGM();
-      const combatant = await requireCombatant(reference);
-      const next = workTheGuns(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
+    async reloadWeapon(weaponKey, reference = null) {
+      const combatant = await requireOwnedCombatant(reference);
+      const next = reloadWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
+    },
+    async workTheGuns(weaponKey, reference = null) {
+      // Legacy API alias. Player-facing Work the Guns is the Battlewatch station action.
+      return this.reloadWeapon(weaponKey, reference);
     },
     reloadRemaining(weaponKey, reference = null) {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
@@ -584,15 +916,15 @@ Hooks.once("ready", () => {
       return movementUndoStatus(combatant);
     },
     async undoMove(reference = null) {
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return restoreTurnStart(combatant, { move: true, facing: false });
     },
     async undoFacing(reference = null) {
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return restoreTurnStart(combatant, { move: false, facing: true });
     },
     async resetTurnPosition(reference = null) {
-      const combatant = await requireCombatant(reference);
+      const combatant = await requireOwnedCombatant(reference);
       return restoreTurnStart(combatant, { move: true, facing: true });
     },
     async nextRound() {
@@ -613,6 +945,21 @@ Hooks.once("ready", () => {
   if (isArkflightCombatant(current)) ensureTurnStartSnapshot(current, game.combat);
 });
 
+
+Hooks.on("preUpdateCombat", (combat, changes) => {
+  if (!(Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn"))) return;
+  const combatant = combat?.combatant ?? null;
+  if (!isArkflightCombatant(combatant)) return;
+  const status = facingEndTurnStatus(combatant);
+  if (!status || status.apRequired === 0) return;
+  if (status.impossible) {
+    ui.notifications?.warn(`${combatant.name}: End Turn blocked. Maneuverability 0 cannot cover the additional facing used this turn.`);
+    return false;
+  }
+  ui.notifications?.warn(`${combatant.name}: End Turn blocked until ${status.apRequired} AP facing cost is reconciled through the Arkflight End Turn control.`);
+  return false;
+});
+
 Hooks.on("updateCombat", async (combat, changes) => {
   if (!game.user?.isGM) return;
   if (!(Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn"))) return;
@@ -626,29 +973,31 @@ Hooks.on("preMoveToken", (token, movement) => {
   const combat = game.combat;
   const combatant = combat?.combatants?.find((entry) => entry.tokenId === token.id && isArkflightCombatant(entry));
   if (!combatant || combat.combatant?.id !== combatant.id) return;
-  movement.autoRotate = false;
-  const state = combatantState(combatant);
-  if (!state) return;
-  const pending = Math.max(0, Math.trunc(Number(movement.pending?.spaces) || 0));
-  const history = Math.max(0, Math.trunc(Number(movement.history?.spaces) || 0));
-  const planned = Math.max(state.mobility.movement.used + pending, history);
-  if (planned <= state.mobility.movement.allowance) return;
-  ui.notifications?.warn(`Movement blocked: ${combatant.name} has ${Math.max(0, state.mobility.movement.allowance - state.mobility.movement.used)} hex${Math.max(0, state.mobility.movement.allowance - state.mobility.movement.used) === 1 ? "" : "es"} remaining. Spend 1 AP on Move for another ${state.mobility.speed}.`);
+
+  if (game.arkflight?.combatEngagement?.isMoored?.(combatant)) {
+    ui.notifications?.warn(`Movement blocked: ${combatant.name} is Moored. Use Break Grapple first.`);
+    return false;
+  }
+
+  if (isArkflightHelmMovement(token)) {
+    movement.autoRotate = false;
+    return;
+  }
+
+  if (game.user?.isGM) {
+    // Deliberate GM drag/keyboard movement is an administrative override. The
+    // Helm HUD remains the rules-authoritative way to pilot ships.
+    return;
+  }
+
+  ui.notifications?.warn(`${combatant.name}: use the Arkflight Helm controls to move the ship.`);
   return false;
 });
 
-Hooks.on("moveToken", async (token, movement) => {
-  if (!game.user?.isGM) return;
-  const combat = game.combat;
-  const combatant = combat?.combatants?.find((entry) => entry.tokenId === token.id && isArkflightCombatant(entry));
-  if (!combatant || combat.combatant?.id !== combatant.id) return;
-  const state = combatantState(combatant);
-  if (!state) return;
-  const total = Math.max(0, Math.trunc(Number(movement.history?.spaces) || 0));
-  const delta = Math.max(0, total - state.mobility.movement.used);
-  if (!delta) return;
-  try { await updateCombatantState(combatant, recordMovement(state, delta)); }
-  catch (error) { console.warn("Arkflight | Could not record ship movement", error); }
+Hooks.on("moveToken", (token, _movement) => {
+  // Arkflight Helm movement updates ship-combat state explicitly after Foundry
+  // confirms the move. GM manual movement is an administrative override.
+  if (isArkflightHelmMovement(token)) return;
 });
 
 Hooks.on("preUpdateToken", (token, changes, options) => {
@@ -656,18 +1005,20 @@ Hooks.on("preUpdateToken", (token, changes, options) => {
   const combat = game.combat;
   const combatant = combat?.combatants?.find((entry) => entry.tokenId === token.id && isArkflightCombatant(entry));
   if (!combatant || combat.combatant?.id !== combatant.id) return;
+  if (game.arkflight?.combatEngagement?.isMoored?.(combatant)) {
+    ui.notifications?.warn(`Facing change blocked: ${combatant.name} is Moored. Use Break Grapple first.`);
+    return false;
+  }
   const state = combatantState(combatant);
   if (!state) return;
   const requested = Number(changes.rotation);
-  const snapped = normalizeHexHeading(requested);
+  const snapped = normalizeShipHeading(requested);
   if (((requested % 360) + 360) % 360 !== snapped) {
-    ui.notifications?.warn("Arkflight ship facing must use 60° hex headings during combat.");
+    ui.notifications?.warn("Arkflight ship heading must use 30° increments during combat.");
     return false;
   }
-  const steps = headingStepDistance(state.mobility.heading, snapped);
-  if (state.mobility.maneuver.used + steps <= state.mobility.maneuver.allowance) return;
-  ui.notifications?.warn(`Facing change blocked: spend 1 AP on Maneuver for ${state.mobility.maneuverability} facing step${state.mobility.maneuverability === 1 ? "" : "s"}.`);
-  return false;
+  // Rotation is preview-only. Gameplay events commit the current heading.
+  return;
 });
 
 Hooks.on("updateToken", async (token, changes, options) => {
@@ -677,11 +1028,10 @@ Hooks.on("updateToken", async (token, changes, options) => {
   if (!combatant || combat.combatant?.id !== combatant.id) return;
   const state = combatantState(combatant);
   if (!state) return;
-  const heading = normalizeHexHeading(changes.rotation);
-  const steps = headingStepDistance(state.mobility.heading, heading);
-  if (!steps) return;
-  try { await updateCombatantState(combatant, recordFacingChange(state, steps, heading)); }
-  catch (error) { console.warn("Arkflight | Could not record ship facing", error); }
+  const heading = normalizeShipHeading(changes.rotation);
+  if (heading === Number(state.mobility?.heading ?? 0)) return;
+  try { await updateCombatantState(combatant, previewFacing(state, heading)); }
+  catch (error) { console.warn("Arkflight | Could not preview ship facing", error); }
 });
 
 

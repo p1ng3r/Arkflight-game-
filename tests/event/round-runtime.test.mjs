@@ -10,8 +10,8 @@ const baseEvent = {
     title: "The Wreck's Ember Wake",
     outcomes: {
       "mixed-success": {
-        narrative: "The ship clears the lane, but burning wreckage forces the vessel harder and adds 1 Strain with Hull threatened.",
-        effects: [{ kind: "gain-strain", area: "hull", value: 1 }]
+        narrative: "The ship clears the lane, but burning wreckage forces the vessel harder and adds 1 ship-wide Strain.",
+        effects: [{ kind: "gain-strain", value: 1 }]
       }
     }
   }]
@@ -66,7 +66,7 @@ test("Mixed Success keeps Momentum, records history, and previews aggregate Even
   assert.equal(next.encounter.momentum, 0);
   assert.equal(Object.hasOwn(next.encounter, "pressure"), false);
   assert.deepEqual(next.pendingShipEffects.map(({ source: _source, ...effect }) => effect), [
-    { kind: "gain-strain", area: "hull", value: 1 }
+    { kind: "gain-strain", value: 1 }
   ]);
   assert.equal(next.consequenceApplied, true);
   assert.equal(next.eventHistory.length, 1);

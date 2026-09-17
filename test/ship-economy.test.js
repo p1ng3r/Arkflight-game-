@@ -7,6 +7,7 @@ import {
   dailySupplyConsumption,
   salvageCargoUsage,
   supplyCargoUsage,
+  supplyGoldValue,
   zeroSupplyDayConsequences
 } from "../src/ship/ship-economy.js";
 
@@ -26,6 +27,14 @@ test("Supplies and Salvage Parts use the locked ten-to-one Cargo conversion", ()
   assert.equal(supplyCargoUsage(25), 2.5);
   assert.equal(salvageCargoUsage(10), 1);
   assert.equal(salvageCargoUsage(3), 0.3);
+});
+
+test("Supplies have the locked PF2e-facing base value of 1 gp each", () => {
+  assert.equal(SHIP_ECONOMY.supplyGpValue, 1);
+  assert.equal(supplyGoldValue(0), 0);
+  assert.equal(supplyGoldValue(1), 1);
+  assert.equal(supplyGoldValue(10), 10);
+  assert.equal(supplyGoldValue(25), 25);
 });
 
 test("uninstalled Mods use slot cost and weapons use authored Cargo value", () => {
@@ -66,8 +75,8 @@ test("installed hardware is not counted by Cargo calculator", () => {
   assert.equal(usage.used, 0);
 });
 
-test("zero Supplies costs one Morale each day and one Strain every second day", () => {
-  assert.deepEqual(zeroSupplyDayConsequences(1), { days: 1, moraleLoss: 1, strainGain: 0 });
-  assert.deepEqual(zeroSupplyDayConsequences(2), { days: 2, moraleLoss: 2, strainGain: 1 });
-  assert.deepEqual(zeroSupplyDayConsequences(5), { days: 5, moraleLoss: 5, strainGain: 2 });
+test("zero Supplies costs twenty percent Morale each day and one Strain every second day", () => {
+  assert.deepEqual(zeroSupplyDayConsequences(1), { days: 1, moraleLoss: 20, strainGain: 0 });
+  assert.deepEqual(zeroSupplyDayConsequences(2), { days: 2, moraleLoss: 40, strainGain: 1 });
+  assert.deepEqual(zeroSupplyDayConsequences(5), { days: 5, moraleLoss: 100, strainGain: 2 });
 });

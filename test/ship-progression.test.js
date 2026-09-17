@@ -184,3 +184,42 @@ test("typed progression mod slot rejects nonmatching overflow", () => {
   assert.equal(check.ok, false);
   assert.match(check.errors.join(" "), /typed Ship Mod slots/);
 });
+
+
+test("talent upgrade chains apply only the strongest owned effect", () => {
+  const hullLine = sloop({ progression: { level: 14, talentIds: ["toughness", "greater-frame", "iron-legend"], arkcraftUpgrades: {} } });
+  const hullDerived = deriveShip(hullLine, SHIP_CATALOGS);
+  assert.equal(hullDerived.stats.hullIntegrity, Math.round(SHIP_CATALOGS.hulls.sloop.data.baseStats.hullIntegrity * 1.30));
+
+  const voyageLine = sloop({ progression: { level: 10, talentIds: ["voyage-trained", "specialist-voyage-systems"], arkcraftUpgrades: {} } });
+  const voyageDerived = deriveShip(voyageLine, SHIP_CATALOGS);
+  assert.equal(voyageDerived.stats.pillarBonuses.voyage, 2);
+});
+
+test("progression cannot grant more than one permanent bonus AP or RP", () => {
+  const ship = sloop({ progression: { level: 20, talentIds: ["expanded-action-economy", "expanded-reaction-economy", "legendary-tempo"], arkcraftUpgrades: {} } });
+  const profile = hullCombatProfile(ship);
+  const base = hullCombatProfile(sloop({ progression: { level: 20, talentIds: [], arkcraftUpgrades: {} } }));
+  assert.equal(profile.ap, base.ap + 1);
+  assert.equal(profile.rp, base.rp + 1);
+});
+
+
+test("level-5 specializations apply their locked derived identities", () => {
+  const trader = sloop({ progression: { level: 5, specializationId: "trader", talentIds: [], arkcraftUpgrades: {} } });
+  const voyager = sloop({ progression: { level: 5, specializationId: "voyager", talentIds: [], arkcraftUpgrades: {} } });
+  const explorer = sloop({ progression: { level: 5, specializationId: "explorer", talentIds: [], arkcraftUpgrades: {} } });
+  const expedition = sloop({ progression: { level: 5, specializationId: "expedition-ship", talentIds: [], arkcraftUpgrades: {} } });
+
+  const traderDerived = deriveShip(trader, SHIP_CATALOGS);
+  const voyagerDerived = deriveShip(voyager, SHIP_CATALOGS);
+  const explorerDerived = deriveShip(explorer, SHIP_CATALOGS);
+  const expeditionDerived = deriveShip(expedition, SHIP_CATALOGS);
+
+  assert.equal(traderDerived.stats.cargoCapacity, Math.floor(SHIP_CATALOGS.hulls.sloop.data.baseStats.cargoCapacity * 1.5));
+  assert.ok(traderDerived.capabilities.includes("established-routes"));
+  assert.equal(voyagerDerived.stats.supplyCapacity, Math.floor(SHIP_CATALOGS.hulls.sloop.data.baseStats.supplyCapacity * 1.5));
+  assert.equal(explorerDerived.stats.modSlotBonuses.exploration, 1);
+  assert.equal(expeditionDerived.stats.modSlotBonuses.expedition, 1);
+  assert.ok(expeditionDerived.capabilities.includes("we-brought-one"));
+});

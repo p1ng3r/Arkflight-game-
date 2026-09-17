@@ -2,6 +2,7 @@ import {
   activeStationEffects,
   applyHardnessToDamage,
   consumeStationEffects,
+  commitFacing,
   degreeOfSuccess,
   fireWeapon,
   reduceWeaponReload,
@@ -13,15 +14,15 @@ import {
 } from "../combat/index.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
+import { resolveShipStrainGain } from "./ship-strain-runtime.js";
 
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
+const COMBAT_SOCKET = `module.${MODULE_ID}`;
+const TARGET_EFFECT_REQUEST = "attack-target-effect-consume-request";
+const TARGET_EFFECT_RESULT = "attack-target-effect-consume-result";
 const ENERGY_TYPES = new Set(["fire", "cold", "electricity", "acid", "sonic", "force"]);
 const DEGREE_LABEL = Object.freeze({ "-1": "Critical Failure", 0: "Failure", 1: "Success", 2: "Critical Success" });
-
-function requireGM() {
-  if (!game.user?.isGM) throw new Error("Only the GM may resolve Arkflight ship combat attacks.");
-}
 
 function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
@@ -29,6 +30,40 @@ function shipPayload(actor) {
 
 function shipLevel(actor) {
   return Math.max(1, Math.min(20, Math.trunc(Number(shipPayload(actor)?.progression?.level) || 1)));
+}
+
+function activePrimaryGM() {
+  return [...(game.users ?? [])]
+    .filter((user) => user?.active && user?.isGM)
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)))[0] ?? null;
+}
+
+function userOwnsActor(user, actor) {
+  if (!user || !actor) return false;
+  if (user.isGM) return true;
+  try { return actor.testUserPermission?.(user, "OWNER") === true; }
+  catch (_error) { return false; }
+}
+
+function userCanUpdateDocument(user, document) {
+  if (!user || !document) return false;
+  if (user.isGM) return true;
+  try {
+    if (typeof document.canUserModify === "function") return document.canUserModify(user, "update") === true;
+    return document.testUserPermission?.(user, "OWNER") === true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function userCanResolveShipState(user, combatant) {
+  if (!combatant?.actor || !userOwnsActor(user, combatant.actor) || !userCanUpdateDocument(user, combatant.actor)) return false;
+  try {
+    return typeof combatant?.canUserModify !== "function"
+      || combatant.canUserModify(user, "update") === true;
+  } catch (_error) {
+    return false;
+  }
 }
 
 function resolveCombatant(base, reference) {
@@ -42,8 +77,12 @@ function resolveCombatant(base, reference) {
 }
 
 function battlewatchActor(shipActor) {
-  const actorId = shipPayload(shipActor)?.crew?.stations?.battlewatch ?? null;
-  return actorId ? game.actors?.get(actorId) ?? null : null;
+  const reference = shipPayload(shipActor)?.crew?.stations?.battlewatch ?? null;
+  if (!reference) return null;
+  if (reference?.documentName === "Actor") return reference;
+  return game.actors?.get?.(reference)
+    ?? game.actors?.contents?.find?.((actor) => actor.uuid === reference || actor.name === reference)
+    ?? null;
 }
 
 function perceptionModifier(actor) {
@@ -199,11 +238,25 @@ function damageDefensePlan(targetState, targetLevel, solution, targetActor) {
   });
 }
 
-async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference = null) {
-  requireGM();
+async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference = null, {
+  requesterUserId = game.user?.id ?? null
+} = {}) {
   const attacker = attackerReference ? resolveCombatant(base, attackerReference) : game.combat?.combatant ?? null;
   const target = resolveCombatant(base, targetReference);
   if (!attacker || !target) throw new Error("Choose attacker and target Arkflight ship combatants.");
+
+  const requester = game.users?.get?.(requesterUserId) ?? game.user;
+  const battlewatch = battlewatchActor(attacker.actor);
+  if (!requester?.isGM) {
+    if (!userOwnsActor(requester, attacker.actor)) throw new Error("You must own the firing ship.");
+    if (!battlewatch || !userOwnsActor(requester, battlewatch)) throw new Error("Only the assigned Battlewatch owner may fire this ship's weapons.");
+  }
+  if (!userCanResolveShipState(game.user, attacker)) {
+    throw new Error(`You do not have permission to update ${attacker.name}'s firing state.`);
+  }
+
+  const canMutateTargetLocally = userCanResolveShipState(game.user, target);
+  const primaryGM = canMutateTargetLocally ? null : activePrimaryGM();
 
   const attackerLevel = shipLevel(attacker.actor);
   const targetLevel = shipLevel(target.actor);
@@ -215,11 +268,14 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   if (!solution.arc.legal) throw new Error(`${solution.weapon.name}: target is outside the ${solution.weaponState.mount ?? "fore"} ${solution.arc.arcTemplate} firing arc.`);
 
   const round = game.combat?.round ?? 1;
-  let attackerAfter = fireWeapon(attackerBefore, weaponKey, round);
-  const offense = attackEffectPlan(attackerBefore, target, solution, attackerLevel);
+  const attackerCommitted = commitFacing(attackerBefore, attackerBefore?.mobility?.heading, "fire");
+  let attackerAfter = fireWeapon(attackerCommitted, weaponKey, round);
+  const offense = attackEffectPlan(attackerCommitted, target, solution, attackerLevel);
   const attackDefense = attackDefensePlan(targetAttackState, targetLevel);
+  if (attackDefense.consumed.length && !canMutateTargetLocally && !primaryGM) {
+    throw new Error("An active GM is required to consume this target's attack-defense effect.");
+  }
 
-  const battlewatch = battlewatchActor(attacker.actor);
   const perception = perceptionModifier(battlewatch);
   if (perception == null) throw new Error(`${attacker.name} needs an assigned Battlewatch officer with PF2e Perception.`);
   const attackerDerived = deriveShip(shipPayload(attacker.actor), SHIP_CATALOGS);
@@ -242,7 +298,8 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     attackerAfter = reduceWeaponReload(attackerAfter, weaponKey, round, 1);
   }
 
-  let targetAfter = consumeStationEffects(targetAttackState, attackDefense.consumed);
+  const targetAttackEffectIds = [...attackDefense.consumed];
+  let targetAfter = targetAttackState;
   let damageDefense = Object.freeze({ wardable: false, wardMitigation: 0, braceMitigation: 0, wardConsumed: [], emergencyWardConsumed: [], braceConsumed: [] });
   let damage = null;
 
@@ -257,8 +314,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     await game.arkflight?.shipCombatReactions?.promptDamage?.({ attacker, target, solution, incoming: poweredIncoming, hardness: hardnessEffective });
 
     const targetLatest = base.state(target) ?? targetAttackState;
-    targetAfter = consumeStationEffects(targetLatest, attackDefense.consumed);
-    damageDefense = damageDefensePlan(targetAfter, targetLevel, solution, target.actor);
+    const damageCalculationState = consumeStationEffects(targetLatest, attackDefense.consumed);
+    targetAfter = targetLatest;
+    damageDefense = damageDefensePlan(damageCalculationState, targetLevel, solution, target.actor);
 
     const wardAbsorbed = Math.min(poweredIncoming, damageDefense.wardMitigation);
     const afterWard = Math.max(0, poweredIncoming - wardAbsorbed);
@@ -284,13 +342,30 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       after,
       type: profile.type ?? "damage"
     });
-    if (wardAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed]);
-    if (braceAbsorbed > 0) targetAfter = consumeStationEffects(targetAfter, damageDefense.braceConsumed);
+    // Ward and Brace effects are not consumed yet. They are recorded on the
+    // damage ChatMessage and consumed only when an authorized user applies it.
   }
 
   await attacker.update({ [STATE_PATH]: attackerAfter });
-  if (targetAfter !== targetAttackState) await target.update({ [STATE_PATH]: targetAfter });
-  if (damage) await target.actor.update({ [`flags.${MODULE_ID}.ship.resources.hull.value`]: damage.after });
+
+  let targetEffectMutationRequested = false;
+  if (targetAttackEffectIds.length && canMutateTargetLocally) {
+    const latestTargetState = base.state(target) ?? targetAfter ?? targetAttackState;
+    const nextTargetState = consumeStationEffects(latestTargetState, targetAttackEffectIds);
+    if (nextTargetState !== latestTargetState) await target.update({ [STATE_PATH]: nextTargetState });
+    targetAfter = nextTargetState;
+  } else if (targetAttackEffectIds.length) {
+    if (!primaryGM) throw new Error("An active GM is required to consume this target's attack-defense effect.");
+    targetEffectMutationRequested = true;
+    game.socket?.emit?.(COMBAT_SOCKET, {
+      type: TARGET_EFFECT_REQUEST,
+      userId: requester?.id ?? requesterUserId,
+      combatId: game.combat?.id ?? null,
+      attackerId: attacker.id,
+      targetId: target.id,
+      effectIds: targetAttackEffectIds
+    });
+  }
 
   const defense = Object.freeze({ ...attackDefense, ...damageDefense });
   const esc = foundry.utils.escapeHTML;
@@ -300,19 +375,66 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   if (attackDefense.acBonus) modifiers.push(`+${attackDefense.acBonus} target AC`);
   if (offense.hardnessReduction) modifiers.push(`−${offense.hardnessReduction} target Hardness`);
   if (solution.arc.vectorTolerance) modifiers.push(`+${solution.arc.vectorTolerance}° arc tolerance`);
-  const stationLine = modifiers.length ? `<br><strong>Station effects:</strong> ${modifiers.join(" · ")}` : "";
-  const damageLine = damage
-    ? `<br><strong>Hull:</strong> ${damage.incoming} − ${damage.wardAbsorbed} Ward − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` (${damage.hardnessBase}→${damage.hardnessEffective})` : ""} − ${damage.braceAbsorbed} Brace = ${damage.hullDamage} Hull (${damage.before} → ${damage.after})`
+
+  const shotClass = degree === 2 ? "is-critical" : degree >= 1 ? "is-hit" : "is-miss";
+  const effectChips = [
+    ...modifiers,
+    ...(damage?.wardAbsorbed ? [`Ward −${damage.wardAbsorbed}`] : []),
+    ...(damage ? [`Hardness −${damage.absorbed}`] : []),
+    ...(damage?.braceAbsorbed ? [`Brace −${damage.braceAbsorbed}`] : [])
+  ];
+  const effectLine = effectChips.length
+    ? `<div class="arkflight-chat-shot-effects">${effectChips.map((entry) => `<span class="arkflight-chat-chip">${esc(entry)}</span>`).join("")}</div>`
     : "";
-  await attack.toMessage({
-    speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
-    flavor: `<strong>${esc(attacker.name)} fires ${esc(solution.weapon.name)} at ${esc(target.name)}</strong><br>${solution.distanceHexes.toFixed(1)} hex · ${esc(solution.range.label)} · ${esc(solution.weaponState.mount ?? "fore")} ${esc(solution.arc.arcTemplate)} arc<br>Attack ${attack.total} vs AC ${ac}: <strong>${DEGREE_LABEL[degree]}</strong>${stationLine}${damageLine}`
-  });
+  const damageLine = damage
+    ? `<div class="arkflight-chat-shot-damage"><span>${damage.incoming} incoming → ${damage.hullDamage} after mitigation</span><strong class="arkflight-chat-damage-final">${damage.hullDamage} Hull</strong><span>${damage.before} → ${damage.after}</span></div>`
+    : "";
+  const compactFlavor = `<div class="arkflight-chat-card arkflight-attack-chat ${shotClass}">
+    <div class="arkflight-chat-shot-head"><strong>${esc(solution.weapon.name)} → ${esc(target.name)}</strong><span>${esc(attacker.name)}</span></div>
+    <div class="arkflight-chat-shot-meta"><span>${solution.distanceHexes.toFixed(1)} hex</span><span>${esc(solution.range.label)}</span><span>${esc(solution.weaponState.mount ?? "fore")} · ${esc(solution.arc.arcTemplate)}</span></div>
+    <div class="arkflight-chat-shot-result"><strong>Attack ${attack.total} vs AC ${ac}</strong><span class="arkflight-chat-outcome">${esc(DEGREE_LABEL[degree])}</span></div>
+    ${effectLine}${damageLine}
+  </div>`;
 
   if (damage) {
+    const damageEffectIds = [
+      ...(damage.wardAbsorbed > 0 ? [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed] : []),
+      ...(damage.braceAbsorbed > 0 ? damageDefense.braceConsumed : [])
+    ];
+    const damageEffectSnapshots = activeStationEffects(base.state(target) ?? targetAfter ?? targetAttackState)
+      .filter((effect) => damageEffectIds.includes(effect.id))
+      .map((effect) => ({ ...effect }));
+
+    // A successful attack produces one combined chat message. The damage roll
+    // remains visible for dice transparency; attack/AC/mitigation live in its
+    // compact flavor block instead of creating a second full roll card.
     await damage.roll.toMessage({
+      user: requester?.id ?? requesterUserId,
       speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
-      flavor: `<strong>${esc(solution.weapon.name)} Damage — ${esc(target.name)}</strong><br>Rolled ${damage.rolled}${offense.damageBonus ? ` + ${offense.damageBonus} station damage` : ""}${damage.wardAbsorbed ? ` − ${damage.wardAbsorbed} Ward` : ""} − ${damage.absorbed} Hardness${damage.hardnessReduced ? ` after ${damage.hardnessReduced} Hardness reduction` : ""}${damage.braceAbsorbed ? ` − ${damage.braceAbsorbed} Brace` : ""} = <strong>${damage.hullDamage} Hull</strong>`
+      flavor: compactFlavor,
+      flags: {
+        [MODULE_ID]: {
+          shipDamage: {
+            combatId: game.combat?.id ?? null,
+            attackerId: attacker.id,
+            targetId: target.id,
+            targetActorId: target.actor?.id ?? null,
+            targetName: target.name,
+            weaponName: solution.weapon.name,
+            degree,
+            systemThreat: solution.weapon.data?.systemThreat ?? "hull",
+            hullDamage: damage.hullDamage,
+            effectIds: damageEffectIds,
+            effectSnapshots: damageEffectSnapshots
+          }
+        }
+      }
+    });
+  } else {
+    await attack.toMessage({
+      user: requester?.id ?? requesterUserId,
+      speaker: ChatMessage.getSpeaker({ actor: battlewatch }),
+      flavor: compactFlavor
     });
   }
 
@@ -327,10 +449,316 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     offense,
     defense,
     attackerState: attackerAfter,
-    targetState: targetAfter
+    targetState: targetAfter,
+    targetEffectMutationRequested
   });
 
-  return Object.freeze({ state: attackerAfter, attack, attackBonus, ac, degree, solution, damage, offense, defense });
+  return Object.freeze({ state: attackerAfter, attack, attackBonus, ac, degree, solution, damage, offense, defense, targetEffectMutationRequested });
+}
+
+function damageApplicationRecord(actor, messageId) {
+  return actor?.flags?.[MODULE_ID]?.chatDamageApplications?.[messageId] ?? null;
+}
+
+function canApplyShipDamage(user, actor, combatant) {
+  if (!user || !actor) return false;
+  if (user.isGM) return true;
+  if (!userOwnsActor(user, actor) || !userCanUpdateDocument(user, actor)) return false;
+  try {
+    return typeof combatant?.canUserModify !== "function"
+      || combatant.canUserModify(user, "update") === true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function restoreConsumedEffects(state, effects = []) {
+  if (!state || !effects.length) return state;
+  const runtime = state.stationRuntime ?? {};
+  const current = [...(runtime.effects ?? [])];
+  const ids = new Set(current.map((effect) => effect.id));
+  for (const effect of effects) {
+    if (effect?.id && !ids.has(effect.id)) {
+      current.push({ ...effect });
+      ids.add(effect.id);
+    }
+  }
+  return Object.freeze({
+    ...state,
+    stationRuntime: Object.freeze({
+      ...runtime,
+      used: Object.freeze({ ...(runtime.used ?? {}) }),
+      effects: Object.freeze(current.map((effect) => Object.freeze({ ...effect })))
+    })
+  });
+}
+
+function damageTargetFromFlag(flag = {}) {
+  const combat = game.combats?.get?.(flag.combatId) ?? game.combat ?? null;
+  const combatant = combat?.combatants?.get?.(flag.targetId)
+    ?? combat?.combatants?.find?.((entry) => entry.id === flag.targetId)
+    ?? null;
+  const actor = combatant?.actor ?? game.actors?.get?.(flag.targetActorId) ?? null;
+  return Object.freeze({ combat, combatant, actor });
+}
+
+function appliedDamageAmount(baseDamage, mode) {
+  const value = Math.max(0, Math.trunc(Number(baseDamage) || 0));
+  if (mode === "half") return Math.floor(value / 2);
+  if (mode === "double") return value * 2;
+  return value;
+}
+
+function damageConsequenceSnapshot(ship) {
+  return Object.freeze({
+    hull: structuredClone(ship?.resources?.hull ?? null),
+    lifeveil: structuredClone(ship?.resources?.lifeveil ?? null),
+    morale: structuredClone(ship?.resources?.morale ?? null),
+    strain: structuredClone(ship?.resources?.strain ?? null),
+    shipConditions: structuredClone(ship?.shipConditions ?? {})
+  });
+}
+
+function damageSnapshotMatches(ship, snapshot) {
+  if (!snapshot) return false;
+  return JSON.stringify(damageConsequenceSnapshot(ship)) === JSON.stringify(snapshot);
+}
+
+async function resolveDeferredDamageConsequences(ship, flag, amount, actor = null) {
+  let next = structuredClone(ship);
+  const notes = [];
+  const beforeHull = Math.max(0, Number(next.resources?.hull?.value) || 0);
+  const requestedAfter = Math.max(0, beforeHull - amount);
+  next.resources ??= {};
+  next.resources.hull = { ...(next.resources.hull ?? {}), value: requestedAfter };
+
+  // Normal weapon hits only damage Hull. Critical hits add one point of
+  // ship-wide Strain; Strain is the universal route into Ship Conditions.
+  if (Number(flag.degree) === 2) {
+    const outcome = await resolveShipStrainGain(next, {
+      amount: 1,
+      currentStrain: next.resources?.strain?.value ?? 0,
+      strainMax: next.resources?.strain?.max ?? 0,
+      sourceLabel: `${flag.weaponName ?? "Weapon"} Critical Hit`,
+      speaker: actor ? ChatMessage.getSpeaker({ actor }) : null
+    });
+    next = structuredClone(outcome.ship);
+    notes.push("Critical hit: +1 Strain.");
+    notes.push(...outcome.notes);
+  }
+
+  return Object.freeze({ ship: next, notes: Object.freeze(notes) });
+}
+
+async function applyShipDamageMessage(message, mode = "apply") {
+  const flag = message?.flags?.[MODULE_ID]?.shipDamage ?? null;
+  if (!flag) return;
+  const { combatant, actor } = damageTargetFromFlag(flag);
+  if (!actor || !combatant) throw new Error("Arkflight damage target is no longer available.");
+  if (!canApplyShipDamage(game.user, actor, combatant)) {
+    throw new Error(`You do not have permission to apply damage to ${actor.name}.`);
+  }
+  if (damageApplicationRecord(actor, message.id)) {
+    throw new Error("This Arkflight damage message has already been applied.");
+  }
+
+  const ship = shipPayload(actor);
+  if (!ship) throw new Error(`${actor.name} has no Arkflight ship state.`);
+  const beforeSnapshot = damageConsequenceSnapshot(ship);
+  const beforeHull = Math.max(0, Number(ship.resources?.hull?.value) || 0);
+  const amount = appliedDamageAmount(flag.hullDamage, mode);
+  const consequence = await resolveDeferredDamageConsequences(ship, flag, amount, actor);
+  const afterSnapshot = damageConsequenceSnapshot(consequence.ship);
+  const afterHull = Math.max(0, Number(consequence.ship.resources?.hull?.value) || 0);
+
+  const beforeState = game.arkflight?.combat?.state?.(combatant) ?? null;
+  const effectIds = Array.isArray(flag.effectIds) ? flag.effectIds.filter(Boolean) : [];
+  const afterState = beforeState && effectIds.length ? consumeStationEffects(beforeState, effectIds) : beforeState;
+  const snapshots = Array.isArray(flag.effectSnapshots) ? flag.effectSnapshots.map((effect) => ({ ...effect })) : [];
+
+  if (afterState && afterState !== beforeState) await combatant.update({ [STATE_PATH]: afterState });
+  await actor.update({
+    [`flags.${MODULE_ID}.ship.resources.hull`]: consequence.ship.resources?.hull ?? ship.resources?.hull,
+    [`flags.${MODULE_ID}.ship.resources.lifeveil`]: consequence.ship.resources?.lifeveil ?? ship.resources?.lifeveil,
+    [`flags.${MODULE_ID}.ship.resources.morale`]: consequence.ship.resources?.morale ?? ship.resources?.morale,
+    [`flags.${MODULE_ID}.ship.resources.strain`]: consequence.ship.resources?.strain ?? ship.resources?.strain,
+    [`flags.${MODULE_ID}.ship.shipConditions`]: consequence.ship.shipConditions ?? ship.shipConditions,
+    [`flags.${MODULE_ID}.chatDamageApplications.${message.id}`]: {
+      beforeHull,
+      afterHull,
+      amount,
+      mode,
+      degree: Number(flag.degree ?? 0),
+      systemThreat: flag.systemThreat ?? "hull",
+      beforeSnapshot,
+      afterSnapshot,
+      effectSnapshots: snapshots,
+      consequenceNotes: [...consequence.notes],
+      appliedBy: game.user?.id ?? null
+    }
+  });
+
+  const damage = Object.freeze({ hullDamage: amount, before: beforeHull, after: afterHull });
+  Hooks.callAll("arkflightChatDamageApplied", { message, combatant, actor, amount, mode, beforeHull, afterHull, degree: Number(flag.degree ?? 0), systemThreat: flag.systemThreat ?? "hull", notes: consequence.notes });
+  Hooks.callAll("arkflightShipDamageStateChanged", { actor, target: combatant, degree: Number(flag.degree ?? 0), damage, notes: consequence.notes, chatDamage: true });
+  ui.notifications?.info?.(`${actor.name}: ${amount} Hull damage applied (${beforeHull} → ${afterHull}).`);
+}
+
+async function undoShipDamageMessage(message) {
+  const flag = message?.flags?.[MODULE_ID]?.shipDamage ?? null;
+  if (!flag) return;
+  const { combatant, actor } = damageTargetFromFlag(flag);
+  if (!actor || !combatant) throw new Error("Arkflight damage target is no longer available.");
+  if (!canApplyShipDamage(game.user, actor, combatant)) {
+    throw new Error(`You do not have permission to undo damage on ${actor.name}.`);
+  }
+
+  const record = damageApplicationRecord(actor, message.id);
+  if (!record) throw new Error("This Arkflight damage message has not been applied.");
+  const currentShip = shipPayload(actor);
+  if (!damageSnapshotMatches(currentShip, record.afterSnapshot)) {
+    throw new Error("Ship damage state changed after this result was applied; undo it manually to avoid overwriting later changes.");
+  }
+
+  const currentState = game.arkflight?.combat?.state?.(combatant) ?? null;
+  const restoredState = restoreConsumedEffects(currentState, record.effectSnapshots ?? []);
+  if (restoredState && restoredState !== currentState) await combatant.update({ [STATE_PATH]: restoredState });
+
+  const beforeSnapshot = record.beforeSnapshot;
+  await actor.update({
+    [`flags.${MODULE_ID}.ship.resources.hull`]: beforeSnapshot?.hull,
+    [`flags.${MODULE_ID}.ship.resources.lifeveil`]: beforeSnapshot?.lifeveil,
+    [`flags.${MODULE_ID}.ship.resources.morale`]: beforeSnapshot?.morale,
+    [`flags.${MODULE_ID}.ship.resources.strain`]: beforeSnapshot?.strain,
+    [`flags.${MODULE_ID}.ship.shipConditions`]: beforeSnapshot?.shipConditions,
+    [`flags.${MODULE_ID}.chatDamageApplications.-=${message.id}`]: null
+  });
+
+  Hooks.callAll("arkflightChatDamageUndone", { message, combatant, actor, record });
+  Hooks.callAll("arkflightShipDamageStateChanged", { actor, target: combatant, undoChatDamage: true, notes: ["Chat damage transaction undone."] });
+  ui.notifications?.info?.(`${actor.name}: Arkflight chat damage undone.`);
+}
+
+function renderShipDamageControls(message, html) {
+  const flag = message?.flags?.[MODULE_ID]?.shipDamage ?? null;
+  if (!flag || !(html instanceof HTMLElement)) return;
+
+  const existing = html.querySelector(".arkflight-ship-damage-controls");
+  existing?.remove();
+
+  const { combatant, actor } = damageTargetFromFlag(flag);
+  if (!actor || !combatant) return;
+  const authorized = canApplyShipDamage(game.user, actor, combatant);
+  const record = damageApplicationRecord(actor, message.id);
+
+  const controls = document.createElement("div");
+  controls.className = "arkflight-ship-damage-controls";
+
+  if (record) {
+    const status = document.createElement("strong");
+    status.className = "arkflight-damage-applied";
+    status.textContent = `Applied ${record.amount} Hull · ${flag.targetName ?? actor.name}`;
+    controls.append(status);
+
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.dataset.arkflightDamageAction = "undo";
+    undo.textContent = "Undo";
+    undo.disabled = !authorized;
+    controls.append(undo);
+  } else {
+    const base = Math.max(0, Math.trunc(Number(flag.hullDamage) || 0));
+    for (const [mode, label] of [
+      ["apply", `Apply ${base}`],
+      ["half", `Half ${Math.floor(base / 2)}`],
+      ["double", `Double ${base * 2}`]
+    ]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.arkflightDamageAction = mode;
+      button.textContent = label;
+      button.disabled = !authorized;
+      button.title = authorized
+        ? `Apply this Arkflight damage result to ${flag.targetName ?? actor.name}.`
+        : `Only a GM or Owner of ${flag.targetName ?? actor.name} may apply this damage.`;
+      controls.append(button);
+    }
+  }
+
+  controls.addEventListener("click", async (event) => {
+    const button = event.target?.closest?.("[data-arkflight-damage-action]");
+    if (!button || button.disabled) return;
+    button.disabled = true;
+    try {
+      if (button.dataset.arkflightDamageAction === "undo") await undoShipDamageMessage(message);
+      else await applyShipDamageMessage(message, button.dataset.arkflightDamageAction);
+      renderShipDamageControls(message, html);
+    } catch (error) {
+      console.error("Arkflight | Chat damage action failed", error);
+      ui.notifications?.error?.(error?.message ?? "Arkflight chat damage action failed.");
+      button.disabled = false;
+    }
+  });
+
+  const host = html.querySelector(".arkflight-attack-chat")
+    ?? html.querySelector(".message-content, .chat-message-content, .message-header")
+    ?? html;
+  host.append(controls);
+}
+
+async function applyProtectedTargetEffects(base, payload = {}) {
+  if (payload?.type === TARGET_EFFECT_RESULT) {
+    if (payload.userId === game.user?.id && payload.ok === false) {
+      ui.notifications?.error(payload.message ?? "Arkflight could not consume the target's attack-defense effect.");
+    }
+    return;
+  }
+
+  if (!game.user?.isGM || payload?.type !== TARGET_EFFECT_REQUEST) return;
+  const primary = activePrimaryGM();
+  if (!primary || primary.id !== game.user.id) return;
+
+  const requester = game.users?.get?.(payload.userId) ?? null;
+  const combat = game.combats?.get?.(payload.combatId) ?? game.combat;
+  const attacker = combat?.combatants?.get?.(payload.attackerId)
+    ?? combat?.combatants?.find?.((entry) => entry.id === payload.attackerId)
+    ?? null;
+  const target = combat?.combatants?.get?.(payload.targetId)
+    ?? combat?.combatants?.find?.((entry) => entry.id === payload.targetId)
+    ?? null;
+
+  const reply = (ok, message) => game.socket?.emit?.(COMBAT_SOCKET, {
+    type: TARGET_EFFECT_RESULT,
+    userId: payload.userId ?? null,
+    combatId: combat?.id ?? payload.combatId ?? null,
+    attackerId: payload.attackerId ?? null,
+    targetId: payload.targetId ?? null,
+    ok,
+    message
+  });
+
+  if (!requester?.active || !combat || !attacker || !target || combat.id !== payload.combatId) {
+    reply(false, "Target attack-defense effect could not resolve its combatants.");
+    return;
+  }
+  const battlewatch = battlewatchActor(attacker.actor);
+  if (!userOwnsActor(requester, attacker.actor) || !battlewatch || !userOwnsActor(requester, battlewatch)) {
+    reply(false, "Requester no longer controls the firing ship's Battlewatch.");
+    return;
+  }
+
+  try {
+    const effectIds = Array.isArray(payload.effectIds) ? payload.effectIds.filter((id) => typeof id === "string") : [];
+    const currentTargetState = base.state(target);
+    if (currentTargetState && effectIds.length) {
+      const nextTargetState = consumeStationEffects(currentTargetState, effectIds);
+      if (nextTargetState !== currentTargetState) await target.update({ [STATE_PATH]: nextTargetState });
+    }
+    reply(true, "Target attack-defense effect consumed.");
+  } catch (error) {
+    console.error("Arkflight | Protected target effect consumption failed", error);
+    reply(false, error?.message ?? "Protected target effect consumption failed.");
+  }
 }
 
 Hooks.once("ready", () => {
@@ -344,15 +772,16 @@ Hooks.once("ready", () => {
       const raw = base.targetingSolution(weaponKey, targetReference, attackerReference);
       return attacker ? attackVectorSolution(base.state(attacker), raw, shipLevel(attacker.actor)) : raw;
     },
-    fireAtTarget(weaponKey, targetReference, attackerReference = null) {
-      return enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference);
+    fireAtTarget(weaponKey, targetReference, attackerReference = null, options = {}) {
+      return enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference, options);
     },
     stationAction(actionId, options = {}, reference = null) {
-      if (actionId === "battlewatch-fire-weapon") {
-        if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
-        return enhancedFireAtTarget(base, options.weaponKey, options.targetId, reference);
-      }
       return originalStationAction(actionId, options, reference);
     }
   });
+  game.socket?.on?.(COMBAT_SOCKET, (payload) => applyProtectedTargetEffects(base, payload));
+});
+
+Hooks.on("renderChatMessageHTML", (message, html) => {
+  renderShipDamageControls(message, html);
 });

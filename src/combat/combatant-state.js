@@ -1,7 +1,8 @@
-import { COMBAT_POINT_TYPES, effectiveMobility, hullCombatProfile, normalizeHexHeading } from "./combat-schema.js";
+import { COMBAT_POINT_TYPES, effectiveMobility, headingDegreeDistance, hullCombatProfile, normalizeShipHeading } from "./combat-schema.js";
 import { normalizeWeaponUpgrades } from "./weapon-combat.js";
+import { weaponConditionModifiers } from "../ship/ship-conditions.js";
 
-export const COMBATANT_STATE_VERSION = 4;
+export const COMBATANT_STATE_VERSION = 6;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -30,6 +31,7 @@ function weaponInstallKey(install, index) {
 
 function installedWeaponStates(ship, catalogs = {}) {
   const rows = {};
+  const weaponCondition = weaponConditionModifiers(ship);
   for (const [index, install] of (ship?.weapons ?? []).entries()) {
     const id = typeof install === "string" ? install : install?.id;
     if (!id) continue;
@@ -43,9 +45,10 @@ function installedWeaponStates(ship, catalogs = {}) {
       mount: typeof install === "object" ? (install?.mount ?? install?.arc ?? null) : null,
       mountIndex: typeof install === "object" ? Number(install?.mountIndex) || 0 : null,
       upgrades: normalizeWeaponUpgrades(install),
-      fireAP: Math.max(1, Math.trunc(Number(combat.fireAP) || 1)),
-      reloadRounds: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0)),
-      readyRound: 1,
+      fireAP: 1,
+      reloadRounds: Math.max(0, Math.trunc(Number(combat.reloadRounds) || 0) + weaponCondition.reloadPenalty),
+      reloadPenalty: weaponCondition.reloadPenalty,
+      reloadRemaining: 0,
       lastFiredRound: null
     });
   }
@@ -80,7 +83,10 @@ export function createCombatantState(ship, { derived = null, catalogs = {}, rota
       maneuverability: mobility.maneuverability,
       movement: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
       maneuver: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
-      heading: normalizeHexHeading(rotation)
+      heading: normalizeShipHeading(rotation),
+      committedHeading: normalizeShipHeading(rotation),
+      facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null }),
+      specialMovementAP: 0
     }),
     weapons: installedWeaponStates(ship, catalogs),
     strain: Object.freeze({ value: strainValue, max: strainMax }),
@@ -129,11 +135,13 @@ export function purchaseMovement(state) {
 }
 
 export function purchaseManeuver(state) {
+  const maneuverability = Math.max(0, Math.trunc(Number(state?.mobility?.maneuverability) || 0));
+  if (maneuverability <= 0) throw new Error("Maneuverability 0 cannot purchase normal facing steps.");
   let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
   const current = next.mobility.maneuver;
   const maneuver = Object.freeze({
     purchases: current.purchases + 1,
-    allowance: current.allowance + next.mobility.maneuverability,
+    allowance: current.allowance + maneuverability,
     used: current.used
   });
   return Object.freeze({ ...next, mobility: Object.freeze({ ...next.mobility, maneuver }) });
@@ -150,32 +158,58 @@ export function recordMovement(state, spaces) {
   });
 }
 
-export function recordFacingChange(state, steps, heading) {
-  const add = Math.max(0, Math.trunc(Number(steps) || 0));
-  const current = state.mobility.maneuver;
-  const used = current.used + add;
-  if (used > current.allowance) throw new Error(`Facing change exceeds Maneuver allowance by ${used - current.allowance} step${used - current.allowance === 1 ? "" : "s"}.`);
+export function previewFacing(state, heading) {
+  const nextHeading = normalizeShipHeading(heading);
+  if (nextHeading === Number(state?.mobility?.heading ?? 0)) return state;
   return Object.freeze({
     ...state,
     mobility: Object.freeze({
       ...state.mobility,
-      maneuver: Object.freeze({ ...current, used }),
-      heading: normalizeHexHeading(heading)
+      heading: nextHeading
     })
   });
 }
 
-export function weaponReloadRemaining(weaponState, round) {
-  return Math.max(0, Math.trunc(Number(weaponState?.readyRound) || 0) - Math.trunc(Number(round) || 0));
+export function commitFacing(state, heading = state?.mobility?.heading ?? 0, reason = "commit") {
+  const targetHeading = normalizeShipHeading(heading);
+  const previousHeading = normalizeShipHeading(state?.mobility?.committedHeading ?? state?.mobility?.heading ?? targetHeading);
+  const deltaDegrees = headingDegreeDistance(previousHeading, targetHeading);
+  const current = state?.mobility?.facing ?? {};
+  const usedDegrees = Math.max(0, Math.trunc(Number(current.usedDegrees) || 0)) + deltaDegrees;
+  if (deltaDegrees === 0 && targetHeading === Number(state?.mobility?.heading ?? targetHeading)) return state;
+  return Object.freeze({
+    ...state,
+    mobility: Object.freeze({
+      ...state.mobility,
+      heading: targetHeading,
+      committedHeading: targetHeading,
+      facing: Object.freeze({
+        usedDegrees,
+        commits: Math.max(0, Math.trunc(Number(current.commits) || 0)) + (deltaDegrees > 0 ? 1 : 0),
+        lastReason: deltaDegrees > 0 ? String(reason ?? "commit") : (current.lastReason ?? null)
+      })
+    })
+  });
 }
 
-export function reduceWeaponReload(state, weaponKey, round, amount = 1) {
+// Compatibility helper: callers that explicitly "record" facing are making a
+// committed gameplay turn. The old numeric step argument is ignored because
+// committed facing is now measured from headings, not mouse/update counts.
+export function recordFacingChange(state, _steps, heading) {
+  return commitFacing(state, heading, "record-facing");
+}
+
+export function weaponReloadRemaining(weaponState, _round = null) {
+  return Math.max(0, Math.trunc(Number(weaponState?.reloadRemaining) || 0));
+}
+
+export function reduceWeaponReload(state, weaponKey, _round = null, amount = 1) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const reduction = Math.max(0, Math.trunc(Number(amount) || 0));
   if (reduction <= 0) return state;
-  const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
-  const updated = Object.freeze({ ...weapon, readyRound: Math.max(combatRound, Number(weapon.readyRound ?? combatRound) - reduction) });
+  const remaining = weaponReloadRemaining(weapon);
+  const updated = Object.freeze({ ...weapon, reloadRemaining: Math.max(0, remaining - reduction) });
   return Object.freeze({
     ...state,
     weapons: Object.freeze({ ...state.weapons, [weaponKey]: updated })
@@ -186,29 +220,35 @@ export function fireWeapon(state, weaponKey, round) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
-  if (weaponReloadRemaining(weapon, combatRound) > 0) throw new Error(`${weapon.name} is still reloading.`);
-  let next = spendPoints(state, COMBAT_POINT_TYPES.AP, weapon.fireAP);
-  const readyRound = combatRound + weapon.reloadRounds + 1;
-  const updated = Object.freeze({ ...weapon, readyRound, lastFiredRound: combatRound });
+  if (weaponReloadRemaining(weapon) > 0) throw new Error(`${weapon.name} is still reloading.`);
+  let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
+  const reloadRemaining = Math.max(0, Math.trunc(Number(weapon.reloadRounds) || 0));
+  const updated = Object.freeze({ ...weapon, reloadRemaining, lastFiredRound: combatRound });
   return Object.freeze({
     ...next,
     weapons: Object.freeze({ ...next.weapons, [weaponKey]: updated }),
-    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "fire-weapon", weaponKey, ap: weapon.fireAP, readyRound })])
+    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "fire-weapon", weaponKey, ap: 1, reloadRemaining })])
   });
 }
 
-export function workTheGuns(state, weaponKey, round) {
+export function reloadWeapon(state, weaponKey, round) {
   const weapon = state?.weapons?.[weaponKey];
   if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
-  if (weaponReloadRemaining(weapon, combatRound) <= 0) throw new Error(`${weapon.name} is already ready.`);
+  if (weaponReloadRemaining(weapon) <= 0) throw new Error(`${weapon.name} is already ready.`);
   let next = spendPoints(state, COMBAT_POINT_TYPES.AP, 1);
   next = reduceWeaponReload(next, weaponKey, combatRound, 1);
   const updated = next.weapons[weaponKey];
   return Object.freeze({
     ...next,
-    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "work-the-guns", weaponKey, ap: 1, readyRound: updated.readyRound })])
+    log: Object.freeze([...(next.log ?? []), Object.freeze({ round: combatRound, kind: "reload-weapon", weaponKey, ap: 1, reloadRemaining: updated.reloadRemaining })])
   });
+}
+
+// Compatibility alias for older callers. Battlewatch Work the Guns is now a
+// separate station action and does not use this 1 AP reload primitive.
+export function workTheGuns(state, weaponKey, round) {
+  return reloadWeapon(state, weaponKey, round);
 }
 
 export function beginCombatantTurn(state, round) {
@@ -225,7 +265,10 @@ export function beginCombatantTurn(state, round) {
     mobility: Object.freeze({
       ...state.mobility,
       movement: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
-      maneuver: Object.freeze({ purchases: 0, allowance: 0, used: 0 })
+      maneuver: Object.freeze({ purchases: 0, allowance: 0, used: 0 }),
+      committedHeading: normalizeShipHeading(state.mobility?.heading ?? state.mobility?.committedHeading ?? 0),
+      facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null }),
+      specialMovementAP: 0
     })
   });
 }

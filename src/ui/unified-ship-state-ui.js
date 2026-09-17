@@ -1,10 +1,15 @@
 import { getMasteryTechnique } from "../content/base-mastery.js";
+import { strainRiskState } from "../ship/strain-rules.js";
+import {
+  SHIP_CONDITION_SYSTEMS,
+  activeShipConditionViews,
+  conditionProfileById,
+  setShipCondition
+} from "../ship/ship-conditions.js";
 
 const MODULE_ID = "arkflight-game";
-const AREA_ORDER = Object.freeze(["hull", "arkengine", "rigging", "lifeveil", "morale"]);
-const AREA_LABELS = Object.freeze({ hull: "Hull", arkengine: "Arkengine", rigging: "Rigging", lifeveil: "Lifeveil", morale: "Morale" });
-const AREA_STATES = Object.freeze(["stable", "stressed", "damaged", "critical", "disabled"]);
-const STATION_AREAS = Object.freeze({ captain: "morale", engineer: "arkengine", navigator: "rigging", battlewatch: "hull", veilwarden: "lifeveil" });
+const CONDITION_LABELS = Object.freeze({ hull: "Hull", drive: "Drive", weapons: "Weapons", lifeveil: "Lifeveil", morale: "Morale" });
+const STATION_SYSTEMS = Object.freeze({ captain: "morale", engineer: "drive", navigator: "drive", battlewatch: "weapons", veilwarden: "lifeveil" });
 
 function rootElement(element, app = null) {
   if (element instanceof HTMLElement) return element;
@@ -16,7 +21,42 @@ function rootElement(element, app = null) {
 
 function shipFromActor(actor) { return actor?.flags?.[MODULE_ID]?.ship ?? null; }
 function activeShipActor() { return game?.arkflight?.activeShip ?? null; }
-function titleCase(value) { const text = String(value ?? ""); return text ? `${text[0].toUpperCase()}${text.slice(1)}` : ""; }
+function titleCase(value) { return String(value ?? "").replaceAll("-", " ").replace(/\b\w/g, (m) => m.toUpperCase()); }
+
+function strainStatus(resource = {}) {
+  const value = Math.max(0, Number(resource?.value) || 0);
+  const max = Math.max(0, Number(resource?.max) || 0);
+  const risk = strainRiskState(value, max);
+  const label = risk.thresholdReached
+    ? "LIMIT — automatic degradation"
+    : risk.flatCheckRequired
+      ? `DC ${risk.flatCheckDC} flat check when Strain is gained`
+      : "SAFE — no flat check";
+  return Object.freeze({ value, max, risk, label });
+}
+
+function decorateStrainResourceCard(root, ship) {
+  const strip = root.querySelector(".arkflight-resource-strip");
+  if (!strip) return;
+  const card = [...strip.children].find((node) =>
+    node.querySelector(".arkflight-resource-label")?.textContent?.trim().endsWith("Strain")
+  );
+  if (!card) return;
+  const status = strainStatus(ship.resources?.strain);
+  let help = card.querySelector(".arkflight-strain-danger");
+  if (!help) {
+    help = document.createElement("small");
+    help.className = "arkflight-strain-danger";
+    card.append(help);
+  }
+  help.textContent = status.label;
+  card.dataset.strainRisk = status.risk.thresholdReached
+    ? "limit"
+    : status.risk.flatCheckRequired
+      ? `dc-${status.risk.flatCheckDC}`
+      : "safe";
+  card.title = `Strain ${status.value}/${status.max}. 0–49% safe; 50–74% DC 5; 75–89% DC 10; 90–99% DC 15; 100%+ automatic degradation.`;
+}
 
 function reorderResourceStrip(root) {
   const strip = root.querySelector(".arkflight-resource-strip");
@@ -29,8 +69,14 @@ function reorderResourceStrip(root) {
   }
 }
 
-function areaConditions(ship, area) {
-  return (ship?.conditions ?? []).filter((condition) => (condition?.area ?? condition?.system) === area);
+function nextConditionId(system, currentId) {
+  const rows = {
+    hull: ["sound", "battered", "breached", "shattered"],
+    drive: ["responsive", "sluggish", "faltering", "unresponsive"],
+    weapons: ["ready", "fouled", "malfunctioning", "barely-operable"]
+  }[system] ?? [];
+  const index = Math.max(0, rows.indexOf(currentId));
+  return rows[(index + 1) % rows.length] ?? rows[0];
 }
 
 function decorateShipReadiness(app, root) {
@@ -40,44 +86,35 @@ function decorateShipReadiness(app, root) {
   if (!ship) return;
 
   reorderResourceStrip(root);
+  decorateStrainResourceCard(root, ship);
 
   const panel = root.querySelector(".arkflight-systems-panel");
   if (panel) {
     const heading = panel.querySelector(".arkflight-panel-heading h2");
-    if (heading) heading.textContent = "Ship Readiness";
+    if (heading) heading.textContent = "Ship Conditions";
     const kicker = panel.querySelector(".arkflight-panel-heading .arkflight-ship-kicker");
-    if (kicker) kicker.textContent = "PERSISTENT AREAS";
+    if (kicker) kicker.textContent = "PERSISTENT SHIP CONDITIONS";
     const help = panel.querySelector(".arkflight-panel-heading small");
-    if (help) help.textContent = "Click an Area in Shipwright Mode to cycle readiness.";
+    if (help) help.textContent = "Hull, Drive, and Weapons can be cycled in Shipwright Mode. Lifeveil and Morale are derived from their percentages.";
 
     const list = panel.querySelector(".arkflight-system-list");
     if (list) {
       list.innerHTML = "";
-      for (const area of AREA_ORDER) {
-        const state = ship.areas?.[area]?.state ?? "stable";
-        const conditions = areaConditions(ship, area);
+      for (const condition of activeShipConditionViews(ship)) {
         const row = document.createElement("button");
         row.type = "button";
-        row.className = `arkflight-system-row arkflight-area-row is-${state}`;
-        row.dataset.arkflightArea = area;
-        row.disabled = !(game.user?.isGM && app?.shipwrightMode);
-        row.innerHTML = `<span class="arkflight-system-name">${AREA_LABELS[area]}</span><span class="arkflight-system-state">${titleCase(state)}</span>${conditions.length ? `<span class="arkflight-condition-count">${conditions.length}</span>` : ""}`;
+        row.className = `arkflight-system-row arkflight-area-row is-${condition.id}`;
+        row.dataset.arkflightArea = condition.system;
+        row.disabled = !(game.user?.isGM && app?.shipwrightMode && SHIP_CONDITION_SYSTEMS.includes(condition.system));
+        row.innerHTML = `<span class="arkflight-system-name">${CONDITION_LABELS[condition.system]}</span><span class="arkflight-system-state">${condition.label}</span>`;
         row.addEventListener("click", async () => {
-          if (!game.user?.isGM || !app?.shipwrightMode) return;
-          const current = shipFromActor(actor)?.areas?.[area]?.state ?? "stable";
-          const index = Math.max(0, AREA_STATES.indexOf(current));
-          const next = AREA_STATES[(index + 1) % AREA_STATES.length];
-          await actor.update({ [`flags.${MODULE_ID}.ship.areas.${area}.state`]: next });
+          if (!game.user?.isGM || !app?.shipwrightMode || !SHIP_CONDITION_SYSTEMS.includes(condition.system)) return;
+          const currentShip = shipFromActor(actor);
+          const current = conditionProfileById(condition.system, currentShip?.shipConditions?.[condition.system]);
+          const next = setShipCondition(currentShip, condition.system, nextConditionId(condition.system, current.id));
+          await actor.update({ [`flags.${MODULE_ID}.ship.shipConditions`]: next.shipConditions });
         });
         list.append(row);
-      }
-    }
-
-    const conditionBox = panel.querySelector(".arkflight-condition-box");
-    if (conditionBox) {
-      for (const line of conditionBox.querySelectorAll(".arkflight-condition-line")) {
-        const span = line.querySelector("span");
-        if (span) span.textContent = span.textContent.replace(/\bsystem\b/gi, "area");
       }
     }
   }
@@ -86,7 +123,7 @@ function decorateShipReadiness(app, root) {
     const strong = card.querySelector("strong");
     const raw = strong?.textContent?.trim()?.toLowerCase();
     const station = raw === "watchmaster" ? "battlewatch" : raw;
-    if (!station || !STATION_AREAS[station]) continue;
+    if (!station || !STATION_SYSTEMS[station]) continue;
     if (strong && raw === "watchmaster") strong.textContent = "Battlewatch";
     let responsibility = card.querySelector(".arkflight-station-responsibility");
     if (!responsibility) {
@@ -94,7 +131,8 @@ function decorateShipReadiness(app, root) {
       responsibility.className = "arkflight-station-responsibility";
       card.querySelector("div:last-child")?.append(responsibility);
     }
-    responsibility.textContent = `Readiness: ${AREA_LABELS[STATION_AREAS[station]]}`;
+    const label = station === "battlewatch" ? "Weapons / Hull" : CONDITION_LABELS[STATION_SYSTEMS[station]];
+    responsibility.textContent = `Condition: ${label}`;
   }
 }
 
@@ -102,10 +140,12 @@ function shipStatusSnapshot() {
   const actor = activeShipActor();
   const ship = shipFromActor(actor);
   if (!ship) return null;
+  const strain = ship.resources?.strain ?? { value: 0, max: 0 };
   return {
     name: actor.name,
-    strain: ship.resources?.strain ?? { value: 0, max: 0 },
-    areas: AREA_ORDER.map((area) => ({ area, label: AREA_LABELS[area], state: ship.areas?.[area]?.state ?? "stable" }))
+    strain,
+    strainStatus: strainStatus(strain),
+    conditions: activeShipConditionViews(ship)
   };
 }
 
@@ -124,8 +164,8 @@ function decorateEventStatus(root) {
   const status = root.querySelector(".arkflight-status-strip");
   if (status && !status.querySelector(".arkflight-persistent-status")) {
     const restart = status.querySelector("button");
-    addStatusBox(status, "Strain", `${snapshot.strain.value} / ${snapshot.strain.max}`, "is-strain");
-    for (const row of snapshot.areas) addStatusBox(status, row.label, titleCase(row.state), `is-${row.state}`);
+    addStatusBox(status, "Strain", `${snapshot.strain.value} / ${snapshot.strain.max} · ${snapshot.strainStatus.label}`, "is-strain");
+    for (const row of snapshot.conditions) addStatusBox(status, CONDITION_LABELS[row.system], row.label, `is-${row.id}`);
     if (restart) status.append(restart);
   }
 
@@ -133,12 +173,12 @@ function decorateEventStatus(root) {
     if (summary.querySelector(".arkflight-persistent-state-inline")) continue;
     const strain = document.createElement("span");
     strain.className = "arkflight-persistent-state-inline";
-    strain.innerHTML = `Strain <strong>${snapshot.strain.value} / ${snapshot.strain.max}</strong>`;
+    strain.innerHTML = `Strain <strong>${snapshot.strain.value} / ${snapshot.strain.max}</strong> <small>${snapshot.strainStatus.label}</small>`;
     summary.append(strain);
-    for (const row of snapshot.areas) {
+    for (const row of snapshot.conditions) {
       const item = document.createElement(summary.classList.contains("arkflight-round-state-summary") ? "div" : "span");
-      item.className = `arkflight-persistent-state-inline is-${row.state}`;
-      item.innerHTML = `<span>${row.label}</span> <strong>${titleCase(row.state)}</strong>`;
+      item.className = `arkflight-persistent-state-inline is-${row.id}`;
+      item.innerHTML = `<span>${CONDITION_LABELS[row.system]}</span> <strong>${row.label}</strong>`;
       summary.append(item);
     }
   }
@@ -173,26 +213,6 @@ function decorateShipDerivedMasteries(root) {
   if (help) help.textContent = "Lock one different officer into each station for the Event. Each station readies one Mastery unlocked by the bound ship; hull, rooms, Arkengine choices, mods, weapons, specialists, and progression can expand these choices.";
 }
 
-function replaceLegacyPlayerText(root) {
-  const replacements = [
-    [/Hull Pressure/gi, "Strain threatening Hull"],
-    [/Arkengine Pressure/gi, "Strain threatening Arkengine"],
-    [/Rigging Pressure/gi, "Strain threatening Rigging"],
-    [/Lifeveil Pressure/gi, "Strain threatening Lifeveil"],
-    [/system Pressure/gi, "ship Strain"],
-    [/\bPressure\b/g, "Strain"]
-  ];
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const nodes = [];
-  while (walker.nextNode()) nodes.push(walker.currentNode);
-  for (const node of nodes) {
-    let text = node.nodeValue;
-    for (const [pattern, replacement] of replacements) text = text.replace(pattern, replacement);
-    node.nodeValue = text;
-  }
-  for (const node of root.querySelectorAll("[data-station='watchmaster']")) node.dataset.station = "battlewatch";
-}
-
 function decorateEventBoard(app, element) {
   if (app?.id !== "arkflight-event-board") return;
   const root = rootElement(element, app);
@@ -200,9 +220,8 @@ function decorateEventBoard(app, element) {
   setTimeout(() => {
     decorateEventStatus(root);
     decorateShipDerivedMasteries(root);
-    replaceLegacyPlayerText(root);
     const complete = root.querySelector(".arkflight-event-complete-copy");
-    if (complete) complete.textContent = "The Event has reached its conclusion. The bound ship already carries persistent Hull, Lifeveil, Strain, Morale, Conditions, and Area readiness forward; Momentum and Hazards remain Event state only.";
+    if (complete) complete.textContent = "The Event has reached its conclusion. The bound ship carries Hull, Lifeveil, Strain, Morale, Ship Conditions, and other persistent Conditions forward; Momentum and Hazards remain Event state only.";
   }, 0);
 }
 

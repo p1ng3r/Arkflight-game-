@@ -1,5 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { validateShip } from "../ship/validate-ship.js";
+import { activeShipConditionViews } from "../ship/ship-conditions.js";
 
 const MODULE_ID = "arkflight-game";
 const CURRENT_SHIP_SETTING = "currentShipActorId";
@@ -38,9 +39,18 @@ function stationReadiness(ship) {
 }
 
 function damagedSystems(ship) {
-  return Object.entries(ship?.systems ?? {})
-    .filter(([, state]) => state && state !== "functional")
-    .map(([system, state]) => ({ system, state }));
+  return activeShipConditionViews(ship)
+    .filter((condition) => {
+      if (["hull", "drive", "weapons", "lifeveil"].includes(condition.system)) return Number(condition.severity ?? 0) > 0;
+      if (condition.system === "morale") return ["faltering", "broken"].includes(condition.id);
+      return false;
+    })
+    .map((condition) => ({
+      system: condition.system,
+      state: condition.id,
+      label: condition.label,
+      severity: condition.severity
+    }));
 }
 
 function classificationFor(actor) {
@@ -62,7 +72,7 @@ function readinessStatus(ship, validation, damage, crew, conditions = []) {
     reasons.push(...validation.errors);
     return { status: "Invalid", reasons };
   }
-  const criticalDamage = damage.filter((row) => ["disabled", "destroyed"].includes(row.state));
+  const criticalDamage = damage.filter((row) => Number(row.severity ?? 0) >= 2);
   if (criticalDamage.length || conditions.some((condition) => Number(condition?.severity ?? 0) >= 2)) {
     for (const row of criticalDamage) reasons.push(`${row.system} is ${row.state}`);
     for (const condition of conditions.filter((condition) => Number(condition?.severity ?? 0) >= 2)) reasons.push(condition.label ?? condition.name ?? condition.id ?? "Persistent condition");
