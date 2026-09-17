@@ -1,6 +1,6 @@
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
-import { normalizeShip } from "../ship/ship-schema.js";
+import { createShip, normalizeShip } from "../ship/ship-schema.js";
 
 const MODULE_ID = "arkflight-game";
 
@@ -9,8 +9,11 @@ function shipFlag(actor) {
 }
 
 export function needsCommissioning(actor) {
+  if (actor?.type !== "vehicle") return false;
+  const marked = actor?.flags?.[MODULE_ID]?.isArkflightShip === true;
   const ship = shipFlag(actor);
-  return Boolean(ship && (!ship.hull?.chassisId || !ship.arkengine?.chassisId));
+  if (!ship) return marked;
+  return !ship.hull?.chassisId || !ship.arkengine?.chassisId;
 }
 
 function escape(value) {
@@ -114,9 +117,15 @@ function askForCommissioningChoices(actor, state) {
 }
 
 export async function commissioningDialog(actor) {
-  const current = shipFlag(actor);
-  if (!current) throw new Error("This vehicle has no Arkflight ship data.");
+  if (actor?.type !== "vehicle") throw new Error("Arkflight ships must be PF2e Vehicle Actors.");
   if (!game.user?.isGM && !actor.isOwner) throw new Error("You must own this Arkflight vessel to commission it.");
+
+  let current = shipFlag(actor);
+  if (!current) {
+    if (actor?.flags?.[MODULE_ID]?.isArkflightShip !== true) throw new Error("This vehicle is not marked as an Arkflight vessel.");
+    current = createShip({ identity: { name: actor.name || "Unnamed Vessel" } });
+    await actor.update({ [`flags.${MODULE_ID}.ship`]: current });
+  }
 
   const state = {
     hullId: current.hull?.chassisId || "",
