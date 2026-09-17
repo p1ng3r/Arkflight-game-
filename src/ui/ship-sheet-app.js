@@ -6,6 +6,7 @@ import { deriveShip } from "../ship/derive-ship.js";
 import { createShip } from "../ship/ship-schema.js";
 import { validateShip } from "../ship/validate-ship.js";
 import { buildShipSheetView, SHIP_SHEET_TABS } from "./ship-sheet-view-model.js";
+import { commissioningDialog, needsCommissioning } from "./shipwright-commissioning-ui.js";
 
 const MODULE_ID = "arkflight-game";
 export const ARKFLIGHT_SHIP_SHEET_ID = `${MODULE_ID}.ArkflightShipSheet`;
@@ -89,9 +90,19 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       await this.actor.update({ [`flags.${MODULE_ID}.ship.resources.${key}.value`]: value, [`flags.${MODULE_ID}.ship.resources.${key}.max`]: max });
     });
     for (const button of html.querySelectorAll("[data-compendium-pack]")) button.addEventListener("click", (event) => { event.preventDefault(); const packId = event.currentTarget.dataset.compendiumPack; const pack = game.packs?.get(packId); if (!pack) return ui.notifications?.warn(`Arkflight Compendium pack is not available yet: ${packId}`); pack.render(true); });
-    html.querySelector("[data-open-shipwright]")?.addEventListener("click", (event) => {
+    html.querySelector("[data-open-shipwright]")?.addEventListener("click", async (event) => {
       event.preventDefault();
-      game.arkflight?.openShipwrightWorkspace?.(this.actor);
+      try {
+        if (needsCommissioning(this.actor)) {
+          const commissioned = await commissioningDialog(this.actor);
+          if (!commissioned) return;
+          this.render({ force: true });
+        }
+        game.arkflight?.openShipwrightWorkspace?.(this.actor);
+      } catch (error) {
+        console.error("Arkflight | Shipwright launch failed", error);
+        ui.notifications?.error?.(error?.message ?? "Unable to open Shipwright.");
+      }
     });
 
     if (this.activeTab === "hold") bindArkflightHoldControls(this.actor, html);
