@@ -6,7 +6,7 @@ import { deriveShip } from "../ship/derive-ship.js";
 import { createShip } from "../ship/ship-schema.js";
 import { validateShip } from "../ship/validate-ship.js";
 import { buildShipSheetView, SHIP_SHEET_TABS } from "./ship-sheet-view-model.js";
-import { commissioningDialog, needsCommissioning } from "./shipwright-commissioning-ui.js";
+import { commissioningDialog } from "./shipwright-commissioning-ui.js";
 
 const MODULE_ID = "arkflight-game";
 export const ARKFLIGHT_SHIP_SHEET_ID = `${MODULE_ID}.ArkflightShipSheet`;
@@ -93,12 +93,19 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
     html.querySelector("[data-open-shipwright]")?.addEventListener("click", async (event) => {
       event.preventDefault();
       try {
-        if (needsCommissioning(this.actor)) {
+        const persistedShip = shipFlag(this.actor);
+        const commissioningRequired = !persistedShip?.hull?.chassisId || !persistedShip?.arkengine?.chassisId;
+
+        if (commissioningRequired) {
           const commissioned = await commissioningDialog(this.actor);
-          if (!commissioned) return;
-          this.render({ force: true });
+          if (commissioned) this.render({ force: true });
+          return;
         }
-        game.arkflight?.openShipwrightWorkspace?.(this.actor);
+
+        if (typeof game.arkflight?.openShipwrightWorkspace !== "function") {
+          throw new Error("Shipwright workspace is not available.");
+        }
+        game.arkflight.openShipwrightWorkspace(this.actor);
       } catch (error) {
         console.error("Arkflight | Shipwright launch failed", error);
         ui.notifications?.error?.(error?.message ?? "Unable to open Shipwright.");
