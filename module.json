@@ -73,6 +73,7 @@
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
+    "src/foundry/massive-creature-api.js",
     "src/foundry/event-manager-2.js",
     "src/foundry/arkflight-compendiums.js",
     "src/foundry/combat-reference-compendium.js",
