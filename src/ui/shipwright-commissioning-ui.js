@@ -122,9 +122,13 @@ export async function commissioningDialog(actor) {
 
   let current = shipFlag(actor);
   if (!current) {
-    if (actor?.flags?.[MODULE_ID]?.isArkflightShip !== true) throw new Error("This vehicle is not marked as an Arkflight vessel.");
     current = createShip({ identity: { name: actor.name || "Unnamed Vessel" } });
-    await actor.update({ [`flags.${MODULE_ID}.ship`]: current });
+    await actor.update({
+      [`flags.${MODULE_ID}.isArkflightShip`]: true,
+      [`flags.${MODULE_ID}.ship`]: current
+    });
+  } else if (actor?.flags?.[MODULE_ID]?.isArkflightShip !== true) {
+    await actor.update({ [`flags.${MODULE_ID}.isArkflightShip`]: true });
   }
 
   const state = {
