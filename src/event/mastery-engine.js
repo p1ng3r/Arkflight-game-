@@ -1,17 +1,10 @@
+import { cloneEncounter } from "./encounter-state.js";
 import { getMasteryTechnique, canonicalMasteryId, canonicalMasteryStation } from "../content/base-mastery.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
 import { scoreRound } from "./event-schema.js";
 import { applyEarnedRiskBenefit } from "./round-runtime.js";
 
-function cloneSources(source) { return Object.fromEntries(Object.entries(source ?? {}).map(([key, rows]) => [key, [...(rows ?? [])]])); }
-function cloneEncounter(encounter = {}) {
-  return {
-    momentum: Number(encounter.momentum ?? 0), hazards: [...(encounter.hazards ?? [])],
-    checkBonuses: { ...(encounter.checkBonuses ?? {}) }, dcAdjustments: { ...(encounter.dcAdjustments ?? {}) }, degreeLifts: { ...(encounter.degreeLifts ?? {}) },
-    checkBonusSources: cloneSources(encounter.checkBonusSources), dcAdjustmentSources: cloneSources(encounter.dcAdjustmentSources), degreeLiftSources: cloneSources(encounter.degreeLiftSources),
-    notes: [...(encounter.notes ?? [])], strainGuards: { ...(encounter.strainGuards ?? {}) }, generalStrainGuard: Number(encounter.generalStrainGuard ?? 0), hazardGuard: Number(encounter.hazardGuard ?? 0), momentumLossGuard: Number(encounter.momentumLossGuard ?? 0), riskOverrides: { ...(encounter.riskOverrides ?? {}) }, hazardShelters: { ...(encounter.hazardShelters ?? {}) }, suppressedHazards: [...(encounter.suppressedHazards ?? [])]
-  };
-}
+
 function unresolved(state) { return (state.order ?? []).filter((stationId) => !state.results?.[stationId]); }
 function assertTarget(state, stationId) { if (!stationId || !unresolved(state).includes(stationId)) throw new Error("Choose an unresolved station."); }
 function addCheckBonus(encounter, stationId, value, source) { encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + Number(value ?? 0); encounter.checkBonusSources[stationId] ??= []; encounter.checkBonusSources[stationId].push(`${source}: +${Number(value ?? 0)} to the PF2e check`); }

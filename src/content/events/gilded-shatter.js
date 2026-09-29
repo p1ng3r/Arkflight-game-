@@ -141,6 +141,7 @@ export const GILDED_SHATTER = eventDefinition({
   image: GILDED_SHATTER_OPENING_IMAGE,
   openingVignette: "A dead Arkflight galleon turns slowly at the edge of a Dark Star, its broken hull bending toward the gravity maw. Fresh gold is spreading through timber, iron, rope, and bone while blue-white pulses flicker somewhere deep below decks. Before anyone can learn why, the Rum Runner has to cross a drifting debris field and hold alongside a wreck whose mass is changing by the minute. Get close, survive the Gravity Shear, establish the boarding corridor, and put the party physically onto the derelict.",
   goal: "Bring the Rum Runner alongside the gilded wreck, survive the escalating Gravity Shear, establish a stable boarding corridor, and get the PCs physically aboard for normal PF2e exploration.",
+  hazardDefinitions: GILDED_SHATTER_HAZARDS,
   startingState: { momentum: 0, hazards: ["gravity-shear"] },
   rounds: ROUNDS,
   endings: {

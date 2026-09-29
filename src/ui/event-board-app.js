@@ -1,3 +1,6 @@
+import { availableStationActions, hazardCheckAdjustment, hazardOrderErrors, riskBlockReason } from "../event/hazard-rules.js";
+import { riskResolutionLabel } from "../event/risk-awards.js";
+import { resolveRiskAwardDialog } from "./risk-award-dialog.js";
 import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
 import { getMasteryTechnique } from "../content/base-mastery.js";
@@ -68,12 +71,12 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       const selection = state.selections[stationId];
       const fallback = FALLBACK_ACTIONS[stationId];
       const authored = round.stationActions[stationId] ?? [];
-      const availableActions = [fallback, ...authored];
+      const availableActions = availableStationActions(event, state, stationId);
       const selectedAction = availableActions.find((action) => action.id === selection.actionId) ?? null;
       const selectedSkill = selectedAction?.skills?.find((skill) => skill.id === selection.skillId) ?? null;
       const riskChoices = (selectedSkill?.riskBids ?? []).map((risk) => {
         const benefit = getRiskBenefit(risk.benefitId);
-        return { ...risk, name: benefit?.name ?? risk.benefitId, success: benefit?.success ?? "", criticalSuccess: benefit?.criticalSuccess ?? "", modifiedDc: Number(selectedSkill.dc) + Number(risk.tier), selected: selection.riskTier === risk.tier };
+        return { ...risk, name: benefit?.name ?? risk.benefitId, resolutionLabel: riskResolutionLabel(risk.benefitId), blockedReason: riskBlockReason(event, state, stationId, risk.tier), success: benefit?.success ?? "", criticalSuccess: benefit?.criticalSuccess ?? "", modifiedDc: Number(selectedSkill.dc) + Number(risk.tier) + hazardCheckAdjustment(event, state, stationId).dc, selected: selection.riskTier === risk.tier };
       });
       const configured = stationOptions[stationId] ?? {};
       const signatures = (configured.signatures ?? []).map((item) => ({ ...item, selected: item.id === selection.signatureId, expended: Boolean(state.signatureUses?.[stationId]) }));
@@ -169,7 +172,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
 
     const encounter = state.encounter ?? event.startingState ?? {};
     const pressure = Object.entries(encounter.pressure ?? {}).map(([system, value]) => ({ system: titleCase(system), value }));
-    const hazards = (encounter.hazards ?? []).map((id) => ({ id, name: titleCase(id) }));
+    const hazards = (encounter.hazards ?? []).map((id) => ({ id, name: event.hazardDefinitions?.[id]?.name ?? titleCase(id), description: event.hazardDefinitions?.[id]?.description ?? "GM-authored Hazard" }));
     const finalRound = (state.roundIndex ?? 0) >= event.rounds.length - 1;
 
     return {
@@ -191,7 +194,10 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       resolution: state.phase === "resolution",
       roundResultPhase: state.phase === "round-result",
       eventComplete: state.phase === "event-complete",
-      readyToLock: planningReady(state),
+      readyToLock: planningReady(state) && !hazardOrderErrors(event, state).length,
+      hazardOrderWarnings: hazardOrderErrors(event, state),
+      pendingRiskAwards: encounter.pendingRiskAwards ?? [],
+      hasPendingRiskAwards: Boolean(encounter.pendingRiskAwards?.length),
       timerExpired: remaining <= 0,
       timerText: formatTimer(remaining),
       momentum: Number(encounter.momentum ?? 0),
@@ -249,7 +255,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       const actor = assignment ? game.actors.get(assignment) : null;
       const selection = state.selections?.[stationId] ?? {};
       const fallback = FALLBACK_ACTIONS[stationId];
-      const actions = [fallback, ...(round?.stationActions?.[stationId] ?? [])].filter(Boolean);
+      const actions = availableStationActions(event, state, stationId);
       const action = actions.find((entry) => entry.id === selection.actionId) ?? null;
       const skill = action?.skills?.find((entry) => entry.id === selection.skillId) ?? null;
       const mastery = getMasteryTechnique(stationId, state.masterySelections?.[stationId]);
@@ -354,7 +360,10 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         }
         const tier = button.dataset.riskTier;
         const headline = button.querySelector("div")?.textContent?.replace(/\s+/g, " ")?.trim() || `Heroic +${tier}`;
-        option(select, tier, `★ ${headline}`, button.classList.contains("selected"));
+        const mode = button.querySelector("small")?.textContent?.trim() ?? "";
+        option(select, tier, `★ ${headline} — ${mode}`, button.classList.contains("selected"));
+        select.lastElementChild.disabled = button.disabled;
+        select.lastElementChild.title = button.title;
         if (button.classList.contains("selected")) {
           const detailBox = document.createElement("div");
           detailBox.className = "arkflight-selected-risk-detail";
@@ -438,6 +447,7 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         event.preventDefault(); const button = event.currentTarget; const action = button.dataset.arkAction; const station = button.dataset.station;
         try {
           switch (action) {
+            case "record-risk-award": await resolveRiskAwardDialog(this.controller, button.dataset.awardId); break;
             case "begin-planning": await this.controller.beginPlanning(); break;
             case "choose-action": await this.controller.command({ type: "select-action", station, actionId: button.dataset.actionId }); break;
             case "choose-skill": await this.controller.command({ type: "select-skill", station, skillId: button.dataset.skillId }); break;
