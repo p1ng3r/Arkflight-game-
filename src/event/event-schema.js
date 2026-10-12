@@ -69,7 +69,7 @@ export function roundDefinition({ id, title, situation = "", openingVignette = "
   return Object.freeze({ id, title, situation, openingVignette, image, stationActions: Object.freeze({ ...normalizedActions }), outcomes: Object.freeze({ ...outcomes }), narrativeHooks: Object.freeze({ ...narrativeHooks }) });
 }
 
-export function eventDefinition({ id, title, image, openingVignette, goal, startingState = {}, rounds, endings = {} }) {
+export function eventDefinition({ id, title, image, openingVignette, goal, startingState = {}, rounds, endings = {}, hazardDefinitions = {} }) {
   if (!id || !title || !image || !openingVignette || !goal) throw new Error("Event requires id, title, image, openingVignette, and goal");
   const sentenceCount = String(openingVignette).split(/[.!?]+/).map((s) => s.trim()).filter(Boolean).length;
   if (sentenceCount < 3 || sentenceCount > 6) throw new Error(`Opening vignette must be 3-6 sentences; received ${sentenceCount}`);
@@ -82,6 +82,7 @@ export function eventDefinition({ id, title, image, openingVignette, goal, start
     openingVignette,
     goal,
     planningSeconds: PLANNING_SECONDS,
+    hazardDefinitions: Object.freeze({ ...hazardDefinitions }),
     startingState: Object.freeze({ momentum: 0, hazards: [], ...cleanStartingState }),
     rounds: Object.freeze([...rounds]),
     endings: Object.freeze({ ...endings })

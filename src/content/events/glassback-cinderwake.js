@@ -6,6 +6,15 @@ export const GLASSBACK_HAZARDS = Object.freeze({
   "collapsing-spars": Object.freeze({
     id: "collapsing-spars",
     name: "Collapsing Spars",
+    actions: Object.freeze({
+      "battlewatch.clear-the-fall": stationAction({
+        id: "battlewatch.clear-the-fall", station: "battlewatch", name: "Clear the Falling Spars",
+        description: "Call a safe line or haul the burning wreckage clear. Success removes Collapsing Spars before its round-end Strain.",
+        skills: [skillChoice({ id: "clear-the-fall-perception", label: "Perception", skill: "perception", dc: 18 }),
+          skillChoice({ id: "clear-the-fall-athletics", label: "Athletics", skill: "athletics", dc: 18 })],
+        tags: ["emergency", "clears-hazard:collapsing-spars"]
+      })
+    }),
     description: "Burning spars tumble through the route, forcing the crew to react before they close the lane.",
     effects: Object.freeze([
       { kind: "add-emergency-action", station: "battlewatch", actionId: "battlewatch.clear-the-fall" },
@@ -138,6 +147,7 @@ export const GLASSBACK_CINDERWAKE = eventDefinition({
   image: "assets/art/events/glassback-cinderwake.webp",
   openingVignette: "The black between worlds flashes red as a Glassback leviathan rolls through the skeleton of a shattered Arkflight wreck. Its passage tears loose ember-bright spars and furnace plates, dragging a burning wake directly across your course. The Lifeveil shivers as the first wave of heat and debris closes around the ship, while the Arkengine strains to answer the helm. Get through the wreck, survive the Glassback's cinderwake, and reach the blue seam beyond its final turn.",
   goal: "Survive the wreck, cross the cinderwake, and escape through the Glassback's final blue seam.",
+  hazardDefinitions: GLASSBACK_HAZARDS,
   startingState: { momentum: 0, hazards: [] },
   rounds: ROUNDS,
   endings: {

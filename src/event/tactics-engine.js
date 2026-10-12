@@ -1,17 +1,9 @@
+import { cloneEncounter } from "./encounter-state.js";
 import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
 import { clampMomentum } from "./event-schema.js";
 import { shiftEventResult } from "./event-outcome.js";
 
-function cloneSources(source) { return Object.fromEntries(Object.entries(source ?? {}).map(([key, rows]) => [key, [...(rows ?? [])]])); }
-function cloneEncounter(encounter = {}) {
-  return {
-    momentum: Number(encounter.momentum ?? 0), hazards: [...(encounter.hazards ?? [])],
-    checkBonuses: { ...(encounter.checkBonuses ?? {}) }, dcAdjustments: { ...(encounter.dcAdjustments ?? {}) }, degreeLifts: { ...(encounter.degreeLifts ?? {}) },
-    checkBonusSources: cloneSources(encounter.checkBonusSources), dcAdjustmentSources: cloneSources(encounter.dcAdjustmentSources), degreeLiftSources: cloneSources(encounter.degreeLiftSources),
-    notes: [...(encounter.notes ?? [])], strainGuards: { ...(encounter.strainGuards ?? {}) }, generalStrainGuard: Number(encounter.generalStrainGuard ?? 0), hazardGuard: Number(encounter.hazardGuard ?? 0), suppressedHazards: [...(encounter.suppressedHazards ?? [])],
-    rollTwiceBest: { ...(encounter.rollTwiceBest ?? {}) }, riskTierOverrides: { ...(encounter.riskTierOverrides ?? {}) }
-  };
-}
+
 function unresolved(state) { return (state.order ?? []).filter((stationId) => !state.results?.[stationId]); }
 function assertTarget(state, stationId) { if (!stationId || !unresolved(state).includes(stationId)) throw new Error("Choose an unresolved station."); }
 function addCheckBonus(encounter, stationId, value, source) { encounter.checkBonuses[stationId] = Number(encounter.checkBonuses[stationId] ?? 0) + Number(value ?? 0); encounter.checkBonusSources[stationId] ??= []; encounter.checkBonusSources[stationId].push(source); }
@@ -36,6 +28,7 @@ function assertTheater(state, tactic) {
 export function applyCrewTactic(state, tacticId, options = {}) {
   const tactic = getCrewEdgeCard(tacticId); if (!tactic) throw new Error(`Unknown Crew Tactic: ${tacticId}`); if (!(state?.crewEdgeHand ?? []).includes(tacticId)) throw new Error(`${tactic.name} is not currently Ready.`);
   assertTheater(state, tactic);
+  if (["hold-together", "brace-for-it", "protect-the-system"].includes(tacticId) && state.consequenceApplied) throw new Error("The round consequence has already been applied.");
   let next = { ...state }; const encounter = cloneEncounter(state.encounter); const source = `Crew Tactic — ${tactic.name}`;
   switch (tacticId) {
     case "all-hands-together": for (const stationId of unresolved(state)) addCheckBonus(encounter, stationId, 1, `${source}: +1 for the round`); break;
@@ -49,11 +42,11 @@ export function applyCrewTactic(state, tacticId, options = {}) {
     case "change-of-course": { if (state.phase !== "planning") throw new Error("Change of Course may only be used during crew planning."); assertTarget(state, options.targetStationId); const order = [...state.order]; const from = order.indexOf(options.targetStationId); const to = Math.max(0, Math.min(order.length - 1, Number(options.targetIndex ?? from))); order.splice(from, 1); order.splice(to, 0, options.targetStationId); next = { ...next, order }; break; }
     case "crew-instinct": { const desired = Array.isArray(options.order) ? options.order : []; if (desired.length !== state.order.length || new Set(desired).size !== state.order.length || desired.some((id) => !state.order.includes(id))) throw new Error("Crew Instinct requires a complete valid station order."); next = { ...next, order: [...desired] }; break; }
     case "not-yet": suppressHazard(encounter, options.hazardId); break;
-    case "brace-for-it": { const area = options.area ?? options.system; if (!area) throw new Error("Choose a ship Area to protect."); encounter.strainGuards[area] = Number(encounter.strainGuards[area] ?? 0) + 99; encounter.notes.push(`${source} protects ${area} from the next round Strain consequence.`); break; }
+    case "brace-for-it": encounter.guardNextStrainSource = true; break;
     case "one-more-push": if (encounter.momentum < 1) throw new Error("One More Push requires at least 1 Momentum."); assertTarget(state, options.targetStationId); encounter.momentum = clampMomentum(encounter.momentum - 1); addCheckBonus(encounter, options.targetStationId, 3, `${source}: +3 after spending 1 Momentum`); break;
     case "steady-hands": { assertTarget(state, options.targetStationId); const riskTier = Number(state.selections?.[options.targetStationId]?.riskTier ?? 0); if (!riskTier) throw new Error("Steady Hands requires a station with a Heroic / Risk Bid selected."); addDc(encounter, options.targetStationId, -Math.min(2, riskTier), `${source}: reduces only the Risk portion of the DC`); break; }
     case "seize-the-gap": { const hasCrit = Object.values(state.results ?? {}).some((result) => result?.degreeKey === "criticalSuccess"); if (!hasCrit) throw new Error("Seize the Gap requires a Critical Success this round."); encounter.momentum = clampMomentum(encounter.momentum + 1); break; }
-    case "protect-the-system": { const area = options.area ?? options.system; if (!area) throw new Error("Choose a ship Area to protect."); encounter.strainGuards[area] = Number(encounter.strainGuards[area] ?? 0) + 2; break; }
+    case "protect-the-system": encounter.nextSourceStrainGuard = Math.max(Number(encounter.nextSourceStrainGuard ?? 0), 2); break;
     case "refuse-the-ending": next = { ...next, eventResultPreview: shiftEventResult(state.eventResultPreview, 1, { failuresOnly: true }), eventResultTacticUsed: tacticId }; break;
     default: throw new Error(`Unsupported Crew Tactic: ${tacticId}`);
   }
