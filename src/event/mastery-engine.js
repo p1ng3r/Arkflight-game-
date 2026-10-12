@@ -17,7 +17,7 @@ function shelterUnresolved(state, encounter) { for (const stationId of unresolve
 
 export function masteryReady(state, stationId) { const station = canonicalMasteryStation(stationId); const masteryId = state?.masterySelections?.[station] ?? state?.masterySelections?.[stationId] ?? null; return Boolean(masteryId && !state?.masteryUses?.[station] && !state?.masteryUses?.[stationId]); }
 
-export function applyMasteryTechnique(state, stationId, options = {}) {
+export function applyMasteryTechnique(state, stationId, options = {}, event = null) {
   if (!state?.setupLocked) throw new Error("Crew & Arkcraft must be locked before an Arkcraft Skill can be used.");
   if (["opening", "event-complete"].includes(state.phase)) throw new Error("Arkcraft Skills cannot be used in this phase.");
   const station = canonicalMasteryStation(stationId);
@@ -32,7 +32,7 @@ export function applyMasteryTechnique(state, stationId, options = {}) {
       const sourceStationId = options.sourceStationId; const result = state.results?.[sourceStationId];
       if (!result?.riskEarned || !result.riskBenefitId) throw new Error("Carry the Deed requires a station that just earned a Heroic/Risk benefit.");
       assertTarget(state, options.targetStationId); const riskBenefit = getRiskBenefit(result.riskBenefitId); if (!riskBenefit) throw new Error("The earned Heroic/Risk benefit could not be found.");
-      next = applyEarnedRiskBenefit({ ...state, encounter }, { stationId: sourceStationId, riskBenefit, riskBid: { benefitId: result.riskBenefitId, parameters: { targetStationId: options.targetStationId } } }, result.degreeKey === "criticalSuccess" ? "criticalSuccess" : "success");
+      next = applyEarnedRiskBenefit({ ...state, encounter }, { stationId: sourceStationId, riskBenefit, riskBid: { benefitId: result.riskBenefitId, parameters: { targetStationId: options.targetStationId } } }, result.degreeKey === "criticalSuccess" ? "criticalSuccess" : "success", event);
       encounter = cloneEncounter(next.encounter); encounter.notes.push(`${source} extended ${riskBenefit.name} to ${options.targetStationId}.`); break;
     }
     case "captain-set-the-pace": throw new Error("Set the Pace resolves automatically when Round 1 planning begins.");

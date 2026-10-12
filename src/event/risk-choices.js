@@ -7,6 +7,78 @@ export const RISK_CHOICE_IDS = new Set([
   "station-link-strong", "station-link-legend"
 ]);
 
+/**
+ * Resolve choice-shaped rewards using authored targets first and encounter
+ * order as the stable fallback. Earned rewards never wait for a GM prompt.
+ */
+function hazardThreatScore(event, hazardId, stationId) {
+  const hazard = event?.hazardDefinitions?.[hazardId];
+  return (hazard?.effects ?? []).reduce((score, effect) => {
+    if (effect.station && stationId && effect.station !== stationId) return score;
+    if (effect.kind === "dc-modifier") return score + Math.max(0, Number(effect.value ?? 0)) * 4;
+    if (effect.kind === "strain-if-ignored") return score + Math.max(0, Number(effect.value ?? 0)) * 3;
+    if (effect.kind === "block-risk-tier") return score + Math.max(0, Number(effect.tier ?? 0));
+    if (effect.kind === "order-restriction") return score + 2;
+    return score;
+  }, 0);
+}
+
+function hazardEligibleForReward(event, hazardId, benefitId) {
+  if (!["lifeveil-ward", "lifeveil-miracle", "weapons-opening"].includes(benefitId)) return true;
+  const hazard = event?.hazardDefinitions?.[hazardId];
+  const text = `${hazardId} ${hazard?.name ?? ""} ${hazard?.description ?? ""}`.toLowerCase();
+  if (["lifeveil-ward", "lifeveil-miracle"].includes(benefitId)) return /void|aether|gravity|veil|dark star|psychic/.test(text);
+  return /cover|debris|obstruction|barrier/.test(text);
+}
+
+export function automaticRiskChoiceOptions(state, award, event = null) {
+  const encounter = state?.encounter ?? {};
+  const remaining = (state?.order ?? []).filter(id => !state?.results?.[id]);
+  const parameters = award?.parameters ?? {};
+  const targetStationId = remaining.includes(parameters.targetStationId)
+    ? parameters.targetStationId
+    : remaining.find(id => id !== award?.stationId) ?? remaining[0] ?? null;
+  const eligibleHazards = (encounter.hazards ?? []).filter(id => hazardEligibleForReward(event, id, award?.benefitId));
+  const hazardId = eligibleHazards.includes(parameters.hazardId)
+    ? parameters.hazardId
+    : eligibleHazards.sort((a, b) => hazardThreatScore(event, b, targetStationId) - hazardThreatScore(event, a, targetStationId))[0] ?? null;
+  const order = [...remaining];
+
+  switch (award?.benefitId) {
+    case "order-shift-self":
+      if (order.length > 1) [order[0], order[1]] = [order[1], order[0]];
+      break;
+    case "order-swap":
+      if (award.degreeKey === "criticalSuccess") order.reverse();
+      else if (order.length > 1) [order[0], order[1]] = [order[1], order[0]];
+      break;
+  }
+
+  return {
+    targetStationId,
+    targetStationIds: remaining.slice(0, 2),
+    hazardId,
+    order,
+    // A one point DC reduction is a fixed, reproducible resolution of the
+    // equivalent +1 check bonus / -1 DC choice.
+    helmChoice: "dc",
+    // Prefer reducing shared Strain when the reward offers two alternatives.
+    engineChoice: "strain"
+  };
+}
+
+export function applyAutomaticRiskChoice(state, award, event = null) {
+  const options = automaticRiskChoiceOptions(state, award, event);
+  const needsHazard = ["hazard-remove-1", "hazard-suppress-1", "hazard-suppress-2", "hazard-delay", "hazard-turn-1", "hazard-opportunity", "lifeveil-ward", "rigging-clear"].includes(award?.benefitId);
+  const needsStation = ["order-followup", "hazard-turn-1", "hazard-opportunity", "lifeveil-ward", "weapons-opening", "station-link-strong", "station-link-legend"].includes(award?.benefitId);
+  if ((needsHazard && !options.hazardId) || (needsStation && !options.targetStationId)) {
+    const encounter = cloneEncounter(state?.encounter);
+    encounter.notes.push(`${award?.name ?? "Risk reward"}: no eligible target remained; resolved automatically with no additional effect.`);
+    return { ...state, encounter };
+  }
+  return applyRiskChoice(state, award, options);
+}
+
 /** Player/GM selected targets; never silently redirect an authored choice. */
 export function applyRiskChoice(state, award, options = {}) {
   if (!RISK_CHOICE_IDS.has(award.benefitId)) return state;

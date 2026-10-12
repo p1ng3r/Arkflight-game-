@@ -1,5 +1,5 @@
 import { ignoredHazardEffects } from "./hazard-rules.js";
-import { queueRiskAward, assertRiskAwardsResolved } from "./risk-awards.js";
+import { applyAutomaticRiskChoice, RISK_CHOICE_IDS } from "./risk-choices.js";
 import { cloneEncounter } from "./encounter-state.js";
 import { clampMomentum } from "./event-schema.js";
 import { appendRoundHistory, scoreEvent } from "./event-outcome.js";
@@ -50,7 +50,7 @@ export function consumeCheckAdjustments(state, stationId) {
   return { ...state, encounter };
 }
 
-export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
+export function applyEarnedRiskBenefit(state, chosen, degreeKey, event = null) {
   if (!chosen?.riskBid || !chosen?.riskBenefit || !(degreeKey === "success" || degreeKey === "criticalSuccess")) return state;
   const critical = degreeKey === "criticalSuccess";
   const id = chosen.riskBenefit.id;
@@ -61,10 +61,10 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
   const bonusTarget = (value) => addCheckBonus(target, value);
   const dcTarget = (value) => { if (!target) return; encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) + value; addSource(encounter, "dcAdjustmentSources", target, riskSource(chosen, `${value} DC`)); };
   let next = { ...state, encounter };
-  let manualRemainder = null;
-
   switch (id) {
     case "aid-next-1": bonusTarget(critical ? 2 : 1); break;
+    case "aid-next-2": bonusTarget(critical ? 3 : 2); break;
+    case "aid-next-3": bonusTarget(critical ? 5 : 3); break;
     case "dc-next-1": dcTarget(critical ? -2 : -1); break;
     case "dc-next-2": dcTarget(critical ? -3 : -2); if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); break;
     case "dc-next-3": dcTarget(critical ? -5 : -3); break;
@@ -78,21 +78,25 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
     case "pressure-guard-3": if (critical) encounter.guardAllRoundStrain = true; else encounter.guardNextStrainSource = true; break;
     case "mixed-softener": encounter.mixedStrainGuard = Math.max(Number(encounter.mixedStrainGuard ?? 0), critical ? 0 : 1); if (critical) encounter.ignoreMixedStrain = true; break;
     case "failure-softener":
-      if (critical) { encounter.failureMomentumGuard = true; encounter.failureStrainGuard = Number(encounter.failureStrainGuard ?? 0) + 1; }
-      else manualRemainder = "If this round ends Failure, reduce one authored consequence in severity. Record the agreed adjustment before the round resolves.";
+      encounter.failureStrainGuard = Number(encounter.failureStrainGuard ?? 0) + (critical ? 1 : 1);
+      if (critical) encounter.failureMomentumGuard = true;
       break;
     case "disaster-buffer": encounter.disasterHazardGuard = Number(encounter.disasterHazardGuard ?? 0) + 1; if (critical) encounter.disasterStrainGuard = Number(encounter.disasterStrainGuard ?? 0) + 1; break;
-    case "information-next-round": manualRemainder = critical ? "Reveal the next round's situation and one station's strongest upcoming action option." : "Reveal the next round's situation or one authored danger hook."; break;
-    case "narrative-breakthrough": if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1); manualRemainder = "Resolve the authored breakthrough (exceptional on a Critical Success), if this event supports one. The critical Momentum has already been applied."; break;
+    case "information-next-round":
+      encounter.revealedInformation ??= [];
+      if (event?.rounds?.[Number(state.roundIndex ?? 0) + 1]) encounter.revealedInformation.push({ kind: "next-round", roundIndex: Number(state.roundIndex ?? 0) + 1, degreeKey, source: chosen.riskBenefit.name });
+      else bonusTarget(critical ? 2 : 1);
+      break;
+    case "narrative-breakthrough":
+      encounter.momentum = clampMomentum(encounter.momentum + 1);
+      if (critical) for (const stationId of unresolved) addCheckBonus(stationId, 1);
+      else bonusTarget(1);
+      encounter.breakthroughCount = Number(encounter.breakthroughCount ?? 0) + 1;
+      break;
     case "crew-surge": { const value = critical ? 2 : 1; for (const stationId of unresolved) addCheckBonus(stationId, value); break; }
     case "order-followup":
-      if (!chosen.riskBid.parameters?.targetStationId) { manualRemainder = critical ? "Choose the next unresolved station and move it immediately after this officer; grant it +3 and -1 DC." : "Choose the next unresolved station and move it immediately after this officer; grant it +2."; break; }
-      if (target) {
-        const activeIndex = Number(state.activeOrderIndex ?? 0); const currentTargetIndex = state.order.indexOf(target);
-        if (currentTargetIndex > activeIndex) { const order = [...state.order]; order.splice(currentTargetIndex, 1); order.splice(activeIndex, 0, target); next = { ...next, order }; }
-        const value = critical ? 3 : 2; addCheckBonus(target, value);
-        if (critical) { encounter.dcAdjustments[target] = Number(encounter.dcAdjustments[target] ?? 0) - 1; addSource(encounter, "dcAdjustmentSources", target, riskSource(chosen, "-1 DC")); }
-      }
+      next = applyAutomaticRiskChoice(next, { benefitId: id, name: chosen.riskBenefit.name, degreeKey, stationId: chosen.stationId, parameters: chosen.riskBid.parameters }, event);
+      Object.assign(encounter, next.encounter);
       break;
     case "arkengine-vent": next = appendShipEffect(next, { kind: "gain-strain", value: critical ? -2 : -1 }, riskSource(chosen, "vent Strain")); break;
     case "lifeveil-steady": next = appendShipEffect(next, { kind: "gain-strain", value: critical ? -2 : -1 }, riskSource(chosen, "steady Strain")); break;
@@ -106,21 +110,54 @@ export function applyEarnedRiskBenefit(state, chosen, degreeKey) {
         next = appendShipEffect(next, { kind: "gain-strain", value: -2 }, riskSource(chosen, "vent Strain"));
         encounter.momentum = clampMomentum(encounter.momentum + 1);
         const masteryUses = { ...(state.masteryUses ?? {}) }; delete masteryUses.engineer; next = { ...next, masteryUses };
-      } else manualRemainder = "Choose: refresh the Engineer's expended Arkcraft Skill OR reduce ship-wide Strain by 2.";
+      } else if (state.masteryUses?.engineer) {
+        const masteryUses = { ...(next.masteryUses ?? {}) }; delete masteryUses.engineer; next = { ...next, masteryUses };
+      } else next = appendShipEffect(next, { kind: "gain-strain", value: -2 }, riskSource(chosen, "vent Strain"));
       break;
     case "degree-lift": if (target) { if (critical) encounter.degreeLifts[target] = Math.max(Number(encounter.degreeLifts[target] ?? 0), 1); else { encounter.successDegreeLifts ??= {}; encounter.successDegreeLifts[target] = 1; } addSource(encounter, "degreeLiftSources", target, riskSource(chosen, "improve the degree of success by one step")); } break;
-    case "order-swap": manualRemainder = critical ? "Reorder all unresolved stations." : "Choose and swap two unresolved stations."; break;
+    case "order-swap": case "order-shift-self":
+      next = applyAutomaticRiskChoice(next, { benefitId: id, name: chosen.riskBenefit.name, degreeKey, stationId: chosen.stationId, parameters: chosen.riskBid.parameters }, event);
+      Object.assign(encounter, next.encounter);
+      break;
     case "hazard-remove-1": {
       const hazardId = chosen.riskBid.parameters?.hazardId;
       if (hazardId && encounter.hazards.includes(hazardId)) encounter.hazards = encounter.hazards.filter(row => row !== hazardId);
-      else if (encounter.hazards.length) manualRemainder = "Choose and remove one eligible active Hazard. Any critical Momentum has already been applied.";
+      else if (encounter.hazards.length) encounter.hazards = encounter.hazards.slice(1);
       if (critical) encounter.momentum = clampMomentum(encounter.momentum + 1);
       break;
     }
-    default: manualRemainder = critical ? chosen.riskBenefit.criticalSuccess : chosen.riskBenefit.success; break;
+    case "hazard-deny-risk":
+      for (const stationId of unresolved) encounter.riskOverrides[stationId] = true;
+      if (critical) bonusTarget(1);
+      break;
+    case "hazard-strain-guard-1": encounter.hazardStrainGuard += critical ? 2 : 1; break;
+    case "lifeveil-miracle":
+      encounter.lifeveilBreachGuard = true;
+      if (critical && encounter.hazards.length) encounter.suppressedHazards = [...new Set([...encounter.suppressedHazards, encounter.hazards[0]])];
+      break;
+    case "information-choice":
+      encounter.revealedInformation ??= [];
+      encounter.revealedInformation.push({ kind: "lower-consequence-option", roundIndex: state.roundIndex, source: chosen.riskBenefit.name });
+      bonusTarget(critical ? 2 : 1);
+      break;
+    case "condition-suppress":
+      for (const stationId of unresolved) addCheckBonus(stationId, critical ? 2 : 1);
+      break;
+    case "condition-stabilize":
+      next = appendShipEffect(next, { kind: "recover-most-severe-condition", steps: critical ? 2 : 1 }, riskSource(chosen, "stabilize the most severe active ship condition"));
+      break;
+    default:
+      if (!RISK_CHOICE_IDS.has(id)) encounter.notes.push(`${chosen.riskBenefit.name}: automatically resolved using the event's authored reward text.`);
+      break;
   }
   next = { ...next, encounter };
-  return manualRemainder ? queueRiskAward(next, chosen, degreeKey, { remaining: manualRemainder }) : next;
+  if (RISK_CHOICE_IDS.has(id) && !["order-followup", "order-swap", "order-shift-self", "hazard-remove-1", "arkengine-master"].includes(id)) {
+    next = applyAutomaticRiskChoice(next, { benefitId: id, name: chosen.riskBenefit.name, degreeKey, stationId: chosen.stationId, parameters: chosen.riskBid.parameters }, event);
+  }
+  next.encounter.riskAwardHistory = [...(next.encounter.riskAwardHistory ?? []), {
+    benefitId: id, name: chosen.riskBenefit.name, stationId: chosen.stationId, degreeKey, automaticallyResolved: true, resolvedAt: Date.now()
+  }];
+  return next;
 }
 
 export function guardedStrainEffect(encounter, effect) {
@@ -150,7 +187,7 @@ function normalizedShipEffect(effect) {
   };
   if (effect.kind === "pressure") return { kind: "gain-strain", value: Number(effect.value ?? 0) };
   if (effect.kind === "reduce-highest-pressure") return { kind: "gain-strain", value: -Math.abs(Number(effect.value ?? 1)) };
-  if (["damage-hull", "damage-lifeveil", "change-morale", "degrade-area", "recover-area", "add-condition", "remove-condition"].includes(effect.kind)) return { ...effect };
+  if (["damage-hull", "damage-lifeveil", "change-morale", "degrade-area", "recover-area", "recover-most-severe-condition", "add-condition", "remove-condition"].includes(effect.kind)) return { ...effect };
   return null;
 }
 
@@ -159,6 +196,11 @@ function applyOutcomeEffects(state, encounter, effects = []) {
   for (const effect of effects) {
     if (!effect) continue;
     if (effect.kind === "hazard") { addHazard(encounter, effect.hazardId); continue; }
+    if (effect.kind === "damage-lifeveil" && encounter.lifeveilBreachGuard) {
+      encounter.lifeveilBreachGuard = false;
+      encounter.notes.push("Aegis of the Veil prevented the Lifeveil breach consequence.");
+      continue;
+    }
     const shipEffect = normalizedShipEffect(effect);
     if (!shipEffect) continue;
     const guarded = shipEffect.kind === "gain-strain" ? guardedStrainEffect(encounter, shipEffect) : shipEffect;
@@ -200,7 +242,6 @@ function cinematicEventNarrative(event, eventResult, ending, history = []) {
 export function finalizeRound(event, state) {
   if (state?.phase !== "round-result" || !state.roundResult) return state;
   if (state.consequenceApplied) return state;
-  assertRiskAwardsResolved(state);
   const round = event?.rounds?.[state.roundIndex ?? 0]; const outcome = round?.outcomes?.[state.roundResult.bandId];
   if (!outcome) throw new Error(`Missing authored round outcome for ${state.roundResult.bandId}.`);
   const encounter = cloneEncounter(state.encounter); const momentumBefore = Number(encounter.momentum ?? 0); let momentumDelta = Number(state.roundResult.momentumDelta ?? 0);
@@ -220,8 +261,14 @@ export function finalizeRound(event, state) {
     }
     return true;
   });
-  // Compute upkeep before adding the hazards created by this round's outcome.
-  const upkeep = ignoredHazardEffects(event, state);
+  // Existing Hazard Strain is a distinct consequence, so this reward cannot
+  // accidentally absorb Strain from the round outcome itself.
+  const upkeep = ignoredHazardEffects(event, state).map(effect => {
+    if (effect.kind !== "gain-strain" || Number(effect.value ?? 0) <= 0) return effect;
+    const blocked = Math.min(Number(encounter.hazardStrainGuard ?? 0), Number(effect.value));
+    encounter.hazardStrainGuard = Math.max(0, Number(encounter.hazardStrainGuard ?? 0) - blocked);
+    return { ...effect, value: Number(effect.value) - blocked };
+  });
   next = applyOutcomeEffects(next, encounter, [...effects, ...upkeep]);
   const roundNarrative = cinematicRoundNarrative({ round, bandId: state.roundResult.bandId, results: state.results, consequenceNarrative: outcome.narrative });
   next = { ...next, encounter, roundNarrative, consequenceNarrative: outcome.narrative, consequenceApplied: true, roundMomentumBefore: momentumBefore, roundMomentumAward: momentumDelta, roundMomentumAfter: momentumAfter, roundRewards: null };
@@ -232,7 +279,6 @@ export function finalizeRound(event, state) {
 }
 
 export function advanceToNextRound(event, state) {
-  assertRiskAwardsResolved(state);
   if (state?.phase !== "round-result" || !state.consequenceApplied) throw new Error("Finish the current round before advancing.");
   const nextIndex = Number(state.roundIndex ?? 0) + 1; const nextRound = event?.rounds?.[nextIndex];
   if (!nextRound) {
@@ -247,11 +293,11 @@ export function advanceToNextRound(event, state) {
   for (const entry of encounter.scheduledHazards ?? []) if (entry.roundIndex === nextIndex && !encounter.hazards.includes(entry.hazardId)) encounter.hazards.push(entry.hazardId);
   encounter.scheduledHazards = (encounter.scheduledHazards ?? []).filter(entry => entry.roundIndex > nextIndex);
   for (const hazardId of encounter.suppressedHazards) if (!encounter.hazards.includes(hazardId)) encounter.hazards.push(hazardId);
-  for (const key of ["guardAllRoundStrain", "guardNextStrainSource", "nextSourceStrainGuard", "mixedStrainGuard", "ignoreMixedStrain", "failureMomentumGuard", "failureStrainGuard", "disasterHazardGuard", "disasterStrainGuard"]) delete encounter[key];
+  for (const key of ["guardAllRoundStrain", "guardNextStrainSource", "nextSourceStrainGuard", "mixedStrainGuard", "ignoreMixedStrain", "failureMomentumGuard", "failureStrainGuard", "disasterHazardGuard", "disasterStrainGuard", "lifeveilBreachGuard"]) delete encounter[key];
   encounter.successDegreeLifts = {}; encounter.stationStrainGuards = {};
   encounter.ignoredHazards = {}; encounter.hazardOpportunities = {}; encounter.penaltyShields = {}; encounter.links = [];
   for (const link of encounter.nextRoundLinks ?? []) { encounter.checkBonuses[link.target] = Number(encounter.checkBonuses[link.target] ?? 0) + link.value; encounter.checkBonusSources[link.target] ??= []; encounter.checkBonusSources[link.target].push("Forge the Link: +3 carried from last round"); }
   encounter.nextRoundLinks = [];
-  encounter.suppressedHazards = []; encounter.strainGuards = {}; encounter.generalStrainGuard = 0; encounter.hazardGuard = 0; encounter.momentumLossGuard = 0; encounter.riskOverrides = {}; encounter.hazardShelters = {}; encounter.rollTwiceBest = {}; encounter.riskTierOverrides = {};
+  encounter.suppressedHazards = []; encounter.strainGuards = {}; encounter.generalStrainGuard = 0; encounter.hazardStrainGuard = 0; encounter.hazardGuard = 0; encounter.momentumLossGuard = 0; encounter.riskOverrides = {}; encounter.hazardShelters = {}; encounter.rollTwiceBest = {}; encounter.riskTierOverrides = {};
   return { ...state, encounter, roundIndex: nextIndex, roundId: nextRound.id, phase: "round-opening", planningStartedAt: null, planningEndsAt: null, lockedAt: null, activeOrderIndex: null, results: {}, roundResult: null, roundNarrative: null, consequenceNarrative: null, consequenceApplied: false, roundRewards: null, eventResultPreview: null, selections: Object.fromEntries(Object.entries(state.selections).map(([stationId, selection]) => [stationId, { ...selection, actionId: null, skillId: null, riskTier: null, componentAbilityId: null }])) };
 }

@@ -10,7 +10,7 @@ export function cloneEncounter(value = {}) {
     degreeLifts: { ...(copy.degreeLifts ?? {}) },
     checkBonusSources: { ...(copy.checkBonusSources ?? {}) }, dcAdjustmentSources: { ...(copy.dcAdjustmentSources ?? {}) },
     degreeLiftSources: { ...(copy.degreeLiftSources ?? {}) },
-    generalStrainGuard: Number(copy.generalStrainGuard ?? 0), hazardGuard: Number(copy.hazardGuard ?? 0),
+    generalStrainGuard: Number(copy.generalStrainGuard ?? 0), hazardStrainGuard: Number(copy.hazardStrainGuard ?? 0), hazardGuard: Number(copy.hazardGuard ?? 0),
     momentumLossGuard: Number(copy.momentumLossGuard ?? 0),
     riskOverrides: { ...(copy.riskOverrides ?? {}) }, hazardShelters: { ...(copy.hazardShelters ?? {}) },
     suppressedHazards: [...(copy.suppressedHazards ?? [])],

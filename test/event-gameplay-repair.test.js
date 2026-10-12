@@ -9,7 +9,8 @@ import { applyMasteryTechnique } from '../src/event/mastery-engine.js';
 import { applyStationRollResult, selectedResolution } from '../src/event/resolution-engine.js';
 import { activeHazards, hazardCheckAdjustment, hazardOrderErrors, riskBlockReason, availableStationActions } from '../src/event/hazard-rules.js';
 import { applyRiskChoice } from '../src/event/risk-choices.js';
-import { recordRiskAwardResolution, assertRiskAwardsResolved } from '../src/event/risk-awards.js';
+import { resolveSavedRiskAwardsAutomatically } from '../src/event/risk-awards.js';
+import { applyShipEffects } from '../src/ship/ship-effects.js';
 
 const glass = ARKFLIGHT_EVENTS['glassback-cinderwake'];
 const gilded = ARKFLIGHT_EVENTS['gilded-shatter'];
@@ -19,18 +20,12 @@ function state(event = glass) {
     results: { captain: { degreeKey: 'success' } }, encounter: encounterFromEvent(event), pendingShipEffects: [], selections: {}, crewEdgeHand: [], masteryUses: {} };
 }
 function earn(s, id, critical = false, parameters = {}) {
-  return applyEarnedRiskBenefit(s, { stationId: 'captain', riskBid: { parameters }, riskBenefit: getRiskBenefit(id) }, critical ? 'criticalSuccess' : 'success');
+  return applyEarnedRiskBenefit(s, { stationId: 'captain', riskBid: { parameters }, riskBenefit: getRiskBenefit(id) }, critical ? 'criticalSuccess' : 'success', ARKFLIGHT_EVENTS[s.eventId] ?? glass);
 }
 function endRound(s, bandId = 'failure') {
   return finalizeRound(glass, { ...s, phase: 'round-result', roundResult: { score: -1, bandId, momentumDelta: -1 } });
 }
 function strain(s) { return s.pendingShipEffects.filter(e => e.kind === 'gain-strain').reduce((a,e) => a + e.value, 0); }
-function choose(s, options) {
-  const award = s.encounter.pendingRiskAwards.at(-1);
-  const next = applyRiskChoice(s, award, options);
-  return recordRiskAwardResolution(next, award.id, 'Selected eligible target', { userId: 'gm', now: 2 });
-}
-
 test('Momentum rewards execute both degrees and respect the cap', () => {
   assert.equal(earn(state(), 'momentum-1').encounter.momentum, 1);
   assert.equal(earn(state(), 'momentum-2', true).encounter.momentum, 2);
@@ -50,6 +45,18 @@ test('shared Strain guards reduce the actual round consequence', () => {
   assert.equal(strain(endRound(earn(state(), 'pressure-guard-1'))), 1);
   assert.equal(strain(endRound(earn(state(), 'pressure-guard-1', true))), 0);
   assert.equal(strain(endRound(earn(state(), 'pressure-guard-2'))), 0);
+});
+
+test('Brace Against the Shear blocks Hazard upkeep Strain without consuming round-outcome protection', () => {
+  const s = state(gilded);
+  s.encounter.hazards = ['gravity-shear', 'gilded-mass'];
+  const guarded = earn(s, 'hazard-strain-guard-1', true);
+  assert.equal(guarded.encounter.hazardStrainGuard, 2);
+  const done = finalizeRound(gilded, { ...guarded, phase: 'round-result', roundResult: { score: -1, bandId: 'failure', momentumDelta: 0 } });
+  const strainEffects = done.pendingShipEffects.filter(effect => effect.kind === 'gain-strain');
+  assert.equal(strain(strainEffects.length ? { pendingShipEffects: strainEffects } : { pendingShipEffects: [] }), 1);
+  assert.ok(strainEffects.every(effect => !String(effect.source ?? '').includes('left active at round end')));
+  assert.equal(done.encounter.hazardStrainGuard, 0);
 });
 
 test('single-source protection does not swallow later hazard upkeep', () => {
@@ -132,51 +139,79 @@ test('Mastery and Tactics retain each others encounter effects', () => {
   assert.equal(s.encounter.generalStrainGuard, 0);
 });
 
-test('earned target choice is persisted, blocks advancement and is recorded once', () => {
-  const s = earn(state(), 'order-followup', true);
-  assert.throws(() => assertRiskAwardsResolved(s), /pending Risk/);
-  const next = choose(s, { targetStationId: 'veilwarden' });
-  assert.equal(next.order[1], 'veilwarden'); assert.equal(next.encounter.checkBonuses.veilwarden, 3);
-  assert.equal(next.encounter.dcAdjustments.veilwarden, -1);
-  assert.doesNotThrow(() => assertRiskAwardsResolved(next));
-  assert.equal(next.encounter.riskAwardHistory[0].userId, 'gm');
-  assert.throws(() => recordRiskAwardResolution(next, s.encounter.pendingRiskAwards[0].id, 'again'), /no longer/);
+test('earned target rewards resolve automatically and never block the next roll', () => {
+  const next = earn(state(), 'order-followup', true);
+  assert.equal(next.encounter.pendingRiskAwards.length, 0);
+  assert.equal(next.order[1], 'engineer');
+  assert.equal(next.encounter.checkBonuses.engineer, 3);
+  assert.equal(next.encounter.dcAdjustments.engineer, -1);
+  assert.equal(next.encounter.riskAwardHistory[0].automaticallyResolved, true);
 });
 
-test('manual effects retain full instructions and cannot silently finalize', () => {
+test('condition stabilization applies automatically without a blocking GM prompt', () => {
   const s = earn(state(), 'condition-stabilize', true);
-  assert.match(s.encounter.pendingRiskAwards[0].effect, /Ship Condition/);
-  assert.throws(() => endRound(s), /pending Risk/);
+  assert.equal(s.encounter.pendingRiskAwards.length, 0);
+  assert.ok(s.pendingShipEffects.some(effect => effect.kind === 'recover-most-severe-condition' && effect.steps === 2));
+  assert.doesNotThrow(() => endRound(s));
+});
+
+test('automatic condition stabilization improves the most severe ship condition', () => {
+  const result = applyShipEffects({
+    resources: { hull: { value: 10, max: 10 }, strain: { value: 0, max: 10 } },
+    shipConditions: { hull: 'breached', drive: 'faltering', weapons: 'ready' }
+  }, [{ kind: 'recover-most-severe-condition', steps: 1 }]);
+  assert.equal(result.ship.shipConditions.hull, 'battered');
+  assert.equal(result.ship.shipConditions.drive, 'faltering');
 });
 
 test('targeted suppression affects a check once and round suppression returns next round', () => {
   const s = state(); s.encounter.hazards = ['ember-current']; s.activeOrderIndex = 4; s.results.engineer = {}; s.results.navigator = {}; s.results.battlewatch = {};
-  const once = choose(earn(s, 'hazard-suppress-1'), { hazardId: 'ember-current' });
+  const once = earn(s, 'hazard-suppress-1');
   assert.equal(hazardCheckAdjustment(glass, once, 'veilwarden').dc, 0);
   assert.equal(hazardCheckAdjustment(glass, consumeCheckAdjustments(once, 'veilwarden'), 'veilwarden').dc, 1);
-  const suppressed = choose(earn(state(gilded), 'hazard-suppress-2', true), { hazardId: 'gravity-shear' });
+  const suppressed = earn(state(gilded), 'hazard-suppress-2', true);
   assert.equal(suppressed.pendingShipEffects.at(-1).value, -1);
   const done = finalizeRound(gilded, { ...suppressed, phase: 'round-result', roundResult: { score: 3, bandId: 'strong-success', momentumDelta: 1 } });
   assert.ok(advanceToNextRound(gilded, done).encounter.hazards.includes('gravity-shear'));
 });
 
 test('chosen order cannot duplicate or omit stations', () => {
-  const s = earn(state(), 'order-swap'); const award = s.encounter.pendingRiskAwards[0];
+  const s = state();
+  const award = { benefitId: 'order-swap', degreeKey: 'success', stationId: 'captain', name: 'Tactical Reorder' };
   assert.throws(() => applyRiskChoice(s, award, { order: ['engineer','engineer'] }), /exactly once/);
 });
 
-test('every shipped benefit succeeds with either a mechanical path or a tracked choice/ruling', () => {
+test('every Risk benefit used in shipped events resolves automatically without a GM queue', () => {
   for (const event of Object.values(ARKFLIGHT_EVENTS)) for (const round of event.rounds) for (const actions of Object.values(round.stationActions)) for (const action of actions) for (const skill of action.skills) for (const bid of skill.riskBids) {
     for (const critical of [false, true]) {
       const next = earn(state(event), bid.benefitId, critical, bid.parameters);
       assert.ok(next.encounter);
-      assert.doesNotMatch(next.encounter.notes.join(), /remains available for GM adjudication/);
+      assert.equal(next.encounter.pendingRiskAwards.length, 0, `${event.id}: ${bid.benefitId}`);
+      assert.equal(next.encounter.riskAwardHistory.at(-1)?.automaticallyResolved, true, `${event.id}: ${bid.benefitId}`);
       assert.doesNotThrow(() => JSON.stringify(next));
     }
   }
 });
 
-test('controller persists a final-station reward choice before applying the round consequence', async () => {
+test('saved rewards from the earlier GM queue migrate to automatic resolution', () => {
+  const s = state();
+  s.encounter.pendingRiskAwards = [{ benefitId: 'order-followup', name: 'Ride the Wake', stationId: 'captain', degreeKey: 'success', roundIndex: 0 }];
+  const migrated = resolveSavedRiskAwardsAutomatically(s, glass);
+  assert.equal(migrated.encounter.pendingRiskAwards.length, 0);
+  assert.equal(migrated.encounter.checkBonuses.engineer, 2);
+  assert.equal(migrated.encounter.riskAwardHistory.at(-1).migrated, true);
+});
+
+test('saved See It Coming rewards migrate to the current Hazard Strain guard', () => {
+  const s = state(gilded);
+  s.encounter.pendingRiskAwards = [{ benefitId: 'hazard-reveal-1', name: 'See It Coming', stationId: 'captain', degreeKey: 'criticalSuccess', roundIndex: 0 }];
+  const migrated = resolveSavedRiskAwardsAutomatically(s, gilded);
+  assert.equal(migrated.encounter.pendingRiskAwards.length, 0);
+  assert.equal(migrated.encounter.hazardStrainGuard, 2);
+  assert.equal(migrated.encounter.riskAwardHistory.at(-1).migrated, true);
+});
+
+test('controller automatically resolves a final-station reward before applying the round consequence', async () => {
   const { PlanningController } = await import('../src/event/planning-controller.js');
   const previousGame = globalThis.game;
   const actor = { id: 'v', name: 'Veilwarden', testUserPermission: () => true };
@@ -193,19 +228,14 @@ test('controller persists a final-station reward choice before applying the roun
     const controller = new PlanningController({ applyShipEffects: async rows => effects.push(...rows) });
     await controller.command({ type: 'submit-station-roll', stationId: 'veilwarden', actorId: 'v', roll: { total: 25, outcome: 'success' } });
     assert.equal(controller.state.phase, 'round-result');
-    assert.equal(controller.state.consequenceApplied, undefined);
-    assert.equal(controller.state.encounter.pendingRiskAwards.length, 1);
-    const awardId = controller.state.encounter.pendingRiskAwards[0].id;
-    await controller.command({ type: 'record-risk-award', awardId, note: 'No unresolved station remains', ineligible: true });
     assert.equal(controller.state.encounter.pendingRiskAwards.length, 0);
+    assert.equal(controller.state.encounter.riskAwardHistory.at(-1).automaticallyResolved, true);
     // Hazard upkeep also opens the applicable defensive Mastery window.
     while (controller.state.pendingMasteryWindows?.length) {
       const window = controller.state.pendingMasteryWindows[0];
       await controller.command({ type: 'dismiss-mastery-window', station: window.stationId, windowId: window.id });
     }
     assert.equal(controller.state.consequenceApplied, true);
-    const writeCount = writes.length;
-    await assert.rejects(controller.command({ type: 'record-risk-award', awardId, note: 'duplicate' }), /no longer/);
-    assert.equal(writes.length, writeCount);
+    assert.ok(controller.state.encounter.riskAwardHistory.some(award => award.automaticallyResolved));
   } finally { globalThis.game = previousGame; }
 });

@@ -1,6 +1,5 @@
 import { availableStationActions, hazardCheckAdjustment, hazardOrderErrors, riskBlockReason } from "../event/hazard-rules.js";
 import { riskResolutionLabel } from "../event/risk-awards.js";
-import { resolveRiskAwardDialog } from "./risk-award-dialog.js";
 import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
 import { getMasteryTechnique } from "../content/base-mastery.js";
@@ -196,8 +195,20 @@ export class ArkflightEventBoard extends HandlebarsApplication {
       eventComplete: state.phase === "event-complete",
       readyToLock: planningReady(state) && !hazardOrderErrors(event, state).length,
       hazardOrderWarnings: hazardOrderErrors(event, state),
-      pendingRiskAwards: encounter.pendingRiskAwards ?? [],
-      hasPendingRiskAwards: Boolean(encounter.pendingRiskAwards?.length),
+      riskAwardNotices: (encounter.riskAwardHistory ?? []).slice(-5).reverse().map(row => ({
+        name: row.name ?? row.benefitId ?? "Risk reward",
+        degree: row.degreeKey === "criticalSuccess" ? "Critical Success" : "Success"
+      })),
+      hasRiskAwardNotices: Boolean(encounter.riskAwardHistory?.length),
+      automaticRevealNotices: (encounter.revealedInformation ?? []).map(reveal => {
+        const revealedRound = event.rounds?.[Number(reveal.roundIndex)];
+        if (reveal.kind === "next-round" && revealedRound) return { title: `${revealedRound.title} — revealed early`, text: revealedRound.situation };
+        if (reveal.kind === "lower-consequence-option") return { title: "Lower-risk approach identified", text: "Use the station action with the lowest listed DC; its risk is now identified for the crew." };
+        return null;
+      }).filter(Boolean),
+      hasAutomaticReveals: Boolean(encounter.revealedInformation?.length),
+      revealedHazardDetails: (encounter.revealedHazards ?? []).map(id => event.hazardDefinitions?.[id]).filter(Boolean),
+      hasRevealedHazards: Boolean(encounter.revealedHazards?.length),
       timerExpired: remaining <= 0,
       timerText: formatTimer(remaining),
       momentum: Number(encounter.momentum ?? 0),
@@ -447,7 +458,6 @@ export class ArkflightEventBoard extends HandlebarsApplication {
         event.preventDefault(); const button = event.currentTarget; const action = button.dataset.arkAction; const station = button.dataset.station;
         try {
           switch (action) {
-            case "record-risk-award": await resolveRiskAwardDialog(this.controller, button.dataset.awardId); break;
             case "begin-planning": await this.controller.beginPlanning(); break;
             case "choose-action": await this.controller.command({ type: "select-action", station, actionId: button.dataset.actionId }); break;
             case "choose-skill": await this.controller.command({ type: "select-skill", station, skillId: button.dataset.skillId }); break;

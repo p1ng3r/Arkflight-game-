@@ -10,14 +10,8 @@
     {{#if hasHazards}}<section class="arkflight-hazard-strip"><div class="arkflight-kicker">ACTIVE HAZARDS</div><div class="arkflight-hazard-list">{{#each hazards}}<span title="{{description}}"><i class="fa-solid fa-triangle-exclamation"></i> {{name}}</span>{{/each}}</div></section>{{/if}}
 
     {{#each hazardOrderWarnings}}<p class="arkflight-waiting">{{this}}</p>{{/each}}
-    {{#if hasPendingRiskAwards}}
-    <section class="arkflight-risk-awards" id="arkflight-risk-awards">
-      <h3>Earned Risk Rewards — Choose / Resolve</h3>
-      <p>Resolve these rewards before the next roll or round consequence.</p>
-      {{#each pendingRiskAwards}}<article><strong>{{name}}</strong><p>{{effect}}</p>
-      {{#if ../isGM}}<button type="button" data-ark-action="record-risk-award" data-award-id="{{id}}">Resolve Reward</button>{{else}}<p>Waiting for GM reward resolution.</p>{{/if}}</article>{{/each}}
-    </section>
-    {{/if}}
+    {{#if hasRiskAwardNotices}}<section class="arkflight-hazard-strip arkflight-risk-auto-strip"><div class="arkflight-kicker">AUTOMATIC RISK BENEFITS</div><div class="arkflight-hazard-list">{{#each riskAwardNotices}}<span>{{name}} — {{degree}}</span>{{/each}}</div></section>{{/if}}
+    {{#if hasAutomaticReveals}}<section class="arkflight-hazard-strip"><div class="arkflight-kicker">CREW INTELLIGENCE</div>{{#each automaticRevealNotices}}<p><strong>{{title}}:</strong> {{text}}</p>{{/each}}{{#each revealedHazardDetails}}<p><strong>{{name}}:</strong> {{description}}</p>{{/each}}</section>{{/if}}
 
     {{#if opening}}
       <div class="arkflight-opening-grid">

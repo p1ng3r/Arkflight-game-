@@ -1,5 +1,4 @@
 import { availableStationActions, hazardCheckAdjustment, hazardOrderErrors, riskBlockReason, applyEmergencyActionResult } from "./hazard-rules.js";
-import { assertRiskAwardsResolved } from "./risk-awards.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
@@ -85,7 +84,6 @@ export function selectedResolution(event, state, stationId, { shipRollBonus = nu
 }
 
 export async function rollSelectedStation({ event, state, actor, shipRollBonus = null }) {
-  assertRiskAwardsResolved(state);
   const orderErrors = hazardOrderErrors(event, state); if (orderErrors.length) throw new Error(orderErrors.join(" "));
   const stationId = activeStationId(state); if (!stationId) throw new Error("No station is waiting to resolve."); const chosen = selectedResolution(event, state, stationId, { shipRollBonus }); if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`); if (!actor) throw new Error("The assigned PF2e actor is unavailable.");
   if (chosen.blockedReason) throw new Error(chosen.blockedReason);
@@ -100,7 +98,6 @@ export async function rollSelectedStation({ event, state, actor, shipRollBonus =
 }
 
 export function applyStationRollResult({ event, state, actor, roll, shipRollBonus = null }) {
-  assertRiskAwardsResolved(state);
   const orderErrors = hazardOrderErrors(event, state); if (orderErrors.length) throw new Error(orderErrors.join(" "));
   const stationId = activeStationId(state); if (!stationId) throw new Error("No station is waiting to resolve."); const chosen = selectedResolution(event, state, stationId, { shipRollBonus }); if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`); if (!actor) throw new Error("The assigned PF2e actor is unavailable."); if (!roll || !Number.isFinite(Number(roll.total)) || !roll.outcome) throw new Error("Arkflight received an invalid PF2e roll result.");
   if (chosen.blockedReason) throw new Error(chosen.blockedReason);
@@ -136,7 +133,7 @@ export function applyStationRollResult({ event, state, actor, roll, shipRollBonu
     return guardedStrainEffect(nextState.encounter, { ...effect, value: Number(effect.value) - blocked });
   });
   delete nextState.encounter.stationStrainGuards?.[stationId];
-  if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey);
+  if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey, event);
   nextState = { ...nextState, lastResolvedStationId: stationId, lastResolvedAt: Date.now() };
   return { nextState, stationId, chosen, roll };
 }
