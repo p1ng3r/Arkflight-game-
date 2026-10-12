@@ -1,3 +1,5 @@
+import { hazardOrderErrors, riskBlockReason, availableStationActions, ignoredHazardEffects } from "./hazard-rules.js";
+import { resolveSavedRiskAwardsAutomatically } from "./risk-awards.js";
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
 import { BASE_MASTERY, getMasteryTechnique, canonicalMasteryId } from "../content/base-mastery.js";
 import {
@@ -56,7 +58,7 @@ function finalMasteryWindows(event, state) {
   if (masteryIsReady(state, "captain", "captain-not-like-this") && ["failure", "criticalFailure"].includes(last?.degreeKey)) windows.push({ id: `captain-not-like-this:${state.roundIndex}:${lastId}`, stationId: "captain", masteryId: "captain-not-like-this", sourceStationId: lastId });
   const round = event?.rounds?.[state.roundIndex ?? 0];
   const outcome = round?.outcomes?.[state.roundResult.bandId];
-  const positiveStrainIncoming = (outcome?.effects ?? []).some((effect) =>
+  const positiveStrainIncoming = [...(outcome?.effects ?? []), ...ignoredHazardEffects(event, state)].some((effect) =>
     (effect?.kind === "gain-strain" || effect?.kind === "pressure") && Number(effect.value ?? 0) > 0
   );
   const hazardIncoming = (outcome?.effects ?? []).some((effect) => effect?.kind === "hazard");
@@ -94,6 +96,7 @@ function repairLoadedState(state, masteryAvailability = null) {
   if (!Array.isArray(repaired.pendingShipEffects)) repaired.pendingShipEffects = [];
   if (typeof repaired.setupLocked !== "boolean") repaired.setupLocked = repaired.phase !== "opening";
   repaired.encounter = cleanEncounter(repaired.encounter, event);
+  repaired = resolveSavedRiskAwardsAutomatically(repaired, event);
   if (repaired.phase === "round-result" && repaired.roundResult && !repaired.consequenceApplied && !repaired.pendingMasteryWindows.length) repaired = finalizeWithMastery(event, repaired);
   return repaired;
 }
@@ -170,12 +173,12 @@ export class PlanningController {
       }
       case "assign-actor": this.#requireStationClaimPermission(sourceUserId, command.station, command.actorId); next = assignActor(this.state, command.station, command.actorId); break;
       case "select-mastery": { this.#requireStationControl(sourceUserId, command.station); const technique = getMasteryTechnique(command.station, command.masteryId); if (!technique) throw new Error("Choose a valid Mastery Technique for that station."); next = selectMastery(this.state, command.station, technique.id); break; }
-      case "use-mastery": this.#requireStationControl(sourceUserId, command.station); next = applyMasteryTechnique(this.state, command.station, command.options ?? {}); next = clearMasteryWindow(next, command.station, command.windowId ?? null); if (next.phase === "round-result" && !next.consequenceApplied && !(next.pendingMasteryWindows?.length)) next = finalizeWithMastery(this.getEvent(), next); break;
+      case "use-mastery": this.#requireStationControl(sourceUserId, command.station); next = applyMasteryTechnique(this.state, command.station, command.options ?? {}, this.getEvent()); next = clearMasteryWindow(next, command.station, command.windowId ?? null); if (next.phase === "round-result" && !next.consequenceApplied && !(next.pendingMasteryWindows?.length)) next = finalizeWithMastery(this.getEvent(), next); break;
       case "dismiss-mastery-window": this.#requireStationControl(sourceUserId, command.station); next = clearMasteryWindow(this.state, command.station, command.windowId ?? null); if (next.phase === "round-result" && !next.consequenceApplied && !(next.pendingMasteryWindows?.length)) next = finalizeWithMastery(this.getEvent(), next); break;
       case "use-tactic": next = applyCrewTactic(this.state, command.tacticId, command.options ?? {}); break;
       case "select-action": this.#requireStationControl(sourceUserId, command.station); next = selectAction(this.state, command.station, command.actionId); break;
       case "select-skill": this.#requireStationControl(sourceUserId, command.station); next = selectSkill(this.state, command.station, command.skillId); break;
-      case "select-risk": this.#requireStationControl(sourceUserId, command.station); next = selectRiskTier(this.state, command.station, command.riskTier); break;
+      case "select-risk": this.#requireStationControl(sourceUserId, command.station); { const blocked = riskBlockReason(this.getEvent(), this.state, command.station, command.riskTier); if (blocked) throw new Error(blocked); } next = selectRiskTier(this.state, command.station, command.riskTier); break;
       case "select-component-ability": this.#requireStationControl(sourceUserId, command.station); next = selectComponentAbility(this.state, command.station, command.componentAbilityId); break;
       case "move-order": this.#requireStationControl(sourceUserId, command.station); next = moveOrder(this.state, command.station, command.direction); break;
       case "submit-station-roll": {
@@ -183,7 +186,20 @@ export class PlanningController {
         const assignedActorId = this.state.assignments?.[stationId]?.actorId ?? null; if (!assignedActorId || command.actorId !== assignedActorId) throw new Error("The submitted roll does not belong to the assigned station officer."); const actor = game.actors.get(assignedActorId); if (!actor) throw new Error(`No PF2e character is assigned to ${stationId}.`);
         const resolved = applyStationRollResult({ event: this.getEvent(), state: this.state, actor, roll: command.roll }); next = prepareAfterStationResult(this.getEvent(), resolved.nextState); break;
       }
-      case "lock-plan": this.#requireGMUser(sourceUserId); next = lockPlanning(this.state); break;
+      case "lock-plan": {
+        this.#requireGMUser(sourceUserId);
+        const errors = hazardOrderErrors(this.getEvent(), this.state);
+        for (const station of this.state.order) {
+          const selection = this.state.selections[station];
+          const action = availableStationActions(this.getEvent(), this.state, station).find(row => row.id === selection?.actionId);
+          const skill = action?.skills?.find(row => row.id === selection?.skillId);
+          if (!skill) errors.push(`${station}: choose an available action and skill.`);
+          if (selection?.riskTier && !skill?.riskBids?.some(row => Number(row.tier) === Number(selection.riskTier))) errors.push(`${station}: Risk tier is unavailable.`);
+          const blocked = riskBlockReason(this.getEvent(), this.state, station, selection?.riskTier); if (blocked) errors.push(blocked);
+        }
+        if (errors.length) throw new Error(errors.join(" "));
+        next = lockPlanning(this.state); break;
+      }
       case "begin-resolution": this.#requireGMUser(sourceUserId); next = initializeResolution(this.state); break;
       case "next-round": this.#requireGMUser(sourceUserId); if (this.state.pendingMasteryWindows?.length) throw new Error("Resolve or dismiss the available Mastery window before advancing."); if (this.state.phase === "round-result" && this.state.roundResult && !this.state.consequenceApplied) next = finalizeWithMastery(this.getEvent(), this.state); next = advanceToNextRound(this.getEvent(), next); break;
       case "mark-rewards-granted": this.#requireGMUser(sourceUserId); if (this.state.phase !== "event-complete" || !this.state.eventRewards) throw new Error("No completed Event rewards are available to mark as granted."); next = { ...this.state, eventRewards: { ...this.state.eventRewards, granted: true, grantedAt: Date.now(), recipientActorId: command.actorId ?? null, recipientActorName: command.actorName ?? null, createdItemIds: [...(command.createdItemIds ?? [])], createdItemNames: [...(command.createdItemNames ?? [])] } }; break;

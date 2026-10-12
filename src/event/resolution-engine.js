@@ -1,10 +1,10 @@
-import { FALLBACK_ACTIONS } from "../content/fallback-actions.js";
+import { availableStationActions, hazardCheckAdjustment, hazardOrderErrors, riskBlockReason, applyEmergencyActionResult } from "./hazard-rules.js";
 import { getRiskBenefit } from "../content/risk-benefits.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { rollPf2eStatistic } from "../pf2e/check-runner.js";
 import { activeStationId, recordStationResult } from "./resolution-state.js";
-import { applyEarnedRiskBenefit, checkAdjustments, consumeCheckAdjustments } from "./round-runtime.js";
+import { applyEarnedRiskBenefit, checkAdjustments, consumeCheckAdjustments, guardedStrainEffect } from "./round-runtime.js";
 
 const MODULE_ID = "arkflight-game";
 function normalizedOutcomeSlug(outcome) { return String(outcome ?? "").trim().replace(/([a-z0-9])([A-Z])/g, "$1-$2").replaceAll("_", "-").replace(/\s+/g, "-").toLowerCase(); }
@@ -43,7 +43,11 @@ function applyAuthoredRiskCommitment(state, chosen) {
     hazards: [...(state.encounter?.hazards ?? [])],
     notes: [...(state.encounter?.notes ?? [])]
   };
-  if (nextRoundHazard && !encounter.hazards.includes(nextRoundHazard)) encounter.hazards.push(nextRoundHazard);
+  if (nextRoundHazard) {
+    encounter.scheduledHazards = [...(encounter.scheduledHazards ?? [])];
+    const roundIndex = Number(state.roundIndex ?? 0) + 1;
+    if (!encounter.scheduledHazards.some(row => row.hazardId === nextRoundHazard && row.roundIndex === roundIndex)) encounter.scheduledHazards.push({ hazardId: nextRoundHazard, roundIndex });
+  }
   if (nextRoundDcAll) encounter.notes.push(`Heroic commitment carries +${nextRoundDcAll} DC to every station in the next round.`);
   if (commitStrain) encounter.notes.push(`Heroic commitment adds ${commitStrain} ${parameters.commitStrainArea ?? "ship"} Strain before escape.`);
 
@@ -67,13 +71,22 @@ function applyAuthoredRiskCommitment(state, chosen) {
 
 export function selectedResolution(event, state, stationId, { shipRollBonus = null } = {}) {
   const round = event?.rounds?.[state?.roundIndex ?? 0]; const selection = state?.selections?.[stationId]; if (!round || !selection) return null;
-  const fallback = FALLBACK_ACTIONS[stationId]; const actions = [fallback, ...(round.stationActions?.[stationId] ?? [])].filter(Boolean); const action = actions.find((entry) => entry.id === selection.actionId) ?? null; const skill = action?.skills?.find((entry) => entry.id === selection.skillId) ?? null; const riskBid = skill?.riskBids?.find((entry) => Number(entry.tier) === Number(selection.riskTier)) ?? null; const riskBenefit = riskBid ? getRiskBenefit(riskBid.benefitId) : null; if (!action || !skill) return null;
-  const adjustments = checkAdjustments(state, stationId); const authoredRiskIncrease = Number(riskBid?.tier ?? 0); const riskReducedByMastery = Boolean(state?.masteryRiskTierReductions?.[stationId] && riskBid); const tacticOverride = state?.encounter?.riskTierOverrides?.[stationId]; const riskReducedByTactic = tacticOverride !== undefined && tacticOverride !== null && Boolean(riskBid); const riskIncrease = riskReducedByTactic ? Math.max(0, Number(tacticOverride)) : riskReducedByMastery ? reducedRiskIncrease(authoredRiskIncrease) : authoredRiskIncrease; const carryoverDc = carryoverRiskDc(state); const baseDc = Number(skill.dc) + carryoverDc; const preAdjustmentDc = baseDc + riskIncrease; const momentumBonus = Math.max(0, Math.min(3, Number(state?.encounter?.momentum ?? 0)));
-  return { stationId, selection, action, skill, riskBid, riskBenefit, momentumBonus, shipRollBonus: resolvedShipRollBonus(stationId, shipRollBonus), checkBonus: adjustments.bonus, checkBonusSources: adjustments.bonusSources, dcAdjustment: adjustments.dc, dcAdjustmentSources: adjustments.dcSources, degreeLift: adjustments.degreeLift, degreeLiftSources: adjustments.degreeLiftSources, authoredRiskIncrease, riskIncrease, riskReducedByMastery, riskReducedByTactic, rollTwiceBest: Boolean(state?.encounter?.rollTwiceBest?.[stationId]), carryoverDc, preAdjustmentDc, finalDc: Math.max(0, preAdjustmentDc + Number(adjustments.dc ?? 0)) };
+  const actions = availableStationActions(event, state, stationId); const action = actions.find((entry) => entry.id === selection.actionId) ?? null; const skill = action?.skills?.find((entry) => entry.id === selection.skillId) ?? null; const riskBid = skill?.riskBids?.find((entry) => Number(entry.tier) === Number(selection.riskTier)) ?? null; const riskBenefit = riskBid ? getRiskBenefit(riskBid.benefitId) : null; if (!action || !skill) return null;
+  const adjustments = checkAdjustments(state, stationId);
+  const hazard = hazardCheckAdjustment(event, state, stationId);
+  adjustments.dc += hazard.dc; adjustments.dcSources.push(...hazard.sources);
+  const opportunity = state.encounter?.hazardOpportunities?.[stationId];
+  if (opportunity && (state.encounter.hazards ?? []).includes(opportunity.hazardId)) { adjustments.bonus += opportunity.bonus; adjustments.bonusSources.push(`${opportunity.source}: +${opportunity.bonus}`); }
+  if (state.encounter?.penaltyShields?.[stationId] && hazard.dc > 0) { adjustments.dc -= 1; adjustments.dcSources.push("Cover the Crew: ignore the first point of Hazard penalty"); }
+  const blockedReason = riskBlockReason(event, state, stationId, selection.riskTier)
+    ?? (selection.riskTier && !riskBid ? "The selected Risk tier is not authored for this skill." : null); const authoredRiskIncrease = Number(riskBid?.tier ?? 0); const riskReducedByMastery = Boolean(state?.masteryRiskTierReductions?.[stationId] && riskBid); const tacticOverride = state?.encounter?.riskTierOverrides?.[stationId]; const riskReducedByTactic = tacticOverride !== undefined && tacticOverride !== null && Boolean(riskBid); const riskIncrease = riskReducedByTactic ? Math.max(0, Number(tacticOverride)) : riskReducedByMastery ? reducedRiskIncrease(authoredRiskIncrease) : authoredRiskIncrease; const carryoverDc = carryoverRiskDc(state); const baseDc = Number(skill.dc) + carryoverDc; const preAdjustmentDc = baseDc + riskIncrease; const momentumBonus = Math.max(0, Math.min(3, Number(state?.encounter?.momentum ?? 0)));
+  return { stationId, selection, action, skill, riskBid, riskBenefit, blockedReason, momentumBonus, shipRollBonus: resolvedShipRollBonus(stationId, shipRollBonus), checkBonus: adjustments.bonus, checkBonusSources: adjustments.bonusSources, dcAdjustment: adjustments.dc, dcAdjustmentSources: adjustments.dcSources, degreeLift: adjustments.degreeLift, degreeLiftSources: adjustments.degreeLiftSources, authoredRiskIncrease, riskIncrease, riskReducedByMastery, riskReducedByTactic, rollTwiceBest: Boolean(state?.encounter?.rollTwiceBest?.[stationId]), carryoverDc, preAdjustmentDc, finalDc: Math.max(0, preAdjustmentDc + Number(adjustments.dc ?? 0)) };
 }
 
 export async function rollSelectedStation({ event, state, actor, shipRollBonus = null }) {
+  const orderErrors = hazardOrderErrors(event, state); if (orderErrors.length) throw new Error(orderErrors.join(" "));
   const stationId = activeStationId(state); if (!stationId) throw new Error("No station is waiting to resolve."); const chosen = selectedResolution(event, state, stationId, { shipRollBonus }); if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`); if (!actor) throw new Error("The assigned PF2e actor is unavailable.");
+  if (chosen.blockedReason) throw new Error(chosen.blockedReason);
   const modifiers = [];
   if (chosen.momentumBonus) modifiers.push({ slug: "arkflight-momentum", label: "Arkflight Momentum", modifier: chosen.momentumBonus, type: "untyped", source: `Crew Momentum ${chosen.momentumBonus}/3` });
   if (chosen.shipRollBonus) modifiers.push({ slug: "arkflight-ship-talent", label: "Arkflight Ship Talents", modifier: chosen.shipRollBonus, type: "untyped", source: "Persistent vessel progression" });
@@ -85,18 +98,42 @@ export async function rollSelectedStation({ event, state, actor, shipRollBonus =
 }
 
 export function applyStationRollResult({ event, state, actor, roll, shipRollBonus = null }) {
+  const orderErrors = hazardOrderErrors(event, state); if (orderErrors.length) throw new Error(orderErrors.join(" "));
   const stationId = activeStationId(state); if (!stationId) throw new Error("No station is waiting to resolve."); const chosen = selectedResolution(event, state, stationId, { shipRollBonus }); if (!chosen) throw new Error(`The ${stationId} selection is incomplete or invalid.`); if (!actor) throw new Error("The assigned PF2e actor is unavailable."); if (!roll || !Number.isFinite(Number(roll.total)) || !roll.outcome) throw new Error("Arkflight received an invalid PF2e roll result.");
-  const rawDegreeKey = normalizeOutcome(roll.outcome); const degreeKey = liftDegree(rawDegreeKey, chosen.degreeLift); const riskEarned = Boolean(chosen.riskBid && (degreeKey === "success" || degreeKey === "criticalSuccess")); const riskText = riskEarned ? (degreeKey === "criticalSuccess" ? chosen.riskBenefit?.criticalSuccess : chosen.riskBenefit?.success) ?? "Heroic/Risk benefit earned." : null;
-  let nextState = recordStationResult(state, stationId, { actorId: actor.id, actorName: actor.name, actionId: chosen.action.id, actionName: chosen.action.name, skillId: chosen.skill.id, skillSlug: chosen.skill.skill, baseDc: Number(chosen.skill.dc), riskTier: chosen.riskBid?.tier ?? null, authoredRiskIncrease: chosen.authoredRiskIncrease, riskIncrease: chosen.riskIncrease, riskReducedByMastery: chosen.riskReducedByMastery, riskReducedByTactic: chosen.riskReducedByTactic, rollTwiceBest: chosen.rollTwiceBest, carryoverDc: chosen.carryoverDc, preAdjustmentDc: chosen.preAdjustmentDc, dcAdjustment: chosen.dcAdjustment, dcAdjustmentSources: chosen.dcAdjustmentSources, momentumBonus: chosen.momentumBonus, shipRollBonus: chosen.shipRollBonus, checkBonus: chosen.checkBonus, checkBonusSources: chosen.checkBonusSources, finalDc: chosen.finalDc, total: Number(roll.total), outcome: roll.outcome, rawDegreeKey, degreeKey, degreeLiftApplied: chosen.degreeLift, degreeLiftSources: chosen.degreeLiftSources, messageId: roll.messageId ?? null, riskBenefitId: chosen.riskBid?.benefitId ?? null, riskBenefitName: chosen.riskBenefit?.name ?? null, riskEarned, riskText });
+  if (chosen.blockedReason) throw new Error(chosen.blockedReason);
+  const rawDegreeKey = normalizeOutcome(roll.outcome);
+  const successLift = rawDegreeKey === "success" ? Number(state.encounter?.successDegreeLifts?.[stationId] ?? 0) : 0;
+  const degreeKey = liftDegree(rawDegreeKey, Math.max(chosen.degreeLift, successLift)); const riskEarned = Boolean(chosen.riskBid && (degreeKey === "success" || degreeKey === "criticalSuccess")); const riskText = riskEarned ? (degreeKey === "criticalSuccess" ? chosen.riskBenefit?.criticalSuccess : chosen.riskBenefit?.success) ?? "Heroic/Risk benefit earned." : null;
+  let nextState = recordStationResult(state, stationId, { actorId: actor.id, actorName: actor.name, actionId: chosen.action.id, actionName: chosen.action.name, skillId: chosen.skill.id, skillSlug: chosen.skill.skill, baseDc: Number(chosen.skill.dc), riskTier: chosen.riskBid?.tier ?? null, authoredRiskIncrease: chosen.authoredRiskIncrease, riskIncrease: chosen.riskIncrease, riskReducedByMastery: chosen.riskReducedByMastery, riskReducedByTactic: chosen.riskReducedByTactic, rollTwiceBest: chosen.rollTwiceBest, carryoverDc: chosen.carryoverDc, preAdjustmentDc: chosen.preAdjustmentDc, dcAdjustment: chosen.dcAdjustment, dcAdjustmentSources: chosen.dcAdjustmentSources, momentumBonus: chosen.momentumBonus, shipRollBonus: chosen.shipRollBonus, checkBonus: chosen.checkBonus, checkBonusSources: chosen.checkBonusSources, finalDc: chosen.finalDc, total: Number(roll.total), outcome: roll.outcome, rawDegreeKey, degreeKey, degreeLiftApplied: Math.max(chosen.degreeLift, successLift), degreeLiftSources: chosen.degreeLiftSources, messageId: roll.messageId ?? null, riskBenefitId: chosen.riskBid?.benefitId ?? null, riskBenefitName: chosen.riskBenefit?.name ?? null, riskEarned, riskText });
   const postCheckShipEffects = state.masteryPostCheckShipEffects?.[stationId] ?? [];
   nextState = consumeCheckAdjustments(nextState, stationId);
+  const opportunity = state.encounter?.hazardOpportunities?.[stationId];
+  if (opportunity?.onSuccess && ["success", "criticalSuccess"].includes(degreeKey)) {
+    nextState.encounter.hazards = nextState.encounter.hazards.filter(id => id !== opportunity.hazardId);
+    if (opportunity.onSuccess === "suppress" && !nextState.encounter.suppressedHazards.includes(opportunity.hazardId)) nextState.encounter.suppressedHazards.push(opportunity.hazardId);
+  }
+  for (const link of state.encounter?.links ?? []) {
+    if (link.target !== stationId || !["success", "criticalSuccess"].includes(degreeKey) || !["success", "criticalSuccess"].includes(state.results?.[link.source]?.degreeKey)) continue;
+    if (link.kind === "station-link-legend") nextState.encounter.momentum = Math.min(3, nextState.encounter.momentum + 1);
+    else { nextState.encounter.nextRoundLinks ??= []; nextState.encounter.nextRoundLinks.push({ target: stationId, value: 3 }); }
+  }
   const masteryRiskTierReductions = { ...(nextState.masteryRiskTierReductions ?? {}) }; const masteryPostCheckMap = { ...(nextState.masteryPostCheckShipEffects ?? {}) }; delete masteryRiskTierReductions[stationId]; delete masteryPostCheckMap[stationId];
   nextState = { ...nextState, masteryRiskTierReductions, masteryPostCheckShipEffects: masteryPostCheckMap };
   if (postCheckShipEffects.length) {
     nextState = { ...nextState, pendingShipEffects: [...(nextState.pendingShipEffects ?? []), ...postCheckShipEffects.map((effect) => ({ ...effect }))], encounter: { ...nextState.encounter, notes: [...(nextState.encounter?.notes ?? []), ...postCheckShipEffects.map((effect) => `${effect.source ?? "Arkcraft"}: ${effect.value >= 0 ? "+" : ""}${effect.value} ship-wide Strain after ${stationId} resolved.`)] } };
   }
+  nextState = applyEmergencyActionResult(nextState, chosen.action, degreeKey);
   nextState = applyAuthoredRiskCommitment(nextState, chosen);
-  if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey);
+  // Guard only Strain generated by this station, not earlier pending effects.
+  const priorEffects = (state.pendingShipEffects ?? []).length;
+  let stationGuard = Number(state.encounter?.stationStrainGuards?.[stationId] ?? 0);
+  nextState.pendingShipEffects = (nextState.pendingShipEffects ?? []).map((effect, index) => {
+    if (index < priorEffects || effect.kind !== "gain-strain" || Number(effect.value) <= 0) return effect;
+    const blocked = Math.min(stationGuard, Number(effect.value)); stationGuard -= blocked;
+    return guardedStrainEffect(nextState.encounter, { ...effect, value: Number(effect.value) - blocked });
+  });
+  delete nextState.encounter.stationStrainGuards?.[stationId];
+  if (riskEarned) nextState = applyEarnedRiskBenefit(nextState, chosen, degreeKey, event);
   nextState = { ...nextState, lastResolvedStationId: stationId, lastResolvedAt: Date.now() };
   return { nextState, stationId, chosen, roll };
 }

@@ -1,5 +1,5 @@
 import { resolveStrainContribution } from "./strain-rules.js";
-import { applyShipSystemDegradation, canonicalDamageTarget, improveShipCondition } from "./ship-conditions.js";
+import { applyShipSystemDegradation, canonicalDamageTarget, improveShipCondition, shipConditionProfile } from "./ship-conditions.js";
 import { normalizeShip } from "./ship-schema.js";
 
 function clamp(value, min, max) { return Math.max(min, Math.min(max, Number(value) || 0)); }
@@ -72,6 +72,14 @@ export function applyShipEffect(ship, effect = {}) {
       const target = canonicalDamageTarget(effect.system ?? effect.area);
       const recovered = recoverLegacyTarget(next, target, Math.max(1, Math.abs(Number(effect.steps ?? 1))));
       return { ship: recovered, affectedSystem: target, threatenedArea: target };
+    }
+    case "recover-most-severe-condition": {
+      const target = ["hull", "drive", "weapons"]
+        .map(system => ({ system, severity: shipConditionProfile(next, system).severity }))
+        .sort((a, b) => b.severity - a.severity)[0];
+      if (!target?.severity) return { ship: next, affectedSystem: null, threatenedArea: null };
+      const recovered = improveShipCondition(next, target.system, Math.max(1, Math.abs(Number(effect.steps ?? 1))));
+      return { ship: recovered.ship, affectedSystem: target.system, threatenedArea: target.system };
     }
     case "add-condition": {
       if (!effect.condition?.id) throw new Error("Arkflight condition effects require condition.id");

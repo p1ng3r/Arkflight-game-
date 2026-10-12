@@ -104,8 +104,8 @@ export const CREW_EDGE_CARDS = Object.freeze({
     id: "brace-for-it",
     name: "Brace for It",
     theater: "resolution",
-    trigger: "Before a round consequence would add Strain to two or more ship Areas.",
-    effect: "Choose one affected Area; it gains no Strain from that consequence.",
+    trigger: "Before an authored consequence adds ship-wide Strain.",
+    effect: "Prevent all Strain from the next single source this round.",
     tags: ["resolution", "strain", "round-consequence"]
   }),
   "one-more-push": edgeCard({
@@ -137,8 +137,8 @@ export const CREW_EDGE_CARDS = Object.freeze({
     id: "protect-the-system",
     name: "Protect the System",
     theater: "resolution",
-    trigger: "When Hull, Arkengine, Lifeveil, or Rigging would gain Strain.",
-    effect: "Choose that Area. Prevent up to 2 Strain from this single source.",
+    trigger: "Before a single source adds ship-wide Strain.",
+    effect: "Prevent up to 2 ship-wide Strain from the next single source this round.",
     tags: ["resolution", "strain", "defense"],
     rarity: "rare"
   }),

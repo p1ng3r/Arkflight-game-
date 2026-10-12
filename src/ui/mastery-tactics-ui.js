@@ -201,11 +201,6 @@ async function tacticOptionsForUse(controller, tactic) {
     const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Choose Hazard${hazardSelectHtml(state)}</label>`, okLabel: "Spend Tactic" });
     return fd ? { hazardId: fd.hazardId } : null;
   }
-  if (["brace-for-it", "protect-the-system"].includes(tactic.id)) {
-    const areas = ["hull", "arkengine", "rigging", "lifeveil", "morale"];
-    const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Choose Area<select name="area">${areas.map((id) => `<option value="${id}">${id}</option>`).join("")}</select></label>`, okLabel: "Spend Tactic" });
-    return fd ? { area: fd.area } : null;
-  }
   if (tactic.id === "change-of-course") {
     const fd = await inputDialog({ title: `Crew Tactic — ${tactic.name}`, description: `<strong>Trigger:</strong> ${tactic.trigger}<br>${tactic.effect}`, content: `<label>Move station${stationSelectHtml(state)}</label><label>New position<select name="targetIndex">${(state.order ?? []).map((_, index) => `<option value="${index}">${index + 1}</option>`).join("")}</select></label>`, okLabel: "Spend Tactic" });
     return fd ? { targetStationId: fd.targetStationId, targetIndex: Number(fd.targetIndex) } : null;
