@@ -346,7 +346,7 @@ function helmControlState(combatant) {
     forwardCostAP: movementRemaining > 0 ? 0 : 1,
     canForward: geometry.ok && !moored && (movementRemaining > 0 || ap > 0),
     reverseCostAP: state?.mobility?.extraordinaryMovement ? 0 : 1,
-    canReverse: geometry.ok && !moored && ap > 0,
+    canReverse: geometry.ok && !moored && (state.mobility.extraordinaryMovement ? movementRemaining > 0 || ap > 0 : ap > 0),
     facing
   });
 }
