@@ -14,7 +14,9 @@ const STATIONS = Object.freeze([
   { id: "battlewatch", label: "Battlewatch", icon: "fa-solid fa-crosshairs" },
   { id: "navigator", label: "Navigator", icon: "fa-solid fa-route" },
   { id: "engineer", label: "Engineer", icon: "fa-solid fa-gears" },
-  { id: "veilwarden", label: "Veilwarden", icon: "fa-solid fa-shield-halved" }
+  { id: "veilwarden", label: "Veilwarden", icon: "fa-solid fa-shield-halved" },
+  { id: "reactions", label: "Shared Reactions", icon: "fa-solid fa-bolt" },
+  { id: "common", label: "Basic Ship Controls", icon: "fa-solid fa-ship" }
 ]);
 const FACINGS = Object.freeze([
   { id: "fore", label: "Fore", color: 0x8bd5e2 },
@@ -101,7 +103,7 @@ function crewName(api, combatant, station) {
 }
 
 function costLabel(action) {
-  if (action.id === "battlewatch-reload-weapon") return "1 Morale · +1 Strain";
+  if (action.id === "battlewatch-reload-weapon") return "1 AP · Surge";
   const parts = [];
   if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
   if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
@@ -143,14 +145,10 @@ function choiceOptions(action, api, combatant, actor, targets, weapons) {
   }
   if (rules.chooseWeapon) {
     let choices = weapons.filter((weapon) => !weapon.ready);
-    if (rules.resolver === "workTheGuns") {
-      const maxRemaining = Math.max(1, Number(rules.maxReloadRemaining) || 2);
-      choices = choices.filter((weapon) => Number(weapon.remaining ?? 0) <= maxRemaining);
-    }
     return choices.map((weapon) => ({ value: weapon.key, label: `${weapon.name} · Reload ${weapon.remaining}` }));
   }
   if (Array.isArray(rules.choices)) return rules.choices.map((value) => ({ value, label: titleCase(value) }));
-  if (rules.chooseSystem) return ["hull", "arkengine", "rigging", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
+  if (rules.chooseSystem) return ["hull", "drive", "weapons", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
   if (Array.isArray(rules.chooseFacing)) return rules.chooseFacing.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseFacing) return FACINGS.map((entry) => ({ value: entry.id, label: entry.label }));
   if (rules.chooseAreaOrEnergy) {
@@ -352,7 +350,7 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
     } else if (resolver === "workTheGuns") {
       usable = Boolean(control.ok && availability.ok && choices.length > 0);
       buttonLabel = "Work the Guns";
-      if (!choices.length) reason = "No weapon at Reload 2 or less";
+      if (!choices.length) reason = "No reloading weapon";
     } else if (choices.length === 0 && (
       action.rules?.chooseStation || action.rules?.chooseTarget || action.rules?.chooseWeapon
       || action.rules?.chooseSystem || action.rules?.chooseFacing || action.rules?.chooseAreaOrEnergy
@@ -372,6 +370,9 @@ function buildStationActions(api, combatant, actor, station, targets, weapons, s
       resolver,
       choices,
       hasChoices: choices.length > 0,
+      multipleChoices: action.rules?.multipleRoutes && Number(shipPayload(actor)?.progression?.level ?? 1) >= 10,
+      rolledAbility: action.rules?.ability === true,
+      tier: action.tier,
       usable,
       buttonLabel: usable ? buttonLabel : reason
     };
@@ -550,7 +551,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
       weapon.statusLabel = weapon.ready ? "Ready" : `Reload ${weapon.remaining}`;
       weapon.canFire = Boolean(battlewatchFireControl.ok && game.combat?.combatant?.id === combatant?.id && weapon.ready && weapon.legal && Number(state?.economy?.ap?.value ?? 0) >= 1);
       weapon.canReload = Boolean(commonReloadControl.ok && commonReloadAvailability.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(state?.economy?.ap?.value ?? 0) >= 1);
-      weapon.showWorkGuns = Boolean(workGunsControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready && Number(weapon.remaining ?? 0) <= 2);
+      weapon.showWorkGuns = Boolean(workGunsControl.ok && game.combat?.combatant?.id === combatant?.id && !weapon.ready);
       weapon.canWorkGuns = Boolean(weapon.showWorkGuns && workGunsAvailability.ok);
     }
 
@@ -780,7 +781,9 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
         const action = api?.actions?.[actionId] ?? [...(api?.stationActions?.(this.selectedStation, combatant) ?? [])].find((entry) => entry.id === actionId);
         if (!action) return;
         const card = button.closest("[data-action-card]");
-        const selection = card?.querySelector("[data-action-choice]")?.value ?? null;
+        const selector = card?.querySelector("[data-action-choice]");
+        const selection = selector?.multiple ? [...selector.selectedOptions].map(o => o.value) : selector?.value ?? null;
+        const push = card?.querySelector("[data-action-push]")?.checked === true;
         try {
           button.disabled = true;
           if (action.rules?.resolver === "fireAtTarget") {
@@ -790,7 +793,7 @@ export class ArkflightCombatConsole extends HandlebarsApplication {
             const weaponKey = selection || this.selectedWeaponKey;
             if (!weaponKey) throw new Error("Choose an installed weapon first.");
             await api.stationAction(actionId, { selection: weaponKey, weaponKey }, combatant);
-          } else await api.stationAction(actionId, { selection }, combatant);
+          } else await api.stationAction(actionId, { selection, push }, combatant);
           this.render({ force: true });
         } catch (error) {
           console.error("Arkflight combat console action failed", error);

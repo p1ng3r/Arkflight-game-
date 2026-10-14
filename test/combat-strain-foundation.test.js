@@ -115,15 +115,15 @@ test("weapon fire always spends exactly 1 AP and creates active Reload work", ()
   assert.throws(() => fireWeapon(state, weaponKey, 2), /still reloading/);
 });
 
-test("starting a new turn never passively reloads a weapon", () => {
+test("starting a new turn automatically advances reload timers", () => {
   let state = createCombatantState(ship(), { derived, catalogs });
   const weaponKey = Object.keys(state.weapons)[0];
   state = fireWeapon(state, weaponKey, 1);
   state = beginCombatantTurn(state, 2);
   assert.equal(state.economy.ap.value, 4);
-  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 2), 1);
+  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 2), 0);
   state = beginCombatantTurn(state, 7);
-  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 7), 1);
+  assert.equal(weaponReloadRemaining(state.weapons[weaponKey], 7), 0);
 });
 
 test("common Reload spends 1 AP to reduce Reload by one", () => {

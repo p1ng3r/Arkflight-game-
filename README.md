@@ -2,6 +2,8 @@
 
 A clean Foundry VTT / PF2e rebuild of the Arkflight ship-encounter game.
 
+For the station ability redesign, installation commands, and Foundry playtest steps, see [Station Ability Redesign](docs/STATION-ABILITY-REDESIGN.md).
+
 This repository exists to prove the game first and keep the older Arcflight development repository untouched.
 
 ## Design Goal

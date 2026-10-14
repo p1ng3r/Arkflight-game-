@@ -94,6 +94,7 @@ function resolvedStationEffect(action, actor, state) {
   const charges = profile.advanced ? 2 : 1;
   const cost = stationActionEconomy(action, level);
 
+  if (action.rules?.ability) return `${action.description} Roll d20 + Ship Bonus; ${action.tier === "surge" ? "recover for two rounds" : action.tier === "signature" ? "once per combat" : "once per round"}.`;
   const effects = {
     "captain-issue-order": `Chosen station's next qualifying check or attack: +${bonus} circumstance bonus. Expires after that roll or before this ship's next turn.`,
     "captain-rally-crew": profile.master
@@ -142,7 +143,7 @@ function actionRuleChips(action, actor) {
   const cost = stationActionEconomy(action, level);
   const chips = [];
 
-  if (action.id === "captain-drive-the-crew") chips.push({ label: "+1 AP", tone: "free" });
+  if (action.id === "captain-drive-the-crew") { chips.push({ label: "1 AP → 3 AP (net +2)", tone: "free" }); }
   else {
     if (cost.ap > 0) chips.push({ label: `${cost.ap} AP`, tone: "cost" });
     if (cost.rp > 0) chips.push({ label: `${cost.rp} RP`, tone: "reaction" });
@@ -154,7 +155,7 @@ function actionRuleChips(action, actor) {
   if (!chips.length) chips.push({ label: "No fixed cost", tone: "free" });
 
   chips.push({ label: action.timing === "reaction" ? "Reaction" : "Action", tone: action.timing === "reaction" ? "reaction" : "timing" });
-  chips.push({ label: `Station Bonus +${profile.bonus}`, tone: "bonus", title: STATION_BONUS_DEFINITION });
+  chips.push({ label: `Ship Bonus +${profile.bonus}`, tone: "bonus", title: STATION_BONUS_DEFINITION });
 
   if (rules.oncePerRound) chips.push({ label: "Once / Round", tone: "limit" });
   if (rules.chooseStation) chips.push({ label: "Choose Station", tone: "choice" });
@@ -182,7 +183,7 @@ function ensureStationBonusHelp(root, actor) {
     help.className = "afcs-station-bonus-help";
     list.before(help);
   }
-  help.innerHTML = `<strong>Station Bonus +${profile.bonus}</strong><span>${STATION_BONUS_DEFINITION}</span>`;
+  help.innerHTML = `<strong>Ship Bonus +${profile.bonus}</strong><span>${STATION_BONUS_DEFINITION}</span>`;
 }
 
 function decorateActionCards(app, root) {

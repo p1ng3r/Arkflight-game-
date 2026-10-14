@@ -1,3 +1,4 @@
+import { SHIP_ABILITIES } from "./station-abilities.js";
 export const COMBAT_ACTION_TIMING = Object.freeze({
   ACTION: "action",
   REACTION: "reaction"
@@ -421,13 +422,17 @@ const ADDITIONAL_ACTIONS = [
   })
 ];
 
-export const COMBAT_ACTIONS = Object.freeze(Object.fromEntries([...CORE_ACTIONS, ...ADDITIONAL_ACTIONS].map((entry) => [entry.id, entry])));
+const basicIds = new Set(["battlewatch-fire-weapon", "navigator-hard-turn", "navigator-ram-ship", "navigator-grapple-ship", "navigator-break-grapple", "captain-board-ship"]);
+const legacyActions = [...CORE_ACTIONS, ...ADDITIONAL_ACTIONS].map(entry => basicIds.has(entry.id)
+  ? Object.freeze({ ...entry, station: "common", description: entry.description.replace("Spend 2 AP", "Spend 1 AP").replace("at 0 AP", "for 1 AP"), summary: entry.summary.replace("2 AP:", "1 AP:").replace("0 AP:", "1 AP:"), cost: Object.freeze({ ap: 1, rp: 0 }) })
+  : entry.id === "common-reload-weapon" ? Object.freeze({ ...entry, description: "Weapons reload automatically at the start of the ship's turns. Reload 1 is ready next turn.", cost: Object.freeze({ ap: 0, rp: 0 }), rules: Object.freeze({ ...entry.rules, retired: true }) }) : SHIP_ABILITIES[entry.id] ? entry : Object.freeze({ ...entry, rules: Object.freeze({ ...entry.rules, retired: true }) }));
+export const COMBAT_ACTIONS = Object.freeze({ ...Object.fromEntries(legacyActions.map(entry => [entry.id, entry])), ...SHIP_ABILITIES });
 
 export const CORE_COMBAT_ACTIONS_BY_STATION = Object.freeze(
   Object.fromEntries(
     ["captain", "engineer", "navigator", "battlewatch", "veilwarden"].map((station) => [
       station,
-      Object.freeze(CORE_ACTIONS.filter((entry) => entry.station === station).map((entry) => entry.id))
+      Object.freeze(Object.values(SHIP_ABILITIES).filter((entry) => entry.station === station).map((entry) => entry.id))
     ])
   )
 );

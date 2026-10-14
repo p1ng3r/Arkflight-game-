@@ -153,9 +153,9 @@ Hooks.once("ready", () => {
     async turn(steps = 1, ref = null) {
       return turn(steps, ref);
     },
-    async fireAtTarget(weaponKey, targetRef, attackerRef = null) {
-      await promptAttackReaction(base, weaponKey, targetRef, attackerRef);
-      return fire(weaponKey, targetRef, attackerRef);
+    async fireAtTarget(weaponKey, targetRef, attackerRef = null, options = {}) {
+      if (options.resolvedByStation) await promptAttackReaction(base, weaponKey, targetRef, attackerRef);
+      return fire(weaponKey, targetRef, attackerRef, options);
     },
     async stationAction(actionId, options = {}, reference = null) {
       await maybePromptEngineerBypass(base, actionId, options, reference);

@@ -1,5 +1,6 @@
 import { normalizeShipConditions } from "./ship-conditions.js";
-export const SHIP_SCHEMA_VERSION = 8;
+import { normalizeAbilityLoadouts } from "./ability-loadouts.js";
+export const SHIP_SCHEMA_VERSION = 9;
 
 export const STATION_KEYS = Object.freeze([
   "captain",
@@ -140,6 +141,7 @@ export function normalizeShip(ship = {}) {
     rewards: normalizeRewardState(ship.rewards),
     shipConditions: normalizeShipConditions(ship),
     progression: normalizeProgression(ship.progression),
+    abilities: normalizeAbilityLoadouts(ship),
     conditions: [...(ship.conditions ?? [])]
   };
   delete base.systems;

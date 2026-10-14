@@ -13,7 +13,7 @@ const PACK_ID = `world.${PACK_NAME}`;
 const FOLDER_NAME = "Arkflight";
 const FLAG_SCOPE = "arkflight";
 const FLAG_KEY = "combatReference";
-const STATIONS = Object.freeze(["common", "captain", "battlewatch", "navigator", "engineer", "veilwarden"]);
+const STATIONS = Object.freeze(["common", "reactions", "captain", "battlewatch", "navigator", "engineer", "veilwarden"]);
 const FUNDAMENTALS_KEY = "fundamentals";
 
 function clone(value) {
@@ -122,6 +122,7 @@ function actionPageHtml(action) {
       section("Quick Effect", quick, "callout"),
       section("At a Glance", meta, "meta"),
       section("Full Rules", `<p>${escapeHtml(stationActionRulesText(action))}</p>`, "rules"),
+      action.outcomes ? section("Ability Outcomes", `<p>d20 + Ship Bonus vs DC 9 + Ship Bonus; ±10 for critical results, natural 20/1 shifts one degree.</p><p>${action.tier === "surge" ? "Surge: unavailable for the next two rounds." : action.tier === "signature" ? "Signature: once per combat; unused charges last until combat ends." : "Regular: once per round."}</p><ol>${action.outcomes.map((text, i) => `<li><strong>${["Critical Success", "Success", "Failure", "Critical Failure"][i]}</strong>: ${escapeHtml(text)}</li>`).join("")}</ol>`, "rules") : "",
       tagBody ? section("Rules Tags", tagBody, "tags") : "",
       `<p class="afcr-source-id">Arkflight Action ID: <code>${escapeHtml(action.id)}</code></p>`
     ].join("")
@@ -236,7 +237,7 @@ function stationOverviewHtml(station, actions) {
 }
 
 function stationJournal(station) {
-  const actions = Object.values(COMBAT_ACTIONS).filter((action) => action.station === station);
+  const actions = Object.values(COMBAT_ACTIONS).filter((action) => action.station === station && !action.rules?.retired);
   const format = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.HTML ?? 1;
   const source = { station, actions: clone(actions), economy: actions.map((action) => stationActionEconomy(action, 1)), rules: actions.map(stationActionRulesText), style: "arkflight-codex-v3" };
   const sourceHash = stableHash(source);

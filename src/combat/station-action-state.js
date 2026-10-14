@@ -15,8 +15,10 @@ function runtime(state) {
   const value = state?.stationRuntime ?? {};
   return {
     round: Math.max(0, Math.trunc(Number(value.round) || 0)),
+    turnRound: Math.max(0, Math.trunc(Number(value.turnRound) || 0)),
     used: { ...(value.used ?? {}) },
     battleUsed: { ...(value.battleUsed ?? {}) },
+    readyRounds: { ...(value.readyRounds ?? {}) },
     effects: [...(value.effects ?? [])],
     temporaryApMaxBonus: Math.max(0, Math.trunc(Number(value.temporaryApMaxBonus) || 0))
   };
@@ -25,8 +27,10 @@ function runtime(state) {
 function freezeRuntime(value) {
   return Object.freeze({
     round: value.round,
+    turnRound: value.turnRound,
     used: Object.freeze({ ...value.used }),
     battleUsed: Object.freeze({ ...value.battleUsed }),
+    readyRounds: Object.freeze({ ...value.readyRounds }),
     effects: Object.freeze(value.effects.map((entry) => Object.freeze({ ...entry }))),
     temporaryApMaxBonus: Math.max(0, Math.trunc(Number(value.temporaryApMaxBonus) || 0))
   });
@@ -186,6 +190,8 @@ export function stationActionAvailability(state, action, { round = 1, shipLevel 
   if (!state || !action) return Object.freeze({ ok: false, reason: "missing-state-or-action" });
   const combatRound = safeRound(round);
   const rt = runtime(state);
+  if (action.rules?.retired) return Object.freeze({ ok: false, reason: "automatic-reload" });
+  if (Number(rt.readyRounds[action.id] ?? 0) > combatRound) return Object.freeze({ ok: false, reason: "cooldown", readyRound: rt.readyRounds[action.id] });
   if (action.rules?.oncePerRound && rt.used[action.id] === combatRound) {
     return Object.freeze({ ok: false, reason: "once-per-round" });
   }
@@ -288,6 +294,7 @@ export function beginStationActionTurn(state, round = 1) {
   if (!state) return state;
   const combatRound = safeRound(round);
   const rt = runtime(state);
+  if (rt.turnRound === combatRound) return state;
   const temporaryBonus = rt.temporaryApMaxBonus;
   let next = state;
   if (temporaryBonus > 0 && next?.economy?.ap) {
@@ -300,5 +307,6 @@ export function beginStationActionTurn(state, round = 1) {
       })
     });
   }
-  return withRuntime(next, { round: combatRound, used: {}, battleUsed: rt.battleUsed, effects: [], temporaryApMaxBonus: 0 });
+  return withRuntime(next, { round: combatRound, turnRound: combatRound, used: rt.used, battleUsed: rt.battleUsed, readyRounds: rt.readyRounds,
+    effects: rt.effects.filter(effect => effect.signature && (effect.charges == null || effect.charges > 0) || (effect.expiresTurn ?? effect.expiresRound) != null && (effect.expiresTurn ?? effect.expiresRound) > combatRound), temporaryApMaxBonus: 0 });
 }

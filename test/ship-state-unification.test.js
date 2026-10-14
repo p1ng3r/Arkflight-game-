@@ -5,7 +5,7 @@ import { createShip, normalizeShip, SHIP_SCHEMA_VERSION } from "../src/ship/ship
 import { applyShipEffect, applyShipEffects } from "../src/ship/ship-effects.js";
 import { shipConditionProfile } from "../src/ship/ship-conditions.js";
 
-test("schema v8 migrates Watchmaster and legacy systems into canonical Ship Conditions", () => {
+test("schema v9 migrates Watchmaster and legacy systems into canonical Ship Conditions", () => {
   const migrated = normalizeShip({
     schemaVersion: 1,
     crew: { stations: { captain: "a", engineer: "b", navigator: "c", watchmaster: "d", veilwarden: "e" }, specialists: [] },
@@ -13,7 +13,7 @@ test("schema v8 migrates Watchmaster and legacy systems into canonical Ship Cond
     systems: { hull: "functional", arkengine: "damaged", rigging: "disabled", lifeveil: "functional", command: "damaged", helm: "functional", weapons: "damaged" },
     conditions: []
   });
-  assert.equal(SHIP_SCHEMA_VERSION, 8);
+  assert.equal(SHIP_SCHEMA_VERSION, 9);
   assert.equal(migrated.schemaVersion, SHIP_SCHEMA_VERSION);
   assert.equal(migrated.crew.stations.battlewatch, "d");
   assert.equal("watchmaster" in migrated.crew.stations, false);

@@ -1,3 +1,6 @@
+import { abilityVectorSolution as attackVectorSolution, shipAttackPlan as attackEffectPlan, shipAttackDefensePlan as attackDefensePlan, shipDamageDefensePlan as damageDefensePlan } from "../combat/ability-effect-plans.js";
+import { applyAbilityLossGuards, applyAbilityStrainGuards } from "../combat/ship-ability-rules.js";
+import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
 import {
   activeStationEffects,
   applyHardnessToDamage,
@@ -133,111 +136,6 @@ function focusWardMatches(effect, type, systemThreat) {
   return selection && (selection === String(type ?? "").toLowerCase() || selection === String(systemThreat ?? "").toLowerCase());
 }
 
-function attackVectorSolution(attackerState, solution, attackerLevel) {
-  if (!solution?.arc || !attackerState) return solution;
-  const vector = activeStationEffects(attackerState).filter((effect) =>
-    effect.actionId === "navigator-set-attack-vector"
-    && effect.selection === solution.weaponState?.mount
-    && isHeadingCurrent(effect, attackerState)
-  );
-  if (!vector.length) return solution;
-  const tolerance = 15 * highestMagnitude(vector, attackerLevel);
-  const difference = Math.max(0, Number(solution.arc.difference) || 0);
-  const halfWidth = Math.max(0, Number(solution.arc.halfWidth) || 0);
-  const arcLegal = Boolean(solution.arc.legal || difference <= halfWidth + tolerance);
-  return Object.freeze({
-    ...solution,
-    legal: Boolean(solution.range?.legal && arcLegal),
-    arc: Object.freeze({ ...solution.arc, legal: arcLegal, vectorTolerance: tolerance })
-  });
-}
-
-function attackEffectPlan(attackerState, target, solution, attackerLevel) {
-  const effects = activeStationEffects(attackerState);
-  const accuracy = [];
-  const consumed = [];
-
-  const issueOrder = effects.filter((effect) => effect.actionId === "captain-issue-order" && effect.selection === "battlewatch");
-  if (issueOrder.length) {
-    accuracy.push(...issueOrder);
-    consumed.push(...issueOrder.map((effect) => effect.id));
-  }
-
-  const acquire = effects.filter((effect) => effect.actionId === "battlewatch-acquire-target" && effectMatchesTarget(effect, target));
-  if (acquire.length) {
-    accuracy.push(...acquire);
-    consumed.push(...acquire.map((effect) => effect.id));
-  }
-
-  const coordinate = effects.filter((effect) => effect.actionId === "captain-coordinate-assault" && effectMatchesTarget(effect, target));
-  if (coordinate.length) consumed.push(...coordinate.map((effect) => effect.id));
-
-  const broadside = effects.filter((effect) =>
-    effect.actionId === "battlewatch-ready-broadside"
-    && effect.selection === solution.weaponState.mount
-  );
-  if (broadside.length) consumed.push(...broadside.map((effect) => effect.id));
-
-  const weaponsPower = effects.filter((effect) => effect.actionId === "engineer-redistribute-power" && effect.selection === "weapons");
-  if (weaponsPower.length) consumed.push(...weaponsPower.map((effect) => effect.id));
-
-  const circumstanceBonus = highestMagnitude(accuracy, attackerLevel);
-  const hardnessReduction = highestMagnitude(coordinate, attackerLevel);
-  const broadsideDamage = broadside.reduce((best, effect) => Math.max(best, 2 * stationEffectMagnitude(effect, attackerLevel)), 0);
-  const powerDamage = weaponsPower.reduce((best, effect) => Math.max(best, stationEffectMagnitude(effect, attackerLevel)), 0);
-
-  return Object.freeze({
-    circumstanceBonus,
-    hardnessReduction,
-    damageBonus: broadsideDamage + powerDamage,
-    broadside,
-    consumed: Object.freeze([...new Set(consumed)])
-  });
-}
-
-function attackDefensePlan(targetState, targetLevel) {
-  const effects = activeStationEffects(targetState);
-  const evasive = effects.filter((effect) => effect.actionId === "navigator-evasive-maneuver");
-  const spoil = effects.filter((effect) => effect.actionId === "battlewatch-spoil-their-aim");
-  return Object.freeze({
-    acBonus: highestMagnitude(evasive, targetLevel),
-    attackPenalty: highestMagnitude(spoil, targetLevel),
-    consumed: Object.freeze([...evasive, ...spoil].map((effect) => effect.id))
-  });
-}
-
-function damageDefensePlan(targetState, targetLevel, solution, targetActor) {
-  const effects = activeStationEffects(targetState);
-  const brace = effects.filter((effect) => effect.actionId === "captain-brace-for-impact");
-  const emergencyWard = effects.filter((effect) => effect.actionId === "veilwarden-emergency-ward");
-  const reinforce = effects.filter((effect) => effect.actionId === "veilwarden-reinforce-lifeveil");
-  const focus = effects.filter((effect) => effect.actionId === "veilwarden-focus-ward");
-  const lifeveilPower = effects.filter((effect) => effect.actionId === "engineer-redistribute-power" && effect.selection === "lifeveil");
-
-  const type = solution.weapon.data?.damageProfile?.type ?? solution.weapon.data?.damageProfile?.damageType ?? "damage";
-  const systemThreat = solution.weapon.data?.systemThreat ?? "hull";
-  const wardable = lifeveilOnline(targetActor) && wardableDamage(type, systemThreat);
-  const matchingFocus = focus.filter((effect) => focusWardMatches(effect, type, systemThreat));
-
-  const broadCandidates = wardable ? [...reinforce, ...lifeveilPower] : [];
-  const broad = bestEffect(broadCandidates, (effect) => stationMitigationValue("ward", effect.shipLevel ?? targetLevel, effect.boost));
-  const focused = bestEffect(matchingFocus, (effect) => stationMitigationValue("focus-ward", effect.shipLevel ?? targetLevel, effect.boost));
-  const baseWard = focused.value > broad.value ? focused : broad;
-  const emergency = wardable
-    ? bestEffect(emergencyWard, (effect) => stationMitigationValue("emergency-ward", effect.shipLevel ?? targetLevel, effect.boost))
-    : Object.freeze({ effect: null, value: 0 });
-  const bracePlan = bestEffect(brace, (effect) => stationMitigationValue("brace", effect.shipLevel ?? targetLevel, effect.boost));
-
-  return Object.freeze({
-    wardable,
-    wardMitigation: baseWard.value + emergency.value,
-    braceMitigation: bracePlan.value,
-    wardConsumed: Object.freeze(baseWard.effect ? [baseWard.effect.id] : []),
-    emergencyWardConsumed: Object.freeze(emergency.effect ? [emergency.effect.id] : []),
-    braceConsumed: Object.freeze(bracePlan.effect ? [bracePlan.effect.id] : [])
-  });
-}
-
 async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference = null, {
   requesterUserId = game.user?.id ?? null
 } = {}) {
@@ -249,7 +147,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   const battlewatch = battlewatchActor(attacker.actor);
   if (!requester?.isGM) {
     if (!userOwnsActor(requester, attacker.actor)) throw new Error("You must own the firing ship.");
-    if (!battlewatch || !userOwnsActor(requester, battlewatch)) throw new Error("Only the assigned Battlewatch owner may fire this ship's weapons.");
+    if (!battlewatch) throw new Error("Assign a Battlewatch officer to provide the weapon attack statistic.");
   }
   if (!userCanResolveShipState(game.user, attacker)) {
     throw new Error(`You do not have permission to update ${attacker.name}'s firing state.`);
@@ -294,9 +192,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   const degree = degreeOfSuccess(Number(attack.total), die, ac);
 
   attackerAfter = consumeStationEffects(attackerAfter, offense.consumed);
-  if (offense.broadside.some((effect) => stationEffectProfile(effect.shipLevel ?? attackerLevel).master)) {
-    attackerAfter = reduceWeaponReload(attackerAfter, weaponKey, round, 1);
-  }
+
 
   const targetAttackEffectIds = [...attackDefense.consumed];
   let targetAfter = targetAttackState;
@@ -307,9 +203,9 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     const profile = weaponDamageProfile(solution.weapon, { upgrades: solution.weaponState.upgrades });
     const damageRoll = await new Roll(degree === 2 ? `2 * (${profile.dice})` : profile.dice).evaluate();
     const rolled = Math.max(0, Number(damageRoll.total) || 0);
-    const poweredIncoming = rolled + offense.damageBonus;
+    const poweredIncoming = rolled + offense.damageBonus * (degree === 2 ? 2 : 1);
     const hardnessBase = Math.max(0, Number(targetDerived.stats.hardness) || 0);
-    const hardnessEffective = Math.max(0, hardnessBase - offense.hardnessReduction);
+    let hardnessEffective = Math.max(0, hardnessBase - offense.hardnessReduction);
 
     await game.arkflight?.shipCombatReactions?.promptDamage?.({ attacker, target, solution, incoming: poweredIncoming, hardness: hardnessEffective });
 
@@ -317,6 +213,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     const damageCalculationState = consumeStationEffects(targetLatest, attackDefense.consumed);
     targetAfter = targetLatest;
     damageDefense = damageDefensePlan(damageCalculationState, targetLevel, solution, target.actor);
+    hardnessEffective += damageDefense.hardnessBonus;
 
     const wardAbsorbed = Math.min(poweredIncoming, damageDefense.wardMitigation);
     const afterWard = Math.max(0, poweredIncoming - wardAbsorbed);
@@ -329,7 +226,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
     damage = Object.freeze({
       roll: damageRoll,
       rolled,
-      stationDamageBonus: offense.damageBonus,
+      stationDamageBonus: offense.damageBonus * (degree === 2 ? 2 : 1),
       incoming: poweredIncoming,
       wardAbsorbed,
       hardnessBase,
@@ -337,6 +234,7 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
       hardnessReduced: Math.min(hardnessBase, offense.hardnessReduction),
       absorbed: hardened.absorbed,
       braceAbsorbed,
+      hardnessGuardUsed: damageDefense.hardnessBonus > 0 && afterWard > hardnessEffective - damageDefense.hardnessBonus,
       hullDamage,
       before,
       after,
@@ -399,7 +297,8 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   if (damage) {
     const damageEffectIds = [
       ...(damage.wardAbsorbed > 0 ? [...damageDefense.wardConsumed, ...damageDefense.emergencyWardConsumed] : []),
-      ...(damage.braceAbsorbed > 0 ? damageDefense.braceConsumed : [])
+      ...(damage.braceAbsorbed > 0 ? damageDefense.braceConsumed : []),
+      ...(damage.hardnessGuardUsed ? damageDefense.hardnessConsumed : [])
     ];
     const damageEffectSnapshots = activeStationEffects(base.state(target) ?? targetAfter ?? targetAttackState)
       .filter((effect) => damageEffectIds.includes(effect.id))
@@ -524,7 +423,7 @@ function damageSnapshotMatches(ship, snapshot) {
   return JSON.stringify(damageConsequenceSnapshot(ship)) === JSON.stringify(snapshot);
 }
 
-async function resolveDeferredDamageConsequences(ship, flag, amount, actor = null) {
+async function resolveDeferredDamageConsequences(ship, flag, amount, actor = null, state = null) {
   let next = structuredClone(ship);
   const notes = [];
   const beforeHull = Math.max(0, Number(next.resources?.hull?.value) || 0);
@@ -535,19 +434,22 @@ async function resolveDeferredDamageConsequences(ship, flag, amount, actor = nul
   // Normal weapon hits only damage Hull. Critical hits add one point of
   // ship-wide Strain; Strain is the universal route into Ship Conditions.
   if (Number(flag.degree) === 2) {
+    const guarded = state ? applyAbilityStrainGuards(state, 1) : { amount: 1, state };
+    state = guarded.state;
     const outcome = await resolveShipStrainGain(next, {
-      amount: 1,
+      amount: guarded.amount,
       currentStrain: next.resources?.strain?.value ?? 0,
       strainMax: next.resources?.strain?.max ?? 0,
       sourceLabel: `${flag.weaponName ?? "Weapon"} Critical Hit`,
       speaker: actor ? ChatMessage.getSpeaker({ actor }) : null
     });
     next = structuredClone(outcome.ship);
-    notes.push("Critical hit: +1 Strain.");
+    if (state) state = { ...state, strain: outcome.strain };
+    notes.push(guarded.amount ? "Critical hit: +1 Strain." : "Critical hit Strain prevented by protection.");
     notes.push(...outcome.notes);
   }
 
-  return Object.freeze({ ship: next, notes: Object.freeze(notes) });
+  return Object.freeze({ ship: next, state, notes: Object.freeze(notes) });
 }
 
 async function applyShipDamageMessage(message, mode = "apply") {
@@ -567,16 +469,21 @@ async function applyShipDamageMessage(message, mode = "apply") {
   const beforeSnapshot = damageConsequenceSnapshot(ship);
   const beforeHull = Math.max(0, Number(ship.resources?.hull?.value) || 0);
   const amount = appliedDamageAmount(flag.hullDamage, mode);
-  const consequence = await resolveDeferredDamageConsequences(ship, flag, amount, actor);
+  const guardState = game.arkflight?.combat?.state?.(combatant);
+  let consequence = await resolveDeferredDamageConsequences(ship, flag, amount, actor, guardState);
+  const guarded = guardState ? applyAbilityLossGuards(ship, consequence.ship, consequence.state ?? guardState) : null;
+  if (guarded) consequence = { ...consequence, ship: guarded.ship };
   const afterSnapshot = damageConsequenceSnapshot(consequence.ship);
   const afterHull = Math.max(0, Number(consequence.ship.resources?.hull?.value) || 0);
 
-  const beforeState = game.arkflight?.combat?.state?.(combatant) ?? null;
+  const beforeState = guarded?.state ?? game.arkflight?.combat?.state?.(combatant) ?? null;
   const effectIds = Array.isArray(flag.effectIds) ? flag.effectIds.filter(Boolean) : [];
-  const afterState = beforeState && effectIds.length ? consumeStationEffects(beforeState, effectIds) : beforeState;
-  const snapshots = Array.isArray(flag.effectSnapshots) ? flag.effectSnapshots.map((effect) => ({ ...effect })) : [];
+  let afterState = beforeState && effectIds.length ? consumeStationEffects(beforeState, effectIds) : beforeState;
+  if (afterState) afterState = reconcileCombatantState(consequence.ship, afterState, { derived: deriveShip(consequence.ship, SHIP_CATALOGS), catalogs: SHIP_CATALOGS, rotation: afterState.mobility.heading });
+  const guardSnapshots = (guardState?.stationRuntime?.effects ?? []).filter(e => !afterState?.stationRuntime?.effects?.some(remaining => remaining.id === e.id));
+  const snapshots = [...new Map([...(flag.effectSnapshots ?? []), ...guardSnapshots].map(e => [e.id, { ...e }])).values()];
 
-  if (afterState && afterState !== beforeState) await combatant.update({ [STATE_PATH]: afterState });
+  if (afterState && afterState !== guardState) await combatant.update({ [STATE_PATH]: afterState });
   await actor.update({
     [`flags.${MODULE_ID}.ship.resources.hull`]: consequence.ship.resources?.hull ?? ship.resources?.hull,
     [`flags.${MODULE_ID}.ship.resources.lifeveil`]: consequence.ship.resources?.lifeveil ?? ship.resources?.lifeveil,
@@ -742,7 +649,7 @@ async function applyProtectedTargetEffects(base, payload = {}) {
     return;
   }
   const battlewatch = battlewatchActor(attacker.actor);
-  if (!userOwnsActor(requester, attacker.actor) || !battlewatch || !userOwnsActor(requester, battlewatch)) {
+  if (!userOwnsActor(requester, attacker.actor) || !battlewatch) {
     reply(false, "Requester no longer controls the firing ship's Battlewatch.");
     return;
   }
@@ -773,6 +680,10 @@ Hooks.once("ready", () => {
       return attacker ? attackVectorSolution(base.state(attacker), raw, shipLevel(attacker.actor)) : raw;
     },
     fireAtTarget(weaponKey, targetReference, attackerReference = null, options = {}) {
+      if (!options.resolvedByStation) {
+        const target = resolveCombatant(base, targetReference);
+        return originalStationAction("battlewatch-fire-weapon", { weaponKey, targetId: target?.id }, attackerReference);
+      }
       return enhancedFireAtTarget(base, weaponKey, targetReference, attackerReference, options);
     },
     stationAction(actionId, options = {}, reference = null) {

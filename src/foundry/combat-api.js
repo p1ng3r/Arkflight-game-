@@ -1,7 +1,9 @@
+import { runShipCommand } from "./ship-ability-runtime.js";
 import {
   COMBAT_ACTIONS,
   applyFreeHelmAllowance,
   beginCombatantTurn,
+  beginStationActionTurn,
   createCombatantState,
   commitFacing,
   fireWeapon,
@@ -343,7 +345,7 @@ function helmControlState(combatant) {
     canOperate: canUserOperateCombatant(combatant),
     forwardCostAP: movementRemaining > 0 ? 0 : 1,
     canForward: geometry.ok && !moored && (movementRemaining > 0 || ap > 0),
-    reverseCostAP: 1,
+    reverseCostAP: state?.mobility?.extraordinaryMovement ? 0 : 1,
     canReverse: geometry.ok && !moored && ap > 0,
     facing
   });
@@ -373,7 +375,7 @@ async function helmMove(direction, reference = null) {
   let movementSpent = 0;
   const reverse = direction.startsWith("reverse");
 
-  if (reverse) {
+  if (reverse && !next.mobility.extraordinaryMovement) {
     next = spendPoints(next, "ap", 1);
     next = Object.freeze({
       ...next,
@@ -792,7 +794,7 @@ async function requireOwnedCombatant(reference = null, user = game.user) {
 async function beginTurn(combatant, round) {
   if (!isArkflightCombatant(combatant)) return null;
   const current = combatantState(combatant) ?? freshState(combatant.actor, combatant.token);
-  const next = beginCombatantTurn(current, round);
+  const next = beginStationActionTurn(beginCombatantTurn(current, round), round);
   if (next !== current) await updateCombatantState(combatant, next);
   try { await combatant.token?.clearMovementHistory?.(); } catch (_error) { /* movement history is convenience only */ }
   ensureTurnStartSnapshot(combatant, game.combat);
@@ -898,13 +900,11 @@ Hooks.once("ready", () => {
     },
     fireAtTarget,
     async reloadWeapon(weaponKey, reference = null) {
-      const combatant = await requireOwnedCombatant(reference);
-      const next = reloadWeapon(combatantState(combatant), weaponKey, game.combat?.round ?? 1);
-      return updateCombatantState(combatant, next);
+      throw new Error("Weapons reload automatically at the start of the ship's turn; use Work the Guns to reduce a timer.");
     },
     async workTheGuns(weaponKey, reference = null) {
       // Legacy API alias. Player-facing Work the Guns is the Battlewatch station action.
-      return this.reloadWeapon(weaponKey, reference);
+      return game.arkflight.combat.stationAction("battlewatch-reload-weapon", { weaponKey, selection: weaponKey }, reference);
     },
     reloadRemaining(weaponKey, reference = null) {
       const combatant = reference ? findCombatant(reference) : game.combat?.combatant ?? null;
@@ -965,7 +965,9 @@ Hooks.on("updateCombat", async (combat, changes) => {
   if (!(Object.hasOwn(changes ?? {}, "round") || Object.hasOwn(changes ?? {}, "turn"))) return;
   const combatant = combat.combatant ?? null;
   if (!isArkflightCombatant(combatant)) return;
-  const state = await beginTurn(combatant, combat.round);
+  const primary = activePrimaryGM();
+  if (primary && primary.id !== game.user.id) return;
+  const state = await runShipCommand(combatant.id, () => beginTurn(combatant, combat.round));
   Hooks.callAll("arkflightCombatTurnChanged", { combat, combatant, state, round: combat.round, turn: combat.turn, shipActor: combatant.actor ?? null });
 });
 

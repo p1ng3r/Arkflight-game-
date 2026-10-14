@@ -53,6 +53,8 @@ function buildReconciledState(combatant) {
  */
 export async function syncCombatantLoadout(combatant) {
   if (!game.user?.isGM || !hasArkflightShipActor(combatant) || syncing.has(combatant.id)) return false;
+  const primary = [...(game.users ?? [])].filter(user => user.active && user.isGM).sort((a, b) => String(a.id).localeCompare(String(b.id)))[0];
+  if (primary && primary.id !== game.user.id) return false;
 
   const next = buildReconciledState(combatant);
   if (!next) return false;
@@ -112,7 +114,8 @@ Hooks.on("createCombatant", (combatant) => {
   setTimeout(() => { void syncCombatantLoadout(combatant); }, 0);
 });
 
-Hooks.on("updateActor", (actor, changes) => {
+Hooks.on("updateActor", (actor, changes, options = {}) => {
+  if (options.arkflightAbilityTransaction) return;
   if (!game.user?.isGM || !shipPayload(actor) || !shipPayloadChanged(changes)) return;
   const combatant = combatantForActor(actor);
   if (combatant) void syncCombatantLoadout(combatant);
