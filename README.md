@@ -4,6 +4,8 @@ A clean Foundry VTT / PF2e rebuild of the Arkflight ship-encounter game.
 
 For the station ability redesign, installation commands, and Foundry playtest steps, see [Station Ability Redesign](docs/STATION-ABILITY-REDESIGN.md).
 
+The approved pillar-by-pillar scope for the next major update is recorded in the [Arkflight 1.0 Roadmap](docs/ARKFLIGHT-1.0-ROADMAP.md). Voyage / Events is approved for improvement; the remaining pillars await review.
+
 This repository exists to prove the game first and keep the older Arcflight development repository untouched.
 
 ## Design Goal
