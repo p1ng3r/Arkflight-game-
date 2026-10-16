@@ -23,7 +23,7 @@ This is the saved scope of the pillar-by-pillar review. Approval means the work 
 | 1. Voyage / Events | Findings and all six improvement areas approved for 1.0 on 15 October 2026 |
 | 2. Ship Combat | All nine improvement areas and station-based AP direction approved for 1.0 on 15 October 2026 |
 | 3. Ship Progression / Vessel Management | All seven improvement areas approved for 1.0 on 15 October 2026 |
-| 4. Crew / Faction / Expedition | Detailed pillar review pending |
+| 4. Crew / Faction / Expedition | Review presented; Ayerstone source integration added on 16 October 2026; final fix scope pending |
 | 5. GM Build & Run | Detailed pillar review pending |
 | 6. UI, Interaction & Ship Sheet | Added as a distinct pillar on 15 October 2026; detailed review pending |
 
@@ -490,6 +490,22 @@ The progression review ran 71 relevant existing checks successfully. Additional 
 - [ ] Play through a live Foundry level-up, reward acquisition, fabrication, installation, and subsequent use in Events and Combat.
 - [ ] Complete cross-pillar checks after the remaining reviews before marking progression ready for 1.0.
 
+## Pillar 4 — Crew / Faction / Expedition
+
+Review presented on 16 October 2026. The user requested that faction information be pulled from the existing [Ayerstone Setting Guide](https://github.com/p1ng3r/Ayerstone-Setting-Guide). The resulting [Ayerstone faction reference and integration notes](AYERSTONE-FACTION-INTEGRATION.md) record the inspected source commit, established public lore, and proposed gameplay connections.
+
+The source already establishes the Open Dock Compact, Freespacers and the Dock 44 Freebooters, major external factions, all ten Great Houses, guilds, civic services, and named contacts. Faction identities do not need to be invented for this update. The remaining task is connecting supported relationships, contracts, access, and rewards to actual play.
+
+Review implications:
+
+- Preserve harbor law and the distinction between docking, trust, contracts, membership, and lawful conduct.
+- Allow distinct relationship types such as Freebooter charter, House employment, route license, service access, and a specific debt or favor.
+- Build candidate faction rewards and mission opportunities from the existing organizations and their established interests.
+- Connect resulting routes, blueprints, specialist recruitment, and services to their actual gameplay consumers across the first three pillars.
+- Distinguish setting facts from Arkflight generator preferences and newly proposed mechanics.
+
+Adding source information is authorized; it does not imply approval or implementation of every outstanding Pillar 4 recommendation. Crew-assignment consistency, staffing and recovery integration, specialist recruitment, expedition requirements and Supply settlement, faction consequences, reward reliability, and personal crew development remain the presented review areas pending final scope agreement. No numeric faction perks are locked by this reference.
+
 ## Pillar 6 — UI, Interaction & Ship Sheet
 
 Added by the user on 15 October 2026 as a distinct sixth pillar. Detailed review is pending.
@@ -498,4 +514,4 @@ Its scope is how the game is understood and operated across all other pillars: t
 
 EVT-06 and COM-08 already record approved interaction needs specific to their pillars. The sixth-pillar review will connect those needs into a coherent experience without treating the review as already complete or authorizing every possible visual change.
 
-The next review is **Crew / Faction / Expedition**. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.
+The current review is **Crew / Faction / Expedition**, now informed by the Ayerstone source. **GM Build & Run** follows after its discussion is complete. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.

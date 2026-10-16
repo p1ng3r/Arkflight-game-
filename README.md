@@ -4,7 +4,7 @@ A clean Foundry VTT / PF2e rebuild of the Arkflight ship-encounter game.
 
 For the station ability redesign, installation commands, and Foundry playtest steps, see [Station Ability Redesign](docs/STATION-ABILITY-REDESIGN.md).
 
-The approved pillar-by-pillar scope for the next major update is recorded in the [Arkflight 1.0 Roadmap](docs/ARKFLIGHT-1.0-ROADMAP.md). Voyage / Events, Ship Combat, and Ship Progression / Vessel Management are approved for improvement; implementation is pending. The plan includes six pillars, with UI, Interaction & Ship Sheet as the sixth; the other three reviews remain pending.
+The approved pillar-by-pillar scope for the next major update is recorded in the [Arkflight 1.0 Roadmap](docs/ARKFLIGHT-1.0-ROADMAP.md). Voyage / Events, Ship Combat, and Ship Progression / Vessel Management are approved for improvement; implementation is pending. Crew / Faction / Expedition is under review using the existing [Ayerstone faction lore and integration reference](docs/AYERSTONE-FACTION-INTEGRATION.md). GM Build & Run and UI, Interaction & Ship Sheet remain to be reviewed.
 
 This repository exists to prove the game first and keep the older Arcflight development repository untouched.
 
