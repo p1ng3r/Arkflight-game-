@@ -2,7 +2,7 @@
 
 Recorded: 15 October 2026 (America/New_York).
 
-Status: **Pillars 1–5 — Voyage / Events, Ship Combat, Ship Progression / Vessel Management, Crew / Faction / Expedition, and GM Build & Run — approved for the 1.0 update; implementation pending. UI, Interaction & Ship Sheet remains to be reviewed.**
+Status: **Pillars 1–5 — Voyage / Events, Ship Combat, Ship Progression / Vessel Management, Crew / Faction / Expedition, and GM Build & Run — approved for the 1.0 update; implementation pending. By user direction on 16 October 2026, implement the approved systems first, then reassess UI, Interaction & Ship Sheet and present mockups for selection.**
 
 This is the saved scope of the pillar-by-pillar review. Approval means the work belongs in the 1.0 update; it does not mean these fixes have shipped. This document does not publish a 1.0 release or change the module version.
 
@@ -11,10 +11,11 @@ This is the saved scope of the pillar-by-pillar review. Approval means the work 
 - Review one pillar at a time. Complete its discussion before moving to the next.
 - Record strengths and flaws against both the design and the running code.
 - Preserve the existing foundations where they serve the intended game.
-- Make the final cross-pillar keep/remove/redesign plan after all six reviews.
+- Implement the approved work in Pillars 1–5 before the final UI reassessment. This sequencing change was requested on 16 October 2026 and supersedes the earlier requirement to finish all six reviews before implementation planning.
 - Keep Events, tactical Combat, and ship leveling distinct, while connecting them through the same persistent vessel, crew, resources, equipment, and consequences.
 - Audit talent-system support across every pillar. Record particular talent and progression changes in the relevant reviews before implementing them.
 - Make the ship sheet enjoyable and interactive by exposing meaningful choices, equipment contributions, and results. A visual redesign is an option; existing useful presentation should be retained.
+- Reassess the working systems after implementation and offer several comparable UI mockups for the user to choose from before committing to the visual redesign.
 
 ## Pillar review status
 
@@ -25,7 +26,7 @@ This is the saved scope of the pillar-by-pillar review. Approval means the work 
 | 3. Ship Progression / Vessel Management | All seven improvement areas approved for 1.0 on 15 October 2026 |
 | 4. Crew / Faction / Expedition | All eight improvement areas, Ayerstone integration, starting faction selection, and support for later factions approved on 16 October 2026 |
 | 5. GM Build & Run | All eight improvement areas and initial priorities approved for 1.0 on 16 October 2026 |
-| 6. UI, Interaction & Ship Sheet | Added as a distinct pillar on 15 October 2026; detailed review pending |
+| 6. UI, Interaction & Ship Sheet | Reassessment and mockups deferred until the approved new systems are implemented, by user direction on 16 October 2026 |
 
 The pending rows reserve later reviews; they do not authorize a simultaneous redesign of those pillars. Approved directions are recorded below, while explicitly open details still require design and balance decisions.
 
@@ -867,10 +868,29 @@ The review ran 12 existing focused generator, officer, equipment, and spell chec
 
 ## Pillar 6 — UI, Interaction & Ship Sheet
 
-Added by the user on 15 October 2026 as a distinct sixth pillar. Detailed review is pending.
+Added by the user on 15 October 2026 as a distinct sixth pillar. On 16 October the user set the desired experience as fun, easy, cool, and sleek, then directed that the approved new systems be programmed before this pillar is reassessed. Detailed review and visual selection are deferred until that point.
 
 Its scope is how the game is understood and operated across all other pillars: the persistent ship sheet, station controls, common navigation, player and GM interaction, meaningful previews, equipment/progression feedback, and visibility of results. Preserve useful existing work while evaluating redesigns against actual player needs.
 
-EVT-06 and COM-08 already record approved interaction needs specific to their pillars. The sixth-pillar review will connect those needs into a coherent experience without treating the review as already complete or authorizing every possible visual change.
+EVT-06, COM-08, and other approved areas already include functional interaction needs. Implement the controls, feedback, reliability fixes, and resource/state displays needed to operate and test those systems. The deferred visual redesign does not block that functional work.
 
-The next and final pillar review is **UI, Interaction & Ship Sheet**. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.
+### Agreed implementation and design sequence
+
+1. Implement the approved gameplay, progression, crew/faction/expedition, and GM systems in dependency-aware increments, settling explicitly open rules as needed.
+2. Keep the existing interface usable while exposing and testing the new functionality. Preserve working behavior and address functional UI defects as part of the relevant fixes.
+3. Reassess the implemented workflows across the pillars using their real actions, choices, feedback, and player/GM needs.
+4. Present several distinct, comparable UI mockups so the user can choose a direction. Include the important Bridge and Combat interactions and show how a design extends to the other workflows; use representative implemented state rather than invented mechanics.
+5. Refine and implement the chosen design, then validate it in live Foundry play before release.
+
+The earlier suggested five-destination navigation, palette, ability-card treatment, and other presentation ideas are examples for later exploration, not a selected layout or approved final design. No mockups are required now, and no broad visual redesign should be undertaken before the reassessment and user selection.
+
+### Reassessment and completion criteria
+
+- [ ] Reassess the actual implemented systems and remaining interaction problems after the approved new work is programmed.
+- [ ] Offer multiple mockups that can be compared using the same representative tasks and ship state.
+- [ ] Let the user select and refine the visual direction before implementing it broadly.
+- [ ] Verify readable text, clear costs and availability, useful previews, and feedback that makes crew contributions noticeable.
+- [ ] Verify player and GM ownership, persistent selections, reliable reopening/window behavior, and laptop-sized layouts in Foundry.
+- [ ] Complete the cross-pillar usability review and final keep/remove/redesign decisions before the 1.0 release.
+
+The next work phase is **implementation of the approved Pillars 1–5**. UI reassessment and mockup selection follow implementation; they are not a prerequisite for starting it. Final release still requires the relevant automated checks, live play, and the selected interface validation.
