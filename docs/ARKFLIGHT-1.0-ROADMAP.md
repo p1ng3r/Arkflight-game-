@@ -2,7 +2,7 @@
 
 Recorded: 15 October 2026 (America/New_York).
 
-Status: **Voyage / Events and Ship Combat findings approved for the 1.0 update; implementation pending. Six gameplay and interaction pillars are now recognized.**
+Status: **Voyage / Events, Ship Combat, and Ship Progression / Vessel Management findings approved for the 1.0 update; implementation pending. Six gameplay and interaction pillars are now recognized.**
 
 This is the saved scope of the pillar-by-pillar review. Approval means the work belongs in the 1.0 update; it does not mean these fixes have shipped. This document does not publish a 1.0 release or change the module version.
 
@@ -22,7 +22,7 @@ This is the saved scope of the pillar-by-pillar review. Approval means the work 
 |---|---|
 | 1. Voyage / Events | Findings and all six improvement areas approved for 1.0 on 15 October 2026 |
 | 2. Ship Combat | All nine improvement areas and station-based AP direction approved for 1.0 on 15 October 2026 |
-| 3. Ship Progression / Vessel Management | Detailed pillar review pending |
+| 3. Ship Progression / Vessel Management | All seven improvement areas approved for 1.0 on 15 October 2026 |
 | 4. Crew / Faction / Expedition | Detailed pillar review pending |
 | 5. GM Build & Run | Detailed pillar review pending |
 | 6. UI, Interaction & Ship Sheet | Added as a distinct pillar on 15 October 2026; detailed review pending |
@@ -343,6 +343,153 @@ The Combat review ran 84 focused checks successfully. Those checks establish a b
 - [ ] Run complete live Foundry combats with several player-controlled stations and representative enemy ships.
 - [ ] Record balance, pacing, and usability findings before marking Combat ready for 1.0.
 
+## Pillar 3 — Ship Progression / Vessel Management
+
+All seven findings and their proposed repair directions were approved for the 1.0 update on 15 October 2026. Approval records the work, not completed implementation. Numerical replacements and other explicitly open choices below remain design and balance work.
+
+### Identity and foundations to preserve
+
+Ship progression is the crew's shared vessel development: adventure rewards, level milestones, talent choices, ship identity, equipment discovery, and deliberate refitting. Preserve its distinct role alongside tactical Combat and cooperative Events.
+
+Preserve:
+
+- Independent ship XP and levels, Talent Points, prerequisites, and upgrade paths.
+- Ship specializations that support different vessel identities.
+- Blueprint knowledge, physical component ownership, and fitting-slot constraints.
+- Refit previews, timed work orders, and meaningful downtime decisions.
+- Persistent adventure rewards including XP, blueprints, recovered equipment, and materials.
+- The existing talent and refit foundations while repairing the connection between advertised benefits and actual play.
+
+### PRO-01 — Replace ineffective legacy capacity upgrades
+
+**Finding:** Lifeveil and Morale use percentage tracks capped at 100%, while purchasable talents and fittings still modify legacy capacity statistics. Reinforced Lifeveil, Deep Veil Reservoir, Crew Quarters, and other capacity upgrades can change those old statistics without improving the actual resource tracks.
+
+**Approved work:** Preserve the percentage tracks. Redesign affected purchases around supported gameplay benefits and migrate existing purchases fairly.
+
+Acceptance criteria:
+
+- [ ] Audit talents, fittings, engines, patterns, and synergies that modify legacy Lifeveil or Morale capacities.
+- [ ] Replace ineffective benefits with intentional effects consumed by the current rules.
+- [ ] Keep actual percentage resource maxima and all displays consistent.
+- [ ] Update descriptions, costs, previews, and existing-ship migration together.
+- [ ] Verify paired outcomes with and without each replacement, beyond its derived statistic.
+
+Reduced losses, better recovery, consequence protection, and stronger station effects are candidate replacements; exact effects and values remain open.
+
+### PRO-02 — Preserve talent-line benefits and redesign conflicting capstones
+
+**Finding:** Purchasing Impossible Burn supersedes Legendary Drive but removes its +2 Speed. Purchasing Turn Between Heartbeats supersedes Legendary Rigging but removes its +2 Maneuverability. The latter also advertises an earlier action while a redesigned ability of the same name is already the Navigator's starter Signature.
+
+**Approved work:** Preserve passive improvements earned through a talent line and give capstones distinct, usable additional value under the current ability system.
+
+Acceptance criteria:
+
+- [ ] Audit upgrade chains for lost predecessor benefits and unintended downgrades.
+- [ ] Preserve the intended cumulative passive benefit without stacking replacement totals twice.
+- [ ] Resolve overlaps between talent unlocks, retired actions, and starter abilities.
+- [ ] Give retained capstones supported effects with clear timing, costs, and limits.
+- [ ] Show the resulting total benefit and verify the before/after ship in play.
+
+Exact capstone effects remain to be designed; approval does not reinstate retired actions or grant duplicate Signature uses.
+
+### PRO-03 — Connect talent promises to actual play across the pillars
+
+**Finding:** Voyage bonuses already reach Event resolution, but the new combat ability rolls do not consume advertised station and Combat talent bonuses such as Master Crew's station-roll benefit. Repair and routine Supply talent modifiers also lack corresponding gameplay consumers in the paths inspected during this review.
+
+**Approved work:** Audit every talent from purchase to its actual gameplay outcome. Ensure the talent system supports all pillars while allowing individual talents to specialize.
+
+Acceptance criteria:
+
+- [ ] Map each talent's advertised benefit to supported decisions, checks, resource changes, unlocks, or consequences.
+- [ ] Connect applicable station and pillar bonuses to their intended resolution paths with explicit stacking rules.
+- [ ] Implement supported repair and routine consumption benefits, or redesign unsupported promises.
+- [ ] Coordinate Event integration with EVT-03 and combat integration with COM-03.
+- [ ] Include later Crew, GM, and interaction findings in the final cross-pillar audit.
+- [ ] Show contribution sources and verify outcomes both with and without the purchase.
+
+Support across the pillars does not require every individual talent to improve every pillar. Exact modifier policy remains open and must preserve the intended ability-roll balance.
+
+### PRO-04 — Make ability learning rewards usable and progression understandable
+
+**Finding:** Learning credits are awarded at levels 5, 9, 13, and 17, but every currently learnable catalog ability is already learned. There are no new ability choices on which those rewards can be spent.
+
+**Approved work:** Add a focused set of learnable alternatives and present level rewards coherently alongside Talent Points and Event Masteries.
+
+Acceptance criteria:
+
+- [ ] Provide eligible, supported alternatives for the awarded learning rewards.
+- [ ] Favor different tactical choices rather than mandatory stronger replacements.
+- [ ] Preserve the two Regular, one Surge, one Signature station loadout and the separate shared reaction loadout.
+- [ ] Define acquisition requirements, reward cadence, and interactions with existing learning credits and talent purchases.
+- [ ] Preserve already earned or banked rewards during migration.
+- [ ] Present the level's earned rewards, available choices, and their purposes together without conflating Event Masteries with Combat abilities.
+- [ ] Verify learning, equipping, persistence, and combat-use limits for the added alternatives.
+
+The exact ability catalog and whether the current credit structure needs consolidation remain open.
+
+### PRO-05 — Migrate economy talents to the approved station action system
+
+**Finding:** Existing talents grant shared AP or RP under the old hull-based combat economy. Their meaning cannot be carried forward automatically into one normal action per station and one shared base RP per ship.
+
+**Approved work:** Coordinate with COM-01 to give these purchases deliberate replacement effects or refunds.
+
+Acceptance criteria:
+
+- [ ] Audit talents and other progression effects that modify AP, RP, extra actions, or station availability.
+- [ ] Define each retained bonus against the new station and shared-RP rules.
+- [ ] Avoid implicitly multiplying an old +1 AP bonus across every station.
+- [ ] Specify stacking, refresh, recipient selection, expiry, and limits where applicable.
+- [ ] Preserve Signature limits, cooldowns, and automatic reload restrictions.
+- [ ] Provide equivalent replacements or refunds for existing purchases and explain the migration.
+- [ ] Verify the resulting economy with representative small and large ships and the updated combat tools.
+
+An extra action for one selected station or a narrowly defined exception are design candidates, not approved final formulas.
+
+### PRO-06 — Use one authoritative fabrication and installation process
+
+**Finding:** The exposed buildFromBlueprint path immediately spends materials and creates a component, while other fabrication paths queue timed work orders. The inventory blueprint UI calls the immediate path, creating competing behavior for the same activity.
+
+**Approved work:** Use consistent rules for blueprint knowledge, payment, fabrication completion, physical ownership, and installation across interfaces and APIs.
+
+Acceptance criteria:
+
+- [ ] Route normal fabrication through one authoritative process: known blueprint, payment, fabrication, owned component, installation.
+- [ ] Remove or migrate normal-play shortcuts that bypass intended time, service, or work-order requirements.
+- [ ] Preserve convenient controls and the distinction between learning a blueprint, receiving a component, and fitting it.
+- [ ] Show total material, gold, time, service, and fitting requirements before commitment.
+- [ ] Keep inventory, costs, job completion, cancellation, and failure behavior consistent across entry points.
+- [ ] Verify persistence and prevent duplicate grants or charges when operations are retried.
+
+Convenience should reduce bookkeeping while using the same underlying rules. Exact service policies remain open.
+
+### PRO-07 — Make specializations and hull identity deliver their real benefits
+
+**Finding:** Specialization-derived Supply capacity is ignored when synchronizing the resource maximum. In the reviewed sloop, Voyager changed derived capacity from 160 to 240 while the actual maximum stayed at 160; Expedition Ship similarly calculated 200 but retained 160. The approved larger-hull station direction also needs explicit progression, fitting, and staffing rules.
+
+**Approved work:** Apply specialization benefits to actual play, then coordinate hull and station growth with COM-01 so ship identity remains meaningful.
+
+Acceptance criteria:
+
+- [ ] Correct Supply maximum synchronization to honor the supported final capacity and specialization rules.
+- [ ] Audit every specialization's advertised stat, capability, and unlock through its gameplay consumer.
+- [ ] Keep resource maxima, previews, and persisted state consistent when specialization or equipment changes.
+- [ ] Define requirements and costs for additional stations, including relevant staffing, fitting, and operation rules.
+- [ ] Preserve worthwhile small-ship advantages and meaningful specialization choices as larger ships gain stations.
+- [ ] Verify representative hulls and specializations in actual use, beyond derived-stat previews.
+
+Exact hull station counts, requirements, and small-ship advantages remain open. This finding does not authorize a new hull economy formula without the combat balance review.
+
+### Validation and completion gate
+
+The progression review ran 71 relevant existing checks successfully. Additional direct comparisons reproduced ineffective percentage-resource upgrades, capstone passive losses, unused learning rewards, and specialization Supply maximum mismatches. Passing baseline checks do not establish that these findings are fixed.
+
+- [ ] Implement and verify PRO-01 through PRO-07 after their open rules are settled.
+- [ ] Verify purchase-to-outcome behavior and fair migration of existing ships, talents, equipment, and rewards.
+- [ ] Update talent descriptions, progression guidance, refit rules, and affected interfaces together.
+- [ ] Run relevant automated checks, including cases covering the reproduced gaps.
+- [ ] Play through a live Foundry level-up, reward acquisition, fabrication, installation, and subsequent use in Events and Combat.
+- [ ] Complete cross-pillar checks after the remaining reviews before marking progression ready for 1.0.
+
 ## Pillar 6 — UI, Interaction & Ship Sheet
 
 Added by the user on 15 October 2026 as a distinct sixth pillar. Detailed review is pending.
@@ -351,4 +498,4 @@ Its scope is how the game is understood and operated across all other pillars: t
 
 EVT-06 and COM-08 already record approved interaction needs specific to their pillars. The sixth-pillar review will connect those needs into a coherent experience without treating the review as already complete or authorizing every possible visual change.
 
-The next review is **Ship Progression / Vessel Management**. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.
+The next review is **Crew / Faction / Expedition**. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.
