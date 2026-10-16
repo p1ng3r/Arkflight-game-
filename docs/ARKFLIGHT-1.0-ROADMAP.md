@@ -2,7 +2,7 @@
 
 Recorded: 15 October 2026 (America/New_York).
 
-Status: **Pillars 1–4 — Voyage / Events, Ship Combat, Ship Progression / Vessel Management, and Crew / Faction / Expedition — approved for the 1.0 update; implementation pending. GM Build & Run and UI, Interaction & Ship Sheet remain to be reviewed.**
+Status: **Pillars 1–5 — Voyage / Events, Ship Combat, Ship Progression / Vessel Management, Crew / Faction / Expedition, and GM Build & Run — approved for the 1.0 update; implementation pending. UI, Interaction & Ship Sheet remains to be reviewed.**
 
 This is the saved scope of the pillar-by-pillar review. Approval means the work belongs in the 1.0 update; it does not mean these fixes have shipped. This document does not publish a 1.0 release or change the module version.
 
@@ -24,7 +24,7 @@ This is the saved scope of the pillar-by-pillar review. Approval means the work 
 | 2. Ship Combat | All nine improvement areas and station-based AP direction approved for 1.0 on 15 October 2026 |
 | 3. Ship Progression / Vessel Management | All seven improvement areas approved for 1.0 on 15 October 2026 |
 | 4. Crew / Faction / Expedition | All eight improvement areas, Ayerstone integration, starting faction selection, and support for later factions approved on 16 October 2026 |
-| 5. GM Build & Run | Detailed pillar review pending |
+| 5. GM Build & Run | All eight improvement areas and initial priorities approved for 1.0 on 16 October 2026 |
 | 6. UI, Interaction & Ship Sheet | Added as a distinct pillar on 15 October 2026; detailed review pending |
 
 The pending rows reserve later reviews; they do not authorize a simultaneous redesign of those pillars. Approved directions are recorded below, while explicitly open details still require design and balance decisions.
@@ -686,6 +686,185 @@ The review ran 31 existing focused crew, expedition, travel, economy, Morale, an
 - [ ] Check that another faction can be added without rewriting the core systems.
 - [ ] Record GM workload, player participation, and meaningful-choice findings before marking the pillar ready for 1.0.
 
+## Pillar 5 — GM Build & Run
+
+All eight review areas and the initial priorities were approved for the 1.0 update on 16 October 2026. Implementation is pending. The [GM Build & Run design document](GM-BUILD-RUN-PILLAR.md) remains the supporting vision; the findings and acceptance criteria below define the approved repair scope.
+
+### Identity and foundations to preserve
+
+The goal is a reliable path from generating a force to running an encounter and recovering its rewards, with minimal GM cleanup.
+
+Preserve:
+
+- Persistent enemy vessels using the normal ship schema and construction rules.
+- Ayerstone faction and House influences on names, crews, and equipment, retaining the distinction between lore and generation preferences.
+- PF2e officer generation with skills, saves, native NPC strikes, equipment, and spellcasting support.
+- Reusable ordinary-crew templates and organized ship-and-crew folders.
+- Preview before Actor creation, with explicit legality and resolution checks.
+- Separate ship level and party-level treasure budgeting.
+- Cleanup of partially created packages when creation fails.
+- GM authority over generation, placement, and tactical decisions; autonomous enemy AI is not required for the first usable version.
+
+### GM-01 — Initialize generated vessels correctly and distinguish readiness from legality
+
+**Finding:** All 500 previews in the review sweep started at zero current Hull while passing construction validation. One example was 0/240 Hull. Resource synchronization preserves the empty initial Hull value instead of initializing a fresh ship at full health.
+
+**Approved work:** Initialize ordinary generated ships ready to operate. Make damaged, disabled, and wrecked generation explicit, and show operational readiness separately from construction legality.
+
+Acceptance criteria:
+
+- [ ] Initialize supported resources and condition states correctly for fresh generation.
+- [ ] Preserve existing damage during later synchronization; do not fix initialization by healing every synchronized vessel.
+- [ ] Define explicit generation options for intentionally damaged, disabled, or wrecked ships and display their consequences.
+- [ ] Check construction legality, resource state, required crew, and role readiness independently before normal combat deployment.
+- [ ] Avoid describing a legal but inoperable vessel as ready to fight.
+- [ ] Verify initial preview, PF2e resolution, persistence, and combat initialization retain the intended resource state.
+- [ ] Repeat representative level/archetype checks covering the reproduced zero-Hull gap.
+
+### GM-02 — Generate coherent builds and meaningful threat information
+
+**Finding:** Ship level already affects derived statistics and officer levels, but generated vessels have no purchased ship talents, specialization, Arkengine mods, or explicit weapon upgrades. Random mount filling can produce an unarmed naval vessel. Level and quality labels alone do not establish encounter balance.
+
+**Approved work:** Generate viable role-specific builds using the supported progression and combat rules, with honest information about expected encounter threat.
+
+Acceptance criteria:
+
+- [ ] Apply appropriate talents, specialization, equipment, and upgrades under the same supported rules used by player ships.
+- [ ] Validate capacities, prerequisites, mounts, and dependencies after assembling the complete build.
+- [ ] Require a viable fighting plan for a combat role, while preserving explicitly selected noncombat or unusual vessels.
+- [ ] Coordinate officer/station rosters and action budgets with COM-01 and CRW-01.
+- [ ] Distinguish ship level, officer quality, encounter threat, and party-level reward budgeting in configuration and preview.
+- [ ] Evaluate combined forces, hull differences, weapon rhythms, and mission objectives using the updated COM-09 tools and live play.
+- [ ] Explain meaningful limitations of threat estimates until calibrated; do not imply that a label proves balance.
+
+Exact build budgets, selection weights, and encounter-difficulty formulas remain open.
+
+### GM-03 — Preserve selected results while editing or rerolling a package
+
+**Finding:** The interface primarily offers a whole-ship reroll. It does not provide practical locks or independent rerolls for an otherwise useful hull, captain, crew, or loadout. Asynchronous PF2e resolution can also allow an older request to replace a newer preview.
+
+**Approved work:** Add selective controls and reliable preview ownership so the GM can refine a result without losing the parts they want.
+
+Acceptance criteria:
+
+- [ ] Support choosing or locking an eligible hull and other useful configuration constraints.
+- [ ] Preserve selected officers or components while rerolling another supported part.
+- [ ] Provide practical editing and crew-template selection with immediate revalidation.
+- [ ] Re-resolve dependent equipment, crew, derived facts, and loot when a change invalidates them.
+- [ ] Prevent stale asynchronous results from overwriting the current preview.
+- [ ] Preserve deterministic seeds or equivalent configuration data for reproducible results.
+- [ ] Ensure the package committed is the exact current reviewed result.
+
+The first control set should serve common GM decisions; every possible generator parameter need not be exposed at once.
+
+### GM-04 — Complete the encounter deployment workflow
+
+**Finding:** Commit creates vessel and crew Actors in folders. The Combat API separately requires an already placed ship token before adding it to combat. The inspected generation path does not complete placement, side assignment, or objective setup.
+
+**Approved work:** Connect Build, Review, Create, Place, side/objective setup, and readiness to start, while allowing packages to be saved for later.
+
+Acceptance criteria:
+
+- [ ] Allow reviewed packages to be created without forcing immediate placement or combat start.
+- [ ] Place selected vessels with the correct footprint, heading, token data, and intended persistent Actor relationship.
+- [ ] Validate the target Scene/grid and placement constraints before committing Scene changes.
+- [ ] Support deployment of several ships, including allies and escorts, with explicit sides.
+- [ ] Configure supported objectives in coordination with COM-07.
+- [ ] Add selected deployed vessels to the intended native Foundry Combat without accidentally starting or modifying another encounter.
+- [ ] Handle partial creation, placement, and registration failures with clear results and safe recovery.
+- [ ] Keep ship-scale placement separate from later normal PF2e crew/boarding deployment.
+
+Exact placement controls and supported objective presets remain open.
+
+### GM-05 — Use authoritative combat state in the GM dashboard
+
+**Finding:** A runtime probe with started native Foundry combat produced no active combat in the dashboard and opened Command. The dashboard treats combat.state as a state object while the current API exposes it as a function.
+
+**Approved work:** Correct active-encounter detection and present enough authoritative information to run the acting ship efficiently.
+
+Acceptance criteria:
+
+- [ ] Detect the intended active native Combat and relevant Arkflight combatants consistently.
+- [ ] Show the correct operation, acting ship, round, and contextual default section.
+- [ ] Present station actions/AP, shared RP, cooldowns, reloads, active effects, conditions, and legal targets using the same runtime rules as resolution.
+- [ ] Show encounter sides and supported objective state.
+- [ ] Make switching between ships clear and prevent commands from affecting a stale or unintended vessel.
+- [ ] Coordinate with COM-06 and COM-08 for reaction timing and useful action feedback.
+- [ ] Where supported, provide concise optional suggestions based on legal firing, movement, or escape choices without taking tactical authority from the GM.
+- [ ] Verify normal combat updates, switching encounters, ending combat, and reopening the window in Foundry.
+
+Suggestions do not require autonomous enemy AI. Broader interaction layout remains part of Pillar 6.
+
+### GM-06 — Make generated crews immediately usable for boarding
+
+**Finding:** Generated officers have useful benchmark statistics, native NPC strikes, and spellcasting support, but several custom abilities are broad descriptions without precise targets, modifiers, durations, or limits.
+
+**Approved work:** Finish retained ability rules and define how generated crew templates become an appropriate normal PF2e boarding encounter.
+
+Acceptance criteria:
+
+- [ ] Give each retained custom ability sufficient action, target, range, effect, duration, limit, and check/DC rules where applicable.
+- [ ] Reuse suitable supported PF2e abilities or complete the custom NPC action instead of leaving essential effects to improvisation.
+- [ ] Preserve native NPC benchmark math and prevent embedded equipment from accidentally adding bonuses twice.
+- [ ] Resolve spellcasting and equipment into usable native PF2e structures, with understandable failure messages.
+- [ ] Identify the officers, selected crew templates, and participant counts intended for a boarding encounter.
+- [ ] Distinguish total people aboard from the number of deployed combatants and evaluate the encounter for the participating PCs.
+- [ ] Preserve the transition from ship approach/grapple/boarding into normal PF2e play.
+- [ ] Validate representative generated Actor sheets, strikes, spells, and abilities in live Foundry play.
+
+Complete rules are required even for manually resolved abilities. Full automation of every NPC action is not required.
+
+### GM-07 — Finish recovery and reconcile actual recoverable value
+
+**Finding:** The Salvage section is a placeholder and generated rewards are stored without a complete recovery workflow. A mocked resolver example with a 13 gp ceiling recorded 8.2 gp while embedding 15 gp of officer weapons alone; four weapons were marked recoverable without their value being reserved.
+
+**Approved work:** Reconcile actual recoverable value with displayed accounting and complete recovery into the appropriate character, ship, or campaign destination.
+
+Acceptance criteria:
+
+- [ ] Account for supported recoverable officer gear, cargo, components, and materials consistently with the displayed reward budget.
+- [ ] Clearly distinguish actual item value, allocated budget, potential recovery, and any explicitly unavailable reward.
+- [ ] Do not mark a package economically resolved merely because unreserved recoverable items are omitted from the total.
+- [ ] Define how battle outcomes, equipment survival, salvage condition, and intact capture affect recovery.
+- [ ] Preserve the distinction between an intact physical component, a blueprint, materials, and narrative salvage.
+- [ ] Resolve pending reward decisions through a usable closeout rather than leaving flags without follow-through.
+- [ ] Coordinate resumable, duplicate-safe delivery and recipient binding with CRW-07.
+- [ ] Verify that recovered equipment reaches the correct inventory/refit path and reward accounting remains consistent after retry or partial failure.
+
+Exact recovery rates, capture value treatment, and budget policies remain open. Displayed budget shares must not silently substitute for supported component or item valuation.
+
+### GM-08 — Provide reusable presets and safe repeated operations
+
+**Finding:** Library remains a placeholder. Generated packages need a usable save/reuse workflow and clear distinctions between deploying an existing vessel and creating a separate copy.
+
+**Approved work:** Preserve useful generated preparation as editable presets and make creation, reuse, and deployment safe against accidental repetition.
+
+Acceptance criteria:
+
+- [ ] Save and browse usable ship or encounter presets with enough configuration to reproduce or edit them.
+- [ ] Preserve useful crew-template reuse and package identity without creating unnecessary duplicate Actors.
+- [ ] Distinguish placement of an existing persistent vessel from creation of an independent copy.
+- [ ] Give independent copies appropriate identities, assignments, resource state, ability use state, and reward tracking.
+- [ ] Prevent accidental repeated requests from creating duplicate packages, tokens, combatants, or rewards.
+- [ ] Preserve existing content when reusing folders and provide clear partial-failure cleanup/recovery.
+- [ ] Verify edit/save/reopen/deploy and multiple-copy scenarios in Foundry.
+
+The preset format, cloning defaults, and exact library controls remain open.
+
+### Initial priorities and completion gate
+
+First priorities are GM-01 resource initialization/readiness, GM-04 deployment, and the active-combat fault in GM-05. This order establishes a usable generation-to-encounter path; it does not drop the other approved areas. Build/threat calibration depends on the approved Combat and Progression rules, and final interface work must coordinate with Pillar 6.
+
+The review ran 12 existing focused generator, officer, equipment, and spell checks successfully. A 500-preview sweep reproduced zero Hull in every preview; separate probes reproduced unarmed naval generation, dashboard active-combat detection failure, and recoverable-value accounting gaps. These are pre-fix findings. Live Foundry interface and encounter validation were not performed during the review.
+
+- [ ] Implement and verify GM-01 through GM-08 after the relevant open rules are settled.
+- [ ] Preserve supported existing packages and custom generation context through migration.
+- [ ] Update generator guidance, readiness labels, deployment instructions, and recovery documentation with the implementation.
+- [ ] Verify selective rerolls, asynchronous requests, partial failures, repeated commands, and copied packages.
+- [ ] Build, review, place, and run a multi-ship encounter from GM Operations in live Foundry.
+- [ ] Exercise the boarding handoff and recover supported rewards into usable persistent inventories.
+- [ ] Measure GM cleanup and rules lookup, rather than relying on Actor creation or passing unit checks as proof of readiness.
+
 ## Pillar 6 — UI, Interaction & Ship Sheet
 
 Added by the user on 15 October 2026 as a distinct sixth pillar. Detailed review is pending.
@@ -694,4 +873,4 @@ Its scope is how the game is understood and operated across all other pillars: t
 
 EVT-06 and COM-08 already record approved interaction needs specific to their pillars. The sixth-pillar review will connect those needs into a coherent experience without treating the review as already complete or authorizing every possible visual change.
 
-The next review is **GM Build & Run**. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.
+The next and final pillar review is **UI, Interaction & Ship Sheet**. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.
