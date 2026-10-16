@@ -2,7 +2,7 @@
 
 Recorded: 15 October 2026 (America/New_York).
 
-Status: **Voyage / Events, Ship Combat, and Ship Progression / Vessel Management findings approved for the 1.0 update; implementation pending. Six gameplay and interaction pillars are now recognized.**
+Status: **Pillars 1–4 — Voyage / Events, Ship Combat, Ship Progression / Vessel Management, and Crew / Faction / Expedition — approved for the 1.0 update; implementation pending. GM Build & Run and UI, Interaction & Ship Sheet remain to be reviewed.**
 
 This is the saved scope of the pillar-by-pillar review. Approval means the work belongs in the 1.0 update; it does not mean these fixes have shipped. This document does not publish a 1.0 release or change the module version.
 
@@ -23,7 +23,7 @@ This is the saved scope of the pillar-by-pillar review. Approval means the work 
 | 1. Voyage / Events | Findings and all six improvement areas approved for 1.0 on 15 October 2026 |
 | 2. Ship Combat | All nine improvement areas and station-based AP direction approved for 1.0 on 15 October 2026 |
 | 3. Ship Progression / Vessel Management | All seven improvement areas approved for 1.0 on 15 October 2026 |
-| 4. Crew / Faction / Expedition | Review presented; Ayerstone source integration added on 16 October 2026; final fix scope pending |
+| 4. Crew / Faction / Expedition | All eight improvement areas, Ayerstone integration, starting faction selection, and support for later factions approved on 16 October 2026 |
 | 5. GM Build & Run | Detailed pillar review pending |
 | 6. UI, Interaction & Ship Sheet | Added as a distinct pillar on 15 October 2026; detailed review pending |
 
@@ -492,11 +492,24 @@ The progression review ran 71 relevant existing checks successfully. Additional 
 
 ## Pillar 4 — Crew / Faction / Expedition
 
-Review presented on 16 October 2026. The user requested that faction information be pulled from the existing [Ayerstone Setting Guide](https://github.com/p1ng3r/Ayerstone-Setting-Guide). The resulting [Ayerstone faction reference and integration notes](AYERSTONE-FACTION-INTEGRATION.md) record the inspected source commit, established public lore, and proposed gameplay connections.
+All eight review areas, the Ayerstone source integration, the recommended starting faction selection, and support for additional factions were approved for the 1.0 update on 16 October 2026. Implementation is pending. The [Ayerstone faction reference and integration notes](AYERSTONE-FACTION-INTEGRATION.md) record the inspected [setting source](https://github.com/p1ng3r/Ayerstone-Setting-Guide), established public lore, and candidate gameplay connections.
 
 The source already establishes the Open Dock Compact, Freespacers and the Dock 44 Freebooters, major external factions, all ten Great Houses, guilds, civic services, and named contacts. Faction identities do not need to be invented for this update. The remaining task is connecting supported relationships, contracts, access, and rewards to actual play.
 
-Review implications:
+### Identity and foundations to preserve
+
+This pillar makes the ship a home, an organization, and a base for adventure. Its intended loop is preparation, mission consequences, return, and development of the crew's opportunities and relationships. It connects the other pillars without replacing their separate Event, Combat, progression, or normal PF2e rules.
+
+Preserve:
+
+- PF2e officers, player station ownership, and persistent assignments.
+- Lightweight crew hands and ship-owned specialists rather than a compulsory character sheet for every person aboard.
+- Expedition preparation using specialists, equipment, Supplies, and a selected vessel.
+- Persistent faction favors, route knowledge, boons, and shared Crew Tactics earned through Events.
+- Existing faction identity in generated crews, including the distinction between Great House members and retainers.
+- The established Ayerstone organizations, contacts, interests, and harbor law.
+
+### Ayerstone integration and initial content selection
 
 - Preserve harbor law and the distinction between docking, trust, contracts, membership, and lawful conduct.
 - Allow distinct relationship types such as Freebooter charter, House employment, route license, service access, and a specific debt or favor.
@@ -504,7 +517,174 @@ Review implications:
 - Connect resulting routes, blueprints, specialist recruitment, and services to their actual gameplay consumers across the first three pillars.
 - Distinguish setting facts from Arkflight generator preferences and newly proposed mechanics.
 
-Adding source information is authorized; it does not imply approval or implementation of every outstanding Pillar 4 recommendation. Crew-assignment consistency, staffing and recovery integration, specialist recruitment, expedition requirements and Supply settlement, faction consequences, reward reliability, and personal crew development remain the presented review areas pending final scope agreement. No numeric faction perks are locked by this reference.
+Develop an initial playable selection around:
+
+| Starting group | Initial design emphasis |
+|---|---|
+| Freespacers / Freebooters | Rescue, exploration, mutual aid, and earned charter status |
+| Brotherhood of the Cosmic Flame | Imperial pressure, military opposition, rescue, and political consequences |
+| Grelkin Cartel | Raids, salvage, captured ships, clan contacts, and negotiation |
+| House Starweaver and its associated organizations | Route knowledge, shipping, exploration, and contracts |
+| House Stormglass / Guild of Arkengineers | Ship development, repairs, prototype work, recruitment, and training; preserve their separate identities |
+| Underwake Syndicates | Covert jobs, unusual equipment leads, contacts, and obligations |
+
+Keep the remaining recorded Houses, factions, guilds, and contacts available for authored stories and later development. The user confirmed that other factions exist: the imported list is a starting reference, not an exhaustive setting catalog. Do not delete existing organizations or invent missing identities to fill the list. Core faction support must allow additional organizations, relationships, contracts, and reward definitions without rewriting the underlying systems.
+
+No numeric faction perks, discount tables, universal reputation model, or complete launch mission count are locked by this approval. The priority is meaningful decisions and usable rewards from a manageable initial selection.
+
+### CRW-01 — Unify permanent crew assignments
+
+**Finding:** Newer controls use Battlewatch and Actor IDs, while the older Crew tab writes Watchmaster and Actor UUIDs directly. A legacy Watchmaster change can lose to an existing Battlewatch assignment during normalization. The older path also bypasses the newer duplicate-officer checks.
+
+**Approved work:** Route every assignment interface through one consistent authority and migrate legacy references safely.
+
+Acceptance criteria:
+
+- [ ] Use canonical station identities and resolvable Actor references across all crew controls.
+- [ ] Apply assignment, duplicate-officer, ownership, and persistence rules consistently at the authoritative service.
+- [ ] Migrate legacy Watchmaster assignments and mixed references without silently discarding the intended officer.
+- [ ] Show missing or unavailable officers clearly instead of counting an unresolved reference as ready.
+- [ ] Reflect changes consistently in the ship sheet, Event setup, Combat controls, and GM operations.
+- [ ] Coordinate station rosters and additional positions with COM-01 rather than retaining incompatible fixed-five assumptions.
+- [ ] Verify GM and authorized player changes, migrations, and reloads in Foundry.
+
+### CRW-02 — Connect staffing, travel upkeep, and recovery
+
+**Finding:** Staffing, overcrowding, daily Supply consumption, and safe-rest Morale recovery have rule helpers, but the review found no normal runtime consumers for those helpers. Displaying crew requirements does not enforce or apply them.
+
+**Approved work:** Keep ordinary hands abstracted as a crew count and integrate staffing, travel consumption, and safe recovery into a manageable voyage/downtime workflow.
+
+Acceptance criteria:
+
+- [ ] Define and persist operating crew and total persons aboard, distinguishing officers, hands, specialists, passengers, and unavailable personnel as needed.
+- [ ] Apply supported staffing and occupancy consequences to their intended gameplay consumers.
+- [ ] Review the existing unbounded minus-one-per-missing-person penalty before enabling it, especially on large vessels.
+- [ ] Calculate travel upkeep from elapsed time and actual persons aboard, coordinating Supply talents with PRO-03.
+- [ ] Apply supported safe-rest recovery and show its requirements, limits, and resulting resource changes.
+- [ ] Make time advancement and recovery safe against duplicate application, including route and downtime entry points.
+- [ ] Show the expected consequence before advancement and an understandable result afterward.
+
+Simple staffing states are a design candidate; the exact penalties, counting rules, recovery policy, and automation timing remain open.
+
+### CRW-03 — Make recruitment and specialist assignment meaningful
+
+**Finding:** The catalog provides thematic specialists, but the Crew tab currently lets the GM toggle catalog entries aboard without checking recruitment or roster availability. This is a setup tool rather than a complete player recruitment loop.
+
+**Approved work:** Separate recruited specialists from active assignments, provide supported benefits, and make bringing or retaining a specialist a meaningful decision.
+
+Acceptance criteria:
+
+- [ ] Distinguish available/recruited specialists from those assigned to the vessel or expedition.
+- [ ] Define supported acquisition through contacts, rewards, recruitment, or other explicit campaign opportunities.
+- [ ] Audit each retained specialist's advertised benefit through the rules that consume it.
+- [ ] Define availability and whether away assignments affect support remaining aboard.
+- [ ] Give the crew useful choices without allowing NPC support to replace player station participation.
+- [ ] Preserve lightweight specialist records and a clearly identified GM setup/override path.
+- [ ] Connect suitable recruitment and training opportunities to the existing Ayerstone organizations.
+
+Roster limits, hiring costs, and individual benefit formulas remain open. The review's Hull Patcher away-versus-aboard choice is an example, not an already authored rule.
+
+### CRW-04 — Make expedition preparation affect mission resolution
+
+**Finding:** Expedition context and requirement-query helpers exist, but the built-in Event paths inspected do not consume them. Direct comparison also showed that a completed expedition still satisfies specialist and equipment requirements because those queries do not require an active expedition.
+
+**Approved work:** Connect preparation to supported opportunities, costs, protection, and outcomes, with correct activity and vessel checks.
+
+Acceptance criteria:
+
+- [ ] Require an active, relevant expedition for normal expedition-based benefits.
+- [ ] Validate the expedition's vessel and eligible specialist, equipment, and capability sources.
+- [ ] Define whether each benefit requires an embarked specialist, ship support, or another explicit source rather than applying every recorded capability indiscriminately.
+- [ ] Connect authored requirements to actual mission options or resolution effects.
+- [ ] Make prepared advantages and missing requirements visible before commitment.
+- [ ] Provide alternative approaches or manageable complications where the mission permits, rather than unnecessarily stopping play.
+- [ ] Verify behavior after completion, cancellation, ship changes, and relevant source changes.
+- [ ] Preserve the existing once-per-expedition flexible-equipment concept with explicit eligibility and use state.
+
+This is preparation and support for authored adventures; it does not establish a separate replacement for normal PF2e exploration or character combat.
+
+### CRW-05 — Define and settle expedition Supply commitments
+
+**Finding:** Starting an expedition checks available Supplies and records the commitment, but does not reserve or spend them. The UI describes the commitment as context. Committing 40 of 50 leaves all 50 available aboard.
+
+**Approved work:** Choose a clear reservation or planning-estimate policy and make interfaces, resource rules, and mission closeout agree.
+
+Acceptance criteria:
+
+- [ ] Define what a commitment means and disclose it before mission start.
+- [ ] If reserving stock, exclude it from other spending and prevent overcommitment.
+- [ ] Track actual consumption and settle unused stock or reservations at completion/cancellation under explicit rules.
+- [ ] Coordinate ordinary travel upkeep and expedition consumption to avoid charging twice for the same use.
+- [ ] Preserve the selected ship as the settlement target and handle missing vessels or partial failures clearly.
+- [ ] Produce a calculated closeout for review without requiring manual reconciliation of several totals.
+- [ ] Verify repeat completion/cancellation requests cannot duplicate spending or returns.
+
+Reservation versus estimate, expenditure rates, and cancellation policy remain open decisions.
+
+### CRW-06 — Turn faction relationships and knowledge into usable opportunities
+
+**Finding:** Campaign faction rewards, boons, and route knowledge persist in a ledger, but the inspected gameplay paths do not turn those records into supported faction access or automatically recognized learned routes. Trader route benefits depend on separately supplied route flags.
+
+**Approved work:** Connect campaign rewards to specific usable opportunities, obligations, contacts, and services using the Ayerstone reference and initial content selection above.
+
+Acceptance criteria:
+
+- [ ] Give organizations stable identities and distinguish relationship types, including charters, contracts, membership, employment, licenses, and particular favors or debts.
+- [ ] Support several simultaneous relationships without forcing the crew into one exclusive affiliation.
+- [ ] Make relevant faction contacts, entitlements, obligations, and source information accessible to authorized users.
+- [ ] Consume supported route knowledge, blueprint grants, specialist introductions, service access, and other defined rewards in their actual gameplay paths.
+- [ ] Preserve Open Dock Compact rules; distinguish lawful docking from trust and professional access.
+- [ ] Use explicit mission outcomes for political consequences rather than automatically changing every allied or rival faction.
+- [ ] Deliver meaningful opportunities for the initial selection while preserving other recorded factions for authored use.
+- [ ] Allow additional factions, contracts, relationships, and reward definitions without core-system rewrites; preserve custom and legacy entries.
+- [ ] Keep lore facts, rumors, generation preferences, and game mechanics distinct.
+
+Exact relationship states, reward amounts, and services remain open. Optional financing must have visible terms; a large mandatory banking or reputation simulation is not required.
+
+### CRW-07 — Make reward display and delivery reliable
+
+**Finding:** Preparing the reward summary reproduced `ReferenceError: hasShipXp is not defined`. Reward delivery also performs several grants before marking the package granted, allowing an earlier successful grant to repeat on retry if a later step fails.
+
+**Approved work:** Repair summary preparation and make delivery resumable and safe across PF2e, ship, and campaign rewards.
+
+Acceptance criteria:
+
+- [ ] Prepare and render reward summaries with supported rewards, empty state, and missing context handled correctly.
+- [ ] Preflight recipients and supported grant APIs before applying rewards where possible.
+- [ ] Persist completed grant steps so retries resume rather than repeat XP, items, currency, components, or campaign changes.
+- [ ] Prevent concurrent grant requests from delivering the same reward twice.
+- [ ] Keep rewards tied to their intended characters, vessel, and campaign context.
+- [ ] Show what was delivered, what failed, and what still needs a choice or resolution.
+- [ ] Provide a supported path for pending reward choices rather than storing them indefinitely without usable follow-through.
+- [ ] Verify partial failure, retry, reload, and multi-user cases with appropriate Foundry validation.
+
+### CRW-08 — Give important crew lightweight personal development
+
+**Finding:** Existing specialist records primarily supply roles and capabilities. The review did not find a developed specialist-growth or relationship loop.
+
+**Approved work:** Give notable crew recognizable identities, goals or relationships, and earned development tied to adventures, while keeping ordinary crew abstract.
+
+Acceptance criteria:
+
+- [ ] Support a name, concise personality, and personal goal or relationship for important crew.
+- [ ] Record earned development and its source when an adventure changes a specialist's role or supported benefit.
+- [ ] Connect applicable introductions and training to established contacts and organizations.
+- [ ] Make progress understandable and persistent without requiring detailed simulation for every person aboard.
+- [ ] Preserve player officer agency and normal PF2e character rules.
+
+Exact advancement thresholds and benefits remain open. Loyalty meters, daily relationship rolls, and a full NPC leveling subsystem are not required by this approval.
+
+### Validation and completion gate
+
+The review ran 31 existing focused crew, expedition, travel, economy, Morale, and reward checks successfully. Separate runtime comparisons reproduced stale expedition eligibility, the legacy assignment conflict, and the reward-summary error. These checks are a pre-fix baseline, not proof of completed integration or fun.
+
+- [ ] Implement and verify CRW-01 through CRW-08 after their open rules are settled.
+- [ ] Verify fair migration of assignments, recruited specialists, ongoing expeditions, Supplies, and existing rewards.
+- [ ] Update crew, travel, recovery, expedition, faction, and reward guidance alongside implementation.
+- [ ] Play through recruitment/preparation, a mission using those choices, reward delivery, and return/downtime in Foundry.
+- [ ] Verify that faction and crew rewards improve actual opportunities in the other pillars.
+- [ ] Check that another faction can be added without rewriting the core systems.
+- [ ] Record GM workload, player participation, and meaningful-choice findings before marking the pillar ready for 1.0.
 
 ## Pillar 6 — UI, Interaction & Ship Sheet
 
@@ -514,4 +694,4 @@ Its scope is how the game is understood and operated across all other pillars: t
 
 EVT-06 and COM-08 already record approved interaction needs specific to their pillars. The sixth-pillar review will connect those needs into a coherent experience without treating the review as already complete or authorizing every possible visual change.
 
-The current review is **Crew / Faction / Expedition**, now informed by the Ayerstone source. **GM Build & Run** follows after its discussion is complete. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.
+The next review is **GM Build & Run**. The overall 1.0 implementation and release sequence will be decided after all six pillar reviews are recorded.

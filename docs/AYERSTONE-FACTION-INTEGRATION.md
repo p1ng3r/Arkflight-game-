@@ -6,7 +6,7 @@ Source: [p1ng3r/Ayerstone-Setting-Guide](https://github.com/p1ng3r/Ayerstone-Set
 
 The user requested that the Crew / Faction / Expedition review draw on this existing setting. The setting already supplies faction identities, institutions, relationships, services, and adventure opportunities. The Arkflight design task is to connect those established elements to play.
 
-This reference summarizes established public-facing lore and separately identifies proposed mechanical uses. It does not implement those uses, grant new benefits, approve every outstanding Pillar 4 recommendation, or change the Ayerstone repository. No GM-guide material or secret sections are reproduced here. Rumors are not treated as established facts.
+This reference summarizes established public-facing lore and separately identifies proposed mechanical uses. On 16 October 2026 the user approved recording the full Pillar 4 review, this source integration, the starting selection, and support for later factions in the [1.0 roadmap](ARKFLIGHT-1.0-ROADMAP.md). Detailed numerical mechanics remain open and implementation is pending. This document does not grant runtime benefits or change the Ayerstone repository. No GM-guide material or secret sections are reproduced here. Rumors are not treated as established facts.
 
 ## Harbor law and faction identity
 
@@ -90,6 +90,25 @@ The public House index already supplies a useful web of interests:
 ### Example mission connection — proposed, not established setting history
 
 A Stormglass contact commissions recovery of a damaged prototype. The players select expedition support and equipment, travel to the wreck through an Event, and resolve any ship opposition through tactical Combat. The result can grant a real blueprint, produce salvage for fabrication, and create a specific follow-up obligation. A Blackwake competing claim could complicate the contract if explicitly authored. This connects existing pillars without replacing their separate rules.
+
+## Approved starting selection and future additions
+
+Approved for the 1.0 design scope on 16 October 2026:
+
+| Starting group | Initial gameplay emphasis |
+|---|---|
+| Freespacers / Freebooters | Rescue, exploration, mutual aid, and earned Freebooter charters |
+| Brotherhood of the Cosmic Flame | Imperial pressure, military opposition, rescue, and political complications |
+| Grelkin Cartel | Raids, salvage, captured ships, clan contacts, and negotiation |
+| House Starweaver and associated organizations | Routes, shipping contracts, and exploration |
+| House Stormglass / Guild of Arkengineers | Upgrades, repairs, prototype work, recruitment, and training; retain separate organizational identities |
+| Underwake Syndicates | Covert work, unusual equipment leads, contacts, and obligations |
+
+This is enough setting material to begin playable integration. The user confirms additional factions exist; the catalog summarized here is not exhaustive. Retain all other recorded organizations for authored stories and contacts, and allow additional factions to be introduced later without rewriting the core systems.
+
+The implementation must support extensible organization identities, relationships, contracts, and reward definitions, preserving custom entries and existing campaign data. A starting content focus does not remove the Council of the Void, Veilwardens, Faith of the Churn, remaining Houses, or civic organizations. Do not invent details for an unverified faction name.
+
+Prioritize meaningful decisions, recognizable contacts, and usable rewards. Exact numerical perks, relationship states, and the initial number of missions remain open. Full approval and acceptance criteria for the eight review areas are in CRW-01 through CRW-08 of the roadmap.
 
 ## Existing Arkflight support and remaining integration work
 
