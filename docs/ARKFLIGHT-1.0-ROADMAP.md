@@ -32,6 +32,20 @@ The [implementation checklist](ARKFLIGHT-1.0-IMPLEMENTATION-PLAN.md) orders the 
 
 The pending rows reserve later reviews; they do not authorize a simultaneous redesign of those pillars. Approved directions are recorded below, while explicitly open details still require design and balance decisions.
 
+## Shared condition extension approved during implementation planning
+
+On 16 October 2026 the user chose Ready-only initial enemy generation, requested more detailed Hull and Morale percentage states with saves, endorsed the proposed direction, and explicitly added Lifeveil to the same structure. The [implementation decision log](ARKFLIGHT-1.0-IMPLEMENTATION-PLAN.md) records the discussion and the bounded Step 06a for this shared work.
+
+- Use six common percentage bands: 100%; at least 75% but below 100%; at least 50% but below 75%; at least 25% but below 50%; at least 10% but below 25%; below 10%.
+- Hull remains measured in actual points, with bands derived from current/max Hull. Lifeveil and Morale remain percentage resources.
+- Save on the first downward crossing below 50% and below 25% per encounter, using d20 + Ship Bonus + applicable talent/mod bonuses. Healing does not repeatedly reset a resolved threshold.
+- Resolve supported failures automatically with resource-appropriate consequences: physical system faults for Hull, crew/command consequences for Morale, and protection/containment consequences for Lifeveil.
+- Below 10%, Hull is Wrecked, Morale is Broken, and Lifeveil is Collapsed. Preserve emergency/recovery opportunities and player agency; define each resource's exact operational effects rather than treating all three as Hull defeat.
+- Allow talents/mods to affect supported saves or consequences under explicit stacking rules.
+- Settle save DCs, critical outcomes, exact penalties/durations, a single loss crossing multiple thresholds, recovery, and interaction with existing Strain degradation before implementation. Do not silently stack duplicate penalties from bands and faults.
+
+This extension affects all relevant pillars and supersedes conflicting threshold/terminal assumptions when implemented. It does not implement the new mechanics or expand the initial fresh-generation fix into a full condition rewrite. Existing ships remain unchanged during routine resource synchronization.
+
 ## Pillar 1 — Voyage / Events
 
 ### Identity and foundations to preserve

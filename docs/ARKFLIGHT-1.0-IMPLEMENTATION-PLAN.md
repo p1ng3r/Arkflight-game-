@@ -2,9 +2,9 @@
 
 Created: 16 October 2026 (America/New_York).
 
-Scope authority: [approved pillar review](ARKFLIGHT-1.0-ROADMAP.md). This plan orders implementation of its 38 approved improvement areas; it does not replace their acceptance criteria or settle their open rules. The [Ayerstone reference](AYERSTONE-FACTION-INTEGRATION.md) supplies existing setting context.
+Scope authority: [approved pillar review](ARKFLIGHT-1.0-ROADMAP.md). This plan orders implementation of its 38 approved improvement areas and the subsequently approved shared Hull/Morale/Lifeveil condition extension; it does not replace their acceptance criteria or settle their open rules. The [Ayerstone reference](AYERSTONE-FACTION-INTEGRATION.md) supplies existing setting context.
 
-**Current work: Step 01 initial answers recorded; five additional Hull/Morale rule questions pending. Gameplay implementation under this plan has not started.**
+**Current work: Step 01 initial decisions recorded. The user endorsed the proposed Hull/Morale threshold direction and added Lifeveil to the same band/save structure on 16 October 2026. Detailed shared-save DCs and consequences remain open for their bounded implementation substep. Gameplay implementation under this plan has not started.**
 
 ## How we will work
 
@@ -55,6 +55,7 @@ These fixes produce trustworthy starting state and prevent early work from being
 These contracts must be stable before encounter generation and combat balance are rebuilt around them.
 
 - [ ] **06 — Real resource benefits.** Replace legacy Lifeveil/Morale capacity promises and honor supported specialization Supply capacity. Cover PRO-01 and the resource portion of PRO-07. Settle replacements before purchasing or migrating them.
+- [ ] **06a — Shared Hull/Morale/Lifeveil condition contract and resolution.** Implement the approved six percentage bands and threshold-save direction as a bounded substep (split further if needed). Ask the required five questions for unresolved DCs, exact consequences and critical results, mitigation/stacking, simultaneous threshold crossings, and recovery/Strain interactions before programming those rules. Coordinate combat/Event application, persistence, undo/retry behavior, and the below-10% operation states. Hull remains a point pool, while Morale and Lifeveil remain percentage pools. The full-save system is not part of the initial Ready-only generator fix.
 - [ ] **07 — Talent upgrade chains and capstones.** Preserve earned passive benefits, resolve starter/retired-action conflicts, and specify usable capstones. Cover PRO-02.
 - [ ] **08 — Station AP and economy talent migration.** Replace hull AP with station budgets, one shared base RP, Captain bonus-AP allocation/expiry, and explicit replacements or refunds for old economy talents. Cover the core of COM-01 and PRO-05.
 - [ ] **09 — Hull station rosters and staffing contracts.** Define additional positions, staffing/ownership, basic-action spending, restricted-use sharing, and small-ship tradeoffs. Finish COM-01's hull policy and the hull-identity portion of PRO-07; establish the counts later used by CRW-02.
@@ -149,22 +150,23 @@ Scope: fresh generated ship resources and operational readiness (GM-01). Full Hu
 | Decision | State |
 |---|---|
 | Condition options | User chose Ready only for initial generation. No Damaged/Wrecked generation presets in this first pass. |
-| Damaged Hull percentage | A fixed generated-damage preset is superseded by the request for percentage-based Hull states. Any Hull below 100% counts as damaged; the user requests intermediate bands around 75%, 50%, 25%, and 10%, and Wrecked below 10%. Exact intervals/names and consequences remain to be settled. |
-| Damaged systems | User proposes a saving throw below 50% Hull, with a negative condition/modifier on failure, creating room for talents/mods. Frequency, roll formula, effects, and interaction with existing Strain degradation are not yet settled. |
-| Initial Morale policy | User requests multiple Morale states analogous to damage. This does not yet select an initial value or approve the former quality-based recommendation. Exact bands/effects and any initial-value changes remain open. |
+| Damaged Hull percentage | Fixed generated-damage presets are superseded by shared percentage states. Any Hull below 100% counts as damaged. User endorsed the six-band direction at 100%, 75%, 50%, 25%, and 10%, with Wrecked below 10%. |
+| Damaged systems | User endorsed threshold saves on first downward crossings below 50% and 25% per encounter, using d20 + Ship Bonus + applicable talent/mod bonuses. Hull failures cause automatically resolved physical faults; detailed DCs, consequences, critical results, and Strain interaction remain open for Step 06a. |
+| Initial Morale policy | Morale follows the shared band/save structure with crew/command consequences. This does not select a new starting value or approve the original quality-based recommendation. Keep existing generation values unchanged in the bounded fresh-Hull fix; settle any starting-value change explicitly in its implementation step. |
+| Lifeveil extension | User explicitly added Lifeveil to the same percentage bands and save system. Consequences must concern Lifeveil protection/containment, with Collapsed as the resource-specific bottom state. Intermediate labels and exact failure consequences remain to be defined; do not apply Hull Wrecked effects to Lifeveil automatically. |
 | Existing generated ships | User delegated the choice. Adopt the conservative recommendation: fix future generation, preserve existing ships and damage, and do not add an old-ship repair tool in this first pass. Routine synchronization must never heal an existing ship automatically. |
 
 ### Scope and dependency note
 
-The Hull/Morale requests affect shared resource status, damage resolution, operational defeat, recovery, talents/mods, Events, and displays. Record the contract before programming its dependent behavior. They are an extension to the approved review, not evidence those systems already exist.
+The Hull/Morale/Lifeveil requests affect shared resource status, damage resolution, operational defeat, recovery, talents/mods, Events, and displays. Record the contract before programming its dependent behavior. They are an extension to the approved review, not evidence those systems already exist.
 
 Keep the fresh-generation fix bounded. Once the relevant answers are settled, implement its independent initial-resource behavior separately from the larger condition/save work. Add the shared-condition implementation as an explicitly bounded substep in Phase B/C when its rules are ready, with the same five-question process. Do not silently expand Step 01 into a complete combat rewrite.
 
 Existing code has separate structural Hull/Drive/Weapons fault tracks that can reduce Hardness, movement, accuracy, or reload, and Strain already causes degradation. Weapon criticals currently add Strain. Any new percentage/save rule must define its interaction with those tracks, avoid accidental duplicate penalties, and specify whether existing consequences are retained, replaced, or limited. Hull remains a point resource; percentage status can be derived from its current/max values without changing it into a fixed-100 pool.
 
-### Five additional questions — threshold contract
+### Five additional questions — endorsed threshold direction
 
-All rows and recommendations below are proposals awaiting answers. They are not implemented rules.
+The user responded "I like it" to this proposal and explicitly requested the same bands and save system for Lifeveil on 16 October 2026. Record the recommended direction as endorsed. The five questions below remain as the decision history; the detailed open mechanics explicitly identified in them still need resolution before Step 06a programming. None of these new rules are implemented yet.
 
 | Percentage | Proposed Hull label | Proposed Morale label |
 |---|---|---|
@@ -181,7 +183,9 @@ All rows and recommendations below are proposals awaiting answers. They are not 
 4. **Failure scope:** apply one automatically resolved, eligible physical system fault for a Hull save and a crew/command-specific consequence for a Morale save (**recommended**), or use a general penalty to ship actions? Exact effects, selection policy, duration, stacking, and critical results still require definition before their programming step.
 5. **Bottom-state operation:** should Wrecked stop normal movement/firing while preserving applicable emergency repair, rescue, and abandonment, and Broken Morale impose crew/command limits while preserving recovery actions and player control (**recommended**)? Settle exact blocked/allowed actions and repair/recommission requirements before implementation.
 
-Additional answers: pending. The user expressly allowed these five follow-up questions. No further questions or scope expansion are inferred from that allowance.
+Additional answer recorded: the user likes the proposed direction and adds Lifeveil. Use the same first-crossing save approach and ship-owned modifier structure for all three resources, with resource-appropriate consequences. Preserve the recommended Wrecked/Broken behavior and recovery/player agency. Lifeveil uses Collapsed as its bottom state; its environmental and protective consequences require their own definition. Do not invent automatic Hull loss or ship destruction from a Lifeveil or Morale failure.
+
+The bands themselves must not accidentally double-apply existing system-fault penalties. Applicable talents and mods can modify the relevant saves or supported consequences once their specific effects and stacking rules are authored. Healing alone does not reset a resolved encounter threshold. The user allowed these five follow-up questions; the normal five-question gate still applies when opening the later bounded shared-rule implementation substep.
 
 After answers, record the implementation branch, commit, focused tests, full-suite result if run, local update instructions, Foundry verification, and any remaining limits here. Mark Step 01 complete only when its defined outcome is delivered; retain any outstanding GM-01 acceptance items explicitly.
 
