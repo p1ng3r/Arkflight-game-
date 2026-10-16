@@ -4,7 +4,7 @@ Created: 16 October 2026 (America/New_York).
 
 Scope authority: [approved pillar review](ARKFLIGHT-1.0-ROADMAP.md). This plan orders implementation of its 38 approved improvement areas; it does not replace their acceptance criteria or settle their open rules. The [Ayerstone reference](AYERSTONE-FACTION-INTEGRATION.md) supplies existing setting context.
 
-**Current work: Step 01 questions pending. Gameplay implementation under this plan has not started.**
+**Current work: Step 01 initial answers recorded; five additional Hull/Morale rule questions pending. Gameplay implementation under this plan has not started.**
 
 ## How we will work
 
@@ -134,9 +134,9 @@ All approved IDs remain governed by the original roadmap. Major dependencies are
 
 The order is intended to reduce rework. If inspection establishes a better dependency order, record the reason and update the queue before moving work; preserve the five-question gate and one active step.
 
-## Step 01 — Five questions to answer before programming
+## Step 01 — Initial five questions and recorded answers
 
-Scope: fresh generated ship resources and operational readiness (GM-01). Full Hull and a sound default vessel are already approved. These questions settle remaining initial-condition details, not the entire generator redesign.
+Scope: fresh generated ship resources and operational readiness (GM-01). Full Hull and a sound default vessel are already approved. The original questions are retained below as history. The user's answers on 16 October 2026 settle Ready-only generation and introduce a wider Hull/Morale condition discussion; do not treat the original recommendations as accepted defaults.
 
 1. **Starting-condition options:** offer Ready, Damaged, and Wrecked now (**recommended**), or ship Ready-only first and add the other options later?
 2. **Damaged preset Hull:** start at 50% (**recommended**), 75%, or 25% of maximum?
@@ -148,11 +148,40 @@ Scope: fresh generated ship resources and operational readiness (GM-01). Full Hu
 
 | Decision | State |
 |---|---|
-| Condition options | Awaiting answer |
-| Damaged Hull percentage | Awaiting answer |
-| Damaged systems | Awaiting answer |
-| Initial Morale policy | Awaiting answer |
-| Existing generated ships | Awaiting answer |
+| Condition options | User chose Ready only for initial generation. No Damaged/Wrecked generation presets in this first pass. |
+| Damaged Hull percentage | A fixed generated-damage preset is superseded by the request for percentage-based Hull states. Any Hull below 100% counts as damaged; the user requests intermediate bands around 75%, 50%, 25%, and 10%, and Wrecked below 10%. Exact intervals/names and consequences remain to be settled. |
+| Damaged systems | User proposes a saving throw below 50% Hull, with a negative condition/modifier on failure, creating room for talents/mods. Frequency, roll formula, effects, and interaction with existing Strain degradation are not yet settled. |
+| Initial Morale policy | User requests multiple Morale states analogous to damage. This does not yet select an initial value or approve the former quality-based recommendation. Exact bands/effects and any initial-value changes remain open. |
+| Existing generated ships | User delegated the choice. Adopt the conservative recommendation: fix future generation, preserve existing ships and damage, and do not add an old-ship repair tool in this first pass. Routine synchronization must never heal an existing ship automatically. |
+
+### Scope and dependency note
+
+The Hull/Morale requests affect shared resource status, damage resolution, operational defeat, recovery, talents/mods, Events, and displays. Record the contract before programming its dependent behavior. They are an extension to the approved review, not evidence those systems already exist.
+
+Keep the fresh-generation fix bounded. Once the relevant answers are settled, implement its independent initial-resource behavior separately from the larger condition/save work. Add the shared-condition implementation as an explicitly bounded substep in Phase B/C when its rules are ready, with the same five-question process. Do not silently expand Step 01 into a complete combat rewrite.
+
+Existing code has separate structural Hull/Drive/Weapons fault tracks that can reduce Hardness, movement, accuracy, or reload, and Strain already causes degradation. Weapon criticals currently add Strain. Any new percentage/save rule must define its interaction with those tracks, avoid accidental duplicate penalties, and specify whether existing consequences are retained, replaced, or limited. Hull remains a point resource; percentage status can be derived from its current/max values without changing it into a fixed-100 pool.
+
+### Five additional questions — threshold contract
+
+All rows and recommendations below are proposals awaiting answers. They are not implemented rules.
+
+| Percentage | Proposed Hull label | Proposed Morale label |
+|---|---|---|
+| 100% | Sound | Inspired |
+| At least 75%, below 100% | Scuffed | Confident |
+| At least 50%, below 75% | Battered | Steady |
+| At least 25%, below 50% | Damaged | Shaken |
+| At least 10%, below 25% | Critical | Faltering |
+| Below 10% | Wrecked | Broken |
+
+1. **Bands:** use the table's six thresholds for both Hull and Morale, with distinct labels (**recommended**), or change a boundary/add a band?
+2. **Save timing:** save on the first downward crossing of 50% and 25% per encounter (**recommended**), on every damaging hit/loss below 50%, or at each round end below 50%? Healing should not repeatedly retrigger an already resolved threshold under the recommended policy; a hit crossing multiple thresholds needs a defined single-versus-multiple-roll policy before implementation.
+3. **Who rolls:** use a ship-owned save of d20 + Ship Bonus + applicable talent/mod bonuses (**recommended**), or use the assigned officer's PF2e statistic? The exact DC/progression remains open until this choice is made.
+4. **Failure scope:** apply one automatically resolved, eligible physical system fault for a Hull save and a crew/command-specific consequence for a Morale save (**recommended**), or use a general penalty to ship actions? Exact effects, selection policy, duration, stacking, and critical results still require definition before their programming step.
+5. **Bottom-state operation:** should Wrecked stop normal movement/firing while preserving applicable emergency repair, rescue, and abandonment, and Broken Morale impose crew/command limits while preserving recovery actions and player control (**recommended**)? Settle exact blocked/allowed actions and repair/recommission requirements before implementation.
+
+Additional answers: pending. The user expressly allowed these five follow-up questions. No further questions or scope expansion are inferred from that allowance.
 
 After answers, record the implementation branch, commit, focused tests, full-suite result if run, local update instructions, Foundry verification, and any remaining limits here. Mark Step 01 complete only when its defined outcome is delivered; retain any outstanding GM-01 acceptance items explicitly.
 
