@@ -8,7 +8,9 @@ Recorded 17 October 2026. Target version: **1.1.0**. This is not a released vers
 
 `src/cards/committed-orders.js` now implements the Captain's order ledger, committed AP, normal resource reservations, additional plans funded by earned AP, operator reassignment, execution requests, skipped orders and turn completion. `src/cards/order-controller.js` adds authority checks, per-ship serialization, round/revision checks and a persistence contract for executing those rules.
 
-**These modules are not wired to live generation, Foundry combat, the socket relay or the ship sheet yet.** Existing station abilities and their old cooldowns continue running. The 75 AP designs and the new RP designs have not been authored or implemented. Tests use synthetic card definitions and effect drivers, not a playable collection. No old ship data is migrated or discarded by these steps. The controller does not roll initiative, move tokens, implement weapon batteries or make PF2e rolls; those require the forthcoming live adapters and effects.
+**A dedicated Foundry Card Combat playtest is now connected.** `src/content/combat-cards-playtest.js` contains the first 16 AP and 6 RP designs with executable effects. `card-playtest-session.js`, `playtest-commands.js`, the Foundry adapter and its window connect locked plans, PF2e-style rolls, shared hex positions, batteries, reaction prompts and round initiative. See [the playtest guide](CARD-COMBAT-PLAYTEST.md) for entry points and limits.
+
+This is an isolated encounter using copies of selected ship resources, fitted weapons and derived stats. It does not replace native Foundry combat, move scene tokens or apply encounter damage to live ship Actors. The first deal saves a permanent `cardDecks` library/hand on an Actor that has none; later encounters reuse it. Existing station abilities continue in the old combat mode. The full 75 AP / 30 RP collection, library management UI, native-scene migration, new damage-save architecture and complete talent/equipment integration remain pending. No release/version bump is made here.
 
 ## Accepted combat direction
 
@@ -108,11 +110,11 @@ For firing cards, use the attack's roll against AC for both hit resolution and i
 ## Next implementation slices
 
 1. **Done:** isolated library/hand/progression/dealing/availability rules with tests. No live switch.
-2. Author and review executable card definitions in manageable batches, including prerequisites, four outcome effects and Flux durations. Both collection counts are settled.
-3. **Order engine implemented:** committed AP, normal resource reservations, locked plans, earned-AP additions, deferred targets/batteries, skips and authority checks. Skill contribution, live effect drivers and Foundry controls remain pending. See the contract below.
-4. Implement hex movement/facing budgets and balanced batteries; connect card effects to those operations.
-5. Connect fresh generation, saved ship migration and library/hand controls; preserve existing learned content until migration is explicitly mapped.
-6. Add round recovery/initiative handling, RP reaction prompts, and live Foundry acceptance scenarios. Only then consider the 1.1.0 release/version change.
+2. **First executable batch connected:** 16 AP / 6 RP cards. Finish the remaining 83 designs in manageable batches, with card-by-card balance review.
+3. **Order engine and playtest controls connected:** committed AP, reservations, earned-AP additions, deferred targets/batteries, skips, skill-rank contributions and ownership checks.
+4. **Playtest board implemented:** free split movement, six headings, separate-cell turns, movement/turn purchases, weapon reload readiness and battery resolution. Native canvas movement remains pending.
+5. **Permanent first library connected:** existing Actor libraries are preserved. Fresh generator integration, explicit saved-content migration, awards and library/hand management controls remain pending.
+6. **Playtest round flow connected:** all plans lock before automatic initiative, each ship acts once, reactions interrupt attacks, and the next round restores budgets. Run the live-world acceptance guide, then extend toward native combat and the remaining damage/talent systems before a 1.1.0 release.
 
 The previously discussed two damage tracks and three save families remain in [the combat foundations working paper](COMBAT-FOUNDATIONS-WORKING-PAPER-01.md). They have not been replaced by this card foundation. Keep programming steps bounded and ask the agreed five focused questions for unresolved behavior before each new step; do not re-open settled rules.
 

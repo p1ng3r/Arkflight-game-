@@ -1,0 +1,53 @@
+<section class="card-combat-shell">
+  <p class="card-combat-note">Connected playtest · ship resources and positions are encounter copies. First card libraries are saved on the selected ships. This batch contains 16 AP and 6 RP designs.</p>
+  {{#if empty}}
+    <h2>Choose vessels</h2>
+    <p>Select two or more ships and assign opposing sides. Their fitted weapons, upgrades and assigned crew will be used.</p>
+    {{#if isGM}}
+      <div class="card-start-ships">{{#each selectable}}<label><input type="checkbox" data-start-ship value="{{id}}"> <span>{{name}}</span> Side <input data-start-team value="{{team}}" maxlength="20"></label>{{/each}}</div>
+      <button type="button" data-card-command="start">Start Card Encounter</button>
+    {{else}}<p>The GM selects vessels to begin. Keep this window open to receive the encounter.</p>{{/if}}
+  {{else}}
+    <header class="card-combat-toolbar">
+      <strong>Round {{state.round}} · {{state.phase}}</strong>
+      <select data-ship-picker>{{#each ships}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}} · {{team}}{{#if current}} · ACTIVE{{/if}}</option>{{/each}}</select>
+      {{#if isGM}}<button type="button" data-card-command="end">End Encounter</button>{{/if}}
+    </header>
+    <div class="card-combat-fleet">{{#each ships}}<span class="{{#if current}}is-active{{/if}}">{{name}} · Side {{team}} · Hull {{hull}}/{{hullMax}}{{#if planning}} · Planning{{/if}}</span>{{/each}}</div>
+    <svg class="card-combat-map" viewBox="{{viewBox}}" role="img" aria-label="Card combat hex positions">
+      <defs><pattern id="card-hex-grid" width="90" height="51.962" patternUnits="userSpaceOnUse"><path d="M0 0 L15 25.981 L45 25.981 L60 0 M45 25.981 L60 51.962 L90 51.962 M15 25.981 L0 51.962" fill="none" stroke="#3a5262" stroke-width="0.8"/></pattern></defs>
+      <rect x="-3000" y="-3000" width="6000" height="6000" fill="url(#card-hex-grid)"/>
+      {{#each ships}}<g transform="translate({{x}} {{y}})"><circle r="17" class="{{#if current}}is-active{{/if}}"/><path d="M0 -15 L8 9 L0 5 L-8 9 Z" transform="rotate({{rotation}})"/><text x="22" y="4">{{name}} ({{team}})</text></g>{{/each}}
+    </svg>
+    {{#if complete}}
+      <h2>Encounter complete {{#if state.winner}}· {{state.winner}}{{/if}}</h2>
+      {{#if isGM}}<details><summary>Start another encounter</summary><div class="card-start-ships">{{#each selectable}}<label><input type="checkbox" data-start-ship value="{{id}}"> <span>{{name}}</span> Side <input data-start-team value="{{team}}" maxlength="20"></label>{{/each}}</div><button type="button" data-card-command="start">Start New Encounter</button></details>{{/if}}
+    {{/if}}
+    {{#if response}}
+      <section class="card-reaction-prompt"><h3>{{response.name}} — incoming attack {{response.total}}</h3><p>Rolled battery damage: {{response.damage}} before critical result and defenses. Defending crew: choose a reaction or pass.</p>
+        {{#if response.canRespond}}
+          <select data-response-card><option value="">Pass — take the attack</option>{{#each response.cards}}<option value="{{id}}" {{#unless enabled}}disabled{{/unless}}>{{name}}{{#unless enabled}} · unavailable{{/unless}}</option>{{/each}}</select>
+          <select data-response-station>{{#each response.stations}}<option value="{{id}}">{{name}}</option>{{/each}}</select>
+          <select data-response-skill>{{#each response.skills}}<option value="{{id}}">{{name}}</option>{{/each}}</select>
+          <button type="button" data-card-command="respond">Resolve Response</button>
+        {{else}}<p>Waiting for the defending crew or GM.</p>{{/if}}
+      </section>
+    {{/if}}
+    <section class="card-ship-state"><strong>{{shipName}} · B {{b}}</strong><span>AP uncommitted {{ap.remaining}} · earned AP available {{ap.bonusAvailable}} · shared RP {{rp}}</span><span>Hull {{resources.hull.value}}/{{resources.hull.max}} · Veil {{resources.lifeveil.value}} · Strain {{resources.strain.value}}/{{resources.strain.max}} · Morale {{resources.morale.value}} · Supplies {{resources.supplies.value}}</span><span>Movement {{motion.used}}/{{motion.allowance}} · turns {{motion.turns}}/{{motion.turnAllowance}}</span></section>
+    <div class="card-helm"><button data-card-command="helm" data-direction="left" {{#unless canMove}}disabled{{/unless}}>Turn Left 60°</button><button data-card-command="helm" data-direction="forward" {{#unless canMove}}disabled{{/unless}}>Move 1 Hex</button><button data-card-command="helm" data-direction="right" {{#unless canMove}}disabled{{/unless}}>Turn Right 60°</button><button data-card-command="advance" {{#unless canEnd}}disabled{{/unless}}>Finish Ship Turn</button></div>
+    <h3>Available hand</h3><p>Choose actual cards and basic orders, then lock the plan. Targets and batteries are chosen during execution.</p>
+    <div class="card-combat-hand">{{#each cards}}<article class="combat-ability-card card-{{type}}"><label><input type="checkbox" data-plan-card value="{{id}}" {{#unless enabled}}disabled{{/unless}}> <strong>{{name}}</strong></label><small>{{stationLabel}} · {{typeLabel}} · 1 AP · {{status}}</small><p>{{description}}</p><details><summary>Four outcomes</summary><dl><dt>Critical success</dt><dd>{{outcomes.criticalSuccess}}</dd><dt>Success</dt><dd>{{outcomes.success}}</dd><dt>Failure</dt><dd>{{outcomes.failure}}</dd><dt>Critical failure</dt><dd>{{outcomes.criticalFailure}}</dd></dl></details></article>{{/each}}</div>
+    <div class="card-basic-orders">{{#each basics}}<label>{{name}} <input type="number" data-plan-basic="{{id}}" value="0" min="0" max="{{max}}" {{#unless ../canPlan}}disabled{{/unless}}></label>{{/each}}</div>
+    <button class="card-lock-button" data-card-command="lock" {{#unless canPlan}}disabled{{/unless}}>{{#if bonus}}Lock Additional Orders{{else}}Lock Captain's Plan{{/if}}</button>
+    <details><summary>Shared reaction hand · {{rp}} RP available</summary><div class="card-combat-hand">{{#each reactions}}<article class="combat-ability-card card-{{type}}"><strong>{{name}}</strong><small>{{type}} · 1 RP · {{status}}</small><p>{{description}}</p><details><summary>Four outcomes</summary><dl><dt>Critical success</dt><dd>{{outcomes.criticalSuccess}}</dd><dt>Success</dt><dd>{{outcomes.success}}</dd><dt>Failure</dt><dd>{{outcomes.failure}}</dd><dt>Critical failure</dt><dd>{{outcomes.criticalFailure}}</dd></dl></details></article>{{/each}}</div></details>
+    <h3>Committed orders</h3>
+    <div class="card-committed-orders">{{#each orders}}<article data-order-row="{{id}}" class="order-{{status}}"><header><strong>{{name}}</strong><span>{{operatorName}} · {{status}}{{#if requested}} · Captain requested execution{{/if}}</span></header>
+      <div class="card-order-controls"><select data-skill>{{#each skills}}<option value="{{id}}">{{name}}</option>{{/each}}</select>
+        {{#if needsChoice}}<select data-choice {{#if multiRoute}}multiple{{/if}}>{{#each choices}}<option value="{{id}}">{{name}}</option>{{/each}}</select>{{/if}}
+        {{#if fire}}<select data-target>{{#each ../targets}}<option value="{{id}}">{{name}}</option>{{/each}}</select><select data-battery>{{#each ../batteries}}<option value="{{id}}">{{name}}</option>{{/each}}</select>{{/if}}
+        <button data-card-command="resolve" {{#unless canResolve}}disabled{{/unless}}>Roll / Execute</button>
+        {{#if canManage}}<button data-card-command="request">Request Player Roll</button><button data-card-command="skip">Skip</button><select data-replacement>{{#each ../crew}}<option value="{{id}}">{{name}}</option>{{/each}}</select><button data-card-command="reassign">Reassign</button>{{/if}}
+      </div>{{#if reason}}<p>{{reason}}</p>{{/if}}</article>{{else}}<p>No committed orders yet. All Captains must lock plans before initiative is rolled automatically.</p>{{/each}}</div>
+    <details class="card-combat-log"><summary>Encounter log</summary>{{#each log}}<p><strong>R{{round}} {{name}} — {{label}}</strong> {{text}}</p>{{/each}}</details>
+  {{/if}}
+</section>
