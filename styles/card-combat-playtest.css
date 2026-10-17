@@ -1,2 +1,131 @@
-.arkflight-card-combat .window-content{background:#10222f;color:#e4edf1;overflow:auto;padding:16px}.arkflight-card-combat button,.arkflight-card-combat select,.arkflight-card-combat input{color:inherit;background:#1c3545;border:1px solid #557184;border-radius:5px}.arkflight-card-combat option{background:#172c3a;color:#e4edf1}.arkflight-card-combat button{padding:6px 10px;cursor:pointer}.arkflight-card-combat button:disabled{opacity:.4;cursor:default}.card-combat-note{font-size:12px;color:#bac9d3}.card-combat-toolbar,.card-helm,.card-basic-orders,.card-order-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.card-combat-toolbar select{flex:1}.card-combat-fleet{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.card-combat-fleet span{padding:5px 8px;border:1px solid #426075;border-radius:6px}.card-combat-fleet .is-active{border-color:#e4bd6b;color:#ffe3a6}.card-combat-map{width:100%;height:220px;background:#0a1822;border:1px solid #426075;border-radius:8px}.card-combat-map circle{fill:#24495c;stroke:#9caebc;stroke-width:2}.card-combat-map circle.is-active{stroke:#f5cc72}.card-combat-map path:not(defs path){fill:#f1c673}.card-combat-map text{fill:#e4edf1;font:12px sans-serif;paint-order:stroke;stroke:#0a1822;stroke-width:3}.card-ship-state{display:grid;gap:5px;margin:12px 0;padding:10px;background:#1a3241;border-radius:6px}.card-combat-hand{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:9px}.combat-ability-card{padding:12px;background:#1a3241;border:1px solid #4c7082;border-top:3px solid #75c0b3;border-radius:8px}.combat-ability-card.card-flux{border-top-color:#b18be5}.combat-ability-card.card-signature{border-top-color:#e9bd68}.combat-ability-card label{display:flex;align-items:center;gap:7px}.combat-ability-card small{display:block;margin-top:5px;color:#b8cbd6}.combat-ability-card p{margin:8px 0}.combat-ability-card details{font-size:12px}.combat-ability-card dd{margin:0 0 6px 10px}.combat-ability-card dt{font-weight:700}.card-basic-orders{margin:12px 0}.card-basic-orders label{display:flex;gap:6px;align-items:center}.card-basic-orders input{width:54px;padding:4px}.card-lock-button{width:100%;border-color:#e9bd68!important;margin:5px 0}.card-committed-orders article{background:#1a3241;padding:10px;border:1px solid #426075;border-radius:6px;margin:8px 0}.card-committed-orders header{display:flex;justify-content:space-between;gap:12px;margin-bottom:7px}.card-committed-orders .order-resolved,.card-committed-orders .order-skipped{opacity:.65}.card-order-controls select{max-width:210px}.card-reaction-prompt{padding:12px;border:2px solid #dfbb71;background:#302f2c;border-radius:8px;margin:10px 0}.card-reaction-prompt select{max-width:250px}.card-start-ships label{display:flex;align-items:center;gap:8px;margin:8px 0}.card-start-ships label span{flex:1}.card-start-ships input[data-start-team]{width:70px}.card-combat-log{margin-top:15px}.card-combat-log p{font:12px monospace;overflow-wrap:anywhere}
-.arkflight-card-combat input[type="checkbox"]{width:16px;height:16px;flex:0 0 16px}.card-combat-shell{min-width:0}.card-order-controls{padding-top:4px}.card-order-controls select[multiple]{min-height:65px}
+/* Scoped temporary command board. Keep these surfaces independent of the ship sheet. */
+.arkflight-card-combat { --cc-bg:#081621; --cc-panel:#102633; --cc-line:#314957; --cc-gold:#e7c080; --cc-text:#e5edf2; --cc-muted:#a3b8c7; --cc-cyan:#73d9d8; }
+.arkflight-card-combat .window-content { padding:0; overflow:hidden; container:card-combat / inline-size; background:var(--cc-bg); color:var(--cc-text); }
+.arkflight-card-combat .card-combat-shell { height:100%; min-height:0; min-width:0; display:flex; flex-direction:column; font:13px/1.4 sans-serif; }
+.arkflight-card-combat [hidden] { display:none!important; }
+.arkflight-card-combat h1,.arkflight-card-combat h2,.arkflight-card-combat h3 { margin:0; border:0; color:var(--cc-text); text-shadow:none; }
+.arkflight-card-combat h2 { font:600 14px/1.3 sans-serif; }
+.arkflight-card-combat h3 { font:600 13px/1.3 sans-serif; }
+.arkflight-card-combat p { margin:7px 0; }
+.arkflight-card-combat button,.arkflight-card-combat select,.arkflight-card-combat input { height:auto; min-height:30px; color:var(--cc-text); background:#183543; border:1px solid #4b6573; border-radius:5px; font:inherit; box-shadow:none; }
+.arkflight-card-combat button { width:auto; padding:6px 10px; cursor:pointer; transition:background .15s,border-color .15s; }
+.arkflight-card-combat button:hover:not(:disabled) { background:#254a58; border-color:var(--cc-gold); }
+.arkflight-card-combat button:disabled { opacity:.4; cursor:default; }
+.arkflight-card-combat :is(button,input,select,summary):focus-visible { outline:2px solid var(--cc-cyan); outline-offset:3px; }
+.arkflight-card-combat input[type="checkbox"] { appearance:auto; width:16px; height:16px; min-height:16px; flex:0 0 16px; accent-color:#d1af72; }
+.arkflight-card-combat select { padding:4px; min-width:0; }
+.arkflight-card-combat option { background:#102633; color:#e5edf2; }
+.arkflight-card-combat img { border:0; border-radius:0; object-fit:contain; }
+.arkflight-card-combat summary { cursor:pointer; color:var(--cc-gold); padding:4px 0; }
+.card-command-banner { flex:0 0 130px; display:flex; justify-content:space-between; align-items:center; gap:12px; padding:18px 24px; border-bottom:1px solid #8c774c; background:linear-gradient(90deg,#07131ee6, #07131e77 50%,#07131e11), url('../assets/ui/card-combat/command-banner.webp') center 43% / cover; }
+.arkflight-card-combat .card-command-banner h1 { font:normal 32px/1.1 Georgia,serif; color:#f5e3bf; margin-top:7px; }
+.card-command-banner p { color:#d7e5eb; }
+.card-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--cc-gold); }
+.card-playtest-badge { align-self:flex-start; font-size:10px; letter-spacing:1px; text-transform:uppercase; border:1px solid #c2a56b80; background:#081621cc; padding:5px 8px; border-radius:4px; color:#edd5a9; }
+.card-combat-toolbar { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--cc-line); background:#112532; }
+.card-combat-toolbar>div { flex:1; min-width:0; }
+.card-combat-toolbar strong { color:var(--cc-gold); display:block; }
+.card-combat-toolbar span { display:block; font-size:11px; color:var(--cc-muted); }
+.card-ship-select { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--cc-muted); }
+.card-ship-select select { max-width:200px; }
+.card-command-layout { display:grid; grid-template-columns:205px minmax(320px,1fr) minmax(340px,1fr); flex:1; min-height:0; }
+.card-command-rail,.card-command-deck { overflow:auto; min-width:0; padding:14px; scrollbar-width:thin; scrollbar-color:#486271 #10222e; }
+.card-command-rail { background:#0c1d29; border-right:1px solid var(--cc-line); padding:14px 10px; }
+.card-command-rail h2,.card-hand-panel>header,.card-chart-panel>header,.card-orders-panel>header { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.card-command-rail h2>span { color:var(--cc-gold); font-size:12px; }
+.card-point-pool { display:flex; gap:8px; margin:10px 0; }
+.card-point-pool>div { flex:1; border:1px solid #7c7047; border-radius:7px; background:linear-gradient(140deg,#2d3740,#12232c); padding:8px 4px; text-align:center; }
+.card-point-pool strong { display:block; font:26px/1 Georgia,serif; color:var(--cc-gold); }
+.card-point-pool span { display:block; font-size:9px; margin-top:6px; color:var(--cc-muted); }
+.card-earned-ap { color:var(--cc-gold); font-size:11px; }
+.card-resource { margin-top:10px; }
+.card-resource label { display:flex; justify-content:space-between; gap:5px; font-size:11px; }
+.card-resource label span { color:var(--cc-muted); }
+.card-resource-track { height:5px; background:#040f18; margin-top:4px; border-radius:5px; overflow:hidden; }
+.card-resource-track i { display:block; height:100%; background:#75b3ae; }
+.resource-hull i { background:#c2a56c; }.resource-lifeveil i { background:#6ac7df; }.resource-strain i { background:#ae8dd0; }.resource-morale i { background:#c8b5e9; }.resource-supplies i { background:#aab98b; }
+.card-resource.is-warning label { color:#f0ac80; }
+.card-station-filters { display:grid; gap:4px; margin-top:22px; }
+.card-station-filters h2 { margin-bottom:4px; }
+.card-station-filters button { display:flex; align-items:center; gap:7px; width:100%; text-align:left; background:transparent; border-color:transparent; padding:4px 6px; min-height:38px; }
+.card-station-filters button[aria-pressed="true"] { border-color:#b79b61; background:#24343c; color:#f4d59c; }
+.card-station-filters img { width:32px; height:32px; }
+.card-station-filters i { width:32px; text-align:center; color:var(--cc-gold); }
+.card-station-filters span { flex:1; }
+.card-station-filters small { display:block; font-size:9px; color:var(--cc-muted); overflow-wrap:anywhere; }
+.card-station-filters b { font-size:10px; color:var(--cc-muted); }
+.card-combat-fleet { margin-top:20px; display:grid; gap:6px; }
+.card-combat-fleet button { display:block; text-align:left; padding:7px; background:#102735; }
+.card-combat-fleet small { display:block; font-size:10px; color:var(--cc-muted); }
+.card-combat-fleet .is-active { border-left:3px solid var(--cc-gold); }
+.card-combat-fleet .is-selected { background:#203f4c; }
+.card-command-deck { display:flex; flex-direction:column; gap:14px; }
+.card-chart-panel,.card-orders-panel,.card-complete-panel { padding:12px; background:var(--cc-panel); border:1px solid var(--cc-line); border-radius:8px; }
+.card-chart-panel>header span,.card-orders-panel>header span,.card-hand-panel>header span { font-size:10px; color:var(--cc-muted); }
+.card-combat-map { width:100%; height:200px; display:block; margin:10px 0; background:radial-gradient(ellipse at center,#163542,#07151f); border:1px solid #334c5c; border-radius:5px; }
+.card-combat-map circle { fill:#203f50; stroke:#9caebc; stroke-width:2; }
+.card-combat-map circle.is-active { stroke:#f5cc72; }
+.card-combat-map path:not(defs path) { fill:#f1c673; }
+.card-combat-map text { fill:#e4edf1; font:12px sans-serif; paint-order:stroke; stroke:#0a1822; stroke-width:3; }
+.card-motion-readout { display:flex; justify-content:space-between; font-size:11px; color:var(--cc-muted); }
+.card-motion-readout strong { color:var(--cc-text); }
+.card-helm { display:flex; gap:5px; margin-top:9px; }
+.card-helm button { flex:1; padding:6px 3px; font-size:11px; }
+.card-panel-hint { font-size:11px; color:var(--cc-muted); }
+.card-committed-orders article { padding:10px; border:1px solid var(--cc-line); border-radius:6px; background:#0c1f2c; margin:8px 0; }
+.card-committed-orders header { display:grid; grid-template-columns:30px 1fr; align-items:center; gap:2px 8px; margin-bottom:8px; }
+.card-order-art { grid-row:span 2; width:30px; height:36px; }
+.card-committed-orders header span { font-size:10px; color:var(--cc-muted); }
+.card-committed-orders .order-resolved,.card-committed-orders .order-skipped { opacity:.6; }
+.card-order-controls { display:flex; gap:5px; flex-wrap:wrap; }
+.card-order-controls select { flex:1 1 110px; max-width:100%; font-size:11px; }
+.card-order-controls button { flex:1 1 auto; font-size:11px; }
+.card-order-controls select[multiple] { min-height:65px; }
+.card-order-controls [data-card-command="resolve"] { border-color:#668f8b; color:#b9e9df; }
+.arkflight-card-combat .card-finish-button { width:100%; margin-top:8px; border-color:#957e4c; color:var(--cc-gold); }
+.card-hand-panel { display:flex; flex-direction:column; min-height:0; min-width:0; background:#0b1d29; border-left:1px solid var(--cc-line); }
+.card-hand-panel>header { padding:14px; border-bottom:1px solid var(--cc-line); }
+.card-hand-scroll { flex:1; overflow:auto; padding:0 12px 12px; min-height:0; scrollbar-width:thin; scrollbar-color:#486271 #10222e; }
+.card-combat-hand { display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:10px; }
+.combat-ability-card { --card-accent:#80cfc1; min-width:0; border:1px solid #395467; border-top:2px solid var(--card-accent); border-radius:8px; overflow:hidden; background:linear-gradient(145deg,#1a3544,#102330); }
+.combat-ability-card.card-flux { --card-accent:#bd9de8; }.combat-ability-card.card-signature { --card-accent:#f3c57e; }
+.combat-ability-card.is-selected { border-color:var(--cc-gold); box-shadow:0 0 0 1px #c1a56d; }
+.card-art-stage { position:relative; height:88px; display:flex; justify-content:center; background:radial-gradient(ellipse at center,#3a536066,transparent 70%); border-bottom:1px solid #294555; }
+.card-art-stage img { width:100%; height:100%; padding:8px 25px; filter:drop-shadow(0 5px 5px #0008); }
+.card-type-badge,.card-cost { position:absolute; top:5px; font-size:9px; color:var(--card-accent); background:#081721db; border:1px solid #52606a; padding:2px 4px; border-radius:3px; }
+.card-type-badge { left:5px; }.card-cost { right:5px; }
+.card-ability-body { padding:9px; font-size:11px; }
+.card-ability-body>small { display:block; color:var(--card-accent); font-size:9px; margin-bottom:5px; }
+.card-ability-body label { display:flex; gap:6px; align-items:flex-start; cursor:pointer; }
+.card-ability-body strong { font-size:12px; line-height:1.2; }
+.card-ability-body p { color:#c5d5df; }
+.card-ability-body details { border-top:1px solid #344c5b; font-size:10px; }
+.card-ability-body dt { font-weight:bold; color:var(--cc-gold); }
+.card-ability-body dd { margin:2px 0 8px; color:#cad8e1; }
+.card-basic-orders { margin-top:16px; padding-top:12px; border-top:1px solid var(--cc-line); }
+.card-basic-orders h3 { margin-bottom:8px; }
+.card-basic-orders label { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:5px; font-size:12px; }
+.card-basic-orders input { width:55px; padding:4px; text-align:center; }
+.card-plan-footer { padding:10px 12px; border-top:1px solid #766646; background:#132936; }
+.card-plan-footer>strong { display:block; color:var(--cc-gold); font-size:11px; margin-bottom:7px; }
+.card-plan-footer .over-budget { color:#ff9e8c; }
+.arkflight-card-combat .card-primary { border-color:#c1a56d; background:linear-gradient(#544830,#3b3428); color:#ffe3ac; font-weight:600; }
+.arkflight-card-combat .card-lock-button { width:100%; }
+.card-reaction-prompt { padding:12px; border:1px solid #e1ad64; background:#3a3025; border-radius:8px; box-shadow:inset 3px 0 #e1ad64; }
+.card-reaction-prompt h3 { color:#f5ce91; }
+.card-reaction-prompt p { font-size:11px; }
+.card-reaction-prompt select { width:100%; margin-bottom:6px; }
+.card-reaction-prompt button { width:100%; }
+.card-combat-log { border:1px solid var(--cc-line); border-radius:5px; padding:7px 10px; }
+.card-combat-log p { font-size:11px; overflow-wrap:anywhere; padding-bottom:8px; border-bottom:1px solid var(--cc-line); }
+.card-combat-log p strong { display:block; color:var(--cc-gold); }
+.card-launch-panel { overflow:auto; max-width:740px; width:100%; margin:0 auto; padding:30px; flex:1; }
+.card-launch-panel h2 { font:24px Georgia,serif; color:var(--cc-gold); }
+.card-start-ships label { display:flex; align-items:center; gap:10px; padding:12px; margin:8px 0; border:1px solid var(--cc-line); background:var(--cc-panel); border-radius:6px; }
+.card-start-ships label>span:first-of-type { flex:1; }
+.card-start-ships input[data-start-team] { width:60px; padding:4px; }
+.card-side-label { font-size:11px; color:var(--cc-muted); }
+.card-combat-note { padding:6px 14px; flex:none; font-size:9px; color:#8da4b5; border-top:1px solid var(--cc-line); background:#091923; }
+@container card-combat (max-width:1100px) { .card-command-layout { grid-template-columns:175px minmax(290px,1fr) minmax(290px,1fr); }.card-command-banner { flex-basis:105px; }.card-command-deck { padding:10px; }.card-art-stage { height:100px; }.card-station-filters small { font-size:8px; }.card-combat-toolbar span { max-width:340px; } }
+@container card-combat (max-width:820px) { .arkflight-card-combat .card-combat-shell { overflow:auto; height:100%; min-height:0; }.card-command-layout { grid-template-columns:165px minmax(0,1fr); flex:none; }.card-command-rail { grid-row:span 2; overflow:visible; }.card-command-deck { overflow:visible; }.card-hand-panel { grid-column:2; min-height:350px; }.card-hand-scroll { overflow:visible; }.card-combat-toolbar { flex-wrap:wrap; }.card-combat-toolbar>div { flex-basis:100%; }.card-combat-toolbar span { max-width:none; }.card-command-banner { min-height:115px; }.card-command-banner h1 { font-size:27px!important; } }
+@media(prefers-reduced-motion:reduce) { .arkflight-card-combat button { transition:none; } }

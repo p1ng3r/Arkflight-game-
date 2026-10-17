@@ -21,6 +21,21 @@ await game.arkflight.cardCombat.open();
 
 The GM chooses two to eight existing Arkflight ship Actors and assigns at least two opposing side labels. No specific ship name is assumed. Ships must have an installed weapon for this first combat batch. Using multiple clients is supported by the request adapter, but still needs acceptance in a real Foundry/PF2e world.
 
+## Temporary Crew Command board
+
+![Crew Command board with sample vessels](images/card-combat-command-board.webp)
+
+The sample above is a local browser render with mock Foundry documents, not a live world screenshot. The temporary UI now provides:
+
+- A space-sailing combat banner, station portraits, and distinct equipment art for all 22 cards. General, Flux and Signature cards use different accent colors; each retains its written four outcomes.
+- A fleet/crew rail with copied resource bars, shared AP/RP and Ship Bonus. Select a vessel in the fleet or the viewing dropdown, then filter the hand by station or open the separate shared reaction hand.
+- A central hex chart, movement/turn budgets, helm controls and committed orders. The phase hint distinguishes planning, a submitted plan, an active ship turn, an incoming attack and completion.
+- A persistent plan footer that counts selected AP across **all** station filters and blocks over-budget submission. Basic orders remain outside equipped card slots. Targets and batteries remain execution choices.
+- Local plan, execution-field, station-filter and panel-scroll drafts that survive shared-state refreshes. Switching filters never removes selected cards from the plan. These drafts are local to the open window; committed plans are persisted in the shared encounter.
+- A resizable window that initially fits the viewport. The layout responds to the window's own width: three panes on larger windows, stacked chart/hand panels on narrow ones.
+
+Resource warning colors are presentation hints, not new condition bands or saving throw rules. Selecting a station filters presentation only; it does not change operator permissions. Use the incoming-fire prompt to actually spend RP. The permanent library/equip interface and final ship-sheet redesign are still separate work.
+
 ## What the playtest saves
 
 - The first enrollment of a ship with no new card library permanently deals 8 General / 3 Flux / 1 Signature AP cards and 3/2/1 RP cards onto that Actor. Each station receives a usable General card. These are chosen randomly from this small batch.
@@ -85,4 +100,8 @@ The player request adapter uses Foundry's server-provided creation user ID and m
 
 ## Validation recorded
 
-All **697 Node tests pass**, including 12 connected-playtest tests exercising the actual batch, every AP/RP card's four outcomes, permanent-library reuse, lock/initiative/execute/response flow, movement, cooldown ownership and the registered Foundry adapter with mocked documents. The actual Handlebars template compiles for empty, planning, executing, reaction and completed contexts. JavaScript syntax and staged whitespace checks pass. A local screenshot renderer could not be installed, so visual rendering and real Foundry v14/PF2e multiplayer acceptance remain pending; the mock tests do not establish those results.
+All **701 Node tests pass**, including 12 connected-playtest tests exercising the actual batch, every AP/RP card's four outcomes, permanent-library reuse, lock/initiative/execute/response flow, movement, cooldown ownership and the registered Foundry adapter with mocked documents. Four presentation tests verify artwork paths, meter bounds, station-hand counts/AP budget and the locked-plan state.
+
+The actual Handlebars template was rendered in local Chromium with the module's complete stylesheet list and mocked Foundry application/documents. Browser interaction checks passed for cross-station selection, refresh preservation, AP budgeting, hidden-card lock payloads, reaction-hand filtering, ship launch selection, execution fields, the incoming-fire pause, completion and panel-scroll preservation. Planning was inspected at 1260×850, 1024×768 and 760×820, without horizontal page overflow. Seven screenshots covered planning, execution, reaction, completion and launch states. No browser JavaScript errors occurred. JavaScript syntax and whitespace checks pass.
+
+Actual Foundry v14/PF2e window chrome, player ownership and multiplayer acceptance remain pending. The local browser harness does not establish those results; use the acceptance checks above.

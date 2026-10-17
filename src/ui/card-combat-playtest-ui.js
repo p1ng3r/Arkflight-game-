@@ -4,6 +4,8 @@ import { cardAvailability } from "../cards/card-library.js";
 import { BASIC_CARD_ORDERS, getOrderQueue } from "../cards/committed-orders.js";
 import { shipAbilityBonus } from "../combat/ship-ability-rules.js";
 
+import { STATION_PRESENTATION, cardArt, resourceMeters } from "./card-combat-presentation.js";
+
 const MODULE = "arkflight-game";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 let windowInstance = null;
@@ -25,12 +27,19 @@ function logText(entry, state) {
 }
 
 export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(ApplicationV2) {
-  static DEFAULT_OPTIONS = { id: "arkflight-card-combat", classes: ["arkflight", "arkflight-card-combat"], position: { width: 1080, height: 820 }, window: { title: "Arkflight — Card Combat Playtest", icon: "fa-solid fa-layer-group" } };
+  static DEFAULT_OPTIONS = { id: "arkflight-card-combat", classes: ["arkflight", "arkflight-card-combat"], position: { width: 1260, height: 850 }, window: { title: "Arkflight — Card Combat Playtest", icon: "fa-solid fa-layer-group", resizable: true } };
   static PARTS = { main: { template: "modules/arkflight-game/templates/card-combat-playtest.hbs" } };
   selectedShipId = null;
+  selectedFilter = "all";
   planDrafts = {};
   executionDrafts = {};
-  constructor(...args) { super(...args); windowInstance = this; }
+  scrollDrafts = {};
+  constructor(options = {}) {
+    const width = Math.min(1260, Math.max(480, (globalThis.innerWidth ?? 1400) - 40));
+    const height = Math.min(850, Math.max(400, (globalThis.innerHeight ?? 940) - 70));
+    super({ ...options, position: { width, height, ...options.position } });
+    windowInstance = this;
+  }
   async _prepareContext(options) {
     const context = await super._prepareContext(options), api = game.arkflight.cardCombat, state = api.state();
     const active = state?.phase !== "complete" && state?.id;
@@ -46,11 +55,11 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     const cards = ship.cardDecks.hands.ap.map(id => {
       const card = cardById(id), check = cardAvailability(ship, PLAYTEST_COMBAT_CARDS, id);
       const committed = q.orders.some(order => order.kind === "card" && order.abilityId === id && order.status !== "skipped");
-      return { ...card, stationLabel: label(card.stations[0]), enabled: canPlan && check.ok && !committed, status: committed ? "Committed" : check.ok ? "Ready" : check.readyRound ? `Ready: Round ${check.readyRound}` : label(check.reason), typeLabel: card.type === "flux" ? `Flux ${card.cooldownRounds}` : label(card.type) };
+      return { ...card, art: cardArt(card), filter: card.stations[0], stationLabel: label(card.stations[0]), enabled: canPlan && check.ok && !committed, status: committed ? "Committed" : check.ok ? "Ready" : check.readyRound ? `Ready: Round ${check.readyRound}` : label(check.reason), typeLabel: card.type === "flux" ? `Flux ${card.cooldownRounds}` : label(card.type) };
     });
     const reactions = ship.cardDecks.hands.rp.map(id => {
       const card = cardById(id), check = cardAvailability(ship, PLAYTEST_COMBAT_CARDS, id);
-      return { ...card, status: check.ok ? "Ready" : check.readyRound ? `Ready: Round ${check.readyRound}` : label(check.reason) };
+      return { ...card, art: cardArt(card), typeLabel: card.type === "flux" ? `Flux ${card.cooldownRounds}` : label(card.type), status: check.ok ? "Ready" : check.readyRound ? `Ready: Round ${check.readyRound}` : label(check.reason) };
     });
     const targets = Object.entries(state.ships).filter(([id, target]) => id !== this.selectedShipId && target.cardPlay.team !== ship.cardPlay.team && target.resources.hull.value > 0).map(([id, target]) => ({ id, name: target.cardPlay.name }));
     const batteries = [...new Set(ship.cardPlay.weapons.map(w => w.mount))].map(id => ({ id, name: label(id) }));
@@ -60,7 +69,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
       if (card?.selection === "station") choices = Object.keys(CARD_SKILLS).map(id => ({ id, name: label(id) }));
       if (card?.selection === "route") choices = ["propulsion", "weapons", "veil"].map(id => ({ id, name: label(id) }));
       if (card?.selection === "weapon") choices = ship.cardPlay.weapons.filter(w => w.readyRound > state.round).map(w => ({ id: w.key, name: `${w.name} · Round ${w.readyRound}` }));
-      return { ...order, name: card?.name ?? basic?.name ?? order.abilityId, operatorName: actorName(order.operatorId), requested: Boolean(order.requestedBy), canResolve: turn && order.status === "pending" && (game.user.isGM || owns(order.operatorId)), canManage: turn && captain && order.status === "pending", skills: CARD_SKILLS[order.station].map(id => ({ id, name: label(id) })), choices, needsChoice: Boolean(card?.selection), multiRoute: card?.selection === "route" && Number(ship.progression?.level ?? 1) >= 10, fire: order.abilityId === "fire-battery" };
+      return { ...order, art: card ? cardArt(card) : STATION_PRESENTATION.find(s => s.id === order.station)?.art, name: card?.name ?? basic?.name ?? order.abilityId, operatorName: actorName(order.operatorId), requested: Boolean(order.requestedBy), canResolve: turn && order.status === "pending" && (game.user.isGM || owns(order.operatorId)), canManage: turn && captain && order.status === "pending", skills: CARD_SKILLS[order.station].map(id => ({ id, name: label(id) })), choices, needsChoice: Boolean(card?.selection), multiRoute: card?.selection === "route" && Number(ship.progression?.level ?? 1) >= 10, fire: order.abilityId === "fire-battery" };
     });
     const pendingAttack = state.pendingAttack;
     let response = null;
@@ -71,20 +80,55 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     }
     const ships = Object.entries(state.ships).map(([id, row]) => ({ id, name: row.cardPlay.name, selected: id === this.selectedShipId, current: id === state.turnOrder[state.turnIndex], team: row.cardPlay.team, hull: row.resources.hull.value, hullMax: row.resources.hull.max, planning: getOrderQueue(row).phase === "planning", x: 1.5 * row.cardPlay.motion.q * 30, y: Math.sqrt(3) * (row.cardPlay.motion.r + row.cardPlay.motion.q / 2) * 30, rotation: row.cardPlay.motion.heading * 60 }));
     const bounds = { left: Math.min(...ships.map(s => s.x)) - 90, top: Math.min(...ships.map(s => s.y)) - 90, width: Math.max(...ships.map(s => s.x)) - Math.min(...ships.map(s => s.x)) + 180, height: Math.max(...ships.map(s => s.y)) - Math.min(...ships.map(s => s.y)) + 180 };
-    return { ...context, state, isGM: game.user.isGM, selectable, active, complete: state.phase === "complete", shipName: ship.cardPlay.name, ships, selectedShipId: this.selectedShipId, cards, reactions, orders, crew, targets, batteries, response, canPlan, bonus: q.phase === "execution", ap: q.ap, rp: ship.cardPlay.rp, b: shipAbilityBonus(ship.progression?.level), resources: ship.resources, motion: { ...ship.cardPlay.motion, allowance: ship.cardPlay.motion.speed + ship.cardPlay.motion.extra, turnAllowance: ship.cardPlay.motion.baseTurns + ship.cardPlay.motion.bonusTurns }, canMove: turn && (game.user.isGM || owns(ship.crew.stations.navigator)), canEnd: turn && captain, basics: BASIC_CARD_ORDERS.map(b => ({ ...b, max: canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0 })), log: [...state.log].reverse().slice(0, 15).map(entry => ({ ...entry, label: cardById(entry.label)?.name ?? label(entry.label), name: state.ships[entry.shipId]?.cardPlay.name, text: logText(entry, state) })), viewBox: `${bounds.left} ${bounds.top} ${bounds.width} ${bounds.height}` };
+    const budget = canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0;
+    const phaseLabel = state.pendingAttack ? "Incoming fire" : state.phase === "planning" ? q.phase === "planning" ? "Plan together" : "Plan locked" : state.phase === "complete" ? "Encounter complete" : turn ? "Your ship's turn" : "Ship turn in progress";
+    const phaseHint = state.pendingAttack ? "Defending crew: choose a reaction or pass to resolve the attack." : state.phase === "planning" ? q.phase === "planning" ? "Choose cards and basic orders. All Captains lock before initiative rolls." : "Orders committed. Waiting for the other Captains to lock their plans." : state.phase === "complete" ? "Review the log, then prepare another encounter." : turn ? "Move, execute orders in any sequence, then finish the ship turn." : "Follow the active vessel. Your committed orders stay visible here.";
+    const stations = STATION_PRESENTATION.map(station => ({ ...station, operator: actorName(ship.crew.stations[station.id]), count: cards.filter(card => card.filter === station.id).length }));
+    return { ...context, budget, phaseLabel, phaseHint, stations, meters: resourceMeters(ship.resources), pendingCount: orders.filter(order => order.status === "pending").length, state, isGM: game.user.isGM, selectable, active, complete: state.phase === "complete", shipName: ship.cardPlay.name, ships, selectedShipId: this.selectedShipId, cards, reactions, orders, crew, targets, batteries, response, canPlan, bonus: q.phase === "execution", ap: q.ap, rp: ship.cardPlay.rp, b: shipAbilityBonus(ship.progression?.level), resources: ship.resources, motion: { ...ship.cardPlay.motion, allowance: ship.cardPlay.motion.speed + ship.cardPlay.motion.extra, turnAllowance: ship.cardPlay.motion.baseTurns + ship.cardPlay.motion.bonusTurns }, canMove: turn && (game.user.isGM || owns(ship.crew.stations.navigator)), canEnd: turn && captain, basics: BASIC_CARD_ORDERS.map(b => ({ ...b, max: canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0 })), log: [...state.log].reverse().slice(0, 15).map(entry => ({ ...entry, label: cardById(entry.label)?.name ?? label(entry.label), name: state.ships[entry.shipId]?.cardPlay.name, text: logText(entry, state) })), viewBox: `${bounds.left} ${bounds.top} ${bounds.width} ${bounds.height}` };
   }
   async _onRender(context, options) {
     await super._onRender(context, options);
     const key = `${context.state?.id}:${context.state?.round}:${this.selectedShipId}`;
+    const scroll = this.scrollDrafts[key] ??= {};
+    for (const selector of [".card-command-rail", ".card-command-deck", ".card-hand-scroll"]) {
+      const panel = this.element.querySelector(selector);
+      if (!panel) continue;
+      panel.scrollTop = scroll[selector] ?? 0;
+      panel.addEventListener("scroll", () => { scroll[selector] = panel.scrollTop; }, { passive: true });
+    }
     const draft = this.planDrafts[key] ??= { cards: [], basics: {} };
+    const updateBudget = () => {
+      const count = this.element.querySelectorAll("[data-plan-card]:checked").length + [...this.element.querySelectorAll("[data-plan-basic]")].reduce((sum, input) => sum + Math.max(0, Number(input.value) || 0), 0);
+      const meter = this.element.querySelector("[data-plan-budget]");
+      if (meter) { meter.textContent = `${count} / ${context.budget} AP selected`; meter.classList.toggle("over-budget", count > context.budget); }
+      const lock = this.element.querySelector('[data-card-command="lock"]');
+      if (lock) lock.disabled = !context.canPlan || count > context.budget;
+      for (const input of this.element.querySelectorAll("[data-plan-card]")) input.closest("article").classList.toggle("is-selected", input.checked);
+    };
+    const applyFilter = filter => {
+      this.selectedFilter = filter;
+      for (const panel of this.element.querySelectorAll("[data-hand-panel]")) panel.hidden = panel.dataset.handPanel !== (filter === "reactions" ? "rp" : "ap");
+      for (const card of this.element.querySelectorAll("[data-card-filter]")) card.hidden = filter !== "all" && card.dataset.cardFilter !== filter;
+      for (const button of this.element.querySelectorAll("[data-station-filter]")) button.setAttribute("aria-pressed", String(button.dataset.stationFilter === filter));
+      const title = this.element.querySelector("[data-hand-title]");
+      if (title) title.textContent = filter === "reactions" ? "Shared reactions" : filter === "all" ? "Crew hand" : `${STATION_PRESENTATION.find(s => s.id === filter)?.name} hand`;
+    };
+    for (const button of this.element.querySelectorAll("[data-station-filter]")) button.addEventListener("click", () => {
+      applyFilter(button.dataset.stationFilter);
+      const hand = this.element.querySelector(".card-hand-scroll");
+      if (hand) hand.scrollTop = 0;
+    });
+    for (const button of this.element.querySelectorAll("[data-view-ship]")) button.addEventListener("click", () => { this.selectedShipId = button.dataset.viewShip; this.render({ force: true }); });
     for (const input of this.element.querySelectorAll("[data-plan-card]")) {
       input.checked = !input.disabled && draft.cards.includes(input.value);
-      input.addEventListener("change", () => { draft.cards = [...this.element.querySelectorAll("[data-plan-card]:checked")].map(input => input.value); });
+      input.addEventListener("change", () => { draft.cards = [...this.element.querySelectorAll("[data-plan-card]:checked")].map(input => input.value); updateBudget(); });
     }
     for (const input of this.element.querySelectorAll("[data-plan-basic]")) {
       input.value = input.disabled ? 0 : draft.basics[input.dataset.planBasic] ?? 0;
-      input.addEventListener("input", () => { draft.basics[input.dataset.planBasic] = input.value; });
+      input.addEventListener("input", () => { draft.basics[input.dataset.planBasic] = input.value; updateBudget(); });
     }
+    updateBudget();
+    applyFilter(this.selectedFilter);
     for (const row of this.element.querySelectorAll("[data-order-row]")) {
       const orderKey = `${key}:${row.dataset.orderRow}`;
       const saved = this.executionDrafts[orderKey] ??= {};
