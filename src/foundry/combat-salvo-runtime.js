@@ -21,6 +21,10 @@ import {
 import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 
+import { runShipCommand } from "./ship-ability-runtime.js";
+import { systemOperationBlock } from "../ship/system-damage.js";
+import { resolveSystemDamageSaves, reportSystemSaves } from "./system-damage-runtime.js";
+
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const ENERGY_TYPES = new Set(["fire", "cold", "electricity", "acid", "sonic", "force"]);
@@ -69,7 +73,7 @@ function bestEffect(effects, valueFor) {
 function wardableDamage(type, systemThreat) {
   return ENERGY_TYPES.has(String(type ?? "").toLowerCase()) || String(systemThreat ?? "").toLowerCase() === "lifeveil";
 }
-function lifeveilOnline(actor) { return Math.max(0, Number(shipPayload(actor)?.resources?.lifeveil?.value) || 0) > 0; }
+function lifeveilOnline(actor) { return Math.max(0, Number(shipPayload(actor)?.resources?.lifeveil?.value) || 0) >= 10; }
 function focusWardMatches(effect, type, systemThreat) {
   const selection = String(effect?.selection ?? "").toLowerCase();
   return selection && (selection === String(type ?? "").toLowerCase() || selection === String(systemThreat ?? "").toLowerCase());
@@ -123,11 +127,13 @@ function reduceOneReload(state, keys, amount, round) {
   return chosen ? reduceWeaponReload(state, chosen.key, round, amount) : state;
 }
 
-async function fireSalvoAtTarget(base, weaponKeys, targetReference, attackerReference = null) {
+export async function fireSalvoAtTarget(base, weaponKeys, targetReference, attackerReference = null) {
   const attacker = resolveCombatant(base, attackerReference);
   const target = resolveCombatant(base, targetReference);
   if (!attacker || !target) throw new Error("Choose attacker and target Arkflight ship combatants.");
   const round = Math.max(1, Number(game.combat?.round ?? 1));
+  const blocked = systemOperationBlock(shipPayload(attacker.actor), "fire");
+  if (blocked) throw new Error(blocked);
   const attackerBefore = base.state(attacker);
   const plan = coordinatedSalvoPlan(attackerBefore, weaponKeys, round);
   const solutions = plan.keys.map((key) => base.targetingSolution(key, target, attacker));
@@ -188,10 +194,13 @@ async function fireSalvoAtTarget(base, weaponKeys, targetReference, attackerRefe
 
   await attacker.update({ [STATE_PATH]: attackerAfter });
   if (targetAfter !== targetAttackState) await target.update({ [STATE_PATH]: targetAfter });
-  if (damage) {
+  if (damage) await runShipCommand(target.actor.uuid ?? target.actor.id, async () => {
     const beforeShip = shipPayload(target.actor);
     let nextShip = structuredClone(beforeShip);
-    nextShip.resources.hull.value = damage.after;
+    const before = Math.max(0, Number(beforeShip.resources?.hull?.value) || 0);
+    const after = Math.max(0, before - damage.hullDamage);
+    damage = Object.freeze({ ...damage, before, after });
+    nextShip.resources.hull.value = after;
     if (degree === 2) {
       const protection = applyAbilityStrainGuards(targetAfter, 1);
       targetAfter = protection.state;
@@ -200,10 +209,13 @@ async function fireSalvoAtTarget(base, weaponKeys, targetReference, attackerRefe
       nextShip = guarded.ship; targetAfter = { ...guarded.state, strain: strain.strain };
       await target.update({ [STATE_PATH]: targetAfter });
     }
+    const systemResult = await resolveSystemDamageSaves(beforeShip, nextShip, { systems: ["hull"] });
+    nextShip = systemResult.ship;
     targetAfter = reconcileCombatantState(nextShip, targetAfter, { derived: deriveShip(nextShip, SHIP_CATALOGS), catalogs: SHIP_CATALOGS, rotation: targetAfter.mobility.heading });
     await target.update({ [STATE_PATH]: targetAfter });
     await target.actor.update({ [`flags.${MODULE_ID}.ship`]: nextShip }, { arkflightAbilityTransaction: true });
-  }
+    await reportSystemSaves(systemResult, target.actor);
+  });
 
   const esc = foundry.utils.escapeHTML;
   const weaponNames = solutions.map((solution) => solution.weapon.name).join(" + ");

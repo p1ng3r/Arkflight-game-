@@ -4,7 +4,7 @@ Created: 16 October 2026 (America/New_York).
 
 Scope authority: [approved pillar review](ARKFLIGHT-1.0-ROADMAP.md). This plan orders implementation of its 38 approved improvement areas and the subsequently approved shared Hull/Morale/Lifeveil condition extension; it does not replace their acceptance criteria or settle their open rules. The [Ayerstone reference](AYERSTONE-FACTION-INTEGRATION.md) supplies existing setting context.
 
-**Current work: Step 01 initial decisions recorded. The user endorsed the proposed Hull/Morale threshold direction and added Lifeveil to the same band/save structure on 16 October 2026. Detailed shared-save DCs and consequences remain open for their bounded implementation substep. Gameplay implementation under this plan has not started.**
+**Current work: Step 01 Ready-only generation and Step 06a five-system damage/save/fault implementation are code-complete on `feat/station-ability-loadouts` (17 October 2026). The user authorized programming after the mock and “Patch mounts” choice. Live Foundry acceptance remains pending. See [rules, defaults, update commands and validation](FIVE-SYSTEM-DAMAGE-AND-REPAIR.md). Later roadmap steps remain unimplemented.**
 
 ## How we will work
 
@@ -42,7 +42,7 @@ No detailed timeline is promised before the open decisions and implementation re
 
 These fixes produce trustworthy starting state and prevent early work from being obscured by unrelated failures.
 
-- [ ] **01 — Fresh enemy resources and operational readiness.** Initialize fresh generated ships correctly; define explicit starting-condition behavior; preserve damage when existing ships synchronize. Cover GM-01. **This is the first programming step.**
+- [x] **01 — Fresh enemy resources and operational readiness (code and regression coverage complete; live acceptance pending).** Initialize fresh generated ships correctly; define explicit starting-condition behavior; preserve damage when existing ships synchronize. Cover GM-01. **This is the first programming step.**
 - [ ] **02 — One crew-assignment authority.** Canonical stations and Actor references, duplicate rules, legacy migration, and consistent controls. Cover CRW-01; prepare for COM-01's roster changes.
 - [ ] **03 — Correct GM active-combat detection.** Repair the dashboard's runtime/API mismatch, operation state, and reopen/update behavior. First part of GM-05; the final station display follows the new economy.
 - [ ] **04 — Reward summary and recipient context.** Repair summary preparation and make characters, ship, campaign destination, empty states, and pending choices understandable. First part of CRW-07.
@@ -55,7 +55,7 @@ These fixes produce trustworthy starting state and prevent early work from being
 These contracts must be stable before encounter generation and combat balance are rebuilt around them.
 
 - [ ] **06 — Real resource benefits.** Replace legacy Lifeveil/Morale capacity promises and honor supported specialization Supply capacity. Cover PRO-01 and the resource portion of PRO-07. Settle replacements before purchasing or migrating them.
-- [ ] **06a — Shared Hull/Morale/Lifeveil condition contract and resolution.** Implement the approved six percentage bands and threshold-save direction as a bounded substep (split further if needed). Ask the required five questions for unresolved DCs, exact consequences and critical results, mitigation/stacking, simultaneous threshold crossings, and recovery/Strain interactions before programming those rules. Coordinate combat/Event application, persistence, undo/retry behavior, and the below-10% operation states. Hull remains a point pool, while Morale and Lifeveil remain percentage pools. The full-save system is not part of the initial Ready-only generator fix.
+- [x] **06a — Five-system integrity, saves, faults and repair (code and regression coverage complete; live acceptance pending).** Hull/Battlewatch, Drive/Navigator, Arkengine/Engineer, Lifeveil/Veilwarden and Morale/Captain use six bands. Actual damage at 50% or lower causes at most one ship-owned save per system per round; later-round damage retriggers it. Each has twelve auto-resolved faults. Named Emergency Repair and paid Shipwright fault repairs are implemented. See the linked rules guide for first-pass DC/component/stacking defaults and transitional limits. This does not complete COM-01's station AP migration or the rest of the combat review.
 - [ ] **07 — Talent upgrade chains and capstones.** Preserve earned passive benefits, resolve starter/retired-action conflicts, and specify usable capstones. Cover PRO-02.
 - [ ] **08 — Station AP and economy talent migration.** Replace hull AP with station budgets, one shared base RP, Captain bonus-AP allocation/expiry, and explicit replacements or refunds for old economy talents. Cover the core of COM-01 and PRO-05.
 - [ ] **09 — Hull station rosters and staffing contracts.** Define additional positions, staffing/ownership, basic-action spending, restricted-use sharing, and small-ship tradeoffs. Finish COM-01's hull policy and the hull-identity portion of PRO-07; establish the counts later used by CRW-02.
@@ -196,3 +196,14 @@ After answers, record the implementation branch, commit, focused tests, full-sui
 - Current change is planning/documentation only. No gameplay fix is marked implemented by creating this checklist.
 - Inspect the actual local and remote state before each implementation step. Prefer focused code commits/PRs over accumulating the whole release in one unreviewable change. Record the chosen branch/base at that step; do not merge or promote releases implicitly.
 - Keep this file's current step, decision log, result evidence, and next step updated so a later session can continue without reconstructing the conversation.
+
+
+## 16–17 October 2026 — Mock approval and implementation record
+
+The user's later decisions supersede the earlier threshold-crossing proposal above. They approved the six bands, five ship-owned saves influenced by Hull/Arkengine, twelve negative conditions for each system, and a save only when further actual system damage occurs at/below 50%. A system saves at most once per round. No new damage, an additional modifier, or acquisition of a fault causes no extra save. They chose “Patch mounts” in the mock and explicitly said “I like it program it to do this please.” That authorizes this bounded implementation without another question gate.
+
+Implemented Ready-only fresh enemy generation; schema v10 with Drive/Arkengine integrity and persistent faults/save marks; sixty faults with actual stat/check/reload effects; automatic native shot, salvo and Event save integration; named Emergency Repair; Shipwright integrity/fault work orders; below-10% operations; five-system status and explicit GM damage controls. Existing ships retain actual damage, and Strain remains separate. Emergency Repair still uses the existing shared AP runtime; one AP per station remains Step 08.
+
+First-pass defaults: DC 14 + Ship Bonus, Hull/Arkengine component contributions, supported upgrade effects, binary saves with natural 1/20, duplicate d12 rerolls, one selected fault per emergency repair, and bounded fault modifiers. These values are documented as implementation defaults rather than earlier user-selected numbers. See `docs/FIVE-SYSTEM-DAMAGE-AND-REPAIR.md` for the full contract and Foundry acceptance procedure.
+
+Automated validation: all 657 Node tests pass, including 21 new regressions covering five-system rules, all sixty fault effects, damage adapters, repair, fresh generation, and Undo; changed JavaScript passes syntax checks and `git diff --check` passes. Live Foundry rendering, PF2e-world compatibility, multiple-client play and balance remain pending. Do not mark the remaining GM-01/COM/PRO review areas or the 1.0 release complete from this substep.

@@ -5,17 +5,19 @@ export const LIFEVEIL = Object.freeze({
   protectsEnvironment: true,
   magicalShielding: true,
   temporaryHitPoints: false,
-  offlineAtZero: true,
+  offlineBelowPercent: 10,
   standardAbilityCostPercent: 5,
   degradationLossPercent: 25
 });
 
 export const LIFEVEIL_BANDS = Object.freeze([
-  Object.freeze({ minimum: 76, id: "stable", label: "Stable" }),
-  Object.freeze({ minimum: 51, id: "degraded", label: "Degraded" }),
-  Object.freeze({ minimum: 1, id: "critical", label: "Critical" }),
-  Object.freeze({ minimum: 0, id: "collapsed", label: "Collapsed" })
-]);
+  { minimum: 100, id: "stable", label: "Stable" },
+  { minimum: 75, id: "weakened", label: "Weakened" },
+  { minimum: 50, id: "fraying", label: "Fraying" },
+  { minimum: 25, id: "unstable", label: "Unstable" },
+  { minimum: 10, id: "critical", label: "Critical" },
+  { minimum: 0, id: "collapsed", label: "Collapsed" }
+].map(Object.freeze));
 
 export const LIFEVEIL_RECOVERY_DEGREES = Object.freeze({
   CRITICAL_SUCCESS: "criticalSuccess",
@@ -34,14 +36,14 @@ export const LIFEVEIL_RECOVERY = Object.freeze({
 });
 
 function clampLifeveil(value) {
-  const n = Math.round(Number(value) || 0);
+  const n = Number(value) || 0;
   return Math.max(LIFEVEIL.minimum, Math.min(LIFEVEIL.maximum, n));
 }
 
 export function lifeveilState(value) {
   const percent = clampLifeveil(value);
   const band = LIFEVEIL_BANDS.find((entry) => percent >= entry.minimum) ?? LIFEVEIL_BANDS.at(-1);
-  return Object.freeze({ value: percent, percent, band: band.id, label: band.label, online: percent > 0 });
+  return Object.freeze({ value: percent, percent, band: band.id, label: band.label, online: percent >= 10 });
 }
 
 export function changeLifeveil(current, deltaPercent) {
@@ -56,7 +58,7 @@ export function degradeLifeveil(current, steps = 1) {
 export function lifeveilOperationalState(ship) {
   const value = clampLifeveil(ship?.resources?.lifeveil?.value ?? 0);
   const state = lifeveilState(value);
-  if (value > 0) {
+  if (value >= 10) {
     return Object.freeze({
       id: "online",
       label: "Online",
@@ -71,7 +73,7 @@ export function lifeveilOperationalState(ship) {
     id: "offline",
     label: "Offline",
     lifeveilState: state.band,
-    lifeveilPercent: 0,
+    lifeveilPercent: value,
     environmentalEnvelopeAvailable: false,
     magicalShieldingAvailable: false,
     exposureRequired: true

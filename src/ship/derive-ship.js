@@ -1,3 +1,4 @@
+import { systemFaultModifiers, systemIntegrity } from "./system-damage.js";
 import { driveConditionPenalties, effectiveHullHardness, weaponConditionModifiers } from "./ship-conditions.js";
 import { applyTalentProgression, clampShipLevel, progressionView, shipDefenseProgressionBonus } from "./progression.js";
 import { resolveInstalledModTalentSynergies } from "./mod-talent-synergy.js";
@@ -118,6 +119,15 @@ export function deriveShip(ship, catalogs = {}) {
   normalizedStats.maneuverability = Math.max(0, Number(normalizedStats.maneuverability ?? 0) - drive.maneuverPenalty);
   normalizedStats.weaponAttackBonus = Number(normalizedStats.weaponAttackBonus ?? 0) - weaponsCondition.attackPenalty;
 
+  const faults = systemFaultModifiers(ship);
+  for (const [key, amount] of Object.entries(faults.stats)) {
+    normalizedStats[key] = Number(normalizedStats[key] ?? 0) + amount;
+  }
+  normalizedStats.stationBonuses ??= {};
+  for (const [station, amount] of Object.entries(faults.stations)) normalizedStats.stationBonuses[station] = Number(normalizedStats.stationBonuses[station] ?? 0) + amount;
+  for (const key of ["hardness", "combatSpeed", "maneuverability", "strainCapacity"]) normalizedStats[key] = Math.max(0, normalizedStats[key]);
+  if (["hull", "drive", "arkengine"].some(key => systemIntegrity(ship, key).terminal && (key !== "hull" || systemIntegrity(ship, key).max > 0))) normalizedStats.combatSpeed = 0;
+
   const frozenStationCapabilities = Object.fromEntries(Object.entries(stationCapabilities).map(([station, values]) => [station, Object.freeze({ masteries: Object.freeze([...values.masteries]), combatActions: Object.freeze([...values.combatActions]), passiveEffects: Object.freeze([...values.passiveEffects]) })]));
   const progression = progressionView(ship);
   return Object.freeze({
@@ -133,10 +143,12 @@ export function deriveShip(ship, catalogs = {}) {
 export function syncResourceMaxima(ship, derived) {
   const hullValue = ship.resources?.hull?.value;
   const supplyMax = Math.max(0, Number(derived.stats?.cargoCapacity ?? 0) * 10);
-  const clampPercent = (value, fallback) => Math.max(0, Math.min(100, Math.round(Number(value ?? fallback) || 0)));
+  const clampPercent = (value, fallback) => Math.max(0, Math.min(100, Number(value ?? fallback) || 0));
   return { ...ship, resources: { ...ship.resources,
     hull: { value: Math.min(hullValue ?? derived.stats.hullIntegrity, derived.stats.hullIntegrity), max: derived.stats.hullIntegrity },
     lifeveil: { value: clampPercent(ship.resources?.lifeveil?.value, 100), max: 100 },
+    drive: { value: clampPercent(ship.resources?.drive?.value, 100), max: 100 },
+    arkengine: { value: clampPercent(ship.resources?.arkengine?.value, 100), max: 100 },
     strain: { value: Math.min(ship.resources.strain.value, derived.stats.strainCapacity), max: derived.stats.strainCapacity },
     morale: { value: clampPercent(ship.resources?.morale?.value, 60), max: 100 },
     supplies: { value: Math.max(0, Number(ship.resources.supplies?.value ?? 0)), max: supplyMax }

@@ -29,6 +29,8 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { validateShip } from "../ship/validate-ship.js";
 
+import { systemOperationBlock } from "../ship/system-damage.js";
+
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const TURN_START_SNAPSHOTS = new Map();
@@ -354,6 +356,8 @@ function helmControlState(combatant) {
 async function helmMove(direction, reference = null) {
   const combatant = await requireOwnedCombatant(reference);
   if (game.combat?.combatant?.id !== combatant.id) throw new Error("Only the active Arkflight ship may use Helm movement.");
+  const blocked = systemOperationBlock(shipPayload(combatant.actor), "move");
+  if (blocked) throw new Error(blocked);
   if (game.arkflight?.combatEngagement?.isMoored?.(combatant)) {
     throw new Error(`${combatant.name} is Moored. Use Break Grapple first.`);
   }
@@ -469,6 +473,8 @@ const DEGREE_LABEL = Object.freeze({ "-1": "Critical Failure", 0: "Failure", 1: 
 
 async function fireAtTarget(weaponKey, targetReference, attackerReference = null) {
   const attacker = await requireOwnedCombatant(attackerReference);
+  const blocked = systemOperationBlock(shipPayload(attacker.actor), "fire");
+  if (blocked) throw new Error(blocked);
   const target = findCombatant(targetReference);
   if (!target) throw new Error("Choose a target ship in the current combat.");
   const solution = targetSolution(attacker, target, weaponKey);
@@ -857,6 +863,8 @@ Hooks.once("ready", () => {
     },
     async buyMovement(reference = null) {
       const combatant = await requireOwnedCombatant(reference);
+      const blocked = systemOperationBlock(shipPayload(combatant.actor), "move");
+      if (blocked) throw new Error(blocked);
       return updateCombatantState(combatant, purchaseMovement(combatantState(combatant)));
     },
     async buyManeuver(reference = null) {
@@ -886,6 +894,8 @@ Hooks.once("ready", () => {
     async fireWeapon(weaponKey, reference = null) {
       const combatant = await requireOwnedCombatant(reference);
       const state = combatantState(combatant);
+      const blocked = systemOperationBlock(shipPayload(combatant.actor), "fire");
+      if (blocked) throw new Error(blocked);
       const next = fireWeapon(commitFacing(state, state?.mobility?.heading, "fire"), weaponKey, game.combat?.round ?? 1);
       return updateCombatantState(combatant, next);
     },

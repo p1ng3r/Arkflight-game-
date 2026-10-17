@@ -69,7 +69,8 @@
     "styles/shipwright-scroll-popup-polish.css",
     "styles/voyage-abandon.css",
     "styles/refit-alpha-unified.css",
-    "styles/event-board-navy-bars-fix.css"
+    "styles/event-board-navy-bars-fix.css",
+    "styles/system-damage.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -88,6 +89,7 @@
     "src/foundry/refit-diagnostics.js",
     "src/foundry/ship-facing-snap.js",
     "src/foundry/combat-api.js",
+    "src/foundry/system-damage-api.js",
     "src/foundry/combat-loadout-sync.js",
     "src/foundry/combat-station-actions-api.js",
     "src/foundry/combat-engagement-api.js",

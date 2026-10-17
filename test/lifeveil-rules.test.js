@@ -22,24 +22,24 @@ test("Lifeveil is a 0-100 environmental envelope, not temporary HP", () => {
   assert.equal(LIFEVEIL.temporaryHitPoints, false);
 });
 
-test("Lifeveil bands are Stable, Degraded, Critical, and Collapsed", () => {
+test("Lifeveil follows the six agreed integrity bands", () => {
   assert.equal(lifeveilState(100).label, "Stable");
-  assert.equal(lifeveilState(76).label, "Stable");
-  assert.equal(lifeveilState(75).label, "Degraded");
-  assert.equal(lifeveilState(51).label, "Degraded");
-  assert.equal(lifeveilState(50).label, "Critical");
-  assert.equal(lifeveilState(1).label, "Critical");
+  assert.equal(lifeveilState(76).label, "Weakened");
+  assert.equal(lifeveilState(75).label, "Weakened");
+  assert.equal(lifeveilState(51).label, "Fraying");
+  assert.equal(lifeveilState(50).label, "Fraying");
+  assert.equal(lifeveilState(1).label, "Collapsed");
   assert.equal(lifeveilState(0).label, "Collapsed");
 });
 
-test("zero Lifeveil is offline and requires environmental exposure handling", () => {
+test("Lifeveil below ten percent is offline and requires environmental exposure handling", () => {
   const offline = lifeveilOperationalState({ resources: { lifeveil: { value: 0, max: 100 } } });
   assert.equal(offline.id, "offline");
   assert.equal(offline.environmentalEnvelopeAvailable, false);
   assert.equal(offline.magicalShieldingAvailable, false);
   assert.equal(offline.exposureRequired, true);
 
-  const online = lifeveilOperationalState({ resources: { lifeveil: { value: 1, max: 100 } } });
+  const online = lifeveilOperationalState({ resources: { lifeveil: { value: 10, max: 100 } } });
   assert.equal(online.id, "online");
   assert.equal(online.exposureRequired, false);
 });

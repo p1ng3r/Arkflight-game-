@@ -1,3 +1,5 @@
+import { activeSystemFaults, systemIntegrity } from "../ship/system-damage.js";
+import { faultDescription } from "../content/system-faults.js";
 import { lifeveilCondition, moraleCondition, shipConditionProfile } from "../ship/ship-conditions.js";
 import { SHIP_ABILITIES } from "../content/station-abilities.js";
 import { normalizeAbilityLoadouts } from "../ship/ability-loadouts.js";
@@ -6,9 +8,9 @@ const MODULE_ID = "arkflight-game";
 const OPEN_TABS = new Map();
 const STATIONS = Object.freeze([
   ["captain", "Captain", "fa-solid fa-compass", "morale"],
-  ["battlewatch", "Battlewatch", "fa-solid fa-crosshairs", "weapons"],
+  ["battlewatch", "Battlewatch", "fa-solid fa-crosshairs", "hull"],
   ["navigator", "Navigator", "fa-solid fa-route", "drive"],
-  ["engineer", "Engineer", "fa-solid fa-gears", "drive"],
+  ["engineer", "Engineer", "fa-solid fa-gears", "arkengine"],
   ["veilwarden", "Veilwarden", "fa-solid fa-shield-halved", "lifeveil"]
   , ["reactions", "Shared Reactions", "fa-solid fa-bolt", "hull"]
   , ["common", "Basic Ship Controls", "fa-solid fa-ship", "hull"]
@@ -36,6 +38,10 @@ function stationConditionText(ship, system) {
   if (system === "morale") {
     const condition = moraleCondition(ship?.resources?.morale?.value ?? 0);
     return `Morale: ${condition.label} (${condition.value}%)`;
+  }
+  if (["hull", "drive", "arkengine"].includes(system)) {
+    const integrity = systemIntegrity(ship, system);
+    return `${titleCase(system)}: ${integrity.label} (${Math.round(integrity.percent)}%)`;
   }
   const condition = shipConditionProfile(ship, system);
   if (system === "weapons") {
@@ -71,7 +77,7 @@ function choiceOptions(action, api, combatant, actor) {
   }
   if (Array.isArray(rules.choices)) return rules.choices.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseSystem) {
-    return ["hull", "drive", "weapons", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
+    return [...activeSystemFaults(shipFlag(actor)).map(f => ({ value: `fault:${f.id}`, label: `Patch ${f.name} (${faultDescription(f)})` })), ...["hull", "drive", "weapons", "lifeveil"].map((value) => ({ value, label: titleCase(value) }))];
   }
   if (Array.isArray(rules.chooseFacing)) return rules.chooseFacing.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseFacing) return ["fore", "port", "starboard", "aft"].map((value) => ({ value, label: titleCase(value) }));
@@ -104,6 +110,11 @@ function unavailableLabel(reason) {
     "not-this-ships-turn": "Wait for Turn",
     "insufficient-ap": "Not Enough AP",
     "insufficient-rp": "Not Enough RP",
+    "hull-wrecked": "Hull Wrecked",
+    "drive-disabled": "Drive Disabled",
+    "arkengine-disabled": "Arkengine Disabled",
+    "lifeveil-collapsed": "Lifeveil Collapsed",
+    "morale-broken": "Morale Broken",
     "insufficient-morale": "Not Enough Morale",
     "crew-unassigned": "Assign Crew",
     "not-assigned-crew": "Assigned Crew Only",

@@ -1,5 +1,6 @@
 import { SHIP_ABILITIES } from "../content/station-abilities.js";
 import { normalizeAbilityLoadouts, abilityEquipped } from "../ship/ability-loadouts.js";
+import { isFaultRepairSelection, repairSystemFault, systemFaultModifiers, systemOperationBlock } from "../ship/system-damage.js";
 import { improveShipCondition } from "../ship/ship-conditions.js";
 import { applyFreeHelmAllowance } from "./helm-rules.js";
 import { degreeOfSuccess } from "./check-resolution.js";
@@ -15,6 +16,8 @@ export function abilityAvailability(ship, state, id, round = 1, { push = false }
   const a = SHIP_ABILITIES[id];
   if (!a || !state) return { ok: false, reason: "combatant-required" };
   if (!abilityEquipped(ship, id)) return { ok: false, reason: "ability-not-equipped" };
+  const blocked = systemOperationBlock(ship, a);
+  if (blocked) return { ok: false, reason: blocked };
   const rt = initialRuntime(state);
   if (a.tier === "signature" && rt.battleUsed[id]) return { ok: false, reason: "once-per-battle" };
   if (Number(rt.readyRounds[id] ?? 0) > round) return { ok: false, reason: "cooldown", readyRound: rt.readyRounds[id] };
@@ -30,14 +33,16 @@ export function abilityAvailability(ship, state, id, round = 1, { push = false }
   return { ok: true, reason: null };
 }
 
-export function abilityRollModifiers(state, station, level, { push = false } = {}) {
+export function abilityRollModifiers(state, station, level, { push = false, ship = null } = {}) {
+  const faults = systemFaultModifiers(ship);
+  const faultPenalty = (faults.stations[station] ?? 0) + (faults.stats.allStationBonus ?? 0);
   const effects = state.stationRuntime?.effects ?? [];
   const orders = effects.filter(e => e.actionId === "captain-issue-order" && e.selection === station);
   const bonus = Math.max(0, ...orders.map(e => Number(e.attackBonus ?? shipAbilityBonus(e.shipLevel ?? level))));
   const penalty = Math.min(0, ...orders.map(e => Number(e.attackBonus ?? 0)));
   const echoes = effects.filter(e => e.abilityEcho && e.station === station);
   const high = echoes.some(e => e.abilityEcho === "higher"), low = echoes.some(e => e.abilityEcho === "lower");
-  return { modifier: shipAbilityBonus(level) + bonus + penalty + (push ? 2 : 0), rollTwice: high === low ? null : high ? "higher" : "lower", consumed: [...orders, ...echoes].map(e => e.id) };
+  return { modifier: shipAbilityBonus(level) + bonus + penalty + faultPenalty + (push ? 2 : 0), rollTwice: high === low ? null : high ? "higher" : "lower", consumed: [...orders, ...echoes].map(e => e.id) };
 }
 
 export function abilityDegree(die, modifier, level) {
@@ -105,6 +110,7 @@ export function resolveShipAbility({ ship: inputShip, state: inputState, id, deg
   if (targetRequired && !selection) throw new Error("Choose a target.");
   if (a.rules.chooseFacing && !(Array.isArray(a.rules.chooseFacing) ? a.rules.chooseFacing : ["fore", "port", "starboard", "aft"]).includes(selection)) throw new Error("Choose a legal facing.");
   if (a.rules.chooseStation && (!Object.keys(ship.abilities.equipped).includes(selection) || ["captain", "reactions"].includes(selection))) throw new Error("Choose another station.");
+  if (a.rules.chooseSystem && !["hull", "drive", "weapons", "lifeveil"].includes(selection) && !isFaultRepairSelection(ship, selection)) throw new Error("Choose an active fault or legal repair system.");
   state.economy.ap.value -= a.cost.ap;
   state.economy.rp.value -= a.cost.rp;
   if (a.rules.supplies) change("supplies", -a.rules.supplies, false);
@@ -175,8 +181,11 @@ export function resolveShipAbility({ ship: inputShip, state: inputState, id, deg
       if (critical || bad) effect(id, { station: "veilwarden", abilityEcho: critical ? "higher" : "lower" }, 1, false); break;
     }
     case "engineer-emergency-repair": {
-      if (!["hull", "drive", "weapons", "lifeveil"].includes(selection)) throw new Error("Choose a repair system.");
       if (bad) { change("supplies", -1); break; }
+      if (isFaultRepairSelection(ship, selection)) {
+        const repaired = repairSystemFault(ship, selection.slice(6));
+        ship = repaired.ship; notes.push(`Cleared ${repaired.fault.name}; integrity unchanged`); break;
+      }
       const baseSteps = level >= 15 ? 2 : 1;
       if (selection === "lifeveil") {
         if (recoveryDice.length !== 2 || recoveryDice.some(d => d < 1 || d > 10)) throw new Error("Emergency Repair requires two d10 results.");

@@ -44,8 +44,8 @@ const reactions = [
 ].map(([id, originStation, name, resolver, trigger, description]) => make(id, "reactions", name, "regular", description,
   reactionOutcomes[id],
   { resolver, trigger, originStation }, id === "veilwarden-emergency-ward" ? { lifeveil: 5 } : id === "navigator-evasive-maneuver" ? { strain: 1 } : {}));
-const repair = make("engineer-emergency-repair", "common", "Emergency Repair", "signature", "Shared ship Signature: 1 AP and 2 Supplies; improve one condition step or roll 2d10 +5 Lifeveil recovery; doubled recovery from level 15.",
-  ["One extra repair step or +5 Lifeveil recovery", "Normal recovery", "One step repair; half Lifeveil recovery", "No recovery; lose 1 additional Supply"],
+const repair = make("engineer-emergency-repair", "common", "Emergency Repair", "signature", "Shared ship Signature: 1 AP and 2 Supplies; clear one selected system fault without healing integrity, improve one legacy condition step, or roll 2d10 +5 Lifeveil recovery; doubled recovery from level 15.",
+  ["Clear one selected fault; otherwise one extra legacy repair step or +5 Lifeveil recovery", "Clear one selected fault or normal recovery", "Clear one selected fault; otherwise one legacy step or half Lifeveil recovery", "No recovery; lose 1 additional Supply"],
   { resolver: "emergencyRepair", chooseSystem: true, originStation: "engineer", recoveryDie: 10 }, { supplies: 2 });
 export const SHIP_ABILITIES = Object.freeze(Object.fromEntries([...A, ...reactions, repair].map(a => [a.id, a])));
 export const STARTER_STATION_ABILITIES = Object.freeze(Object.fromEntries(["captain", "engineer", "navigator", "battlewatch", "veilwarden"].map(s => [s, Object.freeze(A.filter(a => a.station === s).map(a => a.id))])));

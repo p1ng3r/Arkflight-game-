@@ -5,6 +5,7 @@ import { SHIP_ABILITIES } from "../content/station-abilities.js";
 import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
 import { applyAbilityStrainGuards, applyAbilityLossGuards, abilityAvailability } from "../combat/ship-ability-rules.js";
 import { abilityEquipped, normalizeAbilityLoadouts, equipShipAbilities, learnShipAbility } from "../ship/ability-loadouts.js";
+import { systemOperationBlock } from "../ship/system-damage.js";
 import { executeFoundryShipAbility, runShipCommand } from "./ship-ability-runtime.js";
 import {
   COMBAT_ACTION_TIMING,
@@ -253,6 +254,8 @@ function runtimeAvailability(base, actionId, reference = null) {
   }
   if (action.rules?.requiresMoored && !game.arkflight?.combatEngagement?.isMoored?.(combatant)) return { ok: false, reason: "requires-grapple" };
   if (action.rules?.ability) return abilityAvailability(shipPayload(combatant.actor), base.state(combatant), actionId, game.combat?.round ?? 1);
+  const blocked = systemOperationBlock(shipPayload(combatant.actor), action);
+  if (blocked) return { ok: false, reason: blocked };
   const stateAvailability = stationActionAvailability(base.state(combatant), action, { round: game.combat?.round ?? 1, shipLevel: shipLevel(combatant.actor) });
   if (!stateAvailability.ok) return stateAvailability;
   return persistentCostAvailability(combatant.actor, action);
@@ -286,6 +289,8 @@ async function executeStationActionUnlocked(base, actionId, options = {}, refere
   if (action.rules?.ability) return executeFoundryShipAbility(base, combatant, actionId, options, crewActor, requesterUserId);
   if (action.rules?.retired) throw new Error("Weapons reload automatically; use Work the Guns to reduce their timer.");
 
+  const blocked = systemOperationBlock(shipPayload(combatant.actor), action);
+  if (blocked) throw new Error(blocked);
   const resolver = action.rules?.resolver;
   let engagementTarget = null;
   if (ENGAGEMENT_RESOLVERS.has(resolver)) {

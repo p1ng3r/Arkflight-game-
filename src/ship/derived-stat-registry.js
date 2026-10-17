@@ -15,6 +15,8 @@ function stat(path, { label, category, presentation = DERIVED_STAT_PRESENTATION.
 }
 
 export const DERIVED_STAT_REGISTRY = Object.freeze({
+  systemSaveBonuses: stat("systemSaveBonuses", { label: "System Save Bonuses", category: "defense", kind: DERIVED_STAT_KINDS.STRUCTURED, defaultValue: Object.freeze({ hull: 0, drive: 0, arkengine: 0, lifeveil: 0, morale: 0 }), effectTarget: false }),
+  ...Object.fromEntries(["hull", "drive", "arkengine", "lifeveil", "morale"].map(key => [`systemSaveBonuses.${key}`, stat(`systemSaveBonuses.${key}`, { label: `${key} save bonus`, category: "defense" })])),
   armorClass: stat("armorClass", { label: "Armor Class", category: "defense", presentation: "primary" }),
   hardness: stat("hardness", { label: "Hardness", category: "defense", presentation: "operational", min: 0 }),
   hullIntegrity: stat("hullIntegrity", { label: "Hull Integrity", category: "survival", presentation: "primary", min: 0 }),

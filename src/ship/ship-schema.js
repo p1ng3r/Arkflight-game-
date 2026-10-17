@@ -1,6 +1,7 @@
 import { normalizeShipConditions } from "./ship-conditions.js";
 import { normalizeAbilityLoadouts } from "./ability-loadouts.js";
-export const SHIP_SCHEMA_VERSION = 9;
+import { normalizeSystemDamage } from "./system-damage.js";
+export const SHIP_SCHEMA_VERSION = 10;
 
 export const STATION_KEYS = Object.freeze([
   "captain",
@@ -16,14 +17,14 @@ function resource(value = 0, max = 0) { return { value, max }; }
 function clampPercent(value) {
   const n = Number(value);
   if (!Number.isFinite(n)) return 0;
-  return Math.max(0, Math.min(100, Math.round(n)));
+  return Math.max(0, Math.min(100, n));
 }
 function normalizePercentageResource(source, defaultValue = 0) {
   if (!source || typeof source !== "object") return resource(clampPercent(defaultValue), 100);
   const value = Number(source.value ?? defaultValue);
   const max = Number(source.max ?? 100);
   if (Number.isFinite(max) && max > 0 && max !== 100) {
-    return resource(clampPercent((value / max) * 100), 100);
+    return resource(clampPercent(Math.round((value / max) * 100)), 100);
   }
   return resource(clampPercent(value), 100);
 }
@@ -99,6 +100,8 @@ function normalizeRewardState(rewards = {}) {
 function normalizeResources(resources = {}) {
   return {
     hull: { ...resource(), ...(resources.hull ?? {}) },
+    drive: normalizePercentageResource(resources.drive, 100),
+    arkengine: normalizePercentageResource(resources.arkengine, 100),
     lifeveil: normalizePercentageResource(resources.lifeveil, 100),
     strain: { ...resource(), ...(resources.strain ?? {}) },
     supplies: { ...resource(), ...(resources.supplies ?? {}) },
@@ -135,6 +138,7 @@ export function normalizeShip(ship = {}) {
     schemaVersion: SHIP_SCHEMA_VERSION,
     crew: { ...(ship.crew ?? {}), stations: migrateStations(ship.crew?.stations), specialists: [...(ship.crew?.specialists ?? [])] },
     resources: normalizeResources(ship.resources),
+    systemDamage: normalizeSystemDamage(ship.systemDamage),
     blueprints: normalizeBlueprints(ship.blueprints),
     inventory: normalizeInventory(ship.inventory),
     refit: normalizeRefit(ship.refit),

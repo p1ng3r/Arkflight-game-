@@ -19,6 +19,10 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { resolveShipStrainGain } from "./ship-strain-runtime.js";
 
+import { systemOperationBlock } from "../ship/system-damage.js";
+import { resolveSystemDamageSaves, reportSystemSaves } from "./system-damage-runtime.js";
+import { runShipCommand } from "./ship-ability-runtime.js";
+
 const MODULE_ID = "arkflight-game";
 const STATE_PATH = `flags.${MODULE_ID}.combatState`;
 const COMBAT_SOCKET = `module.${MODULE_ID}`;
@@ -128,7 +132,7 @@ function wardableDamage(type, systemThreat) {
 }
 
 function lifeveilOnline(actor) {
-  return Math.max(0, Number(shipPayload(actor)?.resources?.lifeveil?.value) || 0) > 0;
+  return Math.max(0, Number(shipPayload(actor)?.resources?.lifeveil?.value) || 0) >= 10;
 }
 
 function focusWardMatches(effect, type, systemThreat) {
@@ -143,6 +147,8 @@ async function enhancedFireAtTarget(base, weaponKey, targetReference, attackerRe
   const target = resolveCombatant(base, targetReference);
   if (!attacker || !target) throw new Error("Choose attacker and target Arkflight ship combatants.");
 
+  const blocked = systemOperationBlock(shipPayload(attacker.actor), "fire");
+  if (blocked) throw new Error(blocked);
   const requester = game.users?.get?.(requesterUserId) ?? game.user;
   const battlewatch = battlewatchActor(attacker.actor);
   if (!requester?.isGM) {
@@ -410,6 +416,9 @@ function appliedDamageAmount(baseDamage, mode) {
 
 function damageConsequenceSnapshot(ship) {
   return Object.freeze({
+    drive: structuredClone(ship?.resources?.drive ?? null),
+    arkengine: structuredClone(ship?.resources?.arkengine ?? null),
+    systemDamage: structuredClone(ship?.systemDamage ?? { version: 1, faults: [], checks: {}, history: [] }),
     hull: structuredClone(ship?.resources?.hull ?? null),
     lifeveil: structuredClone(ship?.resources?.lifeveil ?? null),
     morale: structuredClone(ship?.resources?.morale ?? null),
@@ -452,7 +461,13 @@ async function resolveDeferredDamageConsequences(ship, flag, amount, actor = nul
   return Object.freeze({ ship: next, state, notes: Object.freeze(notes) });
 }
 
-async function applyShipDamageMessage(message, mode = "apply") {
+export async function applyShipDamageMessage(message, mode = "apply") {
+  const flag = message?.flags?.[MODULE_ID]?.shipDamage;
+  const actor = flag && damageTargetFromFlag(flag).actor;
+  return runShipCommand(actor?.uuid ?? actor?.id ?? message.id, () => applyShipDamageMessageNow(message, mode));
+}
+
+async function applyShipDamageMessageNow(message, mode = "apply") {
   const flag = message?.flags?.[MODULE_ID]?.shipDamage ?? null;
   if (!flag) return;
   const { combatant, actor } = damageTargetFromFlag(flag);
@@ -473,6 +488,8 @@ async function applyShipDamageMessage(message, mode = "apply") {
   let consequence = await resolveDeferredDamageConsequences(ship, flag, amount, actor, guardState);
   const guarded = guardState ? applyAbilityLossGuards(ship, consequence.ship, consequence.state ?? guardState) : null;
   if (guarded) consequence = { ...consequence, ship: guarded.ship };
+  const systemResult = await resolveSystemDamageSaves(ship, consequence.ship, { systems: ["hull"] });
+  consequence = { ...consequence, ship: systemResult.ship };
   const afterSnapshot = damageConsequenceSnapshot(consequence.ship);
   const afterHull = Math.max(0, Number(consequence.ship.resources?.hull?.value) || 0);
 
@@ -490,6 +507,7 @@ async function applyShipDamageMessage(message, mode = "apply") {
     [`flags.${MODULE_ID}.ship.resources.morale`]: consequence.ship.resources?.morale ?? ship.resources?.morale,
     [`flags.${MODULE_ID}.ship.resources.strain`]: consequence.ship.resources?.strain ?? ship.resources?.strain,
     [`flags.${MODULE_ID}.ship.shipConditions`]: consequence.ship.shipConditions ?? ship.shipConditions,
+    [`flags.${MODULE_ID}.ship.systemDamage`]: consequence.ship.systemDamage,
     [`flags.${MODULE_ID}.chatDamageApplications.${message.id}`]: {
       beforeHull,
       afterHull,
@@ -505,13 +523,20 @@ async function applyShipDamageMessage(message, mode = "apply") {
     }
   });
 
+  await reportSystemSaves(systemResult, actor);
   const damage = Object.freeze({ hullDamage: amount, before: beforeHull, after: afterHull });
   Hooks.callAll("arkflightChatDamageApplied", { message, combatant, actor, amount, mode, beforeHull, afterHull, degree: Number(flag.degree ?? 0), systemThreat: flag.systemThreat ?? "hull", notes: consequence.notes });
   Hooks.callAll("arkflightShipDamageStateChanged", { actor, target: combatant, degree: Number(flag.degree ?? 0), damage, notes: consequence.notes, chatDamage: true });
   ui.notifications?.info?.(`${actor.name}: ${amount} Hull damage applied (${beforeHull} → ${afterHull}).`);
 }
 
-async function undoShipDamageMessage(message) {
+export async function undoShipDamageMessage(message) {
+  const flag = message?.flags?.[MODULE_ID]?.shipDamage;
+  const actor = flag && damageTargetFromFlag(flag).actor;
+  return runShipCommand(actor?.uuid ?? actor?.id ?? message.id, () => undoShipDamageMessageNow(message));
+}
+
+async function undoShipDamageMessageNow(message) {
   const flag = message?.flags?.[MODULE_ID]?.shipDamage ?? null;
   if (!flag) return;
   const { combatant, actor } = damageTargetFromFlag(flag);
@@ -528,7 +553,9 @@ async function undoShipDamageMessage(message) {
   }
 
   const currentState = game.arkflight?.combat?.state?.(combatant) ?? null;
-  const restoredState = restoreConsumedEffects(currentState, record.effectSnapshots ?? []);
+  const restoredShip = { ...currentShip, systemDamage: record.beforeSnapshot.systemDamage ?? { version: 1, faults: [], checks: {}, history: [] }, shipConditions: record.beforeSnapshot.shipConditions, resources: { ...currentShip.resources, ...Object.fromEntries(["hull", "lifeveil", "morale", "strain"].map(key => [key, record.beforeSnapshot[key]])) } };
+  const effectsRestored = restoreConsumedEffects(currentState, record.effectSnapshots ?? []);
+  const restoredState = effectsRestored && reconcileCombatantState(restoredShip, effectsRestored, { derived: deriveShip(restoredShip, SHIP_CATALOGS), catalogs: SHIP_CATALOGS, rotation: effectsRestored.mobility.heading });
   if (restoredState && restoredState !== currentState) await combatant.update({ [STATE_PATH]: restoredState });
 
   const beforeSnapshot = record.beforeSnapshot;
@@ -538,6 +565,7 @@ async function undoShipDamageMessage(message) {
     [`flags.${MODULE_ID}.ship.resources.morale`]: beforeSnapshot?.morale,
     [`flags.${MODULE_ID}.ship.resources.strain`]: beforeSnapshot?.strain,
     [`flags.${MODULE_ID}.ship.shipConditions`]: beforeSnapshot?.shipConditions,
+    [`flags.${MODULE_ID}.ship.systemDamage`]: beforeSnapshot?.systemDamage ?? { version: 1, faults: [], checks: {}, history: [] },
     [`flags.${MODULE_ID}.chatDamageApplications.-=${message.id}`]: null
   });
 

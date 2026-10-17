@@ -1,3 +1,4 @@
+import { isFaultRepairSelection } from "../ship/system-damage.js";
 import { SHIP_ABILITIES } from "../content/station-abilities.js";
 import { abilityRollModifiers, abilityDegree, abilityAvailability, resolveShipAbility, applyAbilityLossGuards, shipAbilityDC } from "../combat/ship-ability-rules.js";
 import { resolveShipStrainGain } from "./ship-strain-runtime.js";
@@ -23,7 +24,7 @@ export async function executeFoundryShipAbility(base, combatant, id, options = {
   if (!check.ok) throw new Error(`${action.name}: ${check.reason}`);
   let selection = options.selection ?? options.weaponKey ?? options.targetId ?? options.facing ?? options.system ?? options.station;
   if (action.rules.chooseTarget && !base.targets(combatant).some(t => t.id === selection)) throw new Error("Choose a legal target ship.");
-  if (action.rules.chooseSystem && !["hull", "drive", "weapons", "lifeveil"].includes(selection)) throw new Error("Choose a legal repair system.");
+  if (action.rules.chooseSystem && !["hull", "drive", "weapons", "lifeveil"].includes(selection) && !isFaultRepairSelection(source, selection)) throw new Error("Choose a legal repair system.");
   if (action.rules.chooseFacing && !(Array.isArray(action.rules.chooseFacing) ? action.rules.chooseFacing : ["fore", "port", "starboard", "aft"]).includes(selection)) throw new Error("Choose a legal facing.");
   if (action.rules.chooseStation && !source.crew?.stations?.[selection]) throw new Error("Assign the selected station first.");
   if (action.rules.resolver === "workTheGuns" && (!before.weapons?.[selection] || before.weapons[selection].reloadRemaining <= 0)) throw new Error("Choose a reloading weapon.");
@@ -34,7 +35,7 @@ export async function executeFoundryShipAbility(base, combatant, id, options = {
     if (!choices.length || choices.length > max || new Set(choices).size !== choices.length || choices.some(c => !action.rules.choices.includes(c))) throw new Error("Choose different eligible power routes.");
     selection = choices;
   }
-  const modifier = abilityRollModifiers(before, action.rules.originStation ?? action.station, level, options);
+  const modifier = abilityRollModifiers(before, action.rules.originStation ?? action.station, level, { ...options, ship: source });
   const expression = modifier.rollTwice ? modifier.rollTwice === "higher" ? "2d20kh" : "2d20kl" : "1d20";
   const roll = await new Roll(`${expression} + @bonus`, { bonus: modifier.modifier }).evaluate();
   const die = Number(roll.dice[0].total), degree = abilityDegree(die, modifier.modifier, level);

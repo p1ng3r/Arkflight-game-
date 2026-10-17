@@ -13,7 +13,7 @@ export const MORALE_RULES = Object.freeze({
 });
 
 function clampMorale(value) {
-  const n = Math.round(Number(value) || 0);
+  const n = Number(value) || 0;
   return Math.max(MORALE_RULES.minimum, Math.min(MORALE_RULES.maximum, n));
 }
 
@@ -31,7 +31,7 @@ export function moraleState(value) {
     }),
     inspiredStationBonus: morale === 100 ? MORALE_RULES.inspiredStationBonus : 0,
     inspiredUsesPerRound: morale === 100 ? MORALE_RULES.inspiredUsesPerRound : 0,
-    crewTacticsAvailable: morale > 0
+    crewTacticsAvailable: morale >= 10
   });
 }
 

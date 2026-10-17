@@ -32,7 +32,9 @@ export function shipAttackDefensePlan(state, level) {
 }
 
 export function shipDamageDefensePlan(state, level, solution, _actor) {
-  const effects = activeStationEffects(state);
+  const payload = _actor?.flags?.["arkflight-game"]?.ship;
+  const online = !payload || Number(payload.resources?.lifeveil?.value ?? 100) >= 10;
+  const effects = activeStationEffects(state).filter(e => online || !(e.station === "veilwarden" || e.actionId.startsWith("veilwarden-") || e.actionId === "engineer-redistribute-power" && e.selection === "lifeveil"));
   const type = solution.weapon.data?.damageProfile?.type ?? "damage", threat = solution.weapon.data?.systemThreat ?? "hull";
   const wardable = ["fire", "cold", "electricity", "acid", "sonic", "force"].includes(type) || threat === "lifeveil";
   const best = (candidates, valueFor) => candidates.reduce((r, e) => valueFor(e) > r.value ? { effect: e, value: valueFor(e) } : r, { effect: null, value: 0 });

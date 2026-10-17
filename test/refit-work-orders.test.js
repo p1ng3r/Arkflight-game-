@@ -125,6 +125,24 @@ test("repair uses the same persistent work order lifecycle", () => {
   assert.equal(completed.job.status, REFIT_JOB_STATES.COMPLETE);
 });
 
+test("Drive and Arkengine integrity repairs and individual faults use persistent work orders", () => {
+  for (const targetKey of ["drive", "arkengine", "hull:jolted-gun-mounts"]) {
+    const targetType = targetKey.includes(":") ? "fault" : "resource";
+    let ship = grantSalvageParts(createShip({ resources: { hull: { value: 94, max: 200 }, drive: { value: 30, max: 100 }, arkengine: { value: 40, max: 100 } }, systemDamage: { faults: ["hull:jolted-gun-mounts", "drive:torn-sails"] } }), 3);
+    const queued = queueRepairJob(ship, { componentFamily: `repair:${targetType}`, componentId: targetKey, durationHours: 4, craftingDC: 15, partsCost: 2, idFactory: ids });
+    ship = structuredClone(queued.ship);
+    ship.refit.workOrders.find(j => j.id === queued.job.id).result = { repair: { targetType, targetKey, restoreAmount: 10 } };
+    const completed = completeRefitJob(ship, queued.job.id, SHIP_CATALOGS);
+    assert.equal(completed.ok, true);
+    assert.equal(completed.job.result.repairApplied, true);
+    assert.equal(salvageParts(completed.ship), 1);
+    assert.equal(completed.ship.resources.hull.value, 94);
+    if (targetType === "fault") assert.deepEqual(completed.ship.systemDamage.faults, ["drive:torn-sails"]);
+    else assert.equal(completed.ship.resources[targetKey].value, targetKey === "drive" ? 40 : 50);
+    assert.equal(completeRefitJob(completed.ship, queued.job.id, SHIP_CATALOGS).ok, false);
+  }
+});
+
 test("shipyard jobs record labor gold but use the same work-order engine", () => {
   let ship = grantComponent(createShip(), "shipMod", "reinforced-structural-ribbing", 1);
   ship = grantSalvageParts(ship, 5);

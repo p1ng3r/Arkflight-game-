@@ -2,11 +2,11 @@
 
 Recorded: 15 October 2026 (America/New_York).
 
-Status: **Pillars 1–5 — Voyage / Events, Ship Combat, Ship Progression / Vessel Management, Crew / Faction / Expedition, and GM Build & Run — approved for the 1.0 update; implementation pending. By user direction on 16 October 2026, implement the approved systems first, then reassess UI, Interaction & Ship Sheet and present mockups for selection.**
+Status: **Pillars 1–5 — Voyage / Events, Ship Combat, Ship Progression / Vessel Management, Crew / Faction / Expedition, and GM Build & Run — approved for the 1.0 update; bounded implementation started. By user direction on 16 October 2026, implement the approved systems first, then reassess UI, Interaction & Ship Sheet and present mockups for selection.**
 
 This is the saved scope of the pillar-by-pillar review. Approval means the work belongs in the 1.0 update; it does not mean these fixes have shipped. This document does not publish a 1.0 release or change the module version.
 
-The [implementation checklist](ARKFLIGHT-1.0-IMPLEMENTATION-PLAN.md) orders the approved work into small steps, records current decisions, and requires exactly five focused programming questions before each step, as requested by the user on 16 October 2026. Its Step 01 questions are pending; creating the plan does not mark gameplay fixes implemented.
+The [implementation checklist](ARKFLIGHT-1.0-IMPLEMENTATION-PLAN.md) orders the approved work into small steps, records current decisions, and requires exactly five focused programming questions before each step, as requested by the user on 16 October 2026. Ready-only generation and the five-system damage/save/fault substep are now implemented on the development branch. See [implemented rules and validation](FIVE-SYSTEM-DAMAGE-AND-REPAIR.md). Live Foundry acceptance and the remaining work are pending.
 
 ## Review approach and design direction
 

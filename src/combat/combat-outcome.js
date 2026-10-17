@@ -5,13 +5,14 @@ function hullValue(ship) {
 /**
  * Resolve whether a ship can continue an Arkflight combat encounter.
  *
- * Hull 0 is the universal terminal state. Ship Conditions such as Unresponsive
+ * Hull below 10% is Wrecked; emergency recovery remains possible. Legacy conditions such as Unresponsive
  * Drive or Barely Operable Weapons create severe tactical problems but do not
  * automatically remove the vessel from combat.
  */
 export function shipCombatOutcome(ship) {
   if (!ship) return Object.freeze({ status: "invalid", terminal: true, reason: "missing-ship" });
-  if (hullValue(ship) <= 0) return Object.freeze({ status: "wrecked", terminal: true, reason: "hull-zero" });
+  const max = Number(ship?.resources?.hull?.max ?? 0);
+  if (hullValue(ship) <= 0 || max > 0 && hullValue(ship) / max < 0.1) return Object.freeze({ status: "wrecked", terminal: true, reason: hullValue(ship) <= 0 ? "hull-zero" : "hull-below-ten-percent" });
   return Object.freeze({ status: "active", terminal: false, reason: null });
 }
 

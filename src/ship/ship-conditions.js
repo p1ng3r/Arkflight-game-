@@ -1,3 +1,5 @@
+import { systemIntegrity, systemFaultModifiers } from "./system-damage.js";
+
 export const SHIP_CONDITION_SYSTEMS = Object.freeze(["hull", "drive", "weapons"]);
 
 export const SHIP_CONDITION_TRACKS = Object.freeze({
@@ -161,7 +163,7 @@ export function weaponConditionModifiers(ship) {
   const profile = shipConditionProfile(ship, "weapons");
   return Object.freeze({
     attackPenalty: Math.max(0, Number(profile.attackPenalty) || 0),
-    reloadPenalty: Math.max(0, Number(profile.reloadPenalty) || 0)
+    reloadPenalty: Math.max(0, Number(profile.reloadPenalty) || 0) + (systemFaultModifiers(ship).stats.reloadPenalty ?? 0)
   });
 }
 
@@ -173,21 +175,13 @@ export function wouldWorsenToFinalStage(ship, system) {
 }
 
 export function lifeveilCondition(value) {
-  const percent = clampPercent(value);
-  if (percent === 0) return Object.freeze({ id: "collapsed", label: "Collapsed", severity: 3, value: percent });
-  if (percent <= 50) return Object.freeze({ id: "critical", label: "Critical", severity: 2, value: percent });
-  if (percent <= 75) return Object.freeze({ id: "degraded", label: "Degraded", severity: 1, value: percent });
-  return Object.freeze({ id: "stable", label: "Stable", severity: 0, value: percent });
+  const band = systemIntegrity({ resources: { lifeveil: { value } } }, "lifeveil");
+  return Object.freeze({ id: band.label.toLowerCase(), label: band.label, severity: band.band, value: band.value });
 }
 
 export function moraleCondition(value) {
-  const percent = clampPercent(value);
-  if (percent === 0) return Object.freeze({ id: "broken", label: "Broken", severity: 5, value: percent });
-  if (percent < 40) return Object.freeze({ id: "faltering", label: "Faltering", severity: 4, value: percent });
-  if (percent < 60) return Object.freeze({ id: "shaken", label: "Shaken", severity: 3, value: percent });
-  if (percent < 80) return Object.freeze({ id: "steady", label: "Steady", severity: 2, value: percent });
-  if (percent < 100) return Object.freeze({ id: "confident", label: "Confident", severity: 1, value: percent });
-  return Object.freeze({ id: "inspired", label: "Inspired", severity: 0, value: percent });
+  const band = systemIntegrity({ resources: { morale: { value } } }, "morale");
+  return Object.freeze({ id: band.label.toLowerCase(), label: band.label, severity: band.band, value: band.value });
 }
 
 export function activeShipConditionViews(ship = {}) {
