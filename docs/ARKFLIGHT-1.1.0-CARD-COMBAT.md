@@ -6,7 +6,9 @@ Recorded 17 October 2026. Target version: **1.1.0**. This is not a released vers
 
 `src/cards/card-library.js` is the isolated rules foundation for permanent libraries, shared hands, progression capacities, constrained random starter deals, awards, loadout swaps and per-card combat availability. It returns new ship objects containing a `cardDecks` field without mutating the source ship.
 
-**It is not wired to live generation, Foundry combat, AP/RP spending or the ship sheet yet.** Existing station abilities and their old cooldowns continue running. The 75 AP designs and the new RP designs have not been authored or implemented. Tests use synthetic card definitions, not a playable collection. No old ship data is migrated or discarded by this step.
+`src/cards/committed-orders.js` now implements the Captain's order ledger, committed AP, normal resource reservations, additional plans funded by earned AP, operator reassignment, execution requests, skipped orders and turn completion. `src/cards/order-controller.js` adds authority checks, per-ship serialization, round/revision checks and a persistence contract for executing those rules.
+
+**These modules are not wired to live generation, Foundry combat, the socket relay or the ship sheet yet.** Existing station abilities and their old cooldowns continue running. The 75 AP designs and the new RP designs have not been authored or implemented. Tests use synthetic card definitions and effect drivers, not a playable collection. No old ship data is migrated or discarded by these steps. The controller does not roll initiative, move tokens, implement weapon batteries or make PF2e rolls; those require the forthcoming live adapters and effects.
 
 ## Accepted combat direction
 
@@ -15,6 +17,10 @@ Recorded 17 October 2026. Target version: **1.1.0**. This is not a released vers
 - At round start: advance round recovery, Captains submit locked plans, reroll every ship's initiative, then take one turn per ship in resulting order.
 - The Captain discusses the plan with the crew and selects actual abilities, assigning their stations/operators. Submitting commits their AP. Players resolve their orders in any sequence during their ship's turn.
 - Targets are chosen when orders execute, not during planning.
+- Normal Supplies, Morale, Lifeveil and any explicitly authored Hull payment are checked and reserved at submission, then paid only at execution. Reservations are not damage immunity: if resources disappear before a valid execution attempt, skip an unaffordable order cleanly. Outcome-specific extra costs remain the effect driver's responsibility.
+- Fire Battery selects its battery as well as its target during execution.
+- Earned AP can fund an additional locked plan during the ship's turn. It cannot reopen existing orders or spend original AP that the Captain left unallocated. Multiple additional plans may use portions of an earned balance.
+- A Captain/GM can reassign an unresolved order to another eligible station operator. Only that operator's player or a GM can resolve it. A Captain may request execution without rolling for another player's station.
 - A now-impossible order can use another legal target. If it cannot execute, skip it and retain its committed AP cost; do not expend ammunition, Supplies, cooldowns or Signature uses for a skipped order.
 - Multiple paid actions per operator are permitted, subject to allocated orders, readiness and each card's limits.
 - Shared RP remains separate from AP. Restore RP to 1 at round start. Reload timers and card availability advance once per round, not each time initiative changes.
@@ -101,11 +107,29 @@ For firing cards, use the attack's roll against AC for both hit resolution and i
 
 ## Next implementation slices
 
-1. **Done locally:** isolated library/hand/progression/dealing/availability rules with tests. No live switch.
+1. **Done:** isolated library/hand/progression/dealing/availability rules with tests. No live switch.
 2. Author and review executable card definitions in manageable batches, including prerequisites, four outcome effects and Flux durations. Both collection counts are settled.
-3. Implement the Captain's committed order queue, shared resource accounting, skipped orders and skill contribution. Keep targets deferred until resolution.
+3. **Order engine implemented:** committed AP, normal resource reservations, locked plans, earned-AP additions, deferred targets/batteries, skips and authority checks. Skill contribution, live effect drivers and Foundry controls remain pending. See the contract below.
 4. Implement hex movement/facing budgets and balanced batteries; connect card effects to those operations.
 5. Connect fresh generation, saved ship migration and library/hand controls; preserve existing learned content until migration is explicitly mapped.
 6. Add round recovery/initiative handling, RP reaction prompts, and live Foundry acceptance scenarios. Only then consider the 1.1.0 release/version change.
 
 The previously discussed two damage tracks and three save families remain in [the combat foundations working paper](COMBAT-FOUNDATIONS-WORKING-PAPER-01.md). They have not been replaced by this card foundation. Keep programming steps bounded and ask the agreed five focused questions for unresolved behavior before each new step; do not re-open settled rules.
+
+## Committed-order controller contract
+
+The user approved the five order-flow choices on 17 October: reserve normal costs at lock, choose batteries at resolution, allow earned-AP additional plans, permit eligible operator replacement, and let assigned players resolve with GM fallback.
+
+- Every planned AP order costs 1 AP. RP cards are not accepted into this queue. Base AP defaults to 4 through an authority-owned adapter; this step does not change legacy hull AP profiles or grant client-controlled AP.
+- Initial plans transition from `planning` to `locked`. A trusted round controller must collect all ships' plans, roll initiative and identify the current ship before opening `execution`. The new order controller checks that trusted context; it does not implement the fleet-wide round controller itself.
+- Planning stores only kind, ability ID, station and operator. Client-supplied targets, batteries, costs and rolled outcomes cannot become locked plan fields.
+- Execution requests require the current round and revision. Commands for a ship serialize. Duplicate/stale requests cannot execute a driver or consume resources twice. Reopening the same planning round does not restore AP or erase a lock.
+- Effect drivers are registered by trusted code as `card:<id>` or `basic:<id>`. Each supplies a `preflight` and an `execute` method. The controller fails clearly when an effect has not been implemented; it never silently runs a legacy resolver.
+- Preflight distinguishes an invalid selection (leave the order pending so the player can choose again) from a genuinely impossible action (skip and release reservations). A valid action whose normal costs are no longer affordable also skips without rolling.
+- Execution pays the normal resource costs in a working copy, prepares effects, then marks the card used and order resolved. It never pays AP again. The effect driver returns explicit earned AP separately; it cannot reset the hand, cooldowns or committed ledger.
+- `availableResources` passed to an effect driver excludes the current order's already-paid cost and protects other pending reservations. Voluntary outcome-dependent payments must respect that available budget; hostile damage or written complications can still make subsequent orders unaffordable.
+- Drivers must prepare effects without independent document writes or irreversible chat/target updates. The persistence adapter must compare the original ship snapshot and save the resulting ship atomically, or reject without changes. An authenticated requester context must come from the authority, never a user object supplied in a socket payload.
+- A changed combat, round, turn or requester during preparation aborts persistence. Live multiplayer relay identity, cross-ship effects and recovery from interrupted document writes remain integration work; tests of the isolated contract do not establish live Foundry readiness.
+- Turn completion skips remaining pending orders and releases their resource reservations without refunding committed AP or consuming those cards. A later round restores its own base AP; card cooldowns retain their original ready rounds.
+
+Validation for this step: **685 Node tests passed, zero failed**, including 18 new committed-order tests (28 combined with the existing card-library tests). JavaScript syntax checks and the staged whitespace check passed. Tests cover arbitrary order sequence, deferred battery/target choice, cost reservations and loss, earned-AP additions, Captain/operator/GM permissions, takeover, repeated clicks, stale rounds, driver/persistence failures and turn completion. These are rules/controller tests with synthetic effects; live Foundry play and transport remain unverified.
