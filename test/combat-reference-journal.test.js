@@ -20,10 +20,10 @@ test("Arkflight registers managed combat reference journals and HUD journal link
 });
 
 test("Combat Reference defines Station Bonus and the expanded resource economy", () => {
-  assert.match(economySource, /Station Bonus is the ship-level scaling value/);
-  assert.match(economySource, /levels 1–9/);
-  assert.match(economySource, /levels 10–19/);
-  assert.match(economySource, /level 20/);
+  assert.match(economySource, /Ship Bonus: \+1 at levels 1–4/);
+  assert.match(economySource, /levels 1–4/);
+  assert.match(economySource, /13–16/);
+  assert.match(economySource, /17–20/);
   assert.match(journalSource, /Arkflight Combat — Fundamentals/);
   assert.match(journalSource, /Combat Resources/);
   assert.match(journalSource, /Strain Limit/);
@@ -33,8 +33,8 @@ test("Combat Reference defines Station Bonus and the expanded resource economy",
 });
 
 test("Drive the Crew HUD copy shows the net player-facing result and Morale cost", () => {
-  assert.match(hudSource, /Gain 1 AP this turn\. Spend 20% Morale/);
-  assert.match(hudSource, /Station Bonus \+\$\{profile\.bonus\}/);
+  assert.match(hudSource, /1 AP → 3 AP \(net \+2\)/);
+  assert.match(hudSource, /Ship Bonus \+\$\{profile\.bonus\}/);
   assert.match(economySource, /"captain-drive-the-crew": Object\.freeze\(\{ morale: 20 \}\)/);
 });
 
@@ -75,11 +75,12 @@ test("each combat action can open its exact JournalEntryPage without replacing e
 });
 
 
-test("Combat Reference includes Common Reload separately from Battlewatch Work the Guns", () => {
-  assert.match(journalSource, /"common", "captain", "battlewatch"/);
+test("Combat Reference separates shared reactions and retires manual Reload", () => {
+  assert.match(journalSource, /"common", "reactions", "captain", "battlewatch"/);
   assert.match(journalSource, /Arkflight Combat — Common Actions/);
   assert.match(journalSource, /Common Ship Action/);
   assert.match(economySource, /"common-reload-weapon"/);
   assert.match(economySource, /"battlewatch-reload-weapon": Object\.freeze\(\{ morale: 20 \}\)/);
-  assert.match(economySource, /2 or fewer rounds of Reload remaining/);
+  assert.match(journalSource, /!action.rules\?\.retired/);
+  assert.match(journalSource, /Ability Outcomes/);
 });

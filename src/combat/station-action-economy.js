@@ -1,6 +1,6 @@
 import { stationEffectProfile } from "./station-effect-rules.js";
 
-export const STATION_BONUS_DEFINITION = "Station Bonus is the ship-level scaling value used by station actions: +1 at ship levels 1–9, +2 at levels 10–19, and +3 at level 20. It applies only where an action specifically says Station Bonus; it is not a universal bonus to every roll.";
+export const STATION_BONUS_DEFINITION = "Ship Bonus: +1 at levels 1–4, +2 at 5–8, +3 at 9–12, +4 at 13–16, +5 at 17–20. It applies where an ability specifically says Ship Bonus.";
 
 export const STRAIN_THRESHOLD_DEFINITION = "When Strain is added: 50-74% requires DC 5, 75-89% DC 10, and 90-99% DC 15. Failure worsens one Ship Condition determined by 1d8. At 100%+, skip the flat check, automatically roll 1d8, subtract one full Strain capacity, and keep overflow. A single triggering resolution can worsen at most one Ship Condition.";
 
@@ -16,6 +16,7 @@ const SECONDARY_SPENDS = Object.freeze({
 });
 
 export function stationActionEconomy(action, shipLevel = 1) {
+  if (action?.rules?.ability) return Object.freeze({ ...action.cost, morale: Number(action.rules.morale) || 0, supplies: Number(action.rules.supplies) || 0, lifeveil: Number(action.rules.lifeveil) || 0, strain: Number(action.rules.strain) || 0 });
   const profile = stationEffectProfile(shipLevel);
   const spends = SECONDARY_SPENDS[action?.id] ?? {};
   let ap = Math.max(0, Math.trunc(Number(action?.cost?.ap) || 0));
@@ -46,6 +47,7 @@ export function stationActionStrainArea(_action) {
 }
 
 export function stationActionRulesText(action) {
+  if (action?.rules?.ability || action?.rules?.retired || action?.station === "common") return action.description;
   const fallback = action?.description ?? action?.summary ?? "";
   const rules = {
     "captain-rally-crew": "Spend 1 AP and 1 Supply. Restore 20% Morale × Station Bonus, up to 100%.",

@@ -205,6 +205,8 @@ export function generateEnemyShipPreview(input = {}) {
   let derived = deriveShip(ship, SHIP_CATALOGS);
   const cargo = cargoPreview(rng, derived, baseArchetype, config);
   ship = { ...ship, cargo: { used: cargo.used, notes: cargo.notes } };
+  // Fresh generation explicitly fills Hull; ordinary synchronization preserves damage.
+  ship.resources.hull = { value: derived.stats.hullIntegrity, max: derived.stats.hullIntegrity };
   ship = syncResourceMaxima(ship, derived);
   derived = deriveShip(ship, SHIP_CATALOGS);
   const validation = validateShip(ship, SHIP_CATALOGS);

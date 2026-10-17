@@ -2,7 +2,7 @@ import { COMBAT_POINT_TYPES, effectiveMobility, headingDegreeDistance, hullComba
 import { normalizeWeaponUpgrades } from "./weapon-combat.js";
 import { weaponConditionModifiers } from "../ship/ship-conditions.js";
 
-export const COMBATANT_STATE_VERSION = 6;
+export const COMBATANT_STATE_VERSION = 7;
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, Number(value) || 0));
@@ -173,7 +173,7 @@ export function previewFacing(state, heading) {
 export function commitFacing(state, heading = state?.mobility?.heading ?? 0, reason = "commit") {
   const targetHeading = normalizeShipHeading(heading);
   const previousHeading = normalizeShipHeading(state?.mobility?.committedHeading ?? state?.mobility?.heading ?? targetHeading);
-  const deltaDegrees = headingDegreeDistance(previousHeading, targetHeading);
+  const deltaDegrees = state?.mobility?.extraordinaryMovement ? 0 : headingDegreeDistance(previousHeading, targetHeading);
   const current = state?.mobility?.facing ?? {};
   const usedDegrees = Math.max(0, Math.trunc(Number(current.usedDegrees) || 0)) + deltaDegrees;
   if (deltaDegrees === 0 && targetHeading === Number(state?.mobility?.heading ?? targetHeading)) return state;
@@ -255,9 +255,14 @@ export function beginCombatantTurn(state, round) {
   const combatRound = Math.max(1, Math.trunc(Number(round) || 1));
   const turnKey = `round:${combatRound}`;
   if (state?.turnKey === turnKey) return state;
+  const previousRound = Number(String(state?.turnKey ?? "").split(":")[1]) || combatRound - 1;
+  const elapsed = Math.max(0, combatRound - previousRound);
+  const weapons = Object.freeze(Object.fromEntries(Object.entries(state.weapons ?? {}).map(([key, weapon]) => [key, Object.freeze({ ...weapon,
+    reloadRemaining: Math.max(0, weaponReloadRemaining(weapon) - (Number(weapon.lastFiredRound ?? 0) < combatRound ? elapsed : 0)) })])));
   return Object.freeze({
     ...state,
     turnKey,
+    weapons,
     economy: Object.freeze({
       ap: track(state.economy.ap.max, state.economy.ap.max),
       rp: track(state.economy.rp.max, state.economy.rp.max)
@@ -269,6 +274,7 @@ export function beginCombatantTurn(state, round) {
       committedHeading: normalizeShipHeading(state.mobility?.heading ?? state.mobility?.committedHeading ?? 0),
       facing: Object.freeze({ usedDegrees: 0, commits: 0, lastReason: null }),
       specialMovementAP: 0
+      , extraordinaryMovement: false
     })
   });
 }

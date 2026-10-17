@@ -71,9 +71,9 @@ test("derived Brigantine stats reflect Hull Drive and Weapons conditions", () =>
 });
 
 test("Lifeveil and Morale conditions derive directly from percentage", () => {
-  assert.equal(lifeveilCondition(80).id, "stable");
-  assert.equal(lifeveilCondition(75).id, "degraded");
-  assert.equal(lifeveilCondition(50).id, "critical");
+  assert.equal(lifeveilCondition(80).id, "weakened");
+  assert.equal(lifeveilCondition(75).id, "weakened");
+  assert.equal(lifeveilCondition(50).id, "fraying");
   assert.equal(lifeveilCondition(0).id, "collapsed");
   assert.equal(moraleCondition(100).id, "inspired");
   assert.equal(moraleCondition(80).id, "confident");

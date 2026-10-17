@@ -221,6 +221,7 @@ function createShipFromSpec(spec) {
     progression: { level: spec.level, talentIds: [...spec.talents] }
   });
   let derived = deriveShip(ship, SHIP_CATALOGS);
+  ship.resources.hull = { value: derived.stats.hullIntegrity, max: derived.stats.hullIntegrity };
   ship = syncResourceMaxima(ship, derived);
   derived = deriveShip(ship, SHIP_CATALOGS);
   return { ship, derived };
@@ -258,6 +259,7 @@ function referenceFleet(level) {
         progression: { level, talentIds: [] }
       });
       let derived = deriveShip(ship, SHIP_CATALOGS);
+      ship.resources.hull = { value: derived.stats.hullIntegrity, max: derived.stats.hullIntegrity };
       ship = syncResourceMaxima(ship, derived);
       derived = deriveShip(ship, SHIP_CATALOGS);
       return combatStatVector(derived);

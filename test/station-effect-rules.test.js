@@ -30,10 +30,10 @@ function minimalState() {
 
 test("Station Bonus stays bounded across ship levels", () => {
   assert.equal(stationEffectProfile(1).bonus, 1);
-  assert.equal(stationEffectProfile(5).bonus, 1);
-  assert.equal(stationEffectProfile(10).bonus, 2);
-  assert.equal(stationEffectProfile(19).bonus, 2);
-  assert.equal(stationEffectProfile(20).bonus, 3);
+  assert.equal(stationEffectProfile(5).bonus, 2);
+  assert.equal(stationEffectProfile(10).bonus, 3);
+  assert.equal(stationEffectProfile(19).bonus, 5);
+  assert.equal(stationEffectProfile(20).bonus, 5);
 });
 
 test("level 5 Coordinate Assault carries two native combat charges", () => {

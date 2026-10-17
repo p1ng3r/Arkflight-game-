@@ -1,3 +1,5 @@
+import { runShipCommand } from "./ship-ability-runtime.js";
+import { resolveSystemDamageSaves, reportSystemSaves } from "./system-damage-runtime.js";
 import { ARKFLIGHT_EVENTS } from "../content/events/index.js";
 import { BASE_MASTERY, getMasteryTechnique } from "../content/base-mastery.js";
 import { getCrewEdgeCard } from "../content/crew-edge-cards.js";
@@ -165,12 +167,18 @@ function stationOptionsForShip(actor = activeVoyageShip()) {
 
 async function applyEventShipEffects(effects = []) {
   const actor = activeVoyageShip();
+  return runShipCommand(actor?.uuid ?? actor?.id ?? "event", () => applyEventShipEffectsNow(effects));
+}
+
+async function applyEventShipEffectsNow(effects = []) {
+  const actor = activeVoyageShip();
   if (!actor) throw new Error("Arkflight Event cannot apply a persistent consequence because no vessel is bound.");
   let working = shipPayload(actor);
   if (!working) throw new Error("The active Arkflight vessel has no persistent ship payload.");
 
   const affectedSystems = [];
   const strainOutcomes = [];
+  const systemReports = [];
   for (const effect of coalesceShipEffects(effects)) {
     if (effect?.kind === "gain-strain" && Number(effect.value ?? 0) > 0) {
       const outcome = await resolveShipStrainGain(working, {
@@ -188,14 +196,17 @@ async function applyEventShipEffects(effects = []) {
       continue;
     }
     const result = applyShipEffects(working, [effect]);
-    working = result.ship;
+    const damage = await resolveSystemDamageSaves(working, result.ship, { systems: result.damageSystems, roundKey: `event:${controller?.state?.createdAt ?? controller?.state?.eventId}:${controller?.state?.roundIndex ?? 0}` });
+    working = damage.ship;
+    systemReports.push(...damage.reports);
     for (const system of result.affectedSystems ?? result.threatenedAreas ?? []) {
       if (!affectedSystems.includes(system)) affectedSystems.push(system);
     }
   }
 
   await actor.update({ [`flags.${MODULE_ID}.ship`]: working });
-  if (strainOutcomes.some((outcome) => outcome.degradation)) {
+  await reportSystemSaves({ reports: systemReports }, actor);
+  if (affectedSystems.length || systemReports.length || strainOutcomes.some((outcome) => outcome.degradation)) {
     Hooks.callAll("arkflightShipDamageStateChanged", { actor, voyageEvent: true, strainOutcomes });
   }
   return Object.freeze({ ship: working, affectedSystems: Object.freeze(affectedSystems), threatenedAreas: Object.freeze(affectedSystems), strainOutcomes: Object.freeze(strainOutcomes) });

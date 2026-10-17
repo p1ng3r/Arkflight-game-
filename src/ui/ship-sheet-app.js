@@ -1,3 +1,4 @@
+import { renderSystemDamagePanel } from "./system-damage-panel.js";
 import { bindArkflightHoldControls, buildArkflightHoldHtml } from "./hold-log-ux.js";
 import { renderArkflightCombatStations } from "./combat-station-actions-ui.js";
 import { renderArkflightWeaponsTab } from "./ship-weapons-tab-ui.js";
@@ -112,6 +113,7 @@ export class ArkflightShipSheet extends HandlebarsApplicationMixin(ActorSheetV2)
       }
     });
 
+    if (["overview", "combat"].includes(this.activeTab)) renderSystemDamagePanel(this, html, this.actor);
     if (this.activeTab === "hold") bindArkflightHoldControls(this.actor, html);
     if (this.activeTab === "combat") renderArkflightCombatStations(this, html, this.actor);
     if (this.activeTab === "weapons") renderArkflightWeaponsTab(this, html, this.actor);

@@ -1,3 +1,4 @@
+import { activeSystemFaults, repairSystemFault } from "../ship/system-damage.js";
 import { improveConditionState, repairPackage, repairScrapCost, repairTargetLabel, resourceRepairAmount, validRepairTarget } from "../ship/repair-rules.js";
 import { setShipCondition, shipConditionProfile } from "../ship/ship-conditions.js";
 
@@ -54,6 +55,11 @@ Hooks.once("ready", () => {
         });
       }
 
+      if (type === "fault") {
+        const fault = activeSystemFaults(ship).find(f => f.id === targetKey);
+        if (!fault) return { ok: false, reason: "fault-not-active" };
+        return { ok: true, targetType: type, targetKey, targetLabel: fault.name, packageId: pack.id, packageLabel: pack.label, partsCost, durationHours: pack.hours, craftingDC: pack.dc, currentState: fault.name, currentLabel: fault.name, afterState: "cleared" };
+      }
       const current = shipConditionProfile(ship, targetKey);
       const afterState = improveConditionState(targetKey, current.id, packageId);
       return Object.freeze({
@@ -128,6 +134,8 @@ Hooks.once("ready", () => {
         const amount = Math.max(0, Number(repair.restoreAmount ?? 0));
         resource.value = Math.min(max, Number(resource.value ?? 0) + amount);
         resource.max = max;
+      } else if (repair.targetType === "fault") {
+        if (activeSystemFaults(next).some(f => f.id === repair.targetKey)) next = repairSystemFault(next, repair.targetKey).ship;
       } else {
         next = setShipCondition(next, repair.targetKey, repair.afterState ?? improveConditionState(repair.targetKey, shipConditionProfile(next, repair.targetKey).id, repair.packageId));
       }

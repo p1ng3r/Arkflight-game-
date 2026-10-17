@@ -187,7 +187,7 @@ function normalizedShipEffect(effect) {
   };
   if (effect.kind === "pressure") return { kind: "gain-strain", value: Number(effect.value ?? 0) };
   if (effect.kind === "reduce-highest-pressure") return { kind: "gain-strain", value: -Math.abs(Number(effect.value ?? 1)) };
-  if (["damage-hull", "damage-lifeveil", "change-morale", "degrade-area", "recover-area", "recover-most-severe-condition", "add-condition", "remove-condition"].includes(effect.kind)) return { ...effect };
+  if (["damage-system", "damage-hull", "damage-lifeveil", "change-morale", "degrade-area", "recover-area", "recover-most-severe-condition", "add-condition", "remove-condition"].includes(effect.kind)) return { ...effect };
   return null;
 }
 

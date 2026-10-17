@@ -1,3 +1,5 @@
+import { activeSystemFaults } from "../ship/system-damage.js";
+import { faultDescription } from "../content/system-faults.js";
 import { REPAIR_PACKAGES } from "../ship/repair-rules.js";
 import { shipAllowsRefitMode, shipOperationalStatus } from "../ship/operational-status.js";
 import { shipConditionProfile } from "../ship/ship-conditions.js";
@@ -69,7 +71,7 @@ async function startQueued(actor, queued, label) {
 function packageButtons(actor, targetType, targetKey) {
   const mode = service(actor);
   const api = game.arkflight?.refit;
-  return Object.values(REPAIR_PACKAGES).map((pack) => {
+  return Object.values(REPAIR_PACKAGES).filter(pack => targetType !== "fault" || pack.id === "patch").map((pack) => {
     const quote = api?.quoteRepair?.(actor, targetType, targetKey, pack.id, mode);
     if (!quote?.ok) return "";
     const noEffect = targetType === "resource" ? quote.current >= quote.max : quote.currentState === quote.afterState;
@@ -169,14 +171,17 @@ function renderRepairCard(actor, card) {
   card.classList.add("arkflight-repair-controls-card");
   card.innerHTML = `
     <h3><i class="fa-solid fa-hammer"></i> Ship Repairs</h3>
-    <p>Repair Hull/Lifeveil resources or improve persistent Ship Conditions. Crew repairs are field repairs and may be performed while underway; Dock and Shipyard repairs are professional.</p>
+    <p>Repair Hull, Drive, Arkengine, or Lifeveil integrity, clear individual system faults, or improve legacy Strain conditions. Crew repairs are field repairs and may be performed while underway; Dock and Shipyard repairs are professional.</p>
     <div class="arkflight-repair-section">
       <h4>Resource Repairs</h4>
+      ${["drive", "arkengine"].map(key => `<article class="arkflight-repair-target"><header><strong>${title(key)} Integrity</strong><span>${Number(ship.resources?.[key]?.value ?? 100)} / 100</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"resource",key)}</div></article>`).join("")}
       <article class="arkflight-repair-target" data-repair-target-type="resource" data-repair-target-key="hull"><header><strong>Hull Integrity</strong><span>${Number(ship.resources?.hull?.value ?? 0)} / ${Number(ship.resources?.hull?.max ?? 0)}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"resource","hull")}</div></article>
       <article class="arkflight-repair-target" data-repair-target-type="resource" data-repair-target-key="lifeveil"><header><strong>Lifeveil</strong><span>${Number(ship.resources?.lifeveil?.value ?? 0)} / ${Number(ship.resources?.lifeveil?.max ?? 0)}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"resource","lifeveil")}</div></article>
     </div>
     <div class="arkflight-repair-section">
-      <h4>Ship Condition Repairs</h4>
+      <h4>System Fault Repairs</h4>
+      ${activeSystemFaults(ship).map(f => `<article class="arkflight-repair-target"><header><strong>${escape(f.name)}</strong><span>${escape(faultDescription(f))}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"fault",f.id)}</div></article>`).join("") || "<p>No active system faults.</p>"}
+      <h4>Legacy Strain Condition Repairs</h4>
       ${Object.entries(CONDITION_LABELS).map(([key,label])=>{ const condition=shipConditionProfile(ship,key); return `<article class="arkflight-repair-target" data-repair-target-type="condition" data-repair-target-key="${key}"><header><strong>${escape(label)}</strong><span>${escape(condition.label)}</span></header><div class="arkflight-repair-packages">${packageButtons(actor,"condition",key)}</div></article>`; }).join("")}
     </div>
     <div class="arkflight-repair-service-note">Crew field repair: full Scrap cost · Dock: 25% less · Shipyard: 50% less</div>`;

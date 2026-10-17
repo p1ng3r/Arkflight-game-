@@ -140,7 +140,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
   shell.innerHTML = `<section class="arkflight-weapon-station arkflight-weapon-station-sheet">
     <div class="arkflight-weapon-station-head">
       <div><span>BATTLEWATCH FIRE CONTROL</span><h3>Weapons</h3></div>
-      <small>Ship Owners may Reload for 1 AP. Battlewatch controls firing and may use Work the Guns as a once-per-round special action.</small>
+      <small>Fire Weapon costs 1 AP. Reload timers decrease automatically each ship turn; Battlewatch may use Work the Guns to shorten them.</small>
     </div>
   </section>`;
   const station = shell.querySelector(".arkflight-weapon-station");
@@ -248,27 +248,11 @@ export function renderArkflightWeaponsTab(app, root, actor) {
     let reloadButton = null;
     let workGunsButton = null;
     if (remaining > 0) {
-      reloadButton = document.createElement("button");
-      reloadButton.type = "button";
-      reloadButton.innerHTML = '<i class="fa-solid fa-rotate"></i> Reload · 1 AP';
-      reloadButton.title = "Common action: reduce this weapon's remaining Reload by 1.";
-      reloadButton.addEventListener("click", async () => {
-        try {
-          reloadButton.disabled = true;
-          await api.stationAction("common-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
-          app.render?.({ force: true });
-        } catch (error) {
-          ui.notifications?.error(error?.message ?? "Reload failed.");
-          reloadButton.disabled = false;
-        }
-      });
-      actions.append(reloadButton);
-
-      if (remaining <= 2) {
+      if (remaining > 0) {
         workGunsButton = document.createElement("button");
         workGunsButton.type = "button";
-        workGunsButton.innerHTML = '<i class="fa-solid fa-burst"></i> Work the Guns · 20% Morale · +1 Strain';
-        workGunsButton.title = "Battlewatch, once per round: immediately ready this weapon for 0 AP.";
+        workGunsButton.innerHTML = '<i class="fa-solid fa-burst"></i> Work the Guns · 1 AP · Surge';
+        workGunsButton.title = "Reduce Reload by 1 (2 on a critical success). Recover for two rounds.";
         workGunsButton.addEventListener("click", async () => {
           try {
             workGunsButton.disabled = true;
@@ -303,7 +287,7 @@ export function renderArkflightWeaponsTab(app, root, actor) {
       }
 
       fireButton.disabled = !battlewatchControl.ok || attack.bonus == null || remaining > 0 || !enoughAP || !legal;
-      if (!battlewatchControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-eye"></i> Battlewatch Only';
+      if (!battlewatchControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-eye"></i> Ship Owners Only';
       else if (attack.bonus == null) fireButton.innerHTML = '<i class="fa-solid fa-user-xmark"></i> Assign Battlewatch';
       else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reload ${remaining}`;
       else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';

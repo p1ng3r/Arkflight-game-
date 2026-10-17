@@ -1,3 +1,4 @@
+import { activeSystemFaults, repairSystemFault } from "./system-damage.js";
 import { normalizeShip } from "./ship-schema.js";
 import { consumeComponent, grantComponent, spendSalvageParts, knowsBlueprint } from "./refit-state.js";
 import { createRefitJob, REFIT_JOB_STATES, REFIT_JOB_TYPES, REFIT_METHODS } from "./refit-rules.js";
@@ -45,7 +46,11 @@ function applyRepairEffect(ship, job) {
   const repair = job?.result?.repair;
   if (job?.type !== REFIT_JOB_TYPES.REPAIR || !repair) return { ship, applied: false };
   const next = normalizeShip(ship);
-  if (repair.targetType === "resource" && ["hull", "lifeveil"].includes(repair.targetKey)) {
+  if (repair.targetType === "fault") {
+    const active = activeSystemFaults(next).some(f => f.id === repair.targetKey);
+    return { ship: active ? repairSystemFault(next, repair.targetKey).ship : next, applied: true };
+  }
+  if (repair.targetType === "resource" && ["hull", "lifeveil", "drive", "arkengine"].includes(repair.targetKey)) {
     const resource = next.resources?.[repair.targetKey];
     if (!resource) return { ship: next, applied: false };
     const amount = Math.max(0, Number(repair.restoreAmount ?? 0));

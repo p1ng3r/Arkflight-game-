@@ -69,7 +69,9 @@
     "styles/shipwright-scroll-popup-polish.css",
     "styles/voyage-abandon.css",
     "styles/refit-alpha-unified.css",
-    "styles/event-board-navy-bars-fix.css"
+    "styles/event-board-navy-bars-fix.css",
+    "styles/system-damage.css",
+    "styles/card-combat-playtest.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -88,8 +90,10 @@
     "src/foundry/refit-diagnostics.js",
     "src/foundry/ship-facing-snap.js",
     "src/foundry/combat-api.js",
+    "src/foundry/system-damage-api.js",
     "src/foundry/combat-loadout-sync.js",
     "src/foundry/combat-station-actions-api.js",
+    "src/foundry/card-combat-playtest-api.js",
     "src/foundry/combat-engagement-api.js",
     "src/foundry/native-station-combat-effects.js",
     "src/foundry/combat-flow-usability.js",
@@ -157,7 +161,8 @@
     "src/ui/ship-repair-shortcuts-ui.js",
     "src/ui/ship-sheet-consolidation-ui.js",
     "src/ui/ship-sheet-refit-gameplay-ui.js",
-    "src/ui/voyage-abandon-ui.js"
+    "src/ui/voyage-abandon-ui.js",
+    "src/ui/card-combat-playtest-ui.js"
   ],
   "manifest": "https://raw.githubusercontent.com/p1ng3r/Arkflight-game-/main/module.json",
   "download": "https://github.com/p1ng3r/Arkflight-game-/releases/download/v0.1.0/arkflight-game-v0.1.0.zip"

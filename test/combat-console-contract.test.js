@@ -122,7 +122,7 @@ test("Command HUD keeps targeting, weapon fire, reload work, arcs, log, and toke
   assert.match(template, /\{\{arcButtonLabel\}\}/);
   assert.match(template, /Weapon Arcs/);
   assert.match(template, /afcs-drawer-log/);
-  assert.match(template, /data-work-weapon="\{\{key\}\}"[^>]*>[^<]*(?:<i[^>]*><\/i>\s*)?Reload/);
+  assert.match(template, /Automatic Reload/);
   assert.match(template, /data-work-guns="\{\{key\}\}"/);
   assert.match(source, /stationAction\("common-reload-weapon"/);
   assert.match(source, /Work the Guns/);
