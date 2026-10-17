@@ -77,7 +77,8 @@ Reaction cards follow the same printed recovery categories, with a separate **si
 ## Card collection sizes
 
 - AP base collection: **75 designs = 40 General + 25 Flux + 10 Signature**. These are available authored rewards, not an automatic starting library.
-- RP request: **30 designs**, with a specified distribution of **16 General + 10 Flux + 2 Signature**, which totals **28**. The last two designs are unresolved. Preserve the specified counts; do not silently add Signatures or change the total.
+- RP base collection: **30 designs = 16 General + 10 Flux + 4 Signature**. The user clarified four Signatures on 17 October, resolving the earlier count mismatch. The starting RP hand remains 3 General, 2 Flux and 1 Signature.
+- Combined base collections: **105 designs** (75 AP + 30 RP), not 105 automatically learned cards.
 - Future add-on collections can add learnable cards without automatically expanding hands.
 
 ## Skill contribution and outcomes
@@ -101,7 +102,7 @@ For firing cards, use the attack's roll against AC for both hit resolution and i
 ## Next implementation slices
 
 1. **Done locally:** isolated library/hand/progression/dealing/availability rules with tests. No live switch.
-2. Author and review executable card definitions in manageable batches, including prerequisites, four outcome effects and Flux durations. Reconcile the RP collection count first.
+2. Author and review executable card definitions in manageable batches, including prerequisites, four outcome effects and Flux durations. Both collection counts are settled.
 3. Implement the Captain's committed order queue, shared resource accounting, skipped orders and skill contribution. Keep targets deferred until resolution.
 4. Implement hex movement/facing budgets and balanced batteries; connect card effects to those operations.
 5. Connect fresh generation, saved ship migration and library/hand controls; preserve existing learned content until migration is explicitly mapped.

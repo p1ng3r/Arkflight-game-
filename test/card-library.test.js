@@ -20,7 +20,7 @@ function catalog() {
       for (let n = 0; n < count; n++) cards.push(card(`${station}-${type}-${n}`, "ap", type, [station], 2 + n % 4));
     }
   }
-  for (const [type, count] of [["general", 16], ["flux", 10], ["signature", 2]]) {
+  for (const [type, count] of [["general", 16], ["flux", 10], ["signature", 4]]) {
     for (let n = 0; n < count; n++) cards.push(card(`reaction-${type}-${n}`, "rp", type, [], 2 + n % 4));
   }
   return cards;
