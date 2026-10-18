@@ -15,6 +15,7 @@ function isArkflightShip(actor) {
 }
 
 function activeShipCombatant(token) {
+  if (game.arkflight?.cardCombat?.isCanvasToken?.(token)) return null;
   const combat = game.combat;
   if (!combat || !token?.id || !isArkflightShip(token.actor)) return null;
   const combatant = combat.combatants?.find((entry) => entry.tokenId === token.id && entry.actorId === token.actor?.id) ?? null;

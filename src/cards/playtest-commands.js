@@ -1,5 +1,5 @@
 import { getOrderQueue } from "./committed-orders.js";
-import { createPlaytestController, movePlaytestShip, rollPlaytestInitiative, advancePlaytestTurn, resolvePlaytestAttack } from "./card-playtest-session.js";
+import { createPlaytestController, movePlaytestShip, movePlaytestShipTo, rollPlaytestInitiative, advancePlaytestTurn, resolvePlaytestAttack } from "./card-playtest-session.js";
 
 export async function dispatchPlaytestCommand(input, command, adapters) {
   if (!input || command.sessionId !== input.id || command.revision !== input.revision) throw new Error("Encounter changed; refresh before trying again.");
@@ -22,9 +22,10 @@ export async function dispatchPlaytestCommand(input, command, adapters) {
     case "request": await controller.requestExecution(command.shipId, request); break;
     case "reassign": await controller.reassign(command.shipId, request); break;
     case "skip": await controller.skip(command.shipId, request); break;
+    case "canvas-move":
     case "helm":
       if (!ship || (!user.isGM && !ownsOperator(user, ship.crew?.stations?.navigator))) throw new Error("The Navigator or GM controls movement.");
-      session = movePlaytestShip(session, command.shipId, command.direction);
+      session = command.type === "canvas-move" ? movePlaytestShipTo(session, command.shipId, command.destination) : movePlaytestShip(session, command.shipId, command.direction);
       break;
     case "advance":
       if (command.shipId !== session.turnOrder[session.turnIndex] || !captain(ship)) throw new Error("The active Captain or GM ends this ship's turn.");

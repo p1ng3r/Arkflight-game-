@@ -51,7 +51,7 @@ export function movePlaytestShip(session, shipId, direction) {
   const next = copy(session), ship = next.ships[shipId], m = ship.cardPlay.motion;
   if (direction === "forward") {
     if (m.used >= m.speed + m.extra) throw new Error("Movement allowance exhausted.");
-    const [q, r] = DIRECTIONS[m.heading];
+    const [q, r] = session.canvas?.directions?.[m.heading] ?? DIRECTIONS[m.heading];
     const destination = { q: m.q + q, r: m.r + r };
     if (Object.entries(next.ships).some(([id, other]) => id !== shipId && other.cardPlay.motion.q === destination.q && other.cardPlay.motion.r === destination.r)) throw new Error("That hex is occupied.");
     m.q = destination.q; m.r = destination.r; m.used++;
@@ -64,18 +64,55 @@ export function movePlaytestShip(session, shipId, direction) {
   return next;
 }
 
+export function weaponHexInArc(session, shipId, destination, mount) {
+  const ship = session.ships[shipId], a = ship.cardPlay.motion;
+  const dq = destination.q - a.q, dr = destination.r - a.r;
+  const basis = session.canvas?.basis ?? { q: { x: 1.5, y: Math.sqrt(3) / 2 }, r: { x: 0, y: Math.sqrt(3) } };
+  const dx = dq * basis.q.x + dr * basis.r.x, dy = dq * basis.q.y + dr * basis.r.y;
+  const bearing = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+  const heading = session.canvas?.headings?.[a.heading] ?? a.heading * 60;
+  const center = heading + ({ fore: 0, port: -90, starboard: 90, aft: 180, deck: 0 }[mount] ?? 0);
+  const difference = Math.abs(((bearing - center + 540) % 360) - 180);
+  return mount === "deck" || difference <= 60 + strongest(ship, "arc") + 1e-7;
+}
+
+export function movePlaytestShipTo(session, shipId, destination) {
+  const a = session.ships[shipId]?.cardPlay.motion;
+  if (!a || !Number.isSafeInteger(destination?.q) || !Number.isSafeInteger(destination?.r)) throw new Error("Choose a valid destination hex.");
+  const steps = hexDistance(a, destination);
+  if (steps < 1 || steps > a.speed + a.extra - a.used) throw new Error("Drag within the ship's remaining movement allowance.");
+  const [dq, dr] = session.canvas?.directions?.[a.heading] ?? DIRECTIONS[a.heading];
+  if (a.q + steps * dq !== destination.q || a.r + steps * dr !== destination.r) throw new Error("Turn with the HUD before dragging along a new course. Drag forward along the current heading.");
+  let next = session;
+  for (let i = 0; i < steps; i++) next = movePlaytestShip(next, shipId, "forward");
+  return next;
+}
+
+export function weaponCoverage(session, shipId, weaponKey = null) {
+  const ship = session.ships[shipId];
+  if (!ship) return [];
+  const weapons = ship.cardPlay.weapons.filter(w => !weaponKey || w.key === weaponKey);
+  const cells = [];
+  for (const weapon of weapons) {
+    const radius = Math.ceil(weapon.maxRange);
+    if (!Number.isFinite(radius) || radius < 0 || radius > 60) throw new Error("Weapon overlay range is outside the supported 0–60 hexes.");
+    const origin = ship.cardPlay.motion;
+    for (let q = -radius; q <= radius; q++) for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
+      const cell = { q: origin.q + q, r: origin.r + r }, distance = hexDistance(origin, cell);
+      if (distance && distance >= weapon.minRange && distance <= weapon.maxRange && weaponHexInArc(session, shipId, cell, weapon.mount)) cells.push({ ...cell, mount: weapon.mount, ready: weapon.readyRound <= session.round, weaponKey: weapon.key });
+    }
+  }
+  return cells;
+}
+
 export function batteryOptions(session, shipId, targetId, mount) {
   const ship = session.ships[shipId], target = session.ships[targetId];
   if (!ship || !target || shipId === targetId || ship.cardPlay.team === target.cardPlay.team || value(target, "hull") <= 0) return [];
   const a = ship.cardPlay.motion, b = target.cardPlay.motion;
   const distance = hexDistance(a, b);
   if (distance === 0) return [];
-  const dx = 1.5 * (b.q - a.q), dy = Math.sqrt(3) * ((b.r - a.r) + (b.q - a.q) / 2);
-  const bearing = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
-  const center = a.heading * 60 + ({ fore: 0, port: -90, starboard: 90, aft: 180, deck: 0 }[mount] ?? 0);
-  const difference = Math.abs(((bearing - center + 540) % 360) - 180);
-  const arc = strongest(ship, "arc");
-  if (mount !== "deck" && difference > 60 + arc) return [];
+  if (!weaponHexInArc(session, shipId, b, mount)) return [];
+
   return ship.cardPlay.weapons.filter(w => w.mount === mount && w.readyRound <= session.round && distance >= w.minRange && distance <= w.maxRange);
 }
 

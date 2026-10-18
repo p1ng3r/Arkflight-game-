@@ -1,3 +1,4 @@
+import { resolveCanvasBindings, bindCanvasSession, assertCanvasPositions, moveCanvasToken, createCanvasCombat, syncCanvasCombat, placeSelectedCanvasShips, boundShipForToken } from "./card-combat-canvas.js";
 import { importCardCombatTestFleet } from "./card-combat-test-fleet.js";
 import { PLAYTEST_COMBAT_CARDS } from "../content/combat-cards-playtest.js";
 import { generateShipCardDecks } from "../cards/card-library.js";
@@ -62,6 +63,7 @@ async function startEncounter(command, user) {
     if (!(Number(ship.resources?.hull?.value) > 0)) throw new Error(`${actor.name} needs Hull above zero for this playtest.`);
     return { id: actor.id, name: actor.name, team: String(entry.team ?? "").trim(), ship, stats, weapons };
   });
+  const binding = command.sceneId ? resolveCanvasBindings(entries, command) : null;
   for (const entry of entries) {
     if (!entry.team) throw new Error("Assign a side to every ship.");
     const actor = game.actors.get(entry.id);
@@ -71,21 +73,30 @@ async function startEncounter(command, user) {
     }
     for (const station of Object.keys(CARD_SKILLS)) entry.ship.crew.stations[station] ??= `npc:${entry.id}:${station}`;
   }
-  return createPlaytestSession(entries, { id: foundry.utils.randomID() });
+  const session = createPlaytestSession(entries, { id: foundry.utils.randomID() });
+  return binding ? bindCanvasSession(session, binding) : session;
 }
 async function handle(command, user) {
   if (!command || JSON.stringify(command).length > 30000) throw new Error("Invalid card command.");
+  if (command.type === "place-ships") return placeSelectedCanvasShips(command, user);
   if (command.type === "import-test-ships") {
     if (!user.isGM) throw new Error("Only the GM may import the combat test fleet.");
     return importCardCombatTestFleet();
   }
   const before = clone(game.settings.get(MODULE, SETTING));
+  if (command.type !== "start" && command.type !== "end") assertCanvasPositions(before);
   let next;
   if (command.type === "start") next = await startEncounter(command, user);
   else next = await dispatchPlaytestCommand(before, command, { user, ownsOperator: ownsCardOperator, isEligibleOperator: operatorEligible, rank: cardOperatorRank, roll });
   // One primary GM serializes all commands, including both ships in a shot.
   if (JSON.stringify(game.settings.get(MODULE, SETTING)) !== JSON.stringify(before)) throw new Error("Encounter changed during this command; retry from its latest state.");
-  await game.settings.set(MODULE, SETTING, next);
+  let rollback = async () => {};
+  if (command.type === "start" && next.canvas) rollback = await createCanvasCombat(next);
+  else if (before?.canvas && ["helm", "canvas-move"].includes(command.type)) rollback = await moveCanvasToken(before, next, command.shipId);
+  try { await game.settings.set(MODULE, SETTING, next); }
+  catch (error) { await rollback(); throw error; }
+  try { await syncCanvasCombat(next); }
+  catch (error) { console.error("Arkflight | Card combat tracker sync failed", error); ui.notifications?.warn("Card order saved. Foundry's tracker will retry synchronization on the next command."); }
   Hooks.callAll("arkflightCardCombatChanged", next);
   return next;
 }
@@ -112,7 +123,7 @@ async function request(command) {
 
 Hooks.once("init", () => game.settings.register(MODULE, SETTING, { name: "Arkflight Card Combat Playtest", scope: "world", config: false, type: Object, default: {} }));
 Hooks.once("ready", () => {
-  game.arkflight.cardCombat = Object.freeze({ cards: PLAYTEST_COMBAT_CARDS, state: () => { const state = game.settings.get(MODULE, SETTING); return state?.id ? clone(state) : null; }, request, importTestShips: () => request({ type: "import-test-ships" }), ownsOperator: ownsCardOperator });
+  game.arkflight.cardCombat = Object.freeze({ cards: PLAYTEST_COMBAT_CARDS, state: () => { const state = game.settings.get(MODULE, SETTING); return state?.id ? clone(state) : null; }, request, isCanvasToken: token => Boolean(boundShipForToken(token)), placeShips: actorIds => request({ type: "place-ships", sceneId: globalThis.canvas?.scene?.id, actorIds }), importTestShips: () => request({ type: "import-test-ships" }), ownsOperator: ownsCardOperator });
 });
 Hooks.on("createChatMessage", (message, _options, userId) => {
   const request = message.flags?.[MODULE]?.cardCommand;
@@ -137,4 +148,9 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
 });
 Hooks.on("updateSetting", setting => {
   if (setting.key === `${MODULE}.${SETTING}`) Hooks.callAll("arkflightCardCombatChanged", game.arkflight?.cardCombat?.state());
+});
+
+Hooks.on("canvasReady", () => {
+  const state = game.arkflight?.cardCombat?.state();
+  if (game.user?.id === primaryGM()?.id && state?.canvas?.sceneId === globalThis.canvas?.scene?.id) void syncCanvasCombat(state).catch(error => console.error("Arkflight | Card tracker resume failed", error));
 });

@@ -17,7 +17,7 @@ function shipPayload(actor) {
 // combat controls. Those existing combatants are exactly the entries this bridge
 // must adopt and initialize.
 function hasArkflightShipActor(combatant) {
-  return Boolean(shipPayload(combatant?.actor));
+  return !combatant?.parent?.flags?.[MODULE_ID]?.cardCombatSession && Boolean(shipPayload(combatant?.actor));
 }
 
 function currentState(combatant) {

@@ -176,7 +176,7 @@ test("Foundry entry points and functional template are registered in the module"
   const manifest = JSON.parse(await readFile(new URL("../module.json", import.meta.url)));
   assert.ok(manifest.esmodules.includes("src/foundry/card-combat-playtest-api.js"));
   assert.ok(manifest.esmodules.includes("src/ui/card-combat-playtest-ui.js"));
-  const template = await readFile(new URL("../templates/card-combat-playtest.hbs", import.meta.url), "utf8");
+  const template = (await Promise.all(["card-combat-playtest.hbs", "card-combat-canvas-hud.hbs"].map(file => readFile(new URL(`../templates/${file}`, import.meta.url), "utf8")))).join("\n");
   for (const command of ["start", "lock", "resolve", "respond", "helm", "advance"]) assert.ok(template.includes(`data-card-command="${command}"`));
 });
 
