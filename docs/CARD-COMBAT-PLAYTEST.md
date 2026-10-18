@@ -21,6 +21,28 @@ await game.arkflight.cardCombat.open();
 
 The GM chooses two to eight existing Arkflight ship Actors and assigns at least two opposing side labels. No specific ship name is assumed. Ships must have an installed weapon for this first combat batch. Using multiple clients is supported by the request adapter, but still needs acceptance in a real Foundry/PF2e world.
 
+## Import the four packaged test ships
+
+On the launch screen, the GM clicks **Import 4 Test Ships**. If an encounter is already running, end it and expand **Prepare another encounter** to reach the same import action. The ships appear in the Actor folder **Arkflight — Combat Test Fleet** and in the vessel picker. Nothing is imported automatically into campaign worlds.
+
+| Vessel | Profile | Suggested side |
+| --- | --- | --- |
+| [Test] Wayfarer | Standard brigantine / Tidewake engine | A |
+| [Test] Swiftwake | Racing brigantine / Tidewake engine | A |
+| [Test] IronSpear | Standard frigate / Iron Choir engine | B |
+| [Test] Resolute | Battle frigate / military Iron Choir engine | B |
+
+All four are level 5 with six legally mounted weapons (fore, aft and two per broadside), full Hull, Lifeveil, drive, Arkengine integrity, Morale and Supplies, zero Strain, and independent random 12-card AP / 6-card RP hands. They use the real catalog profiles rather than overriding balance values. The GM can operate all stations using the existing Trained NPC fallback; assign real player crew before starting to test player permissions and skill ranks.
+
+Importing again reuses the test Actors by a stable flag, even after renaming them. It preserves edits, resources and existing card libraries, and recreates only missing vessels. Same-name campaign Actors are not treated as test ships. Commands run through the primary GM's serial queue, and import never replaces the active encounter. You still choose which vessels to include and can edit their suggested side labels; use two for a duel or all four for a two-versus-two test.
+
+The same opt-in action is available to a GM macro:
+
+```js
+await game.arkflight.cardCombat.importTestShips();
+await game.arkflight.cardCombat.open();
+```
+
 ## Temporary Crew Command board
 
 ![Crew Command board with sample vessels](images/card-combat-command-board.webp)
@@ -100,8 +122,8 @@ The player request adapter uses Foundry's server-provided creation user ID and m
 
 ## Validation recorded
 
-All **701 Node tests pass**, including 12 connected-playtest tests exercising the actual batch, every AP/RP card's four outcomes, permanent-library reuse, lock/initiative/execute/response flow, movement, cooldown ownership and the registered Foundry adapter with mocked documents. Four presentation tests verify artwork paths, meter bounds, station-hand counts/AP budget and the locked-plan state.
+All **707 Node tests pass**, including 12 connected-playtest tests exercising the actual batch, every AP/RP card's four outcomes, permanent-library reuse, lock/initiative/execute/response flow, movement, cooldown ownership and the registered Foundry adapter with mocked documents. Six fleet tests cover build legality/readiness, real weapon enrollment, repeat imports/renames, partial-import retry, GM authorization and concurrent imports through the registered API. Four presentation tests verify artwork paths, meter bounds, station-hand counts/AP budget and the locked-plan state.
 
-The actual Handlebars template was rendered in local Chromium with the module's complete stylesheet list and mocked Foundry application/documents. Browser interaction checks passed for cross-station selection, refresh preservation, AP budgeting, hidden-card lock payloads, reaction-hand filtering, ship launch selection, execution fields, the incoming-fire pause, completion and panel-scroll preservation. Planning was inspected at 1260×850, 1024×768 and 760×820, without horizontal page overflow. Seven screenshots covered planning, execution, reaction, completion and launch states. No browser JavaScript errors occurred. JavaScript syntax and whitespace checks pass.
+The actual Handlebars template was rendered in local Chromium with the module's complete stylesheet list and mocked Foundry application/documents. Browser interaction checks passed for cross-station selection, refresh preservation, AP budgeting, hidden-card lock payloads, reaction-hand filtering, ship launch selection, execution fields, the incoming-fire pause, completion and panel-scroll preservation. Planning was inspected at 1260×850, 1024×768 and 760×820, without horizontal page overflow. Eight screenshots covered planning, execution, reaction, completion, launch and the imported fleet. The import button was also exercised with the actual fleet builder/import service against mocked Actor/Folder documents, including repeat imports and suggested side labels. No browser JavaScript errors occurred. JavaScript syntax and whitespace checks pass.
 
 Actual Foundry v14/PF2e window chrome, player ownership and multiplayer acceptance remain pending. The local browser harness does not establish those results; use the acceptance checks above.

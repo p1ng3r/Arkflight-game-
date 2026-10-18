@@ -1,3 +1,4 @@
+import { importCardCombatTestFleet } from "./card-combat-test-fleet.js";
 import { PLAYTEST_COMBAT_CARDS } from "../content/combat-cards-playtest.js";
 import { generateShipCardDecks } from "../cards/card-library.js";
 import { CARD_SKILLS, createPlaytestSession } from "../cards/card-playtest-session.js";
@@ -74,6 +75,10 @@ async function startEncounter(command, user) {
 }
 async function handle(command, user) {
   if (!command || JSON.stringify(command).length > 30000) throw new Error("Invalid card command.");
+  if (command.type === "import-test-ships") {
+    if (!user.isGM) throw new Error("Only the GM may import the combat test fleet.");
+    return importCardCombatTestFleet();
+  }
   const before = clone(game.settings.get(MODULE, SETTING));
   let next;
   if (command.type === "start") next = await startEncounter(command, user);
@@ -107,7 +112,7 @@ async function request(command) {
 
 Hooks.once("init", () => game.settings.register(MODULE, SETTING, { name: "Arkflight Card Combat Playtest", scope: "world", config: false, type: Object, default: {} }));
 Hooks.once("ready", () => {
-  game.arkflight.cardCombat = Object.freeze({ cards: PLAYTEST_COMBAT_CARDS, state: () => { const state = game.settings.get(MODULE, SETTING); return state?.id ? clone(state) : null; }, request, ownsOperator: ownsCardOperator });
+  game.arkflight.cardCombat = Object.freeze({ cards: PLAYTEST_COMBAT_CARDS, state: () => { const state = game.settings.get(MODULE, SETTING); return state?.id ? clone(state) : null; }, request, importTestShips: () => request({ type: "import-test-ships" }), ownsOperator: ownsCardOperator });
 });
 Hooks.on("createChatMessage", (message, _options, userId) => {
   const request = message.flags?.[MODULE]?.cardCommand;

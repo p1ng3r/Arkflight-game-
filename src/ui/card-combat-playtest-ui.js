@@ -43,7 +43,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
   async _prepareContext(options) {
     const context = await super._prepareContext(options), api = game.arkflight.cardCombat, state = api.state();
     const active = state?.phase !== "complete" && state?.id;
-    const selectable = game.actors.contents.filter(actor => actor.flags?.[MODULE]?.ship).map((actor, i) => ({ id: actor.id, name: actor.name, team: i === 0 ? "A" : "B" }));
+    const selectable = game.actors.contents.filter(actor => actor.flags?.[MODULE]?.ship).map((actor, i) => ({ id: actor.id, name: actor.name, team: actor.flags[MODULE].cardCombatTestTeam ?? (i === 0 ? "A" : "B"), role: actor.flags[MODULE].cardCombatTestRole }));
     if (!state) return { ...context, isGM: game.user.isGM, selectable, empty: true };
     const shipIds = Object.keys(state.ships);
     if (!shipIds.includes(this.selectedShipId)) this.selectedShipId = state.turnOrder[state.turnIndex] ?? shipIds[0];
@@ -156,6 +156,11 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
   }
   async command(button, context) {
     const api = game.arkflight.cardCombat, state = api.state(), type = button.dataset.cardCommand;
+    if (type === "import-test-ships") {
+      await api.importTestShips();
+      ui.notifications.info("Test fleet ready. Select your ships and opposing sides, then launch the encounter.");
+      return;
+    }
     let command = { type, sessionId: state?.id, revision: state?.revision, shipId: this.selectedShipId };
     const ship = state?.ships[this.selectedShipId], q = ship ? getOrderQueue(ship) : null;
     const request = extra => ({ round: q.round, revision: q.revision, ...extra });
@@ -189,3 +194,5 @@ Hooks.once("ready", () => {
   game.arkflight.cardCombat = Object.freeze({ ...game.arkflight.cardCombat, async open() { windowInstance ??= new ArkflightCardCombatWindow(); await windowInstance.render({ force: true }); if (windowInstance.minimized) await windowInstance.maximize(); return windowInstance; } });
 });
 Hooks.on("arkflightCardCombatChanged", () => { if (windowInstance?.rendered) windowInstance.render({ force: true }); });
+
+Hooks.on("createActor", actor => { if (actor.flags?.[MODULE]?.cardCombatTestShip && windowInstance?.rendered) windowInstance.render({ force: true }); });
