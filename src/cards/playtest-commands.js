@@ -41,7 +41,7 @@ export async function dispatchPlaytestCommand(input, command, adapters) {
     }
     case "end":
       if (!user.isGM) throw new Error("The GM ends this playtest encounter.");
-      session.phase = "complete"; session.pendingAttack = null;
+      session.phase = "complete"; session.pendingAttack = null; session.queuedAttacks = [];
       break;
     default: throw new Error("Unknown card combat command.");
   }

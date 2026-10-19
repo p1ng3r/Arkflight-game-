@@ -68,6 +68,29 @@ Select **All weapons** or an individual installed weapon in the left panel, then
 
 Coverage follows the session's native grid geometry, position and facing. It is a local visual aid and does not roll attacks, spend AP or add persistent scene drawings/templates. Hide it with the same button; closing the HUD, ending combat, changing selected vessels or tearing down the canvas clears it. Return to the bound scene to view coverage after switching scenes.
 
+### Weapon patterns and controlled broadsides
+
+End an older playtest encounter and launch a fresh one after updating: new encounter snapshots now retain each installed weapon's catalog arc. Existing saved encounters do not acquire missing weapon metadata automatically.
+
+| Aiming pattern | Full width | Attack behavior |
+| --- | --- | --- |
+| Precision / line | 60° | One chosen ship; the name describes aiming tolerance, not a piercing area attack. |
+| Broadside | 90° | A port or starboard cone; concentrate on one ship or assign different installed weapons to different ships inside it. |
+| Wide | 180° | One chosen ship. Swivel cannons retain flexible aiming without becoming area attacks. |
+| Turret | 360° | One chosen ship; only weapons explicitly carrying the turret pattern receive all-around coverage. |
+
+The mount supplies direction and the weapon supplies width. A deck mount by itself does not grant turret coverage. **Set Attack Vector** still widens eligible aiming arcs. Displayed hex coverage and shot legality share the same weapon-specific predicate. The shared targeting helper also narrows legacy broadside arcs from 120° to 90°; split-fire controls are exclusive to card combat.
+
+**Concentrate fire** remains the default. Choose an enemy and mounting side in a committed **Fire Battery** order, then leave the eligible weapons checked or uncheck weapons to hold them ready. Guns outside that target's range or arc cannot participate.
+
+For **Split broadside**, choose Port or Starboard, then select that mode. Assign each broadside installation to an enemy in its own legal range and arc, or leave it on **Hold fire**. Swivels and other non-broadside weapons cannot be included in split fire. Each installed weapon is indivisible; an item named “Broadside Cannon Battery” still counts as one installed weapon for assignment. Two distinct targets therefore require at least two participating installations.
+
+**Preview selected fire** shows coverage for the chosen weapons and outlines the selected target hexes. It spends nothing. Change the choices to clear that preview, or hide firing coverage. A shared encounter revision also clears the preview so it cannot silently represent an old assignment. Click **Roll / Execute** to fire.
+
+One committed Fire Battery order costs its existing **1 AP**, regardless of target count, and uses **one shared attack roll**. Roll each participating weapon's damage once: the highest roll contributes fully and each other roll contributes half, rounded down. Each contribution goes only to that weapon's assigned target. A volley damage bonus is added once to the highest-roll contribution; ties use the first selected weapon. A negative damage modifier reduces that contribution first, then the remaining contributions, never below zero. Splitting therefore redistributes the concentrated damage pool instead of creating another full-damage pool per target.
+
+Each target compares the shared attack total against its own AC, receives its own reaction/pass window, and applies its own critical result, Hardness and defenses. Prompts advance automatically through the selected targets. Accuracy/damage/penetration buff uses are consumed once per volley; each target receives the same applicable penetration. All other actions and movement stay paused until every response finishes. Only fired weapons start their printed reload timers; held weapons remain ready. Ships merely standing elsewhere in the cone are not automatically attacked.
+
 ## What the playtest saves
 
 - The first enrollment of a ship with no new card library permanently deals 8 General / 3 Flux / 1 Signature AP cards and 3/2/1 RP cards onto that Actor. Each station receives a usable General card. These are chosen randomly from this small batch.
@@ -111,7 +134,7 @@ These numerical defaults remain provisional while the connected card flow is pla
 - Use standard four degree calculation from the existing rules helper, including natural 1/20 shifts. Non-attack operations deliver their base effect with their written rider. Damage/recovery dice determine strength separately.
 - The first batch, Flux durations, numerical kickers, new General Feed the Guns and Flux Breakaway Vector are provisional card designs. Most recovery quantities reuse prior abilities. Detailed text is in `src/content/combat-cards-playtest.js`.
 - Matching temporary bonuses use the strongest positive plus the strongest negative of a category. Accuracy and damage are separate. One-use buffs are consumed by the qualifying operation; temporary effects expire at the start of that ship's next turn.
-- A battery attack uses ready weapons on one mounting side. Its damage is the highest rolled weapon damage plus half (rounded down) of each other participating weapon's rolled damage. Weapon Impact/Potency are read from installations. One Hardness reduction is applied after a critical doubles the combined damage. This formula needs playtest balancing.
+- A battery attack uses selected ready weapons on one mounting side. Its damage is the highest rolled weapon damage plus half (rounded down) of each other participating weapon's rolled damage. Weapon Impact/Potency are read from installations. A controlled split broadside divides those contributions among selected targets. Hardness is applied once per defending ship after its critical result. This formula needs playtest balancing.
 - Ship attack base is `level + 4 + B + selected skill rank + ship weapon accuracy + minimum participating Potency`, plus temporary bonuses. Initiative uses `d20 + level + B + Navigator Survival rank`. Both are provisional, ship-owned numerical bases.
 - Printed weapon reload N sets readiness to current round + N. A zero-reload weapon can fire again for another committed basic order. Work the Guns can bring a future ready round down to the current round.
 - Use derived ship speed capped at 6; giant profiles cap at 3 and have one normal turn, other ships have two. Purchases can add at most one more full movement allowance and one more turn. The playtest uses one hex per ship. Native wall checks constrain movement; wind, terrain movement costs, ramming, grapples and boarding remain pending.
@@ -125,6 +148,7 @@ These numerical defaults remain provisional while the connected card flow is pla
 - Repeat-click an execution button: it must not charge twice or grant AP twice. Invalid targets leave an order pending; a truly impossible order or missing reserved resources skip cleanly.
 - Use a Flux 2 card in round 1. It must be available at the start of round 3. A Signature remains spent through subsequent rounds.
 - Fire two batteries with movement between them. Check six headings, range/arcs, one attack roll per battery, reload readiness and the reaction prompt. A team with two surviving friendly ships must not prevent victory when the opposing side has no operational ships.
+- Compare a precision weapon, swivel and broadside on the canvas: 60° / 180° / 90° before temporary widening. Put two enemies inside a side cone, split two broadside installations between them, preview, fire, and resolve both reaction prompts. A third ship elsewhere in that cone must remain untouched. Held swivels must remain ready. Try a friendly, reloading or out-of-arc assignment: the authority must reject it without resolving the order.
 - End and start a second encounter. The Actor's card library and equipped hand must be identical; only encounter recovery resets.
 - Check that tokens really move/rotate on both clients and the native tracker selects the active ship. Live Actor resources must remain unchanged by playtest effects. First libraries intentionally save to Actors.
 - Try both card clicks and drag-to-token targeting. A drop should open the preview without consuming the order. Repeated execution clicks must not roll or charge twice.

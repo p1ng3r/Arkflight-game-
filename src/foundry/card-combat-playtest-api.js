@@ -38,14 +38,14 @@ export function authenticateCardRequest(message, userId, users) {
   if (!user?.active || authorId !== userId) return null;
   return user;
 }
-function weaponEntries(ship) {
+export function weaponEntries(ship) {
   return (ship.weapons ?? []).map((install, index) => {
     const id = typeof install === "string" ? install : install.id;
     const weapon = SHIP_CATALOGS.weapons[id];
     if (!weapon) throw new Error(`Unknown installed weapon: ${id}`);
     const profile = weaponDamageProfile(weapon, install), combat = weapon.data?.combat ?? {};
     if (!/^\d+d\d+(?:[+-]\d+)?$/.test(String(profile.dice).replaceAll(" ", ""))) throw new Error(`Unsupported damage formula for ${weapon.name}.`);
-    return { key: install.instanceId ?? `${id}-${index}`, name: weapon.name, mount: install.mount ?? install.arc ?? "deck", dice: profile.dice, potency: Number(install.upgrades?.potency ?? 0), minRange: Number(combat.rangeHexes?.min ?? 1), maxRange: Number(combat.rangeHexes?.max ?? 6), reloadRounds: Math.max(0, Number(combat.reloadRounds ?? 1)) };
+    return { key: install.instanceId ?? `${id}-${index}`, name: weapon.name, mount: install.mount ?? install.arc ?? "deck", arcTemplate: combat.arcTemplate ?? "wide", dice: profile.dice, potency: Number(install.upgrades?.potency ?? 0), minRange: Number(combat.rangeHexes?.min ?? 1), maxRange: Number(combat.rangeHexes?.max ?? 6), reloadRounds: Math.max(0, Number(combat.reloadRounds ?? 1)) };
   });
 }
 async function startEncounter(command, user) {

@@ -81,6 +81,12 @@
 .card-order-controls select { flex:1 1 110px; max-width:100%; font-size:11px; }
 .card-order-controls button { flex:1 1 auto; font-size:11px; }
 .card-order-controls select[multiple] { min-height:65px; }
+.cc-fire-weapons { grid-column:1 / -1; flex:1 0 100%; min-width:0; margin:4px 0; padding:7px; border:1px solid #57717b; border-radius:5px; }
+.cc-fire-weapon { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:11px; border-bottom:1px solid #ffffff14; }
+.cc-fire-weapon>span { flex:1; min-width:0; overflow-wrap:anywhere; }
+.cc-fire-weapon>select { flex:1; min-width:0; max-width:55%; }
+.cc-fire-weapon>input { flex:0 0 auto; margin:0; }
+.cc-fire-summary { font-size:11px; color:#bed4db; margin:6px 0; }
 .card-order-controls [data-card-command="resolve"] { border-color:#668f8b; color:#b9e9df; }
 .arkflight-card-combat .card-finish-button { width:100%; margin-top:8px; border-color:#957e4c; color:var(--cc-gold); }
 .card-hand-panel { display:flex; flex-direction:column; min-height:0; min-width:0; background:#0b1d29; border-left:1px solid var(--cc-line); }

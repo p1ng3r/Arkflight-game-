@@ -4,6 +4,7 @@ import { createOrderController } from "./order-controller.js";
 import { getOrderQueue, startOrderRound, beginOrderExecution, finishOrderTurn, availableOrderResources } from "./committed-orders.js";
 import { shipAbilityBonus, shipAbilityDC } from "../combat/ship-ability-rules.js";
 import { degreeOfSuccess } from "../combat/check-resolution.js";
+import { weaponArcCheck } from "../combat/weapon-targeting.js";
 
 export const CARD_SKILLS = Object.freeze({
   captain: ["diplomacy", "intimidation", "society"], engineer: ["crafting", "arcana", "thievery"],
@@ -64,16 +65,14 @@ export function movePlaytestShip(session, shipId, direction) {
   return next;
 }
 
-export function weaponHexInArc(session, shipId, destination, mount) {
+export function weaponHexInArc(session, shipId, destination, weapon) {
   const ship = session.ships[shipId], a = ship.cardPlay.motion;
   const dq = destination.q - a.q, dr = destination.r - a.r;
   const basis = session.canvas?.basis ?? { q: { x: 1.5, y: Math.sqrt(3) / 2 }, r: { x: 0, y: Math.sqrt(3) } };
   const dx = dq * basis.q.x + dr * basis.r.x, dy = dq * basis.q.y + dr * basis.r.y;
   const bearing = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
   const heading = session.canvas?.headings?.[a.heading] ?? a.heading * 60;
-  const center = heading + ({ fore: 0, port: -90, starboard: 90, aft: 180, deck: 0 }[mount] ?? 0);
-  const difference = Math.abs(((bearing - center + 540) % 360) - 180);
-  return mount === "deck" || difference <= 60 + strongest(ship, "arc") + 1e-7;
+  return weaponArcCheck({ heading, mount: weapon.mount, arcTemplate: weapon.arcTemplate ?? "wide", bearing, arcBonus: strongest(ship, "arc") }).legal;
 }
 
 export function movePlaytestShipTo(session, shipId, destination) {
@@ -99,7 +98,7 @@ export function weaponCoverage(session, shipId, weaponKey = null) {
     const origin = ship.cardPlay.motion;
     for (let q = -radius; q <= radius; q++) for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
       const cell = { q: origin.q + q, r: origin.r + r }, distance = hexDistance(origin, cell);
-      if (distance && distance >= weapon.minRange && distance <= weapon.maxRange && weaponHexInArc(session, shipId, cell, weapon.mount)) cells.push({ ...cell, mount: weapon.mount, ready: weapon.readyRound <= session.round, weaponKey: weapon.key });
+      if (distance && distance >= weapon.minRange && distance <= weapon.maxRange && weaponHexInArc(session, shipId, cell, weapon)) cells.push({ ...cell, mount: weapon.mount, ready: weapon.readyRound <= session.round, weaponKey: weapon.key });
     }
   }
   return cells;
@@ -111,9 +110,26 @@ export function batteryOptions(session, shipId, targetId, mount) {
   const a = ship.cardPlay.motion, b = target.cardPlay.motion;
   const distance = hexDistance(a, b);
   if (distance === 0) return [];
-  if (!weaponHexInArc(session, shipId, b, mount)) return [];
+  return ship.cardPlay.weapons.filter(w => w.mount === mount && w.readyRound <= session.round && distance >= w.minRange && distance <= w.maxRange && weaponHexInArc(session, shipId, b, w));
+}
 
-  return ship.cardPlay.weapons.filter(w => w.mount === mount && w.readyRound <= session.round && distance >= w.minRange && distance <= w.maxRange);
+// Each installed weapon is indivisible. Splitting redistributes the existing
+// battery damage pool; it must not grant a fresh full-damage die per target.
+export function planBatteryFire(session, shipId, selection) {
+  if (selection.assignments !== undefined) {
+    const rows = selection.assignments;
+    if (!["port", "starboard"].includes(selection.batteryId) || !Array.isArray(rows) || !rows.length || rows.length > 24 || selection.weaponKeys !== undefined || selection.targetId !== undefined) throw new Error("Split fire requires one port or starboard broadside and explicit weapon assignments.");
+    if (new Set(rows.map(row => row?.weaponKey)).size !== rows.length) throw new Error("Assign each broadside weapon only once.");
+    return rows.map(row => {
+      const weapon = batteryOptions(session, shipId, row.targetId, selection.batteryId).find(w => w.key === row.weaponKey);
+      if (!weapon || weapon.arcTemplate !== "broadside") throw new Error("Assign a ready broadside weapon to an enemy inside its range and arc.");
+      return { weapon, targetId: row.targetId };
+    });
+  }
+  const legal = batteryOptions(session, shipId, selection.targetId, selection.batteryId);
+  if (!legal.length) throw new Error("Choose a ready battery with its target in range and arc.");
+  if (selection.weaponKeys !== undefined && (!Array.isArray(selection.weaponKeys) || !selection.weaponKeys.length || new Set(selection.weaponKeys).size !== selection.weaponKeys.length || selection.weaponKeys.some(key => !legal.some(w => w.key === key)))) throw new Error("Choose different ready weapons in this battery.");
+  return legal.filter(w => !selection.weaponKeys || selection.weaponKeys.includes(w.key)).map(weapon => ({ weapon, targetId: selection.targetId }));
 }
 
 export function createPlaytestSession(entries, { id, rng = Math.random } = {}) {
@@ -235,27 +251,46 @@ export function createPlaytestController(session, { user, ownsOperator, isEligib
     preflight({ ship, selection, order }) {
       if (value(ship, "hull") <= 0) return { ok: false, impossible: true, reason: "Restore Hull before firing a disabled ship." };
       roleCheck(ship, "battlewatch", selection, (s, st, sk) => rank(s, st, sk, order.operatorId));
-      const target = session.ships[selection.targetId];
-      if (!target) return { ok: false, reason: "Choose an enemy target." };
-      const legal = batteryOptions(session, ship.cardPlay.actorId, selection.targetId, selection.batteryId);
-      if (!legal.length) return { ok: false, reason: "Choose a ready battery with its target in range and arc." };
-      if (selection.weaponKeys && (new Set(selection.weaponKeys).size !== selection.weaponKeys.length || !selection.weaponKeys.length || selection.weaponKeys.some(key => !legal.some(w => w.key === key)))) return { ok: false, reason: "Choose different ready weapons in this battery." };
+      try { planBatteryFire(session, ship.cardPlay.actorId, selection); }
+      catch (error) { return { ok: false, reason: error.message }; }
       return { ok: true };
     },
     async execute({ ship, selection, order }) {
-      const target = session.ships[selection.targetId], id = ship.cardPlay.actorId;
+      const id = ship.cardPlay.actorId;
       const selected = roleCheck(ship, "battlewatch", selection, (s, st, sk) => rank(s, st, sk, order.operatorId));
-      const guns = batteryOptions(session, id, selection.targetId, selection.batteryId).filter(w => !selection.weaponKeys || selection.weaponKeys.includes(w.key));
+      const assignments = planBatteryFire(session, id, selection), guns = assignments.map(row => row.weapon);
       const b = shipAbilityBonus(ship.progression?.level), level = Number(ship.progression?.level ?? 1);
       const modifier = level + 4 + b + selected.rank + Number(ship.cardPlay.stats.weaponAttackBonus ?? 0) + Math.min(...guns.map(w => w.potency ?? 0)) + strongest(ship, "attack", null, true) + strongest(ship, "check", "battlewatch", true);
       const die = await roll("1d20");
+      if (!Number.isInteger(die) || die < 1 || die > 20) throw new Error("Invalid d20 result.");
       const rolled = await Promise.all(guns.map(w => roll(w.dice)));
-      const descending = [...rolled].sort((a, b) => b - a);
-      const damage = descending[0] + descending.slice(1).reduce((sum, n) => sum + Math.floor(n / 2), 0) + strongest(ship, "damage", null, true);
+      if (rolled.some(n => !Number.isFinite(n) || n < 0)) throw new Error("Invalid weapon damage result.");
+      const lead = rolled.indexOf(Math.max(...rolled));
+      const damageBonus = strongest(ship, "damage", null, true);
       const penetration = strongest(ship, "penetration", null, true);
+      const contributions = rolled.map((n, i) => i === lead ? n : Math.floor(n / 2));
+      if (damageBonus >= 0) contributions[lead] += damageBonus;
+      else {
+        let penalty = -damageBonus;
+        for (const i of [lead, ...contributions.keys()].filter((i, index, all) => all.indexOf(i) === index)) {
+          const applied = Math.min(contributions[i], penalty);
+          contributions[i] -= applied; penalty -= applied;
+        }
+      }
+      const attacks = new Map();
+      for (const [i, assignment] of assignments.entries()) {
+        const targetId = assignment.targetId;
+        const attack = attacks.get(targetId) ?? { attackerId: id, targetId, battery: selection.batteryId, die, modifier, total: die + modifier, damage: 0, penetration, weaponKeys: [] };
+        attack.damage += contributions[i];
+        attack.weaponKeys.push(assignment.weapon.key);
+        attacks.set(targetId, attack);
+      }
+      for (const attack of attacks.values()) attack.damage = Math.max(0, attack.damage);
       for (const gun of guns) ship.cardPlay.weapons.find(w => w.key === gun.key).readyRound = session.round + gun.reloadRounds;
-      session.pendingAttack = { attackerId: id, targetId: selection.targetId, battery: selection.batteryId, die, modifier, total: die + modifier, damage, penetration };
-      log(session, { shipId: id, label: "Fire Battery", result: { die, total: die + modifier, damage }, targetId: selection.targetId });
+      const volley = [...attacks.values()];
+      session.pendingAttack = volley[0];
+      session.queuedAttacks = volley.slice(1);
+      log(session, { shipId: id, label: volley.length > 1 ? "Split Broadside" : "Fire Battery", result: { die, total: die + modifier, damage: volley.reduce((sum, a) => sum + a.damage, 0) }, targets: volley.map(a => ({ targetId: a.targetId, damage: a.damage, weaponKeys: a.weaponKeys })) });
       return { ship, details: session.pendingAttack };
     }
   };
@@ -341,6 +376,6 @@ export async function resolvePlaytestAttack(session, { cardId = null, station = 
     change(defender, "hull", -damage);
   }
   log(next, { shipId: attack.targetId, label: cardId ?? "No reaction", result: { ...attack, ac, degree, damage, reaction: reactionResult } });
-  next.pendingAttack = null;
+  next.pendingAttack = next.queuedAttacks?.shift() ?? null;
   return next;
 }

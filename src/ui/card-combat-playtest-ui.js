@@ -1,4 +1,6 @@
-import { showCardWeaponOverlay, hideCardWeaponOverlay, cardWeaponOverlayVisible } from "./card-combat-canvas-overlays.js";
+import { showCardWeaponOverlay, showCardFireOverlay, clearCardFirePreview, hideCardWeaponOverlay, cardWeaponOverlayVisible } from "./card-combat-canvas-overlays.js";
+import { bindFireControls, readFireSelection } from "./card-combat-fire-ui.js";
+import { weaponArcCheck } from "../combat/weapon-targeting.js";
 import { PLAYTEST_COMBAT_CARDS } from "../content/combat-cards-playtest.js";
 import { CARD_SKILLS } from "../cards/card-playtest-session.js";
 import { cardAvailability } from "../cards/card-library.js";
@@ -105,7 +107,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     if (pendingAttack) {
       const defender = state.ships[pendingAttack.targetId];
       const stations = Object.entries(defender.crew.stations).filter(([, id]) => game.user.isGM || owns(id)).map(([id]) => ({ id, name: label(id) }));
-      response = { name: defender.cardPlay.name, total: pendingAttack.total, damage: pendingAttack.damage, canRespond: stations.length > 0, stations, skills: CARD_SKILLS[stations[0]?.id ?? "captain"].map(id => ({ id, name: label(id) })), cards: defender.cardDecks.hands.rp.map(id => ({ ...cardById(id), enabled: defender.cardPlay.rp > 0 && cardAvailability(defender, PLAYTEST_COMBAT_CARDS, id).ok })) };
+      response = { name: defender.cardPlay.name, total: pendingAttack.total, damage: pendingAttack.damage, remainingTargets: state.queuedAttacks?.length ?? 0, canRespond: stations.length > 0, stations, skills: CARD_SKILLS[stations[0]?.id ?? "captain"].map(id => ({ id, name: label(id) })), cards: defender.cardDecks.hands.rp.map(id => ({ ...cardById(id), enabled: defender.cardPlay.rp > 0 && cardAvailability(defender, PLAYTEST_COMBAT_CARDS, id).ok })) };
     }
     const ships = Object.entries(state.ships).map(([id, row]) => ({ id, name: row.cardPlay.name, selected: id === this.selectedShipId, current: id === state.turnOrder[state.turnIndex], team: row.cardPlay.team, hull: row.resources.hull.value, hullMax: row.resources.hull.max, planning: getOrderQueue(row).phase === "planning", x: 1.5 * row.cardPlay.motion.q * 30, y: Math.sqrt(3) * (row.cardPlay.motion.r + row.cardPlay.motion.q / 2) * 30, rotation: state.canvas?.headings?.[row.cardPlay.motion.heading] ?? row.cardPlay.motion.heading * 60 }));
     const bounds = { left: Math.min(...ships.map(s => s.x)) - 90, top: Math.min(...ships.map(s => s.y)) - 90, width: Math.max(...ships.map(s => s.x)) - Math.min(...ships.map(s => s.x)) + 180, height: Math.max(...ships.map(s => s.y)) - Math.min(...ships.map(s => s.y)) + 180 };
@@ -116,7 +118,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     const previewCard = cardById(this.expandedCardId);
     const focusedOrder = orders.find(order => order.id === this.expandedOrderId) ?? null;
     const preview = previewCard ? { ...previewCard, art: cardArt(previewCard), typeLabel: previewCard.type === "flux" ? `Flux ${previewCard.cooldownRounds}` : label(previewCard.type) } : focusedOrder ? { name: focusedOrder.name, description: "Basic ship order · 1 AP committed. Targets and batteries are selected now.", art: focusedOrder.art, type: "general", typeLabel: "Basic" } : null;
-    const weaponChoices = ship.cardPlay.weapons.map(weapon => ({ id: weapon.key, name: `${label(weapon.mount)} · ${weapon.name} · ${weapon.minRange}–${weapon.maxRange} hex · ${weapon.readyRound <= state.round ? "Ready" : `Ready R${weapon.readyRound}`}`, selected: weapon.key === this.selectedWeaponKey }));
+    const weaponChoices = ship.cardPlay.weapons.map(weapon => ({ id: weapon.key, name: `${label(weapon.mount)} · ${weapon.name} · ${label(weapon.arcTemplate ?? "wide")} ${2 * weaponArcCheck({ arcTemplate: weapon.arcTemplate ?? "wide" }).halfWidth}° · ${weapon.minRange}–${weapon.maxRange} hex · ${weapon.readyRound <= state.round ? "Ready" : `Ready R${weapon.readyRound}`}`, selected: weapon.key === this.selectedWeaponKey }));
     const canvasBound = Boolean(state.canvas), sceneMatches = canvasBound && state.canvas.sceneId === scene?.id;
     return { ...context, canAddPreview: canPlan && previewCard?.deck === "ap", canChoosePreviewReaction: response?.canRespond && previewCard?.deck === "rp", preview, focusedOrders: focusedOrder ? [focusedOrder] : [], ownedStations, handCollapsed: this.handCollapsed, weaponChoices, arcsVisible: cardWeaponOverlayVisible(this.selectedShipId), canvasBound, sceneMatches, sceneName: scene?.name, sceneReady: Boolean(globalThis.canvas?.grid?.isHexagonal), budget, phaseLabel, phaseHint, stations, meters: resourceMeters(ship.resources), pendingCount: orders.filter(order => order.status === "pending").length, state, isGM: game.user.isGM, selectable, active, complete: state.phase === "complete", shipName: ship.cardPlay.name, ships, selectedShipId: this.selectedShipId, cards: cards.map(card => ({ ...card, dragOrderId: orders.find(order => order.abilityId === card.id && order.status === "pending")?.id })), reactions: reactions.map(card => ({ ...card, canDragReaction: response?.canRespond && state.pendingAttack?.targetId === this.selectedShipId && ship.cardPlay.rp > 0 && card.status === "Ready" })), orders, crew, targets, batteries, response, canPlan, bonus: q.phase === "execution", ap: q.ap, rp: ship.cardPlay.rp, b: shipAbilityBonus(ship.progression?.level), resources: ship.resources, motion: { ...ship.cardPlay.motion, allowance: ship.cardPlay.motion.speed + ship.cardPlay.motion.extra, turnAllowance: ship.cardPlay.motion.baseTurns + ship.cardPlay.motion.bonusTurns }, canMove: turn && (game.user.isGM || owns(ship.crew.stations.navigator)), canEnd: turn && captain, basics: BASIC_CARD_ORDERS.map(b => ({ ...b, max: canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0 })), log: [...state.log].reverse().slice(0, 15).map(entry => ({ ...entry, label: cardById(entry.label)?.name ?? label(entry.label), name: state.ships[entry.shipId]?.cardPlay.name, text: logText(entry, state) })), viewBox: `${bounds.left} ${bounds.top} ${bounds.width} ${bounds.height}` };
   }
@@ -184,6 +186,12 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
         }
         select.addEventListener("change", () => { saved[field] = select.multiple ? [...select.selectedOptions].map(option => option.value) : select.value; });
       }
+      if (row.querySelector("[data-fire-mode]")) bindFireControls(row, context.state, this.selectedShipId, saved, {
+        changed: clearCardFirePreview,
+        preview: assignments => {
+          if (!showCardFireOverlay(this.selectedShipId, assignments.map(a => ({ weaponKey: a.weapon.key, targetId: a.targetId })))) ui.notifications.warn("View the encounter scene to preview selected fire.");
+        }
+      });
     }
     this.element.querySelector("[data-ship-picker]")?.addEventListener("change", event => { hideCardWeaponOverlay(); this.selectedWeaponKey = ""; this.expandedOrderId = null; this.expandedCardId = null; this.selectedShipId = event.target.value; this.render({ force: true }); });
     this.element.querySelector("[data-response-station]")?.addEventListener("change", event => {
@@ -241,7 +249,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
       const selection = { skill: row.querySelector("[data-skill]").value };
       const choice = row.querySelector("[data-choice]");
       if (choice) selection.choice = choice.multiple ? [...choice.selectedOptions].map(o => o.value) : choice.value;
-      if (row.querySelector("[data-target]")) { selection.targetId = row.querySelector("[data-target]").value; selection.batteryId = row.querySelector("[data-battery]").value; }
+      if (row.querySelector("[data-target]")) Object.assign(selection, readFireSelection(row));
       command.request = request({ orderId, selection, operatorId: row.querySelector("[data-replacement]")?.value, reason: "Captain skipped this order" });
     }
     if (type === "helm") command.direction = button.dataset.direction;
@@ -310,6 +318,7 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
     if (targetId) {
       const key = `${state.id}:${state.round}:${shipId}:${orderId}`;
       (this.executionDrafts[key] ??= {}).target = targetId;
+      this.executionDrafts[key].fireMode = "concentrate";
     }
     await this.render({ force: true });
   }
@@ -348,7 +357,7 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
       try {
         switch (button.dataset.hudAction) {
           case "basic-orders": this.element.querySelector('[data-station-filter="all"]').click(); this.element.querySelector(".cc-basic-orders")?.scrollIntoView({ block: "nearest", inline: "end", behavior: "smooth" }); break;
-          case "close-preview": this.expandedCardId = null; this.expandedOrderId = null; await this.render({ force: true }); break;
+          case "close-preview": clearCardFirePreview(); this.expandedCardId = null; this.expandedOrderId = null; await this.render({ force: true }); break;
           case "toggle-hand": this.handCollapsed = !this.handCollapsed; await this.render({ force: true }); break;
           case "close": await this.close(); break;
           case "setup": await game.arkflight.cardCombat.open(); break;
@@ -385,7 +394,6 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
       } catch (error) { ui.notifications.error(error.message); }
     });
     this.element.querySelector("[data-overlay-weapon]")?.addEventListener("change", event => { this.selectedWeaponKey = event.target.value; if (cardWeaponOverlayVisible(this.selectedShipId)) showCardWeaponOverlay(this.selectedShipId, this.selectedWeaponKey || null); });
-    if (cardWeaponOverlayVisible(this.selectedShipId)) showCardWeaponOverlay(this.selectedShipId, this.selectedWeaponKey || null);
   }
   async close(options = {}) { hideCardWeaponOverlay(); return super.close(options); }
 }

@@ -58,10 +58,12 @@ export function createOrderController({ cards, drivers, read, write, getContext,
   }
 
   function selectionOf(value = {}) {
-    const allowed = ["targetId", "batteryId", "weaponKeys", "skill", "choice"];
+    const allowed = ["targetId", "batteryId", "weaponKeys", "assignments", "skill", "choice"];
     if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some(key => !allowed.includes(key))) throw new Error("Choose execution targets, weapons or a skill; roll results and costs come from the authority.");
     for (const [key, item] of Object.entries(value)) {
-      if (key === "weaponKeys" || (key === "choice" && Array.isArray(item))) {
+      if (key === "assignments") {
+        if (!Array.isArray(item) || item.length > 24 || item.some(row => !row || typeof row !== "object" || Array.isArray(row) || Object.keys(row).length !== 2 || typeof row.weaponKey !== "string" || typeof row.targetId !== "string")) throw new Error("Invalid broadside assignments.");
+      } else if (key === "weaponKeys" || (key === "choice" && Array.isArray(item))) {
         if (!Array.isArray(item) || item.length > 24 || item.some(id => typeof id !== "string")) throw new Error("Invalid execution choices.");
       } else if (typeof item !== "string") throw new Error("Invalid execution choice.");
     }
