@@ -16,7 +16,7 @@ function mockWorld({ isGM = true, failAt = null } = {}) {
   globalThis.game = { user: gm, users: { [Symbol.iterator]: function* () { yield gm; }, get: id => id === gm.id ? gm : null }, actors: { contents: actors, get: id => actors.find(actor => actor.id === id) }, folders: { contents: folders }, settings: { register() {}, get: () => structuredClone(saved), async set(...args) { settingsWrites.push(args); saved = structuredClone(args[2]); } }, arkflight: {} };
   globalThis.foundry = { utils: { randomID: () => `session-${++serial}` } };
   globalThis.Folder = { async create(data) { const folder = { id: `folder-${++serial}`, ...structuredClone(data) }; folders.push(folder); return folder; } };
-  globalThis.Actor = { async create(data) { if (++attempts === failAt) throw new Error("Simulated create failure"); const actor = { id: `actor-${++serial}`, ...structuredClone(data), async update() { writes.push(this.id); } }; actors.push(actor); return actor; } };
+  globalThis.Actor = { async create(data) { if (++attempts === failAt) throw new Error("Simulated create failure"); const actor = { id: `actor-${++serial}`, ...structuredClone(data), async update(patch) { writes.push(this.id); for (const [path, value] of Object.entries(patch)) { const keys = path.split("."), last = keys.pop(), parent = keys.reduce((obj, key) => obj[key] ??= {}, this); parent[last] = structuredClone(value); } } }; actors.push(actor); return actor; } };
   return { actors, folders, writes, settingsWrites, callbacks, gm };
 }
 
@@ -77,6 +77,45 @@ test("retry after a partial import creates only the missing vessels", async () =
   assert.equal(retry.createdIds.length, 2);
   assert.equal(world.actors.length, 4);
   assert.equal(world.folders.length, 1);
+});
+
+test("test fleet uses overhead rotating tokens while retaining the original Actor portrait", async () => {
+  const world = mockWorld(); await importCardCombatTestFleet();
+  for (const actor of world.actors) {
+    assert.equal(actor.img, "modules/arkflight-game/assets/ui/stations/voyage_vessel_icon.webp");
+    assert.equal(actor.prototypeToken.texture.src, "modules/arkflight-game/assets/ui/stations/voyage_vessel_token_topdown.webp");
+    assert.equal(actor.prototypeToken.lockRotation, false);
+    assert.equal(actor.prototypeToken.rotation, 0);
+  }
+});
+
+test("repeat import upgrades only default art on marked test Actors and linked tokens, preserving customizations", async () => {
+  const world = mockWorld(), first = await importCardCombatTestFleet();
+  const portrait = "modules/arkflight-game/assets/ui/stations/voyage_vessel_icon.webp", topdown = "modules/arkflight-game/assets/ui/stations/voyage_vessel_token_topdown.webp";
+  const actor = world.actors[0], custom = world.actors[1];
+  actor.prototypeToken.texture = { src: portrait, scaleX: 1.7 }; actor.prototypeToken.rotation = 120; actor.prototypeToken.lockRotation = true;
+  custom.prototypeToken.texture.src = "worlds/custom-ship.webp";
+  const resources = structuredClone(actor.flags), customPrototype = structuredClone(custom.prototypeToken);
+  const tokens = [
+    { id: "default", actorId: actor.id, actorLink: true, texture: { src: portrait, scaleX: 2 }, rotation: 240, x: 200, y: 350 },
+    { id: "custom", actorId: actor.id, actorLink: true, texture: { src: "worlds/my-token.webp" }, rotation: 60 },
+    { id: "campaign", actorId: "campaign", actorLink: true, texture: { src: portrait } },
+    { id: "unlinked", actorId: actor.id, actorLink: false, texture: { src: portrait } }
+  ];
+  const untouched = structuredClone(tokens.slice(1)), sceneWrites = [];
+  game.scenes = { contents: [{ tokens: { contents: tokens }, async updateEmbeddedDocuments(type, patches) {
+    assert.equal(type, "Token"); sceneWrites.push(...patches);
+    for (const patch of patches) { const token = tokens.find(t => t.id === patch._id); token.texture.src = patch["texture.src"]; token.lockRotation = patch.lockRotation; }
+  } }] };
+  const again = await importCardCombatTestFleet();
+  assert.deepEqual(again.actorIds, first.actorIds); assert.deepEqual(again.createdIds, []);
+  assert.equal(actor.prototypeToken.texture.src, topdown); assert.equal(actor.prototypeToken.texture.scaleX, 1.7); assert.equal(actor.prototypeToken.rotation, 120);
+  assert.deepEqual(actor.flags, resources); assert.deepEqual(custom.prototypeToken, customPrototype);
+  assert.equal(tokens[0].texture.src, topdown); assert.equal(tokens[0].lockRotation, false); assert.equal(tokens[0].rotation, 240);
+  assert.equal(tokens[0].x, 200); assert.equal(tokens[0].y, 350); assert.equal(tokens[0].texture.scaleX, 2);
+  assert.deepEqual(tokens.slice(1), untouched); assert.equal(sceneWrites.length, 1); assert.deepEqual(world.writes, [actor.id]);
+  await importCardCombatTestFleet(); assert.equal(sceneWrites.length, 1); assert.deepEqual(world.writes, [actor.id]);
+  delete game.scenes;
 });
 
 test("players cannot import test ships", async () => {

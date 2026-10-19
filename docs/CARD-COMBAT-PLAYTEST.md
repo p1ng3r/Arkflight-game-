@@ -40,6 +40,8 @@ All four are level 5 with six legally mounted weapons (fore, aft and two per bro
 
 Importing again reuses the test Actors by a stable flag, even after renaming them. It preserves edits, resources and existing card libraries, and recreates only missing vessels. Same-name campaign Actors are not treated as test ships. Commands run through the primary GM's serial queue, and import never replaces the active encounter. You still choose which vessels to include and can edit their suggested side labels; use two for a duel or all four for a two-versus-two test.
 
+Test ships keep the original gold vessel illustration as their Actor portrait and use a transparent overhead token on the canvas: `modules/arkflight-game/assets/ui/stations/voyage_vessel_token_topdown.webp`. The art points bow-up at rotation 0°, with port on the left and starboard on the right when viewed in that orientation. It rotates with the token. **Import 4 Test Ships** also upgrades existing marked test Actors and their linked scene tokens if they still use the original portrait illustration as token art. Custom artwork, positions, current headings, scale, resources and hands are preserved; campaign ships are excluded. To use it for another ship, choose this file as its Prototype Token texture and update any already placed tokens separately.
+
 The same opt-in action is available to a GM macro:
 
 ```js
