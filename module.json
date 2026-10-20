@@ -72,7 +72,8 @@
     "styles/event-board-navy-bars-fix.css",
     "styles/system-damage.css",
     "styles/card-combat-playtest.css",
-    "styles/card-combat-motion.css"
+    "styles/card-combat-motion.css",
+    "styles/card-combat-hud-layout.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",

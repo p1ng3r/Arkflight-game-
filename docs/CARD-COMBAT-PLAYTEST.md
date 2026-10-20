@@ -143,6 +143,20 @@ These numerical defaults remain provisional while the connected card flow is pla
 - Basic Damage Control restores `1d4 × B` copied Hull for 1 AP. Its final named-fault suppression/repair behavior remains a separate design step.
 - Missing station assignments use explicit NPC crew at Trained (+1) for this playtest. Assigned PF2e actors contribute their selected skill rank; the UI always provides the three station skill choices. Takeovers use the replacement actor's rank.
 
+## HUD placement and dashboard controls
+
+The card hand automatically fits between Foundry's visible left controls and its right sidebar/chat area, including a floating chat input. Navigation and the hotbar also reserve space. Resizing the browser, expanding tools or opening/closing chat recalculates the layout without rebuilding the hand or changing your selected orders. Cards keep their normal size and scroll horizontally. **Lock Captain's Plan is the first control on the left of the planning footer.**
+
+The former left ship panel is now a horizontal dashboard above the hand: ship selection, separate AP/RP pools, five resource meters and the helm. Expand **Weapon arcs & ship controls** to select weapon coverage or end the encounter.
+
+- Drag the dashboard using its grip. It stays between the Foundry toolbars/chat and above the hand so it cannot cover Lock Plan.
+- **Collapse** folds it into a compact ship tab retaining resource/AP/RP totals; **Expand ship** restores the dashboard.
+- Position and collapsed state are saved on your client, independently of combat and other players. Resizing clamps saved positions into the available space.
+- **Reset** restores the expanded dashboard above the cards. With the grip focused, arrow keys move 10 pixels, Shift+arrow moves 40, and Home resets.
+- Closing/reopening the HUD preserves the saved layout and releases resize/mutation observers and pointer listeners.
+
+Thirteen layout tests cover floating chat, expanded tool columns, navigation/hotbar space, viewport changes, saved positions, dragging/collapse/reset, client-only persistence and lifecycle cleanup. Full Node validation runs through the existing GitHub CI. This revision has not been visually tested in a live Foundry client; check with the floating chat and expanded tools shown in the reported screenshot.
+
 ## Motion and sound
 
 The HUD's top ribbon has **Motion: Full / Subtle / Off** and an independent **Sound on/off** button. These preferences belong to each client. The same controls and a volume slider appear in Configure Settings → Arkflight Game. Sound starts off and uses short generated tones after a browser click. OS reduced-motion preference always disables visual movement; sound remains separately controlled.
@@ -175,7 +189,7 @@ The player request adapter uses Foundry's server-provided creation user ID and m
 
 ## Validation recorded
 
-All **745 Node tests pass**. Fourteen presentation tests cover first-snapshot/reconnect behavior, duplicate/stale revisions, AP/RP separation, split-volley deduplication, the capped log, unique reaction outcomes, Flux readiness, spent Signatures, movement, reduced motion and transformed token coordinates. In addition to the original connected card, fleet and presentation checks, ten canvas tests exercise both hex orientations/parities, linked token selection, legal binding, real-position initialization, marked Combat creation/legacy exclusion, multi-hex movement, the native drag hook, authority checks, occupied/walled movement, rollback after rejected movement or persistence failure, facing budgets, tracker protection, exact coverage-versus-firing checks, and repeat-safe scene deployment.
+The preceding animation build passed all **745 Node tests**. This layout update adds 13 tests; the commit's GitHub CI records the current full-suite result. Fourteen presentation tests cover first-snapshot/reconnect behavior, duplicate/stale revisions, AP/RP separation, split-volley deduplication, the capped log, unique reaction outcomes, Flux readiness, spent Signatures, movement, reduced motion and transformed token coordinates. In addition to the original connected card, fleet and presentation checks, ten canvas tests exercise both hex orientations/parities, linked token selection, legal binding, real-position initialization, marked Combat creation/legacy exclusion, multi-hex movement, the native drag hook, authority checks, occupied/walled movement, rollback after rejected movement or persistence failure, facing budgets, tracker protection, exact coverage-versus-firing checks, and repeat-safe scene deployment.
 
 The real launch/HUD templates and full module styles were exercised in local Chromium with mocked Foundry application/documents and a simulated scene. Interaction checks passed for portrait cards, expanded four outcomes, selecting through preview, cross-station planning, refresh preservation (including horizontal scroll and reaction choices), folding, actual coverage polygons, Captain plan submission, execution fields, AP and RP drag payloads, token targeting, confirmation before consumption, settings-menu reuse of the HUD and the defender reaction flow. Screenshots were inspected at 1600×1000 and 1366×768 with no horizontal page overflow or browser JavaScript errors. Syntax and whitespace checks pass.
 

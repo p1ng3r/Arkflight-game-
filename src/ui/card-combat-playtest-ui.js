@@ -1,3 +1,4 @@
+import { CardCombatHUDLayout } from "./card-combat-hud-layout.js";
 import { showCardWeaponOverlay, showCardFireOverlay, clearCardFirePreview, hideCardWeaponOverlay, cardWeaponOverlayVisible } from "./card-combat-canvas-overlays.js";
 import { bindFireControls, readFireSelection } from "./card-combat-fire-ui.js";
 import { weaponArcCheck } from "../combat/weapon-targeting.js";
@@ -336,8 +337,8 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
     const motionView = `${this.selectedShipId}:${this.handCollapsed}`;
     if (this.motionView && this.motionView !== motionView && !this.handCollapsed) revealCombatHand(this.element);
     this.motionView = motionView;
-    const sidebar = document.querySelector("#sidebar")?.getBoundingClientRect();
-    this.element.style.setProperty("--cc-sidebar", `${sidebar?.width > 50 ? sidebar.width + 12 : 58}px`);
+    this.layoutController ??= new CardCombatHUDLayout();
+    this.layoutController.bind(this.element);
     for (const card of this.element.querySelectorAll("[data-preview-card]")) {
       const open = () => {
         this.expandedCardId = card.dataset.previewCard;
@@ -404,7 +405,7 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
     });
     this.element.querySelector("[data-overlay-weapon]")?.addEventListener("change", event => { this.selectedWeaponKey = event.target.value; if (cardWeaponOverlayVisible(this.selectedShipId)) showCardWeaponOverlay(this.selectedShipId, this.selectedWeaponKey || null); });
   }
-  async close(options = {}) { hideCardWeaponOverlay(); return super.close(options); }
+  async close(options = {}) { this.layoutController?.destroy(); hideCardWeaponOverlay(); return super.close(options); }
 }
 Hooks.on("controlToken", (token, controlled) => {
   const state = game.arkflight?.cardCombat?.state();
