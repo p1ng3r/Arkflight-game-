@@ -135,3 +135,10 @@ The user approved the five order-flow choices on 17 October: reserve normal cost
 - Turn completion skips remaining pending orders and releases their resource reservations without refunding committed AP or consuming those cards. A later round restores its own base AP; card cooldowns retain their original ready rounds.
 
 Validation for this step: **685 Node tests passed, zero failed**, including 18 new committed-order tests (28 combined with the existing card-library tests). JavaScript syntax checks and the staged whitespace check passed. Tests cover arbitrary order sequence, deferred battery/target choice, cost reservations and loss, earned-AP additions, Captain/operator/GM permissions, takeover, repeated clicks, stale rounds, driver/persistence failures and turn completion. These are rules/controller tests with synthetic effects; live Foundry play and transport remain unverified.
+
+
+## Animated card HUD — 20 October 2026
+
+The canvas playtest now uses the nine brass/crystal art layers for cosmetic feedback: card frames and type-band glints; committed-card/AP transitions and the plan latch; independent RP feedback; outcome reveals with persistent unique text; Flux countdowns and spent Signatures; cannon trails/flashes, engine flares, ward/Signature accents, active-ship indicators and floating resource changes. Confirmed state revisions drive local effects without delaying commands. Initial snapshots, duplicate/stale revisions and reconnect gaps do not replay prior shots.
+
+Each client chooses Full, Subtle or Off in the HUD/settings; OS reduced motion disables movement. Sound is independent, starts off, and has a volume setting. Native token centers and canvas transforms anchor disposable, click-through overlays. No additional effects module is required. Fourteen new automated presentation checks bring the suite to 745 passing tests. Local Chromium covers the actual HUD and real pure combat dispatcher over mocked Foundry documents; live GM/player, native canvas and audio acceptance remains pending. See the [playtest guide](CARD-COMBAT-PLAYTEST.md#motion-and-sound).
