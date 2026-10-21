@@ -4,6 +4,7 @@ import { cardAvailability } from "../cards/card-library.js";
 import { PLAYTEST_COMBAT_CARDS } from "../content/combat-cards-playtest.js";
 import { showCardWeaponOverlay, showCardFireOverlay, hideCardWeaponOverlay } from "./card-combat-canvas-overlays.js";
 import { motionPreferences } from "./card-combat-motion.js";
+import { CARD_COMBAT_BUILD } from "../foundry/card-combat-diagnostics.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 let instance;
 export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -12,6 +13,8 @@ export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(Applicati
   busy = false;
   fresh = false;
   error = "";
+  progress = "Sending command";
+  report = "";
   onlyReady = false;
   openSections = new Set();
   selectedShip = null;
@@ -31,7 +34,7 @@ export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(Applicati
       const card = PLAYTEST_COMBAT_CARDS.find(c => c.id === id), availability = cardAvailability(ship, PLAYTEST_COMBAT_CARDS, id);
       return { name: card.name, type: card.type, deck: deck.toUpperCase(), ready: availability.ok, status: availability.ok ? "Ready" : availability.readyRound ? `Ready R${availability.readyRound}` : availability.reason.replaceAll("-", " ") };
     })).filter(c => !this.onlyReady || c.ready) : [];
-    return { ...context, demo, next, error: this.error, busy: this.busy, paused: game.paused, blocked, running, done: demo?.status === "complete", stopped: demo?.status === "stopped", disabled: this.busy || game.paused || blocked || Boolean(demo && !running), onlyReady: this.onlyReady,
+    return { ...context, demo, next, build: CARD_COMBAT_BUILD, progress: this.progress, report: this.report, error: this.error, busy: this.busy, paused: game.paused, blocked, running, done: demo?.status === "complete", stopped: demo?.status === "stopped", disabled: this.busy || game.paused || blocked || Boolean(demo && !running), onlyReady: this.onlyReady,
       rounds: [1, 2, 3].map(number => ({ number, current: running && Math.min(state.round, 3) === number, complete: Boolean(demo && (state.round > number || demo.status === "complete")) })),
       nextTitle: next?.title ?? (demo ? "Test finished — review results or reset" : "Prepare the test scene and four ships"),
       nextDetail: next?.explanation ?? "Create or reset dedicated demo vessels and view their separate hex scene. Your campaign ships and current scene content are preserved. Fixed test rolls make this walkthrough repeatable.",
@@ -49,6 +52,13 @@ export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(Applicati
     this.element.querySelector("[data-demo-next]").addEventListener("click", () => this.act("next"));
     this.element.querySelector("[data-demo-stop]")?.addEventListener("click", () => this.act("stop"));
     this.element.querySelector("[data-demo-reset]")?.addEventListener("click", () => this.act("reset"));
+    this.element.querySelector("[data-demo-report]")?.addEventListener("click", async () => {
+      const report = JSON.stringify(game.arkflight.cardCombat.diagnostics?.() ?? { build: CARD_COMBAT_BUILD, progress: this.progress, error: this.error }, null, 2);
+      try {
+        if (!globalThis.navigator?.clipboard?.writeText) throw new Error("Clipboard unavailable");
+        await navigator.clipboard.writeText(report); ui.notifications.info("Combat debug report copied. Paste it into the support conversation.");
+      } catch { this.report = report; await this.render({ force: true }); }
+    });
     this.element.querySelector("[data-demo-reopen-hud]")?.addEventListener("click", () => game.arkflight.cardCombat.open());
     this.element.querySelector("[data-demo-ship]")?.addEventListener("change", event => { this.selectedShip = event.target.value; this.render({ force: true }); });
     this.element.querySelector("[data-demo-ready]")?.addEventListener("change", event => { this.onlyReady = event.target.checked; this.render({ force: true }); });
@@ -56,7 +66,7 @@ export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(Applicati
   }
   async act(action) {
     if (this.busy) return;
-    this.busy = true; this.error = ""; await this.render({ force: true });
+    this.busy = true; this.error = ""; this.progress = "Sending command"; await this.render({ force: true });
     try {
       const api = game.arkflight.cardCombat, before = api.state(), demo = !this.fresh && before?.guidedDemo;
       if (action === "reset") {
@@ -101,3 +111,9 @@ Hooks.once("ready", () => {
 });
 Hooks.on("arkflightCardCombatChanged", () => { if (instance?.rendered) void instance.render({ force: true }); });
 Hooks.on("pauseGame", () => { if (instance?.rendered) void instance.render({ force: true }); });
+Hooks.on("arkflightCardCommandProgress", progress => {
+  if (!instance?.busy) return;
+  instance.progress = progress.stage;
+  const label = instance.element?.querySelector("[data-demo-progress]");
+  if (label) label.textContent = progress.stage;
+});

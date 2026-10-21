@@ -1,4 +1,5 @@
 import { hexDistance } from "../cards/card-playtest-session.js";
+import { cardCombatProgress } from "./card-combat-diagnostics.js";
 
 const MODULE = "arkflight-game";
 const moving = new Set();
@@ -92,19 +93,31 @@ export async function synchronizeGuidedDemoTokens(session) {
 async function setPose(token, pose, rollback = false) {
   if (Math.hypot(token.x - pose.x, token.y - pose.y) < .01 && difference(angle(token.rotation), pose.rotation) < .01) return true;
   moving.add(token.id);
+  let confirm;
+  const operationId = foundry.utils.randomID();
+  const matches = updated => Math.hypot(updated.x - pose.x, updated.y - pose.y) <= 1 && difference(angle(updated.rotation), pose.rotation) <= .1;
+  const committed = new Promise(resolve => { confirm = resolve; });
+  const onUpdate = (updated, _changes, options) => {
+    if (updated.id !== token.id || updated.parent?.id !== token.parent?.id || options?.arkflightCardUpdateId !== operationId) return;
+    if (!matches(updated)) return; // Intermediate waypoints are not a commit of the requested destination.
+    cardCombatProgress("Token document confirmed", { tokenId: token.id, operationId });
+    confirm(true);
+  };
+  Hooks.on("updateToken", onUpdate);
   try {
     const rotationOnly = Math.hypot(token.x - pose.x, token.y - pose.y) < .01;
-    // v14 update() commits position through native movement, whereas move()
-    // waits for the entire movement lifecycle. A pending completion callback
-    // must not leave the real token ahead of the saved combat revision.
-    await token.update(rotationOnly ? { rotation: pose.rotation } : pose, {
+    // A wrapper around update(), like move(), can remain pending after the
+    // server has committed the document. Confirm our exact operation through
+    // the public post-update hook; never infer a commit from a rendered pose.
+    cardCombatProgress("Writing token document", { tokenId: token.id, operationId });
+    const operation = Promise.resolve().then(() => token.update(rotationOnly ? { rotation: pose.rotation } : pose, {
       method: "hud", autoRotate: false, showRuler: false, pan: false,
-      arkflightCardSync: true,
+      arkflightCardSync: true, arkflightCardUpdateId: operationId,
       ...(rotationOnly || rollback ? { animate: false } : {}),
       ...(rollback ? { constrainOptions: { ignoreWalls: true, ignoreCost: true } } : {})
-    });
-    return Math.hypot(token.x - pose.x, token.y - pose.y) <= 1 && difference(angle(token.rotation), pose.rotation) <= .1;
-  } finally { moving.delete(token.id); }
+    })).then(() => matches(token));
+    return await Promise.race([committed, operation]);
+  } finally { Hooks.off?.("updateToken", onUpdate); moving.delete(token.id); }
 }
 export async function moveCanvasToken(before, next, shipId) {
   if (!before.canvas) return async () => {};

@@ -104,6 +104,14 @@ The subsequent live trace showed Wayfarer at actual hex **15,3** while the encou
 
 **796 Node tests pass.** A new regression holds native movement completion pending after its document reaches the destination. It failed on the previous adapter; the revised adapter commits Step 5, and the following support step reaches Step 6 without any corrective token update or extra movement/AP charge. Existing full three-round, native-hook, blocked-update and persistence-rollback tests pass. This reproduces the reported state mismatch with mocked lifecycle behavior; confirmation against the user's live Foundry/PF2e module combination remains necessary.
 
+### Confirmed document writes and a visible debug report
+
+The follow-up build **movement-confirmation-20261021** also handles an `update()` wrapper remaining pending after the document write. Each position update carries a unique operation marker. The adapter accepts Foundry's public `updateToken` confirmation only for that marker, token and scene, at the requested destination/facing. Intermediate waypoints and unrelated updates cannot confirm it. The listener is removed on success/failure, and a later movement/animation callback cannot hold the already confirmed combat step open. After saving, the authority reads back the revision and ship poses; an unconfirmed save fails with a specific error and rolls movement back.
+
+The guide footer now shows the loaded build, a live command stage while busy, and **Copy debug report**. If clipboard access is unavailable, it opens a read-only text report instead. Reports include the local stage/error, saved revision/step and saved/actual ship poses; they are not persisted or sent anywhere automatically. If another live failure occurs, copy that report from the guide rather than installing another console watcher.
+
+**801 Node tests pass.** Added checks cover a confirmed write with a pending update wrapper, observer cleanup, unrelated operations, intermediate waypoints, read-only diagnostics and an unchanged save. The pending-wrapper regression failed before this follow-up. Chromium verifies the visible build/stage, report fallback and the full 108-step walkthrough with 12 coverage previews and 13 defender responses. These checks use mocked Foundry documents; the live installed-module callback chain remains unverified.
+
 ## Weapon arcs and firing range
 
 ![Weapon coverage on scene hexes](images/card-combat-canvas-arcs.webp)

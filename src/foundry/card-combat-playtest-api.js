@@ -9,6 +9,7 @@ import { SHIP_CATALOGS } from "../content/index.js";
 import { weaponDamageProfile } from "../combat/weapon-combat.js";
 import { prepareGuidedDemoScene } from "./guided-combat-demo.js";
 import { runDemoStep } from "../cards/guided-combat-demo.js";
+import { cardCombatProgress, cardCombatDiagnostics } from "./card-combat-diagnostics.js";
 
 const MODULE = "arkflight-game", SETTING = "cardCombatPlaytest";
 let commandQueue = Promise.resolve();
@@ -79,6 +80,7 @@ async function startEncounter(command, user) {
   return binding ? bindCanvasSession(session, binding) : session;
 }
 async function handle(command, user) {
+  cardCombatProgress("Checking request", { command: command?.type, error: null, tokenId: null, operationId: null });
   if (!command || JSON.stringify(command).length > 30000) throw new Error("Invalid card command.");
   if (command.type === "place-ships") return placeSelectedCanvasShips(command, user);
   if (command.type === "import-test-ships") {
@@ -94,6 +96,7 @@ async function handle(command, user) {
     // Authenticate the step before touching fixture documents; stale or paused
     // requests must never perform even a visual correction.
     if (!before?.guidedDemo || command.sessionId !== before.id || command.revision !== before.revision) throw new Error("The guided test changed; refresh before advancing.");
+    cardCombatProgress("Checking demo tokens");
     await synchronizeGuidedDemoTokens(before);
   }
   if (!["start", "demo-start", "end", "demo-stop"].includes(command.type)) assertCanvasPositions(before);
@@ -113,15 +116,23 @@ async function handle(command, user) {
   if (["start", "demo-start"].includes(command.type) && next.canvas) rollback = await createCanvasCombat(next);
   else if (command.type === "demo-next" && next.guidedDemo.last.kind === "movement") rollback = await moveCanvasToken(before, next, next.guidedDemo.last.shipId);
   else if (before?.canvas && ["helm", "canvas-move"].includes(command.type)) rollback = await moveCanvasToken(before, next, command.shipId);
-  try { await game.settings.set(MODULE, SETTING, next); }
+  cardCombatProgress("Saving encounter");
+  try {
+    await game.settings.set(MODULE, SETTING, next);
+    const saved = game.settings.get(MODULE, SETTING);
+    const posesSaved = Object.entries(next.ships).every(([id, ship]) => ["q", "r", "heading", "used", "turns"].every(key => saved?.ships?.[id]?.cardPlay?.motion?.[key] === ship.cardPlay.motion[key]));
+    if (saved?.id !== next.id || saved?.revision !== next.revision || !posesSaved) throw new Error(`Encounter save was not confirmed: expected revision ${next.revision}, found ${saved?.revision ?? "none"}. The movement step has not completed.`);
+  }
   catch (error) { await rollback(); throw error; }
+  cardCombatProgress("Updating combat tracker");
   try { await syncCanvasCombat(next); }
   catch (error) { console.error("Arkflight | Card combat tracker sync failed", error); ui.notifications?.warn("Card order saved. Foundry's tracker will retry synchronization on the next command."); }
   Hooks.callAll("arkflightCardCombatChanged", next);
+  cardCombatProgress("Complete");
   return next;
 }
 function enqueue(command, user) {
-  const next = commandQueue.catch(() => {}).then(() => handle(clone(command), user));
+  const next = commandQueue.catch(() => {}).then(() => handle(clone(command), user)).catch(error => { cardCombatProgress("Failed", { command: command?.type, error: error.message }); throw error; });
   commandQueue = next;
   return next;
 }
@@ -143,7 +154,7 @@ async function request(command) {
 
 Hooks.once("init", () => game.settings.register(MODULE, SETTING, { name: "Arkflight Card Combat Playtest", scope: "world", config: false, type: Object, default: {} }));
 Hooks.once("ready", () => {
-  game.arkflight.cardCombat = Object.freeze({ cards: PLAYTEST_COMBAT_CARDS, state: () => { const state = game.settings.get(MODULE, SETTING); return state?.id ? clone(state) : null; }, request, isCanvasToken: token => Boolean(boundShipForToken(token)), placeShips: actorIds => request({ type: "place-ships", sceneId: globalThis.canvas?.scene?.id, actorIds }), importTestShips: () => request({ type: "import-test-ships" }), ownsOperator: ownsCardOperator });
+  game.arkflight.cardCombat = Object.freeze({ cards: PLAYTEST_COMBAT_CARDS, diagnostics: cardCombatDiagnostics, state: () => { const state = game.settings.get(MODULE, SETTING); return state?.id ? clone(state) : null; }, request, isCanvasToken: token => Boolean(boundShipForToken(token)), placeShips: actorIds => request({ type: "place-ships", sceneId: globalThis.canvas?.scene?.id, actorIds }), importTestShips: () => request({ type: "import-test-ships" }), ownsOperator: ownsCardOperator });
 });
 Hooks.on("createChatMessage", (message, _options, userId) => {
   const request = message.flags?.[MODULE]?.cardCommand;

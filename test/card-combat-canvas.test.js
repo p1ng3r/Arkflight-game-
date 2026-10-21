@@ -4,7 +4,7 @@ import { deriveBuild } from "../scripts/combat-build-lab.mjs";
 import { CARD_SKILLS, batteryOptions, weaponCoverage, movePlaytestShipTo } from "../src/cards/card-playtest-session.js";
 import { getOrderQueue } from "../src/cards/committed-orders.js";
 const hooks = new Map();
-globalThis.Hooks = { once: add, on: add, callAll(name, ...args) { for (const fn of hooks.get(name) ?? []) fn(...args); } };
+globalThis.Hooks = { once: add, on: add, off(name, fn) { hooks.set(name, (hooks.get(name) ?? []).filter(row => row !== fn)); }, callAll(name, ...args) { for (const fn of hooks.get(name) ?? []) fn(...args); } };
 function add(name, fn) { const list = hooks.get(name) ?? []; list.push(fn); hooks.set(name, list); }
 const bridge = await import("../src/foundry/card-combat-canvas.js");
 await import("../src/foundry/card-combat-playtest-api.js");

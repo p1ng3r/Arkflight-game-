@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getOrderQueue } from "../src/cards/committed-orders.js";
 const callbacks = new Map();
-globalThis.Hooks = { on(name, fn) { const rows = callbacks.get(name) ?? []; rows.push(fn); callbacks.set(name, rows); }, once(name, fn) { this.on(name, fn); }, callAll(name, ...args) { for (const fn of callbacks.get(name) ?? []) fn(...args); } };
+globalThis.Hooks = { on(name, fn) { const rows = callbacks.get(name) ?? []; rows.push(fn); callbacks.set(name, rows); }, off(name, fn) { callbacks.set(name, (callbacks.get(name) ?? []).filter(row => row !== fn)); }, once(name, fn) { this.on(name, fn); }, callAll(name, ...args) { for (const fn of callbacks.get(name) ?? []) fn(...args); } };
 await import("../src/foundry/card-combat-playtest-api.js");
 const M = "arkflight-game";
 function collection() { const contents = []; return { contents, get: id => contents.find(d => d.id === id), [Symbol.iterator]: () => contents[Symbol.iterator]() }; }
@@ -27,6 +27,7 @@ function world() {
           for (const part of parts) target = target[part] ??= {};
           target[leaf] = value;
         }
+        Hooks.callAll("updateToken", this, change, options, game.user.id);
         return this;
       }, async move(pose, options = {}) {
         counts.move++;
@@ -194,4 +195,80 @@ test("a committed native move advances Step 5 without waiting on movement-comple
   assert.deepEqual({ x: token.x, y: token.y, rotation: token.rotation }, pose, "the following support step never resets the committed movement");
   assert.equal(counts.move, moves, "the following step does not issue a corrective token update");
   assert.deepEqual(getOrderQueue(api.state().ships[id]).ap, getOrderQueue(moved.ships[id]).ap);
+});
+
+test("Step 5 commits when updateToken confirms the write but the update wrapper remains pending", async () => {
+  const { api, counts } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  const before = api.state(), id = before.turnOrder[0], token = canvas.scene.tokens.get(before.ships[id].cardPlay.tokenId), update = token.update.bind(token);
+  token.update = async (changes, options) => {
+    const result = await update(changes, options);
+    if ("x" in changes || "y" in changes) return new Promise(() => {});
+    return result;
+  };
+  let timeout;
+  try {
+    await Promise.race([next(api), new Promise((_, reject) => { timeout = setTimeout(() => reject(Error("Position committed, update wrapper pending, encounter still at Step 4")), 1000); })]);
+  } finally { clearTimeout(timeout); }
+  assert.equal(api.state().guidedDemo.step, 5); assert.equal(api.state().revision, 5);
+  const pose = { x: token.x, y: token.y, rotation: token.rotation }, moves = counts.move;
+  await next(api);
+  assert.equal(api.state().guidedDemo.step, 6); assert.equal(counts.move, moves);
+  assert.deepEqual({ x: token.x, y: token.y, rotation: token.rotation }, pose);
+  assert.equal((callbacks.get("updateToken") ?? []).length, 0, "commit observer is removed even though the wrapper never settles");
+});
+
+test("an unrelated update event cannot confirm the pending token operation", async () => {
+  const { api } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  const before = api.state(), token = canvas.scene.tokens.get(before.ships[before.turnOrder[0]].cardPlay.tokenId);
+  token.update = async (changes, options) => {
+    Object.assign(token, changes);
+    Hooks.callAll("updateToken", token, changes, { ...options, arkflightCardUpdateId: "different-operation" }, game.user.id);
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(api.state().revision, before.revision, "an unrelated hook never commits the encounter");
+    throw Error("the actual document update failed");
+  };
+  // Restore rollback through a real update after the deliberate rejection.
+  const failing = token.update;
+  token.update = (changes, options) => options.animate === false ? (Object.assign(token, changes), Promise.resolve(token)) : failing(changes, options);
+  await assert.rejects(() => next(api), /actual document update failed/);
+  assert.deepEqual(api.state(), before); assert.equal((callbacks.get("updateToken") ?? []).length, 0);
+});
+
+test("debug reports expose the loaded build, command stage and saved/actual positions read-only", async () => {
+  const { api, counts } = world(); await api.request({ type: "demo-start" });
+  const before = api.state(), writes = counts.writes, moves = counts.move, report = api.diagnostics();
+  assert.equal(report.build, "movement-confirmation-20261021"); assert.equal(report.progress.stage, "Complete");
+  assert.equal(report.ships.length, 4); assert.equal(report.step, 0);
+  assert.equal(counts.writes, writes); assert.equal(counts.move, moves); assert.deepEqual(api.state(), before);
+  report.ships[0].saved.q = -999; assert.deepEqual(api.state(), before);
+});
+
+test("an intermediate waypoint from the right operation does not finish or roll back the step", async () => {
+  const { api } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  const before = api.state(), token = canvas.scene.tokens.get(before.ships[before.turnOrder[0]].cardPlay.tokenId), update = token.update.bind(token);
+  token.update = async (changes, options) => {
+    if (("x" in changes || "y" in changes) && options.animate !== false) {
+      await update({ ...changes, x: (token.x + changes.x) / 2, y: (token.y + changes.y) / 2 }, options);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      assert.equal(api.state().revision, before.revision);
+    }
+    return update(changes, options);
+  };
+  await next(api);
+  assert.equal(api.state().guidedDemo.step, 5);
+  assert.equal((callbacks.get("updateToken") ?? []).length, 0);
+});
+
+test("a silently unchanged encounter save reports failure and restores the token", async () => {
+  const { api } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  const before = api.state(), token = canvas.scene.tokens.get(before.ships[before.turnOrder[0]].cardPlay.tokenId), pose = { x: token.x, y: token.y, rotation: token.rotation };
+  game.settings.set = async () => before;
+  await assert.rejects(() => next(api), /save was not confirmed: expected revision 5, found 4/);
+  assert.deepEqual(api.state(), before);
+  assert.deepEqual({ x: token.x, y: token.y, rotation: token.rotation }, pose);
+  assert.equal(api.diagnostics().progress.stage, "Failed");
 });
