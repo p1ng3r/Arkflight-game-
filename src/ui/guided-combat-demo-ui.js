@@ -3,6 +3,7 @@ import { getOrderQueue } from "../cards/committed-orders.js";
 import { cardAvailability } from "../cards/card-library.js";
 import { PLAYTEST_COMBAT_CARDS } from "../content/combat-cards-playtest.js";
 import { showCardWeaponOverlay, showCardFireOverlay, hideCardWeaponOverlay } from "./card-combat-canvas-overlays.js";
+import { motionPreferences } from "./card-combat-motion.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 let instance;
 export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -74,6 +75,10 @@ export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(Applicati
           if (planning) hud.selectedFilter = "all";
           await hud.render({ force: true });
           if (!planning && ["lock", "bonus"].includes(last.kind)) hud.layoutController?.setHandMinimized(true, { automatic: true });
+          if (last.kind === "movement") {
+            const token = canvas.tokens.get(state.ships[last.shipId].cardPlay.tokenId);
+            if (token) await canvas.animatePan({ ...(token.document?.getCenterPoint?.() ?? token.center), duration: motionPreferences().mode === "off" ? 0 : 250 });
+          }
           if (last.kind === "coverage") {
             const ship = state.ships[last.shipId];
             if (last.selection.assignments) showCardFireOverlay(last.shipId, last.selection.assignments);

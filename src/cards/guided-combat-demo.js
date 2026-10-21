@@ -91,7 +91,7 @@ export function nextDemoStep(state) {
     return step("lock", id, `Lock ${ship.cardPlay.name}'s plan`, "Reserve the listed AP orders. Targets stay undecided. The final Captain's lock also rolls this round's initiative.", { orders, command: { type: "lock", request: { round: q.round, revision: q.revision, orders } } });
   }
   const id = state.turnOrder[state.turnIndex], ship = state.ships[id], q = getOrderQueue(ship), key = `${state.round}:${id}`;
-  const helm = (direction, flag = null) => step("movement", id, direction === "forward" ? "Move one hex" : `Turn ${direction} 60°`, "Use the real Navigator allowance and native token movement. Movement can stop for an attack and continue afterward.", { flag, command: { type: "helm", direction } });
+  const helm = (direction, flag = null) => step("movement", id, direction === "forward" ? "Move one hex" : `Turn ${direction} 60°`, "Click Next Step: the test moves or turns the ship token for you and follows it with the camera. Do not drag it manually. This uses the real Navigator allowance; movement can stop for an attack and continue afterward.", { flag, command: { type: "helm", direction } });
   if (!demo.seen[`${key}:approach`]) {
     try { movePlaytestShip(state, id, "forward"); return helm("forward", `${key}:approach`); } catch { return step("inspect", id, "Inspect the blocked approach", "This hex is occupied or movement is unavailable; no movement is spent.", { flag: `${key}:approach` }); }
   }

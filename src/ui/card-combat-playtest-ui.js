@@ -158,9 +158,9 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
       for (const input of this.element.querySelectorAll("[data-plan-card]")) {
         const card = input.closest("article"), scripted = context.guided && context.guidedPlan?.includes(input.value);
         card.classList.toggle("is-selected", input.checked); card.classList.toggle("is-scripted", Boolean(scripted));
-        const button = card.querySelector("[data-select-card]"); button?.setAttribute("aria-pressed", String(input.checked));
+        card.setAttribute("aria-pressed", String(input.checked));
         const status = card.querySelector("[data-card-selection-status]");
-        if (status) status.textContent = scripted ? "Next scripted choice" : context.guided ? "Guided · Inspect only" : input.checked ? "Selected" : input.disabled ? card.dataset.cardStatus : "Select";
+        if (status) status.textContent = scripted ? "Next scripted choice" : context.guided ? "Guided · Click for details" : input.checked ? "Selected" : input.disabled ? card.dataset.cardStatus : "Click to select";
       }
       const add = this.element.querySelector('[data-hud-action="add-plan"]');
       if (add) { const selected = [...this.element.querySelectorAll("[data-plan-card]")].some(i => i.value === this.expandedCardId && i.checked); add.textContent = selected ? "Remove From Plan" : "Select for Plan · 1 AP"; add.setAttribute("aria-pressed", String(selected)); }
@@ -358,33 +358,31 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
     this.motionView = motionView;
     this.layoutController ??= new CardCombatWorkspace({ feedback: combatPanelFeedback });
     this.layoutController.bind(this.element, context);
-    for (const button of this.element.querySelectorAll("[data-inspect-card]")) {
-      button.addEventListener("click", () => {
-        playCombatSound("open"); this.expandedCardId = button.dataset.inspectCard;
+    this.updateReactionCards = () => {
+      const selected = this.element.querySelector("[data-response-card]")?.value;
+      for (const card of this.element.querySelectorAll("[data-drag-reaction]")) {
+        const available = card.dataset.canSelectReaction === "true", active = available && card.dataset.previewCard === selected;
+        card.setAttribute("aria-pressed", String(active)); card.classList.toggle("is-selected", active);
+        card.querySelector("[data-card-selection-status]").textContent = context.guided ? "Guided · Click for details" : active ? "Reaction selected" : available ? "Click to choose" : "Click for details";
+      }
+    };
+    for (const card of this.element.querySelectorAll("[data-preview-card]")) {
+      card.addEventListener("click", () => {
+        const input = card.querySelector("[data-plan-card]"), select = this.element.querySelector("[data-response-card]");
+        if (input && !input.disabled) { input.checked = !input.checked; input.dispatchEvent(new Event("change", { bubbles: true })); }
+        else if (card.dataset.canSelectReaction === "true" && select) {
+          select.value = select.value === card.dataset.previewCard ? "" : card.dataset.previewCard;
+          select.dispatchEvent(new Event("change")); playCombatSound(select.value ? "select" : "deselect");
+        } else playCombatSound("open");
+        this.expandedCardId = card.dataset.previewCard;
         const order = context.orders.find(row => row.abilityId === this.expandedCardId && row.status === "pending");
         this.expandedOrderId = order?.id ?? null;
         this.render({ force: true });
       });
+      card.addEventListener("keydown", event => {
+        if (event.target === card && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); card.click(); }
+      });
     }
-    for (const button of this.element.querySelectorAll("[data-select-card]")) button.addEventListener("click", () => {
-      const input = [...this.element.querySelectorAll("[data-plan-card]")].find(i => i.value === button.dataset.selectCard);
-      if (!input || input.disabled) return;
-      input.checked = !input.checked; input.dispatchEvent(new Event("change", { bubbles: true }));
-    });
-    this.updateReactionCards = () => {
-      const selected = this.element.querySelector("[data-response-card]")?.value;
-      for (const button of this.element.querySelectorAll("[data-select-reaction]")) {
-        const active = button.getAttribute("aria-disabled") === "false" && button.dataset.selectReaction === selected;
-        button.setAttribute("aria-pressed", String(active)); button.closest("article").classList.toggle("is-selected", active);
-        const status = button.closest("article").querySelector("[data-card-selection-status]");
-        status.textContent = context.guided ? "Guided · Inspect only" : active ? "Reaction selected" : button.getAttribute("aria-disabled") === "true" ? "Inspect only" : "Choose reaction";
-      }
-    };
-    for (const button of this.element.querySelectorAll("[data-select-reaction]")) button.addEventListener("click", () => {
-      const select = this.element.querySelector("[data-response-card]"); if (!select || button.getAttribute("aria-disabled") === "true") return;
-      select.value = select.value === button.dataset.selectReaction ? "" : button.dataset.selectReaction;
-      select.dispatchEvent(new Event("change")); playCombatSound(select.value ? "select" : "deselect"); this.updateReactionCards();
-    });
     this.updateReactionCards();
     for (const button of this.element.querySelectorAll("[data-preview-order]")) button.addEventListener("click", () => this.focusOrder(this.selectedShipId, button.dataset.previewOrder).catch(error => ui.notifications.error(error.message)));
     for (const card of this.element.querySelectorAll("[data-drag-order]")) {
