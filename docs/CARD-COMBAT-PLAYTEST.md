@@ -90,6 +90,14 @@ Card-interaction validation: **790 Node tests pass**. Chromium checks face/keybo
 
 The card-face and scrolling styles are bundled in the already registered workspace stylesheet, avoiding a dependency on Foundry refreshing its cached module manifest. The screenshot showing an unframed/clipped preview and small translucent boxes matches the new markup loading without those styles. Reload clients after pulling. The separate PF2e `EncounterTracker._onRender` error shown in that report has not been reproduced or claimed fixed by these UI changes.
 
+### Guided Step 5 token synchronization
+
+The guide now restores its marked fixture tokens to the saved hex centers and headings before each valid **Next Step**. This handles the reported position/facing mismatch blocking the first movement after planning. It does not adopt unexpected movement into the rules, spend AP, advance an extra step or move campaign tokens. Ordinary encounters retain strict token-position validation. Stale and paused requests cannot synchronize anything, and every scene/token identity is checked before corrections begin. Blocked updates leave the same step pending and report the expected/actual hex and heading rather than directing the GM to drag a guided token.
+
+New demo tokens disable PF2e actor-size linking and automatic scaling. Reset also restores those settings and one-hex dimensions on reused fixture tokens; permanent Actor libraries/resources are preserved. After installing this fix, refresh Foundry and use **Reset → Next Step** once to prepare the corrected fixtures, then continue with Next Step alone.
+
+**795 Node tests pass**, including five new regressions for the Step 5 failure, repeated drift throughout the full three-round run, fixture identity/paused/stale guards, blocked corrections and resized-fixture reset. Browser validation completes the same 108-step sequence with token camera follow. The original trigger of the reported drift and interactions with the user's installed modules remain unverified in a live Foundry world; this fix provides automatic fixture recovery within the guide.
+
 ## Weapon arcs and firing range
 
 ![Weapon coverage on scene hexes](images/card-combat-canvas-arcs.webp)

@@ -19,7 +19,7 @@ export async function prepareGuidedDemoScene({ user, current, weaponEntries }) {
   for (const spec of fleet) {
     const ship = equipDemoShip(spec.ship, spec.id);
     let actor = game.actors.contents.find(a => a.flags?.[MODULE]?.guidedCombatDemoShip === spec.id);
-    if (!actor) actor = await Actor.create({ name: `[Demo] ${spec.name.replace("[Test] ", "")}`, type: "vehicle", img: ART, prototypeToken: { texture: { src: ART }, width: 1, height: 1, lockRotation: false }, flags: { [MODULE]: { guidedCombatDemoShip: spec.id, ship, shipClassification: "npc" } } }, { renderSheet: false });
+    if (!actor) actor = await Actor.create({ name: `[Demo] ${spec.name.replace("[Test] ", "")}`, type: "vehicle", img: ART, prototypeToken: { texture: { src: ART }, width: 1, height: 1, lockRotation: false, flags: { pf2e: { linkToActorSize: false, autoscale: false } } }, flags: { [MODULE]: { guidedCombatDemoShip: spec.id, ship, shipClassification: "npc" } } }, { renderSheet: false });
     // The encounter is initialized from fresh copies; permanent demo libraries
     // and campaign resources are never written by combat operations.
     for (const station of Object.keys(CARD_SKILLS)) ship.crew.stations[station] = `npc:${actor.id}:${station}`;
@@ -38,13 +38,14 @@ export async function prepareGuidedDemoScene({ user, current, weaponEntries }) {
     if (index < 0) throw new Error("The scene has incompatible hex directions.");
     let token = scene.tokens.contents.find(t => t.actorId === actor.id && t.flags?.[MODULE]?.[FLAG]);
     if (!token) {
-      const doc = await actor.getTokenDocument({ actorLink: true, width: 1, height: 1, rotation: geometry.headings[index], flags: { [MODULE]: { [FLAG]: true } } });
+      const doc = await actor.getTokenDocument({ actorLink: true, width: 1, height: 1, rotation: geometry.headings[index], flags: { [MODULE]: { [FLAG]: true }, pf2e: { linkToActorSize: false, autoscale: false } } });
       const center = doc.getCenterPoint(), source = doc.toObject(); delete source._id;
       source.x = point.x - (center.x - doc.x); source.y = point.y - (center.y - doc.y);
       [token] = await scene.createEmbeddedDocuments("Token", [source]);
     } else {
+      await token.update({ width: 1, height: 1, "flags.pf2e.linkToActorSize": false, "flags.pf2e.autoscale": false }, { arkflightCardSync: true, animate: false });
       const center = token.getCenterPoint();
-      await token.update({ x: point.x - (center.x - token.x), y: point.y - (center.y - token.y), rotation: geometry.headings[index] }, { animate: false });
+      await token.update({ x: point.x - (center.x - token.x), y: point.y - (center.y - token.y), rotation: geometry.headings[index] }, { arkflightCardSync: true, animate: false });
     }
     bindings.push({ id: actor.id, tokenId: token.id });
   }

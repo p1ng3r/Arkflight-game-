@@ -1,4 +1,4 @@
-import { resolveCanvasBindings, bindCanvasSession, assertCanvasPositions, moveCanvasToken, createCanvasCombat, syncCanvasCombat, placeSelectedCanvasShips, boundShipForToken } from "./card-combat-canvas.js";
+import { resolveCanvasBindings, bindCanvasSession, assertCanvasPositions, synchronizeGuidedDemoTokens, moveCanvasToken, createCanvasCombat, syncCanvasCombat, placeSelectedCanvasShips, boundShipForToken } from "./card-combat-canvas.js";
 import { importCardCombatTestFleet } from "./card-combat-test-fleet.js";
 import { PLAYTEST_COMBAT_CARDS } from "../content/combat-cards-playtest.js";
 import { generateShipCardDecks } from "../cards/card-library.js";
@@ -90,6 +90,12 @@ async function handle(command, user) {
   if (demoCommand && !user.isGM) throw new Error("Only the GM controls the guided test.");
   if (demoCommand && command.type !== "demo-stop" && game.paused) throw new Error("Unpause Foundry before advancing the guided test.");
   if (before?.guidedDemo?.status === "running" && !["demo-next", "demo-stop", "end"].includes(command.type)) throw new Error("Use Next Step or Stop in the guided test. Manual orders are disabled during the demonstration.");
+  if (command.type === "demo-next") {
+    // Authenticate the step before touching fixture documents; stale or paused
+    // requests must never perform even a visual correction.
+    if (!before?.guidedDemo || command.sessionId !== before.id || command.revision !== before.revision) throw new Error("The guided test changed; refresh before advancing.");
+    await synchronizeGuidedDemoTokens(before);
+  }
   if (!["start", "demo-start", "end", "demo-stop"].includes(command.type)) assertCanvasPositions(before);
   let next;
   if (command.type === "demo-start") next = await prepareGuidedDemoScene({ user, current: before, weaponEntries });

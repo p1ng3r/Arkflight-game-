@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { getOrderQueue } from "../src/cards/committed-orders.js";
 const callbacks = new Map();
 globalThis.Hooks = { on(name, fn) { const rows = callbacks.get(name) ?? []; rows.push(fn); callbacks.set(name, rows); }, once(name, fn) { this.on(name, fn); }, callAll(name, ...args) { for (const fn of callbacks.get(name) ?? []) fn(...args); } };
 await import("../src/foundry/card-combat-playtest-api.js");
@@ -14,10 +15,15 @@ function world() {
   globalThis.foundry = { utils: { randomID: () => `id${++serial}` } };
   function token(source, scene) {
     const doc = { x: 0, y: 0, rotation: 0, flags: {}, ...structuredClone(source), id: source._id ?? `token${++serial}`, parent: scene,
-      getCenterPoint(position = {}) { return { x: (position.x ?? this.x) + 50, y: (position.y ?? this.y) + 50 }; }, toObject() { const { x,y,rotation,actorId,actorLink,flags,width=1,height=1 } = this; return { x,y,rotation,actorId,actorLink,flags,width,height }; },
+      getCenterPoint(position = {}) { return { x: (position.x ?? this.x) + 50 * (this.width ?? 1), y: (position.y ?? this.y) + 50 * (this.height ?? 1) }; }, toObject() { const { x,y,rotation,actorId,actorLink,flags,width=1,height=1 } = this; return { x,y,rotation,actorId,actorLink,flags,width,height }; },
       async update(change, options = {}) {
         if ((callbacks.get("preUpdateToken") ?? []).some(fn => fn(this, change, options) === false)) return this;
-        Object.assign(this, change); return this;
+        for (const [key, value] of Object.entries(change)) {
+          const parts = key.split("."), leaf = parts.pop(); let target = this;
+          for (const part of parts) target = target[part] ??= {};
+          target[leaf] = value;
+        }
+        return this;
       }, async move(pose, options = {}) {
         counts.move++;
         if ((callbacks.get("preMoveToken") ?? []).some(fn => fn(this, { destination: pose }, options) === false)) return false;
@@ -95,4 +101,70 @@ test("marked native callbacks after a Next move do not become another helm order
   assert.ok((callbacks.get("preUpdateToken") ?? []).every(fn => fn(token, { rotation: token.rotation + 60 }, options) !== false));
   await new Promise(resolve => setImmediate(resolve));
   assert.deepEqual(submitted, []); assert.deepEqual(counts.notifications, []); assert.deepEqual(api.state(), before);
+});
+
+test("Step 5 restores a drifted demo token before automatically moving it", async () => {
+  const { api, counts } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  const before = api.state(), id = before.turnOrder[0], token = canvas.scene.tokens.get(before.ships[id].cardPlay.tokenId);
+  assert.equal(before.guidedDemo.step, 4);
+  token.x += 17; token.rotation += 60;
+  const { assertCanvasPositions } = await import("../src/foundry/card-combat-canvas.js");
+  assert.throws(() => assertCanvasPositions(before), /out of sync/);
+  const after = await next(api);
+  assert.equal(after.guidedDemo.step, 5); assert.equal(after.guidedDemo.last.kind, "movement");
+  assertCanvasPositions(after);
+  assert.deepEqual(getOrderQueue(after.ships[id]).ap, getOrderQueue(before.ships[id]).ap);
+  assert.deepEqual(counts.notifications, []);
+});
+
+test("the complete guide recovers repeated fixture drift without adopting it into combat", async () => {
+  const { api, counts } = world(); let state = await api.request({ type: "demo-start" }), steps = 0;
+  while (state.guidedDemo.status === "running" && steps++ < 180) {
+    const ship = Object.values(state.ships)[steps % 4], token = canvas.scene.tokens.get(ship.cardPlay.tokenId);
+    token.x += 150; token.y += 87; token.rotation += 120;
+    state = await next(api);
+  }
+  assert.equal(state.guidedDemo.status, "complete"); assert.equal(state.guidedDemo.step, 108);
+  assert.ok(state.guidedDemo.checks.every(c => c.passed)); assert.deepEqual(counts.notifications, []);
+});
+
+test("fixture synchronization refuses campaign tokens, stale requests and paused advancement", async () => {
+  const { api } = world(); await api.request({ type: "demo-start" });
+  const before = api.state(), token = canvas.scene.tokens.get(Object.values(before.ships)[0].cardPlay.tokenId);
+  token.x += 17; const drifted = token.x;
+  await assert.rejects(() => api.request({ type: "demo-next", sessionId: before.id, revision: before.revision - 1 }), /changed/);
+  assert.equal(token.x, drifted);
+  game.paused = true; await assert.rejects(() => next(api), /Unpause/); assert.equal(token.x, drifted); game.paused = false;
+  const second = canvas.scene.tokens.contents[1]; second.flags[M].guidedCombatDemo = false;
+  await assert.rejects(() => next(api), /original marked demo tokens/);
+  assert.equal(token.x, drifted, "all fixture identities validate before any correction");
+  assert.deepEqual(api.state(), before);
+  second.flags[M].guidedCombatDemo = true; canvas.scene.flags[M].guidedCombatDemo = false;
+  await assert.rejects(() => next(api), /marked demo scene/); assert.equal(token.x, drifted);
+});
+
+test("blocked fixture correction keeps the pending step and reports an actionable error", async () => {
+  const { api } = world(); await api.request({ type: "demo-start" });
+  const before = api.state(), token = canvas.scene.tokens.get(Object.values(before.ships)[0].cardPlay.tokenId);
+  token.x += 17; token.move = async () => false;
+  await assert.rejects(() => next(api), /prevented guided token synchronization/);
+  assert.deepEqual(api.state(), before);
+});
+
+test("reset fixes resized fixtures and disables actor-size linking on demo tokens only", async () => {
+  const { api } = world(); await api.request({ type: "demo-start" });
+  await api.request({ type: "demo-stop", sessionId: api.state().id, revision: api.state().revision });
+  const actors = structuredClone(game.actors.contents.map(a => a.flags));
+  for (const token of canvas.scene.tokens.contents) {
+    token.width = 4; token.height = 2;
+    token.flags.pf2e = { linkToActorSize: true, autoscale: true };
+  }
+  const state = await api.request({ type: "demo-start" });
+  for (const token of canvas.scene.tokens.contents) {
+    assert.equal(token.width, 1); assert.equal(token.height, 1);
+    assert.equal(token.flags.pf2e.linkToActorSize, false); assert.equal(token.flags.pf2e.autoscale, false);
+  }
+  const { assertCanvasPositions } = await import("../src/foundry/card-combat-canvas.js");
+  assertCanvasPositions(state); assert.deepEqual(game.actors.contents.map(a => a.flags), actors);
 });

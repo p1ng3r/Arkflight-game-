@@ -178,3 +178,9 @@ AP still commits at **Lock Plan**. A reaction face selects a draft response and 
 ### Guided token-input follow-up
 
 Native movement/rotation hooks no longer forward manual inputs into the guided encounter's command queue. Guide-controlled movement and rollback carry an explicit synchronization marker, including for callbacks outside the short local moving guard. The server still rejects direct manual orders during the walkthrough. Full adapter tests now fire native hooks and assert no rejected-order notifications; two additional regressions cover repeated input and late synchronized callbacks. **790 Node tests pass.** Other modules' v14 deprecation warnings are outside this fix.
+
+### Guided fixture recovery
+
+Next Step now synchronizes only the original marked demo tokens in their marked scene to the saved encounter poses before advancing. Unexpected positions/facing never become free movement or a second action. The ordinary encounter guard remains strict. Identity, stale and pause checks precede document updates; blocked corrections preserve the pending step and expose expected/actual pose details. Demo setup/reset locks fixture dimensions to one hex and disables PF2e actor-size linking/autoscaling, leaving campaign tokens and permanent Actor resources alone.
+
+**795 Node tests pass**, including five new adapter regressions covering Step 5 after planning, repeated drift over all three rounds, protected document identities, paused/stale requests, blocked recovery and resized-fixture reset. The 108-step Chromium guide remains passing with camera follow. Native rendering and the particular installed-module interaction that caused the user's drift remain live acceptance work; the reported PF2e tracker render error is a separate unresolved report.

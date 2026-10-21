@@ -64,8 +64,30 @@ export function assertCanvasPositions(session) {
     const token = c.scene.tokens.get(ship.cardPlay.tokenId);
     if (!token) throw new Error(`The scene token for ${ship.cardPlay.name} is missing.`);
     const pose = tokenPose(token, ship.cardPlay.motion, session.canvas, c.grid);
-    if (Math.hypot(token.x - pose.x, token.y - pose.y) > 1 || difference(angle(token.rotation), pose.rotation) > .1) throw new Error(`${ship.cardPlay.name}'s token changed outside the card encounter. Use the HUD and normal token drag controls during combat.`);
+    if (Math.hypot(token.x - pose.x, token.y - pose.y) > 1 || difference(angle(token.rotation), pose.rotation) > .1) {
+      const actual = tokenCell(token, c.grid);
+      throw new Error(`${ship.cardPlay.name}'s token is out of sync: expected hex (${ship.cardPlay.motion.q}, ${ship.cardPlay.motion.r}) at ${Math.round(pose.rotation)}°, found hex (${actual.q}, ${actual.r}) at ${Math.round(angle(token.rotation))}°. ${session.guidedDemo?.status === "running" ? "The guided test could not restore its demo token; check for token-control automation blocking updates." : "Use the HUD and normal token drag controls during combat."}`);
+    }
   }
+}
+// The walkthrough owns only its explicitly marked fixture tokens. Native
+// snapping, size preparation or other automation must not strand Next Step.
+// Reconcile to the saved pose, never adopt the unexpected position into rules.
+export async function synchronizeGuidedDemoTokens(session) {
+  if (session?.guidedDemo?.status !== "running" || !session.canvas) return;
+  const c = canvasGrid(session.canvas.sceneId);
+  if (c.grid.type !== session.canvas.gridType || c.grid.size !== session.canvas.gridSize) throw new Error("Scene grid changed during the guided test. Restore its grid before continuing.");
+  if (c.scene.flags?.[MODULE]?.guidedCombatDemo !== true) throw new Error("The guided test can synchronize only its marked demo scene.");
+  const rows = Object.entries(session.ships).map(([id, ship]) => {
+    const token = c.scene.tokens.get(ship.cardPlay.tokenId);
+    if (!token || token.actorId !== id || token.actorLink === false || token.flags?.[MODULE]?.guidedCombatDemo !== true) throw new Error("The guided test can synchronize only its original marked demo tokens.");
+    return { token, motion: ship.cardPlay.motion };
+  });
+  // Validate every fixture before changing any document.
+  for (const { token, motion } of rows) {
+    if (!await setPose(token, tokenPose(token, motion, session.canvas, c.grid), true)) throw new Error("Foundry prevented guided token synchronization. The pending step has not advanced.");
+  }
+  assertCanvasPositions(session);
 }
 async function setPose(token, pose, rollback = false) {
   if (Math.hypot(token.x - pose.x, token.y - pose.y) < .01 && difference(angle(token.rotation), pose.rotation) < .01) return true;
