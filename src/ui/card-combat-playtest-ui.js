@@ -1,4 +1,4 @@
-import { CardCombatHUDLayout } from "./card-combat-hud-layout.js";
+import { CardCombatWorkspace } from "./card-combat-workspace.js";
 import { showCardWeaponOverlay, showCardFireOverlay, clearCardFirePreview, hideCardWeaponOverlay, cardWeaponOverlayVisible } from "./card-combat-canvas-overlays.js";
 import { bindFireControls, readFireSelection } from "./card-combat-fire-ui.js";
 import { weaponArcCheck } from "../combat/weapon-targeting.js";
@@ -11,7 +11,7 @@ import { shipAbilityBonus } from "../combat/ship-ability-rules.js";
 import { STATION_PRESENTATION, cardArt, resourceMeters } from "./card-combat-presentation.js";
 
 import { cardCooldown } from "./card-combat-motion-state.js";
-import { decorateCombatMotion, lastCombatOutcome, motionPreferences, revealCombatHand } from "./card-combat-motion.js";
+import { decorateCombatMotion, lastCombatOutcome, motionPreferences, revealCombatHand, combatPanelFeedback, playCombatSound } from "./card-combat-motion.js";
 
 const MODULE = "arkflight-game";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -117,6 +117,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     const bounds = { left: Math.min(...ships.map(s => s.x)) - 90, top: Math.min(...ships.map(s => s.y)) - 90, width: Math.max(...ships.map(s => s.x)) - Math.min(...ships.map(s => s.x)) + 180, height: Math.max(...ships.map(s => s.y)) - Math.min(...ships.map(s => s.y)) + 180 };
     const budget = canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0;
     const phaseLabel = state.pendingAttack ? "Incoming fire" : state.phase === "planning" ? q.phase === "planning" ? "Plan together" : "Plan locked" : state.phase === "complete" ? "Encounter complete" : turn ? "Your ship's turn" : "Ship turn in progress";
+    const phaseShort = state.pendingAttack ? "React" : state.phase === "planning" ? q.phase === "planning" ? "Plan" : "Locked" : state.phase === "complete" ? "Complete" : turn ? "Your Turn" : "Executing";
     const phaseHint = state.pendingAttack ? "Defending crew: choose a reaction or pass to resolve the attack." : state.phase === "planning" ? q.phase === "planning" ? "Choose cards and basic orders. All Captains lock before initiative rolls." : "Orders committed. Waiting for the other Captains to lock their plans." : state.phase === "complete" ? "Review the log, then prepare another encounter." : turn ? "Move, execute orders in any sequence, then finish the ship turn." : "Follow the active vessel. Your committed orders stay visible here.";
     const stations = STATION_PRESENTATION.map(station => ({ ...station, operator: actorName(ship.crew.stations[station.id]), count: cards.filter(card => card.filter === station.id).length }));
     const previewCard = cardById(this.expandedCardId);
@@ -124,7 +125,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     const preview = previewCard ? { ...previewCard, art: cardArt(previewCard), typeLabel: previewCard.type === "flux" ? `Flux ${previewCard.cooldownRounds}` : label(previewCard.type) } : focusedOrder ? { name: focusedOrder.name, description: "Basic ship order · 1 AP committed. Targets and batteries are selected now.", art: focusedOrder.art, type: "general", typeLabel: "Basic" } : null;
     const weaponChoices = ship.cardPlay.weapons.map(weapon => ({ id: weapon.key, name: `${label(weapon.mount)} · ${weapon.name} · ${label(weapon.arcTemplate ?? "wide")} ${2 * weaponArcCheck({ arcTemplate: weapon.arcTemplate ?? "wide" }).halfWidth}° · ${weapon.minRange}–${weapon.maxRange} hex · ${weapon.readyRound <= state.round ? "Ready" : `Ready R${weapon.readyRound}`}`, selected: weapon.key === this.selectedWeaponKey }));
     const canvasBound = Boolean(state.canvas), sceneMatches = canvasBound && state.canvas.sceneId === scene?.id;
-    return { ...context, motionPreferences: motionPreferences(), lastOutcome: lastCombatOutcome(state, this.selectedShipId), canAddPreview: canPlan && previewCard?.deck === "ap", canChoosePreviewReaction: response?.canRespond && previewCard?.deck === "rp", preview, focusedOrders: focusedOrder ? [focusedOrder] : [], ownedStations, handCollapsed: this.handCollapsed, weaponChoices, arcsVisible: cardWeaponOverlayVisible(this.selectedShipId), canvasBound, sceneMatches, sceneName: scene?.name, sceneReady: Boolean(globalThis.canvas?.grid?.isHexagonal), budget, phaseLabel, phaseHint, stations, meters: resourceMeters(ship.resources), pendingCount: orders.filter(order => order.status === "pending").length, state, isGM: game.user.isGM, selectable, active, complete: state.phase === "complete", shipName: ship.cardPlay.name, ships, selectedShipId: this.selectedShipId, cards: cards.map(card => ({ ...card, dragOrderId: orders.find(order => order.abilityId === card.id && order.status === "pending")?.id })), reactions: reactions.map(card => ({ ...card, canDragReaction: response?.canRespond && state.pendingAttack?.targetId === this.selectedShipId && ship.cardPlay.rp > 0 && card.status === "Ready" })), orders, crew, targets, batteries, response, canPlan, bonus: q.phase === "execution", ap: q.ap, rp: ship.cardPlay.rp, b: shipAbilityBonus(ship.progression?.level), resources: ship.resources, motion: { ...ship.cardPlay.motion, allowance: ship.cardPlay.motion.speed + ship.cardPlay.motion.extra, turnAllowance: ship.cardPlay.motion.baseTurns + ship.cardPlay.motion.bonusTurns }, canMove: turn && (game.user.isGM || owns(ship.crew.stations.navigator)), canEnd: turn && captain, basics: BASIC_CARD_ORDERS.map(b => ({ ...b, max: canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0 })), log: [...state.log].reverse().slice(0, 15).map(entry => ({ ...entry, label: cardById(entry.label)?.name ?? label(entry.label), name: state.ships[entry.shipId]?.cardPlay.name, text: logText(entry, state) })), viewBox: `${bounds.left} ${bounds.top} ${bounds.width} ${bounds.height}` };
+    return { ...context, phaseShort, motionPreferences: motionPreferences(), lastOutcome: lastCombatOutcome(state, this.selectedShipId), canAddPreview: canPlan && previewCard?.deck === "ap", canChoosePreviewReaction: response?.canRespond && previewCard?.deck === "rp", preview, focusedOrders: focusedOrder ? [focusedOrder] : [], ownedStations, handCollapsed: this.handCollapsed, weaponChoices, arcsVisible: cardWeaponOverlayVisible(this.selectedShipId), canvasBound, sceneMatches, sceneName: scene?.name, sceneReady: Boolean(globalThis.canvas?.grid?.isHexagonal), budget, phaseLabel, phaseHint, stations, meters: resourceMeters(ship.resources), pendingCount: orders.filter(order => order.status === "pending").length, state, isGM: game.user.isGM, selectable, active, complete: state.phase === "complete", shipName: ship.cardPlay.name, ships, selectedShipId: this.selectedShipId, cards: cards.map(card => ({ ...card, dragOrderId: orders.find(order => order.abilityId === card.id && order.status === "pending")?.id })), reactions: reactions.map(card => ({ ...card, canDragReaction: response?.canRespond && state.pendingAttack?.targetId === this.selectedShipId && ship.cardPlay.rp > 0 && card.status === "Ready" })), orders, crew, targets, batteries, response, canPlan, bonus: q.phase === "execution", ap: q.ap, rp: ship.cardPlay.rp, b: shipAbilityBonus(ship.progression?.level), resources: ship.resources, motion: { ...ship.cardPlay.motion, allowance: ship.cardPlay.motion.speed + ship.cardPlay.motion.extra, turnAllowance: ship.cardPlay.motion.baseTurns + ship.cardPlay.motion.bonusTurns }, canMove: turn && (game.user.isGM || owns(ship.crew.stations.navigator)), canEnd: turn && captain, basics: BASIC_CARD_ORDERS.map(b => ({ ...b, max: canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0 })), log: [...state.log].reverse().slice(0, 15).map(entry => ({ ...entry, label: cardById(entry.label)?.name ?? label(entry.label), name: state.ships[entry.shipId]?.cardPlay.name, text: logText(entry, state) })), viewBox: `${bounds.left} ${bounds.top} ${bounds.width} ${bounds.height}` };
   }
   async _onRender(context, options) {
     await super._onRender(context, options);
@@ -133,12 +134,13 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     this.boundPart = part;
     const key = `${context.state?.id}:${context.state?.round}:${this.selectedShipId}`;
     const scroll = this.scrollDrafts[key] ??= {};
-    for (const selector of [".card-command-rail", ".card-command-deck", ".card-hand-scroll"]) {
+    for (const selector of [".card-command-rail", ".card-command-deck", ".card-hand-scroll", ".cc-preview-content"]) {
       const panel = this.element.querySelector(selector);
       if (!panel) continue;
-      panel.scrollTop = scroll[selector]?.top ?? 0;
-      panel.scrollLeft = scroll[selector]?.left ?? 0;
-      panel.addEventListener("scroll", () => { scroll[selector] = { top: panel.scrollTop, left: panel.scrollLeft }; }, { passive: true });
+      const scrollKey = selector === ".cc-preview-content" ? `${selector}:${this.expandedCardId ?? this.expandedOrderId ?? ""}` : selector;
+      panel.scrollTop = scroll[scrollKey]?.top ?? 0;
+      panel.scrollLeft = scroll[scrollKey]?.left ?? 0;
+      panel.addEventListener("scroll", () => { scroll[scrollKey] = { top: panel.scrollTop, left: panel.scrollLeft }; }, { passive: true });
     }
     const draft = this.planDrafts[key] ??= { cards: [], basics: {} };
     const updateBudget = () => {
@@ -171,7 +173,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     for (const button of this.element.querySelectorAll("[data-view-ship]")) button.addEventListener("click", () => { hideCardWeaponOverlay(); this.selectedShipId = button.dataset.viewShip; this.render({ force: true }); });
     for (const input of this.element.querySelectorAll("[data-plan-card]")) {
       input.checked = !input.disabled && draft.cards.includes(input.value);
-      input.addEventListener("change", () => { draft.cards = [...this.element.querySelectorAll("[data-plan-card]:checked")].map(input => input.value); updateBudget(); });
+      input.addEventListener("change", () => { draft.cards = [...this.element.querySelectorAll("[data-plan-card]:checked")].map(input => input.value); updateBudget(); playCombatSound(input.checked ? "select" : "deselect"); });
     }
     for (const input of this.element.querySelectorAll("[data-plan-basic]")) {
       input.value = input.disabled ? 0 : draft.basics[input.dataset.planBasic] ?? 0;
@@ -261,7 +263,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     if (type === "respond") command.response = { cardId: this.element.querySelector("[data-response-card]").value || null, station: this.element.querySelector("[data-response-station]").value, skill: this.element.querySelector("[data-response-skill]").value };
     await api.request(command);
     if (type === "end" || type === "start" && api.state()?.canvas) await api.open();
-    if (type === "lock") delete this.planDrafts[`${state.id}:${state.round}:${command.shipId}`];
+    if (type === "lock") { delete this.planDrafts[`${state.id}:${state.round}:${command.shipId}`]; this.layoutController?.setHandMinimized(true, { automatic: true }); }
   }
 }
 async function openCardWindow() {
@@ -318,6 +320,7 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
   async focusOrder(shipId, orderId, targetId = null) {
     const state = game.arkflight.cardCombat.state(), order = state?.ships[shipId] ? getOrderQueue(state.ships[shipId]).orders.find(row => row.id === orderId) : null;
     if (!order) throw new Error("That committed order is no longer available.");
+    if (this.expandedOrderId !== orderId) playCombatSound("open");
     this.selectedShipId = shipId;
     this.expandedOrderId = orderId;
     this.expandedCardId = order.kind === "card" ? order.abilityId : null;
@@ -337,11 +340,11 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
     const motionView = `${this.selectedShipId}:${this.handCollapsed}`;
     if (this.motionView && this.motionView !== motionView && !this.handCollapsed) revealCombatHand(this.element);
     this.motionView = motionView;
-    this.layoutController ??= new CardCombatHUDLayout();
-    this.layoutController.bind(this.element);
+    this.layoutController ??= new CardCombatWorkspace({ feedback: combatPanelFeedback });
+    this.layoutController.bind(this.element, context);
     for (const card of this.element.querySelectorAll("[data-preview-card]")) {
       const open = () => {
-        this.expandedCardId = card.dataset.previewCard;
+        playCombatSound("open"); this.expandedCardId = card.dataset.previewCard;
         const order = context.orders.find(row => row.abilityId === this.expandedCardId && row.status === "pending");
         this.expandedOrderId = order?.id ?? null;
         this.render({ force: true });
@@ -367,8 +370,8 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
       try {
         switch (button.dataset.hudAction) {
           case "basic-orders": this.element.querySelector('[data-station-filter="all"]').click(); this.element.querySelector(".cc-basic-orders")?.scrollIntoView({ block: "nearest", inline: "end", behavior: motionPreferences().mode === "off" ? "instant" : "smooth" }); break;
-          case "close-preview": clearCardFirePreview(); this.expandedCardId = null; this.expandedOrderId = null; await this.render({ force: true }); break;
-          case "toggle-hand": this.handCollapsed = !this.handCollapsed; await this.render({ force: true }); break;
+          case "close-preview": playCombatSound("close"); clearCardFirePreview(); this.expandedCardId = null; this.expandedOrderId = null; await this.render({ force: true }); break;
+          case "toggle-hand": this.layoutController?.setHandMinimized(!this.layoutController.workspace.hand.minimized); break;
           case "close": await this.close(); break;
           case "setup": await game.arkflight.cardCombat.open(); break;
           case "view-scene": await game.scenes.get(context.state.canvas.sceneId)?.view(); break;

@@ -73,7 +73,8 @@
     "styles/system-damage.css",
     "styles/card-combat-playtest.css",
     "styles/card-combat-motion.css",
-    "styles/card-combat-hud-layout.css"
+    "styles/card-combat-hud-layout.css",
+    "styles/card-combat-workspace.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",

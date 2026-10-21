@@ -1,3 +1,4 @@
+import { CombatAudio, combatSoundCues } from "./card-combat-audio.js";
 import { createMotionTracker, effectiveMotion } from "./card-combat-motion-state.js";
 import { PLAYTEST_COMBAT_CARDS } from "../content/combat-cards-playtest.js";
 
@@ -7,7 +8,8 @@ const reducedMotion = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)"
 const tracker = createMotionTracker();
 const live = new Set();
 const delivered = new Map();
-let recent = null, audio = null, sessionId = null;
+const audioEngine = new CombatAudio();
+let recent = null, sessionId = null, toastCancel = null;
 const names = { hull: "Hull", lifeveil: "Lifeveil", strain: "Strain", morale: "Morale", supplies: "Supplies" };
 const card = id => PLAYTEST_COMBAT_CARDS.find(row => row.id === id);
 const degreeName = degree => ({ 2: "Critical success", 1: "Success", 0: "Failure", "-1": "Critical failure" }[degree]);
@@ -28,6 +30,7 @@ function animate(element, frames, duration = 550) {
   animation.finished.then(() => live.delete(cancel), () => live.delete(cancel));
 }
 export function clearCombatMotion() {
+  audioEngine.stop();
   for (const cancel of [...live]) cancel();
   live.clear(); recent = null; delivered.clear();
   document.querySelectorAll(".cc-motion-layer").forEach(layer => layer.remove());
@@ -127,25 +130,24 @@ function volley(state, event, subtle) {
   }
 }
 function unlockAudio(force = false) {
-  if (!force && !setting("cardCombatSound", false)) return;
-  const Context = globalThis.AudioContext ?? globalThis.webkitAudioContext;
-  if (!Context) return;
-  audio ??= new Context();
-  void audio.resume().catch(() => {});
+  if (force || setting("cardCombatSound", false)) void audioEngine.unlock();
 }
-function sound(kind) {
-  if (!setting("cardCombatSound", false) || audio?.state !== "running" || document.hidden) return;
-  const volume = Math.max(0, Math.min(0.4, Number(setting("cardCombatSoundVolume", 0.15)) || 0));
-  if (!volume) return;
-  const oscillator = audio.createOscillator(), gain = audio.createGain(), now = audio.currentTime;
-  const low = kind === "fire", duration = low ? 0.18 : 0.12;
-  oscillator.type = low ? "triangle" : "sine";
-  oscillator.frequency.setValueAtTime(low ? 100 : kind === "incoming" ? 440 : 660, now);
-  oscillator.frequency.exponentialRampToValueAtTime(low ? 35 : 330, now + duration);
-  gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(volume * 0.35, now + 0.008); gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-  oscillator.connect(gain); gain.connect(audio.destination); oscillator.start(now); oscillator.stop(now + duration);
-  const cancel = () => { try { oscillator.stop(); } catch {} oscillator.disconnect(); gain.disconnect(); live.delete(cancel); };
-  live.add(cancel); oscillator.onended = cancel;
+export function playCombatSound(kind, delay = 0) {
+  safely(() => { if (setting("cardCombatSound", false) && !document.hidden) audioEngine.play(kind, setting("cardCombatSoundVolume", .15), delay); });
+}
+export function combatPanelFeedback(kind, element) {
+  playCombatSound(kind);
+  safely(() => {
+    if (!element || motionPreferences().mode === "off") return;
+    if (kind !== "close") { animate(element, [{ opacity: .4, transform: "translateY(5px)" }, { opacity: 1, transform: "none" }], 180); return; }
+    const box = element.getBoundingClientRect(); if (!box.width || !box.height) return;
+    const ghost = document.createElement("div"); ghost.className = "cc-panel-ghost";
+    ghost.style.cssText = `position:fixed;left:${box.left}px;top:${box.top}px;width:${box.width}px;height:${box.height}px;pointer-events:none;border:1px solid #b99b60;border-radius:9px;background:#102735cc;z-index:100;`;
+    ghost.setAttribute("aria-hidden", "true"); document.body.append(ghost);
+    const animation = ghost.animate([{ opacity: .8, transform: "scale(1)" }, { opacity: 0, transform: "scale(.96)" }], { duration: 160, easing: "ease-out" });
+    const cancel = () => { animation.cancel(); ghost.remove(); live.delete(cancel); }; live.add(cancel);
+    animation.finished.then(cancel, cancel);
+  });
 }
 function playEvent(state, event) {
   const mode = motionPreferences().mode;
@@ -163,6 +165,22 @@ function playEvent(state, event) {
   }
   if (event.kind === "signature" && !subtle) tokenArt(state, event.shipId, card(event.cardId)?.stations?.[0] === "veilwarden" ? "lifeveil-impact" : "signature-burst", { scale: 1.8, duration: 950 });
 }
+function showOutcomeToast(state, event, hud) {
+  if (!hud || document.hidden) return;
+  toastCancel?.();
+  const definition = card(event.cardId), result = event.result;
+  const box = hud.querySelector(".cc-round-ribbon")?.getBoundingClientRect();
+  if (!box) return;
+  const toast = document.createElement("div"); toast.className = "cc-outcome-toast"; toast.setAttribute("role", "status");
+  const title = document.createElement("strong"), text = document.createElement("span");
+  title.textContent = `${state.ships[event.shipId]?.cardPlay.name ?? "Ship"} · ${definition?.name ?? "Attack"} · ${degreeName(result.degree) ?? "Resolved"}`;
+  text.textContent = definition?.outcomes?.[["criticalFailure", "failure", "success", "criticalSuccess"][result.degree + 1]] ?? (event.attack ? `${event.attack.damage ?? 0} Hull damage after defenses.` : `Total ${result.total}`);
+  toast.append(title, text); toast.style.left = `${box.left}px`; toast.style.top = `${box.bottom + 8}px`; toast.style.maxWidth = `${Math.min(420, parseFloat(getComputedStyle(hud).getPropertyValue("--cc-available-width")) || 420)}px`;
+  document.body.append(toast); animate(toast, [{ opacity: .3 }, { opacity: 1 }], 180);
+  const timer = setTimeout(() => cancel(), 4000);
+  const cancel = () => { clearTimeout(timer); toast.remove(); live.delete(cancel); if (toastCancel === cancel) toastCancel = null; };
+  toastCancel = cancel; live.add(cancel);
+}
 function receive(state) {
   safely(() => {
     if (sessionId !== state?.id) { clearCombatMotion(); sessionId = state?.id; }
@@ -179,8 +197,9 @@ function receive(state) {
     recent = { id: state.id, revision: state.revision, time: performance.now(), events };
     if (state.canvas?.sceneId !== globalThis.canvas?.scene?.id) return;
     events.forEach(event => safely(() => playEvent(state, event)));
-    const audible = events.find(event => event.kind === "fire") ?? events.find(event => ["incoming", "lock", "signature", "ready"].includes(event.kind));
-    if (audible) sound(audible.kind);
+    const outcome = events.find(event => event.kind === "outcome");
+    if (outcome) showOutcomeToast(state, outcome, hud);
+    combatSoundCues(events).forEach((cue, index) => playCombatSound(cue, index * .08));
   });
 }
 function selectByData(root, key, value) { return [...root.querySelectorAll(`[${key}]`)].find(node => node.getAttribute(key) === value); }
@@ -195,16 +214,23 @@ export function decorateCombatMotion(root, context) {
     const active = context.state?.phase === "execution" && context.state.turnOrder?.[context.state.turnIndex] === context.selectedShipId;
     root.querySelector(".cc-vessel-panel")?.classList.toggle("cc-active-vessel", Boolean(active));
     const outcomes = root.querySelector("[data-outcome-card]");
-    if (context.lastOutcome?.cardId === outcomes?.dataset.outcomeCard) {
+    if (outcomes && context.lastOutcome && context.lastOutcome.cardId === outcomes.dataset.outcomeCard) {
       const row = [...outcomes.querySelectorAll("[data-degree]")].find(node => Number(node.dataset.degree) === context.lastOutcome.degree);
       row?.classList.add("cc-current-result"); row?.nextElementSibling?.classList.add("cc-current-result");
     }
-    const preference = root.querySelector("[data-cc-motion]");
+    const preference = root.querySelector("select[data-cc-motion]");
     if (preference) { preference.value = prefs.preference; preference.addEventListener("change", async () => { await game.settings.set(MODULE, "cardCombatMotion", preference.value); }); }
     const soundButton = root.querySelector("[data-cc-sound]");
     if (soundButton) {
       soundButton.textContent = prefs.sound ? "Sound on" : "Sound off"; soundButton.setAttribute("aria-pressed", String(prefs.sound));
       soundButton.addEventListener("click", async () => { const enabled = !setting("cardCombatSound", false); if (enabled) safely(() => unlockAudio(true)); await game.settings.set(MODULE, "cardCombatSound", enabled); });
+    }
+    const volume = root.querySelector("[data-cc-volume]"), volumeLabel = root.querySelector("[data-volume-label]");
+    if (volume) {
+      volume.value = Math.round(Math.max(0, Math.min(.4, setting("cardCombatSoundVolume", .15))) * 250);
+      if (volumeLabel) volumeLabel.textContent = `${volume.value}%`;
+      volume.addEventListener("input", () => { if (volumeLabel) volumeLabel.textContent = `${volume.value}%`; });
+      volume.addEventListener("change", () => { void game.settings.set(MODULE, "cardCombatSoundVolume", Number(volume.value) / 250); });
     }
     const events = recent?.id === context.state?.id && recent.revision === context.state?.revision && performance.now() - recent.time < 1800 ? recent.events.filter(event => event.shipId === context.selectedShipId) : [];
     const key = `${context.state?.id}:${context.state?.revision}:${context.selectedShipId}`;
@@ -212,7 +238,7 @@ export function decorateCombatMotion(root, context) {
     delivered.set(key, true); if (delivered.size > 100) delivered.delete(delivered.keys().next().value);
     for (const event of events) {
       if (event.kind === "lock") {
-        pulse(root.querySelector(".cc-orders-panel"));
+        pulse(root.querySelector("[data-orders-toggle]"));
         animate(root.querySelector(".cc-lock-bolt"), [{ transform: "translateX(-65%)" }, { transform: "translateX(0)" }], 450);
         for (const order of event.orders) animate(selectByData(root, "data-preview-order", order.id), [{ opacity: 0, transform: "translateY(24px) scale(.9)" }, { opacity: 1, transform: "none" }], 450);
         if (prefs.mode === "full") for (const origin of event.origins ?? []) {
@@ -268,7 +294,7 @@ export function lastCombatOutcome(state, shipId) {
 Hooks.once("init", () => {
   const refresh = () => { clearCombatMotion(); Hooks.callAll("arkflightCardCombatMotionChanged"); };
   game.settings.register(MODULE, "cardCombatMotion", { name: "Card combat motion", hint: "Full effects, subtle feedback, or no animation. OS reduced motion always disables movement.", scope: "client", config: true, type: String, choices: { full: "Full", subtle: "Subtle", off: "Off" }, default: "full", onChange: refresh });
-  game.settings.register(MODULE, "cardCombatSound", { name: "Card combat sounds", hint: "Quiet generated cannon, lock and alert tones. Requires a click in this browser to enable audio.", scope: "client", config: true, type: Boolean, default: false, onChange: refresh });
+  game.settings.register(MODULE, "cardCombatSound", { name: "Card combat sounds", hint: "Layered cannon, impact, crystal, card and panel effects. Requires a click in this browser to enable audio.", scope: "client", config: true, type: Boolean, default: false, onChange: refresh });
   game.settings.register(MODULE, "cardCombatSoundVolume", { name: "Card combat sound volume", scope: "client", config: true, type: Number, range: { min: 0, max: 0.4, step: 0.05 }, default: 0.15 });
 });
 Hooks.once("ready", () => {
@@ -278,6 +304,7 @@ Hooks.once("ready", () => {
     const image = new Image(); image.src = `${ART}${file}.webp`;
   }
   document.addEventListener("pointerdown", () => safely(unlockAudio), { passive: true });
+  document.addEventListener("keydown", () => safely(unlockAudio), { passive: true });
   reducedMotion?.addEventListener("change", () => { clearCombatMotion(); Hooks.callAll("arkflightCardCombatMotionChanged"); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) clearCombatMotion(); });
 });

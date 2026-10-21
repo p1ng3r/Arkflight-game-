@@ -107,7 +107,19 @@ test("OS reduced motion overrides Full and Subtle; unknown preferences fail clos
 });
 
 globalThis.Hooks = { once() {}, on() {} };
-const { tokenScreenPoint, lastCombatOutcome } = await import("../src/ui/card-combat-motion.js");
+const { tokenScreenPoint, lastCombatOutcome, decorateCombatMotion } = await import("../src/ui/card-combat-motion.js");
+test("motion, sound and volume controls bind before the encounter has any roll results", () => {
+  const previous = globalThis.game;
+  globalThis.game = { settings: { get: (_module, key) => key === "cardCombatSoundVolume" ? .15 : undefined } };
+  const control = () => ({ handlers: [], addEventListener(name, fn) { this.handlers.push(name); }, setAttribute() {} });
+  const motion = control(), sound = control(), volume = control(), label = {};
+  const nodes = { "select[data-cc-motion]": motion, "[data-cc-sound]": sound, "[data-cc-volume]": volume, "[data-volume-label]": label };
+  const root = { dataset: {}, querySelector: selector => nodes[selector] ?? null };
+  try {
+    decorateCombatMotion(root, { state: { id: "initial-controls", revision: 0 }, selectedShipId: "a", lastOutcome: null });
+    assert.ok(sound.handlers.includes("click")); assert.ok(motion.handlers.includes("change")); assert.ok(volume.handlers.includes("change")); assert.equal(volume.value, 38);
+  } finally { globalThis.game = previous; }
+});
 test("canvas effects follow the transformed native token center and reject other scenes", () => {
   const state = fixture(); state.canvas = { sceneId: "scene" };
   globalThis.canvas = { ready: true, scene: { id: "scene" }, stage: { worldTransform: { a: 2, b: 0, c: 0, d: 2, tx: 50, ty: 20 } }, tokens: { get: () => ({ center: { x: 100, y: 70 }, w: 80, document: { rotation: 60 } }) }, app: { renderer: { screen: { width: 1000, height: 800 } }, canvas: { getBoundingClientRect: () => ({ left: 5, top: 10, width: 500, height: 400 }) } } };

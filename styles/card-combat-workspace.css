@@ -1,0 +1,77 @@
+/* Compact default view: one command strip and a five-card floating hand. */
+.arkflight-card-canvas { --cc-ui-scale:1; }
+.arkflight-card-canvas .cc-command-strip { width:fit-content; max-width:var(--cc-available-width); right:auto; gap:6px; padding:5px 7px; min-height:40px; border-radius:7px; z-index:8; }
+.cc-command-strip [data-ship-picker] { flex:1 1 130px; max-width:190px; min-width:90px; width:auto; font-size:calc(12px * var(--cc-ui-scale)); }
+.cc-command-strip .cc-round-status { font:600 calc(12px * var(--cc-ui-scale))/1.2 sans-serif; margin:0; color:#e7d4ac; max-width:210px; }
+.cc-command-points { font-size:calc(12px * var(--cc-ui-scale)); color:#a5ded2; white-space:nowrap; }
+.arkflight-card-canvas .cc-command-strip button,.cc-command-strip summary { min-height:calc(30px * var(--cc-ui-scale)); padding:4px 7px; font-size:calc(12px * var(--cc-ui-scale)); white-space:nowrap; }
+.cc-hud-options { position:relative; flex:none; }
+.cc-hud-options>summary { cursor:pointer; color:#d9c398; border:1px solid #456272; border-radius:4px; }
+.cc-options-body { position:absolute; right:0; top:calc(100% + 8px); width:280px; max-width:var(--cc-available-width); max-height:65vh; overflow:auto; background:#102735; border:1px solid #a48a59; box-shadow:0 8px 24px #0009; border-radius:7px; padding:12px; display:grid; gap:10px; z-index:20; }
+.cc-options-body>label { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; }
+.cc-options-body input[type=range] { flex:1 1 120px; min-width:0; width:100%; }
+.cc-options-body select { width:auto; }
+.cc-options-body output { width:38px; color:#e6c68e; }
+.cc-options-body input[type=checkbox] { width:16px; height:16px; flex:none; }
+.arkflight-card-canvas .cc-hand-dock { right:auto; bottom:auto; display:flex; flex-direction:column; min-width:0; min-height:0; z-index:5; container-type:inline-size; container-name:cc-hand; }
+.arkflight-card-canvas .cc-hand-dock>header { flex:none; flex-wrap:wrap; padding:5px 8px; gap:5px; }
+.cc-hand-dock>header [data-hand-title] { display:none; }
+.arkflight-card-canvas .cc-hand-dock>header button,.cc-hand-dock>header select { font-size:calc(12px * var(--cc-ui-scale)); min-height:calc(30px * var(--cc-ui-scale)); padding:3px 7px; }
+.cc-hand-dock [data-hand-station] { flex:1 1 100px; min-width:75px; max-width:140px; }
+.cc-panel-grip { cursor:grab; touch-action:none; color:#e3c786!important; white-space:nowrap; }
+.cc-panel-grip:active { cursor:grabbing; }
+.cc-panel-grip:focus-visible,.cc-panel-resize:focus-visible { outline:2px solid #9ce1d3; outline-offset:1px; }
+.cc-panel-grip:disabled,.cc-panel-resize:disabled { cursor:default; opacity:.4; }
+.cc-hand-dock .card-hand-scroll { flex:1; min-height:0; overflow:auto!important; padding:8px 10px!important; }
+.cc-hand-dock .cc-card-lane { gap:calc(10px * var(--cc-ui-scale)); min-height:100%; padding:0; align-items:stretch; }
+.cc-hand-dock [data-hand-panel] { height:100%; }
+.arkflight-card-canvas .cc-playing-card { flex:0 0 calc(164px * var(--cc-ui-scale)); width:calc(164px * var(--cc-ui-scale)); height:100%; min-height:calc(218px * var(--cc-ui-scale)); max-height:calc(300px * var(--cc-ui-scale)); border-radius:8px; }
+.cc-hand-dock .cc-card-band { padding:5px 9px; font-size:calc(11px * var(--cc-ui-scale)); }
+.cc-hand-dock .cc-card-illustration { height:calc(64px * var(--cc-ui-scale)); }
+.cc-hand-dock .cc-card-caption { padding:6px 17px!important; }
+.cc-hand-dock .cc-card-caption>strong { font-size:calc(14px * var(--cc-ui-scale)); line-height:1.1; }
+.cc-hand-dock .cc-card-caption>small { font-size:calc(10px * var(--cc-ui-scale)); line-height:1.15; margin-top:3px; }
+.arkflight-card-canvas .cc-hand-dock .cc-card-caption p { font-size:calc(11px * var(--cc-ui-scale)); line-height:1.25; margin:4px 0!important; -webkit-line-clamp:2; }
+.cc-hand-dock .cc-card-caption label { font-size:calc(10px * var(--cc-ui-scale)); bottom:8px; }
+.arkflight-card-canvas .cc-hand-dock .card-plan-footer { flex:none; min-height:calc(48px * var(--cc-ui-scale)); padding:5px 34px 5px 8px; gap:8px; }
+.arkflight-card-canvas .card-lock-button { min-height:calc(40px * var(--cc-ui-scale)); min-width:calc(135px * var(--cc-ui-scale)); font-size:calc(15px * var(--cc-ui-scale)); padding:6px 12px; }
+.cc-hand-dock [data-plan-budget] { font-size:calc(12px * var(--cc-ui-scale)); }
+.cc-hand-dock .card-plan-footer>small { display:none; }
+.cc-hand-dock .cc-lock-mechanism { margin-left:auto; width:42px; flex-basis:42px; }
+.cc-panel-resize { position:absolute; right:2px; bottom:2px; width:28px!important; height:25px; min-height:0!important; padding:0!important; font-size:18px!important; border:0!important; background:transparent!important; cursor:nwse-resize; touch-action:none; color:#bda472!important; z-index:6; }
+.cc-hand-tab { position:absolute; min-height:calc(40px * var(--cc-ui-scale)); padding:7px 14px!important; border:1px solid #b79a60!important; border-radius:7px; background:#102735!important; color:#f1d6a2!important; font-size:calc(14px * var(--cc-ui-scale))!important; box-shadow:0 4px 16px #0007; z-index:5; pointer-events:auto; }
+.cc-hand-tab span { color:#9bcdbf; margin-left:8px; font-size:calc(11px * var(--cc-ui-scale)); }
+.arkflight-card-canvas .cc-ship-dashboard { right:auto; bottom:auto; visibility:visible; max-height:none; z-index:4; display:flex; flex-direction:column; }
+.cc-ship-dashboard .cc-dashboard-header { flex:none; gap:6px; }
+.cc-dashboard-header>strong { flex:1; font-size:calc(13px * var(--cc-ui-scale)); color:#d9c699; }
+.arkflight-card-canvas .cc-dashboard-header button { font-size:calc(12px * var(--cc-ui-scale)); min-height:calc(30px * var(--cc-ui-scale)); }
+.arkflight-card-canvas .cc-ship-dashboard .cc-vessel-body { flex:1; min-height:0; overflow:auto; display:grid; grid-template-columns:120px minmax(0,1fr); gap:10px; padding:10px; align-content:start; }
+.cc-ship-dashboard .cc-helm { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.cc-ship-dashboard .cc-helm .card-helm { flex:0 0 210px; }
+.cc-ship-dashboard .cc-helm p { font-size:calc(12px * var(--cc-ui-scale)); }
+.cc-ship-dashboard .card-resource label,.cc-ship-dashboard .card-resource label span { font-size:calc(11px * var(--cc-ui-scale)); }
+.cc-ship-dashboard .cc-dashboard-tools { flex:none; max-height:55%; overflow:auto; padding-bottom:8px; }
+.cc-ship-dashboard .cc-dashboard-tools>summary { font-size:calc(12px * var(--cc-ui-scale)); }
+.arkflight-card-canvas .cc-orders-panel { right:auto; width:min(650px,var(--cc-available-width)); min-height:0; max-height:220px; z-index:7; }
+.cc-orders-panel .cc-order-chips { flex-wrap:wrap; max-height:140px; }
+.cc-orders-panel .cc-order-chips>button { min-height:38px; }
+.cc-orders-panel .cc-order-chips span { font-size:13px; }
+.cc-orders-panel .cc-order-chips small { font-size:11px; }
+.arkflight-card-canvas .cc-card-preview { width:min(370px,var(--cc-available-width)); z-index:7; }
+.cc-preview-content>p,.cc-preview-content .cc-outcomes { font-size:13px; }
+.cc-preview-content .card-order-controls { font-size:13px; }
+.cc-options-body [data-hud-action="close"] { color:#dfae9d; }
+@container cc-hand (max-width:620px) { .cc-hand-tabs button { font-size:11px!important; }.cc-hand-dock [data-hud-action="basic-orders"] { font-size:11px!important; }.cc-hand-dock .cc-lock-mechanism { display:none; } }
+@media(prefers-reduced-motion:reduce) { .cc-panel-ghost { display:none; } }
+
+.cc-resize-edge { position:absolute; z-index:6; touch-action:none; pointer-events:auto; }
+.cc-edge-right { right:0; top:42px; bottom:28px; width:6px; cursor:ew-resize; }
+.cc-edge-bottom { left:8px; right:30px; bottom:0; height:6px; cursor:ns-resize; }
+.cc-resize-edge:hover { background:#bb9d5c55; }
+.cc-outcome-toast { position:fixed; padding:10px 13px; border:1px solid #b69c67; border-radius:7px; background:#112b39f0; color:#d6e7e8; box-shadow:0 5px 20px #0008; pointer-events:none; z-index:90; font:13px/1.35 sans-serif; }
+.cc-outcome-toast strong { display:block; color:#ecd09b; margin-bottom:4px; }
+
+.is-pinned>.cc-resize-edge { display:none; }
+
+.cc-card-preview.is-card .cc-preview-art { float:none; width:100%; height:140px; margin:0 0 10px; object-fit:contain; background:radial-gradient(ellipse,#405d6c66,transparent 75%); }
+.cc-card-preview.is-basic .cc-preview-art { width:48px; height:48px; }
