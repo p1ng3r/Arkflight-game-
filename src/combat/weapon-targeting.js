@@ -1,5 +1,5 @@
 const MOUNT_OFFSET = Object.freeze({ fore: 0, starboard: 90, aft: 180, port: 270, deck: 0 });
-const ARC_HALF_WIDTH = Object.freeze({ line: 30, broadside: 60, wide: 90, turret: 180 });
+export const WEAPON_ARC_HALF_WIDTH = Object.freeze({ line: 30, broadside: 45, wide: 90, turret: 180 });
 
 function normalizedDegrees(value) {
   return ((Number(value) || 0) % 360 + 360) % 360;
@@ -30,11 +30,11 @@ export function weaponRangeBand(rangeHexes = {}, distanceHexes = 0) {
   return Object.freeze({ key: "long", label: "Long Band", legal: true, distance, min, optimalMin, optimalMax, max });
 }
 
-export function weaponArcCheck({ heading = 0, mount = "fore", arcTemplate = "wide", bearing = 0 } = {}) {
+export function weaponArcCheck({ heading = 0, mount = "fore", arcTemplate = "wide", bearing = 0, arcBonus = 0 } = {}) {
   const center = normalizedDegrees(Number(heading) + (MOUNT_OFFSET[mount] ?? 0));
-  const halfWidth = ARC_HALF_WIDTH[arcTemplate] ?? ARC_HALF_WIDTH.wide;
+  const halfWidth = Math.min(180, Math.max(0, (WEAPON_ARC_HALF_WIDTH[arcTemplate] ?? WEAPON_ARC_HALF_WIDTH.wide) + Number(arcBonus || 0)));
   const difference = angleDifference(center, bearing);
-  return Object.freeze({ legal: difference <= halfWidth, center, bearing: normalizedDegrees(bearing), difference, halfWidth, mount, arcTemplate });
+  return Object.freeze({ legal: difference <= halfWidth + 1e-7, center, bearing: normalizedDegrees(bearing), difference, halfWidth, mount, arcTemplate });
 }
 
 export function weaponTargetingSolution({ weapon, weaponState, heading = 0, distanceHexes = 0, bearing = 0 } = {}) {

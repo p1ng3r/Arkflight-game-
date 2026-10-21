@@ -1,0 +1,20 @@
+<section class="card-combat-shell">
+  <header class="card-command-banner"><div><span class="card-eyebrow">Arkflight · Crew Command</span><h1>Take the helm</h1><p>Real ships. Real canvas. One crew.</p></div><span class="card-playtest-badge">Canvas combat playtest</span></header>
+  <section class="card-launch-panel">
+    {{#if isGM}}<button type="button" data-guided-demo>Guided 3-Round Combat Test · Next Step</button>{{/if}}
+    {{#if active}}
+      <h2>Encounter already running</h2><p>Open the card HUD to continue a canvas encounter. An earlier standalone encounter must end before starting on the canvas.</p>{{#if isGM}}<button type="button" data-card-command="end">End Encounter</button>{{/if}}
+    {{else}}
+      {{#if complete}}<h2>Encounter complete {{#if state.winner}}· {{state.winner}}{{/if}}</h2>{{/if}}
+      <h2>Assemble the fleet</h2><p>Choose linked ship tokens on the current hex-grid scene. Starting facings snap to the scene's six legal headings.</p>
+      <p class="card-scene-status">{{#if sceneReady}}Scene: <strong>{{sceneName}}</strong>{{else}}Open a scene with a hexagonal grid to place ships and launch.{{/if}}</p>
+      {{#if isGM}}
+        <div class="card-test-fleet-import"><button type="button" data-card-command="import-test-ships">Import 4 Test Ships</button><small>Level 5 · armed · full resources. GM can run every station. Existing test ships are preserved.</small></div>
+        <div class="card-start-ships">{{#each selectable}}<label><input type="checkbox" data-start-ship value="{{id}}"><span>{{name}}{{#if role}}<small class="card-test-role">{{role}} · Level 5</small>{{/if}}</span><select data-start-token aria-label="Scene token for {{name}}">{{#if noToken}}<option value="">Place a linked token first</option>{{/if}}{{#if multipleTokens}}<option value="">Choose scene token…</option>{{/if}}{{#each tokens}}<option value="{{id}}">{{name}}</option>{{/each}}</select><span class="card-side-label">Side</span><input aria-label="Side for {{name}}" data-start-team value="{{team}}" maxlength="20"></label>{{else}}<p>Import test ships or create Arkflight ship Actors first.</p>{{/each}}</div>
+        <div class="card-launch-actions"><button type="button" data-card-command="place-ships" {{#unless sceneReady}}disabled{{/unless}}>Place Selected Ships on Scene</button><button type="button" class="card-primary" data-card-command="start" {{#unless sceneReady}}disabled{{/unless}}>Launch Canvas Encounter</button></div><p class="card-panel-hint">You choose the participating ships and sides. Existing linked tokens are reused. Placement creates only missing tokens and leaves current positions alone.</p>
+      {{else}}<p>The GM selects vessels and launches the encounter. Assigned crew can then use their orders in the shared HUD.</p>{{/if}}
+    {{/if}}
+    {{#if log}}<details class="card-combat-log"><summary>Previous encounter log</summary>{{#each log}}<p><strong>R{{round}} {{name}} — {{label}}</strong> {{text}}</p>{{/each}}</details>{{/if}}
+  </section>
+  <footer class="card-combat-note">Token positions are live. Resources remain encounter copies for this playtest. Card libraries are saved on ships.</footer>
+</section>

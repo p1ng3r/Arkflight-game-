@@ -1,0 +1,37 @@
+.arkflight-guided-combat { color:#e1e9e8; }
+.arkflight-guided-combat .window-content { background:#102632; padding:0; overflow:hidden; }
+.guided-demo-shell { display:flex; flex-direction:column; gap:12px; padding:14px; height:100%; min-height:0; font:14px/1.4 sans-serif; }
+.guided-demo-body { flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:12px; }
+.guided-demo-shell h2 { font:24px/1.15 Georgia,serif; color:#f0d49b; margin:5px 0; }
+.guided-demo-shell h3 { color:#f0d49b; font-size:16px; margin:5px 0; }
+.guided-demo-shell p { margin:5px 0; }
+.guided-demo-eyebrow { font-size:11px; letter-spacing:1.2px; color:#99d6cc; }
+.guided-demo-rounds { display:flex; gap:7px; margin-top:12px; }
+.guided-demo-rounds span { flex:1; padding:6px; border:1px solid #52666c; border-radius:5px; text-align:center; }
+.guided-demo-rounds .is-current { border-color:#e1bd72; color:#f6d898; background:#574a2c; }
+.guided-demo-rounds .is-complete { color:#9ce0cd; }
+.guided-demo-next,.guided-demo-receipt { padding:12px; border:1px solid #657b7e; border-radius:7px; background:#0a1d27; }
+.guided-demo-next { border-color:#bd9a58; }
+.guided-demo-shell small { color:#adc1c7; font-size:12px; }
+.guided-demo-shell button,.guided-demo-shell select { min-height:35px; color:#e1e9e8; background:#203e4a; border:1px solid #71878b; border-radius:5px; font-size:14px; cursor:pointer; }
+.guided-demo-shell button:disabled { opacity:.5; cursor:default; }
+.guided-demo-shell select { width:100%; }
+.guided-demo-shell details { border-top:1px solid #405963; padding-top:8px; }
+.guided-demo-shell summary { cursor:pointer; color:#d8c294; }
+.guided-demo-shell code { display:block; color:#9adccc; white-space:normal; }
+.guided-demo-warning,.guided-demo-error { padding:9px; background:#543e2b; border-left:3px solid #d4a95c; }
+.guided-demo-error { background:#522e2e; border-color:#e69a8b; }
+.guided-demo-weapons,.guided-demo-cards { list-style:none; padding:0; }
+.guided-demo-weapons li,.guided-demo-cards li { padding:7px 9px; border-bottom:1px solid #405963; }
+.guided-demo-shell li span { display:block; color:#b1c9ce; font-size:12px; }
+.guided-demo-cards li { border-left:3px solid #80cfc1; }
+.guided-demo-cards .card-flux { border-left-color:#bd9de8; }
+.guided-demo-cards .card-signature { border-left-color:#f3c57e; }
+.guided-demo-shell input[type=checkbox] { width:16px; height:16px; vertical-align:middle; }
+.guided-demo-shell footer { position:sticky; bottom:0; margin-top:auto; padding:10px 0 0; background:#102632; border-top:1px solid #637371; display:grid; gap:8px; z-index:2; }
+.guided-demo-shell .guided-demo-primary { min-height:46px; background:#644e28; color:#fff1d5; border-color:#e1bd72; font-weight:bold; font-size:18px; }
+.guided-demo-shell footer>div { display:flex; gap:7px; }
+.guided-demo-shell footer>div button { flex:1; }
+.guided-demo-report { display:block; color:#e8cf9f; font-size:12px; }
+.guided-demo-report textarea { width:100%; resize:vertical; min-height:100px; color:#dde8e8; background:#091b27; font:11px/1.3 monospace; }
+[data-demo-progress] { color:#e8cf9f; font:12px/1.3 sans-serif; }

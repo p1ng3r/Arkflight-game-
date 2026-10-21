@@ -1,3 +1,4 @@
+import { damageSystemIntegrity } from "./system-damage.js";
 import { resolveStrainContribution } from "./strain-rules.js";
 import { applyShipSystemDegradation, canonicalDamageTarget, improveShipCondition, shipConditionProfile } from "./ship-conditions.js";
 import { normalizeShip } from "./ship-schema.js";
@@ -46,20 +47,24 @@ export function applyShipEffect(ship, effect = {}) {
       next.resources.strain = { ...resource, value: Math.max(0, Number(resource.value ?? 0) + delta) };
       return { ship: next, affectedSystem: null, threatenedArea: null };
     }
+    case "damage-system": {
+      next = damageSystemIntegrity(next, effect.system, effect.value);
+      return { ship: next, affectedSystem: effect.system, damageSystems: [effect.system] };
+    }
     case "damage-hull": {
       const resource = next.resources?.hull ?? { value: 0, max: 0 };
       next.resources.hull = { ...resource, value: clamp(Number(resource.value ?? 0) - Math.abs(Number(effect.value ?? 0)), 0, Number(resource.max ?? 0)) };
-      return { ship: next, affectedSystem: "hull", threatenedArea: "hull" };
+      return { ship: next, affectedSystem: "hull", threatenedArea: "hull", damageSystems: ["hull"] };
     }
     case "damage-lifeveil": {
       const resource = next.resources?.lifeveil ?? { value: 0, max: 100 };
       next.resources.lifeveil = { ...resource, max: 100, value: clamp(Number(resource.value ?? 0) - Math.abs(Number(effect.value ?? 0)), 0, 100) };
-      return { ship: next, affectedSystem: "lifeveil", threatenedArea: "lifeveil" };
+      return { ship: next, affectedSystem: "lifeveil", threatenedArea: "lifeveil", damageSystems: ["lifeveil"] };
     }
     case "change-morale": {
       const resource = next.resources?.morale ?? { value: 0, max: 100 };
       next.resources.morale = { ...resource, max: 100, value: clamp(Number(resource.value ?? 0) + Number(effect.value ?? 0), 0, 100) };
-      return { ship: next, affectedSystem: "morale", threatenedArea: "morale" };
+      return { ship: next, affectedSystem: "morale", threatenedArea: "morale", damageSystems: Number(effect.value) < 0 ? ["morale"] : [] };
     }
     case "degrade-system":
     case "degrade-area": {
@@ -97,14 +102,16 @@ export function applyShipEffect(ship, effect = {}) {
 export function applyShipEffects(ship, effects = []) {
   let next = normalizeShip(structuredClone(ship));
   const affectedSystems = [];
+  const damageSystems = new Set();
   for (const effect of effects) {
     const result = applyShipEffect(next, effect);
     next = result.ship;
+    for (const system of result.damageSystems ?? []) damageSystems.add(system);
     const system = result.affectedSystem ?? result.threatenedArea;
     if (system && !affectedSystems.includes(system)) affectedSystems.push(system);
   }
   // threatenedAreas is retained as a compatibility alias for older event code.
-  return { ship: next, affectedSystems, threatenedAreas: affectedSystems };
+  return { ship: next, affectedSystems, threatenedAreas: affectedSystems, damageSystems: [...damageSystems] };
 }
 
 

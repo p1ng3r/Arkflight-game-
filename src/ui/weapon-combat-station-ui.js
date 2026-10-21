@@ -355,25 +355,7 @@ function buildShipWeaponStation(app, actor) {
     if (remaining > 0) {
       const reloadButton = document.createElement("button");
       reloadButton.type = "button";
-      const reloadControl = api.stationActionControl?.("common-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
-      const reloadAvailability = api.stationActionAvailability?.("common-reload-weapon", combatant) ?? { ok: true, reason: null };
-      const reloadBlocker = !reloadControl.ok ? reloadControl.reason : !reloadAvailability.ok ? reloadAvailability.reason : null;
-      reloadButton.disabled = Boolean(reloadBlocker);
-      reloadButton.innerHTML = reloadBlocker
-        ? `<i class="fa-solid fa-lock"></i> ${esc(stationActionBlockerLabel(reloadBlocker))}`
-        : '<i class="fa-solid fa-rotate"></i> Reload · 1 AP';
-      reloadButton.title = reloadBlocker
-        ? `Reload unavailable: ${stationActionBlockerLabel(reloadBlocker)}.`
-        : "Common action: spend 1 AP to reduce this weapon's remaining Reload by 1.";
-      reloadButton.addEventListener("click", async () => {
-        try {
-          const result = await api.stationAction("common-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
-          if (!result?.requested) app.render(false);
-        } catch (error) { ui.notifications?.error(error?.message ?? "Reload failed."); }
-      });
-      actions.append(reloadButton);
-
-      if (remaining <= 2) {
+      if (remaining > 0) {
         const workButton = document.createElement("button");
         workButton.type = "button";
         const workControl = api.stationActionControl?.("battlewatch-reload-weapon", combatant) ?? { ok: Boolean(game.user?.isGM), reason: null };
@@ -382,10 +364,10 @@ function buildShipWeaponStation(app, actor) {
         workButton.disabled = Boolean(workBlocker);
         workButton.innerHTML = workBlocker
           ? `<i class="fa-solid fa-lock"></i> Work the Guns · ${esc(stationActionBlockerLabel(workBlocker))}`
-          : '<i class="fa-solid fa-burst"></i> Work the Guns · 20% Morale · +1 Strain';
+          : '<i class="fa-solid fa-burst"></i> Work the Guns · 1 AP · Surge';
         workButton.title = workBlocker
           ? `Work the Guns unavailable: ${stationActionBlockerLabel(workBlocker)}.`
-          : "Battlewatch, once per round: spend 20% Morale and gain 1 Strain to immediately ready this weapon for 0 AP.";
+          : "Reduce Reload by 1 (2 on a critical success). Recover for two rounds.";
         workButton.addEventListener("click", async () => {
           try {
             const result = await api.stationAction("battlewatch-reload-weapon", { weaponKey: weaponState.key, selection: weaponState.key }, combatant);
@@ -417,7 +399,7 @@ function buildShipWeaponStation(app, actor) {
 
       const fireControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
       fireButton.disabled = !fireControl.ok || remaining > 0 || !enoughAP || !legal;
-      if (!fireControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> Battlewatch Only';
+      if (!fireControl.ok) fireButton.innerHTML = '<i class="fa-solid fa-lock"></i> Ship Owners Only';
       else if (remaining > 0) fireButton.innerHTML = `<i class="fa-solid fa-hourglass-half"></i> Reload ${remaining}`;
       else if (!enoughAP) fireButton.innerHTML = '<i class="fa-solid fa-bolt"></i> Need 1 AP';
       else if (!legal) fireButton.innerHTML = '<i class="fa-solid fa-ban"></i> Target Illegal';
@@ -468,7 +450,7 @@ function buildShipWeaponStation(app, actor) {
   section.append(list);
   updateAll();
   const battlewatchControl = api.stationActionControl?.("battlewatch-fire-weapon", combatant) ?? { ok: Boolean(game.user?.isGM) };
-  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Fire control is Battlewatch-only. Reload is a common action available to ship Owners.</p>');
+  if (!battlewatchControl.ok) section.insertAdjacentHTML("beforeend", '<p class="arkflight-weapon-authority"><i class="fa-solid fa-lock"></i> Fire Weapon costs 1 AP. Reload timers decrease automatically each ship turn.</p>');
   return section;
 }
 

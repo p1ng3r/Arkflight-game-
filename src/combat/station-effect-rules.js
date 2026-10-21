@@ -1,6 +1,6 @@
 export function stationEffectProfile(level = 1) {
   const shipLevel = Math.max(1, Math.min(20, Math.trunc(Number(level) || 1)));
-  const bonus = shipLevel >= 20 ? 3 : shipLevel >= 10 ? 2 : 1;
+  const bonus = Math.ceil(shipLevel / 4);
   const tier = shipLevel >= 20 ? 5 : shipLevel >= 15 ? 4 : shipLevel >= 10 ? 3 : shipLevel >= 5 ? 2 : 1;
   return Object.freeze({
     level: shipLevel,
@@ -37,14 +37,15 @@ export function stationEffectCharges(actionId, level = 1) {
 }
 
 export function stationEffectMagnitude(effect, fallbackLevel = 1) {
+  if (effect?.attackBonus != null) return Number(effect.attackBonus);
   const level = Math.max(1, Math.trunc(Number(effect?.shipLevel) || Number(fallbackLevel) || 1));
   const base = stationBonus(level);
   const boost = Math.max(0, Math.trunc(Number(effect?.boost) || 0));
-  return Math.max(1, Math.min(3, base + boost));
+  return Math.max(1, Math.min(5, base + boost));
 }
 
 export function stationMitigationValue(kind, level = 1, boost = 0) {
-  const magnitude = Math.max(1, Math.min(3, stationBonus(level) + Math.max(0, Math.trunc(Number(boost) || 0))));
+  const magnitude = Math.max(1, Math.min(5, stationBonus(level) + Math.max(0, Math.trunc(Number(boost) || 0))));
   if (kind === "brace") return 3 * magnitude;
   if (kind === "emergency-ward") return 4 * magnitude;
   if (kind === "focus-ward") return 3 * magnitude;

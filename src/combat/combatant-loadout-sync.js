@@ -106,6 +106,7 @@ function reconcileMobility(fresh, current) {
     committedHeading,
     facing,
     specialMovementAP: Math.max(0, Math.trunc(Number(current.specialMovementAP) || 0)),
+    extraordinaryMovement: Boolean(current.extraordinaryMovement),
     movement: Object.freeze({ ...current.movement }),
     // v5 and earlier stored every token rotation update in maneuver.used. That
     // value is intentionally discarded; v6 tracks only committed degrees.
@@ -148,10 +149,11 @@ export function reconcileCombatantState(ship, currentState, {
   return Object.freeze({
     ...fresh,
     turnKey: typeof currentState.turnKey === "string" ? currentState.turnKey : fresh.turnKey,
-    economy: reconcileEconomy(fresh.economy, currentState.economy),
+    economy: reconcileEconomy({ ...fresh.economy, ap: { ...fresh.economy.ap, max: fresh.economy.ap.max + Number(currentState.stationRuntime?.temporaryApMaxBonus ?? 0) } }, currentState.economy),
     mobility: reconcileMobility(fresh.mobility, currentState.mobility),
     weapons: reconciledWeapons(fresh.weapons, currentState.weapons, migrationRound(currentState, round)),
     strain: reconcileStrain(fresh.strain, currentState.strain),
+    stationRuntime: structuredClone(currentState.stationRuntime ?? { round: 0, used: {}, battleUsed: {}, readyRounds: {}, effects: [], temporaryApMaxBonus: 0 }),
     log: Array.isArray(currentState.log) ? Object.freeze([...currentState.log]) : fresh.log
   });
 }

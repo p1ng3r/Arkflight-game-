@@ -19,10 +19,10 @@ export const MORALE_BANDS = Object.freeze({
 
 export const MORALE_PERCENT_BANDS = Object.freeze([
   Object.freeze({ minimum: 100, id: "inspired", label: "Inspired" }),
-  Object.freeze({ minimum: 80, id: "confident", label: "Confident" }),
-  Object.freeze({ minimum: 60, id: "steady", label: "Steady" }),
-  Object.freeze({ minimum: 40, id: "shaken", label: "Shaken" }),
-  Object.freeze({ minimum: 1, id: "faltering", label: "Faltering" }),
+  Object.freeze({ minimum: 75, id: "confident", label: "Confident" }),
+  Object.freeze({ minimum: 50, id: "steady", label: "Steady" }),
+  Object.freeze({ minimum: 25, id: "shaken", label: "Shaken" }),
+  Object.freeze({ minimum: 10, id: "faltering", label: "Faltering" }),
   Object.freeze({ minimum: 0, id: "broken", label: "Broken" })
 ]);
 
@@ -79,7 +79,8 @@ export function moraleBand(value) {
 
 export function hullOperationalState(ship) {
   const value = Math.max(0, Number(ship?.resources?.hull?.value ?? 0));
-  if (value > 0) {
+  const max = Number(ship?.resources?.hull?.max ?? 0);
+  if (value > 0 && (max <= 0 || value / max >= 0.1)) {
     return Object.freeze({
       id: "operational",
       label: "Operational",

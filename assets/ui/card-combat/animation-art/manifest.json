@@ -1,0 +1,168 @@
+{
+  "kind": "still-art-layers",
+  "version": 1,
+  "assets": [
+    {
+      "id": "plan-latch-housing",
+      "name": "Plan-lock housing",
+      "file": "plan-latch-housing.webp",
+      "width": 1983,
+      "height": 793,
+      "quality": 70,
+      "alphaBounds": [
+        40,
+        120,
+        1942,
+        633
+      ],
+      "source": "exec-156f243d-4cbd-49dd-9d1e-03cdbb1b7563.png",
+      "sourceSha256": "47a6469116bd84d226abe1594983197b1bf4f66a4a482f8208feb6e377b36dc9",
+      "use": "Fixed brass guide rails; transparent central slot.",
+      "bytes": 139812
+    },
+    {
+      "id": "plan-latch-bolt",
+      "name": "Plan-lock bolt",
+      "file": "plan-latch-bolt.webp",
+      "width": 2020,
+      "height": 779,
+      "quality": 70,
+      "alphaBounds": [
+        221,
+        213,
+        1800,
+        558
+      ],
+      "source": "exec-f2930a58-88d8-4a25-a845-d9b2624f98f4.png",
+      "sourceSha256": "f9ac5676961893816f1701524ef99a411a9f782f09061e7545030446248d4b25",
+      "use": "Separate moving brass bolt with cyan crystal grip.",
+      "bytes": 95198
+    },
+    {
+      "id": "ap-crystal",
+      "name": "AP crystal",
+      "file": "ap-crystal.webp",
+      "width": 1254,
+      "height": 1254,
+      "quality": 70,
+      "alphaBounds": [
+        332,
+        129,
+        921,
+        1086
+      ],
+      "source": "exec-5b185348-94c0-4e67-8134-2184276d8b6e.png",
+      "sourceSha256": "2053cd98de4e4a14f904a28221680781be7d59a32d56ee663e5befe3d7c4261d",
+      "use": "Cyan diamond-shaped action-point indicator.",
+      "bytes": 94354
+    },
+    {
+      "id": "rp-crystal",
+      "name": "RP crystal",
+      "file": "rp-crystal.webp",
+      "width": 1254,
+      "height": 1254,
+      "quality": 70,
+      "alphaBounds": [
+        249,
+        209,
+        1007,
+        1029
+      ],
+      "source": "exec-735df572-2dcc-4be7-9687-4a3eb3708d31.png",
+      "sourceSha256": "ec55c239d57d8e4d89dc03d864018a9c0f96ccc5dfe2c99198db55ab4fe5595e",
+      "use": "Amber shield-shaped reaction-point indicator.",
+      "bytes": 117732
+    },
+    {
+      "id": "ability-card-frame",
+      "name": "Ability card frame",
+      "file": "ability-card-frame.webp",
+      "width": 1024,
+      "height": 1536,
+      "quality": 70,
+      "alphaBounds": [
+        34,
+        16,
+        991,
+        1509
+      ],
+      "source": "exec-2feccbeb-aa0a-433a-a443-99245b0c1a2d.png",
+      "sourceSha256": "23fc846750a134ff417f8d2ec4d85727b8f2eefeb9f4d7a2f7aafe033d0e8dd9",
+      "use": "Portrait brass frame with transparent center and blank top band.",
+      "bytes": 126428
+    },
+    {
+      "id": "lifeveil-impact",
+      "name": "Lifeveil impact",
+      "file": "lifeveil-impact.webp",
+      "width": 1254,
+      "height": 1254,
+      "quality": 70,
+      "alphaBounds": [
+        37,
+        33,
+        1228,
+        1226
+      ],
+      "source": "exec-b90fa3cd-620f-405c-8fbc-eb10dc2f7da7.png",
+      "sourceSha256": "976548c8b4a96522cfb8cda189cbf658842b5ad9f52904e8ab1f1f41cfbd1a43",
+      "use": "Green/gold leafy protective ring with impact on its upper-right edge.",
+      "bytes": 485082
+    },
+    {
+      "id": "arkengine-flare",
+      "name": "Arkengine flare",
+      "file": "arkengine-flare.webp",
+      "width": 887,
+      "height": 1774,
+      "quality": 70,
+      "alphaBounds": [
+        199,
+        58,
+        689,
+        1708
+      ],
+      "source": "exec-bffb6dac-3211-4b8a-abbb-dd84e29d2789.png",
+      "sourceSha256": "b9e01d1165f9c552cadf1a21ecef6360e651209071e73d539f474ab314a929d6",
+      "use": "Vertical cyan aether plume, bright core toward the upper end and tapered lower tail.",
+      "bytes": 220324
+    },
+    {
+      "id": "cannon-muzzle-flash",
+      "name": "Cannon muzzle flash",
+      "file": "cannon-muzzle-flash.webp",
+      "width": 1774,
+      "height": 887,
+      "quality": 70,
+      "alphaBounds": [
+        233,
+        204,
+        1516,
+        695
+      ],
+      "source": "exec-b71f6c9c-4cf0-4a7e-95d6-58f7123644d6.png",
+      "sourceSha256": "002a3266d82c80844f3ca5cad66612856048b87476716931a4018133a20a9927",
+      "use": "Horizontal amber flash with its ignition point toward the left and plume extending right.",
+      "bytes": 210452
+    },
+    {
+      "id": "signature-burst",
+      "name": "Signature activation accent",
+      "file": "signature-burst.webp",
+      "width": 1254,
+      "height": 1254,
+      "quality": 70,
+      "alphaBounds": [
+        21,
+        21,
+        1232,
+        1216
+      ],
+      "source": "exec-1809dfba-3234-4b5e-bdf7-c37e60412c70.png",
+      "sourceSha256": "39e4a0baa97fb0629c0139c13438174acdf0504058d302c11caa20b8c6309955",
+      "use": "Gold compass-ring accent with transparent center and cyan crystal sparks.",
+      "bytes": 329334
+    }
+  ]
+}

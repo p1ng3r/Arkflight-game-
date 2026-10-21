@@ -1,0 +1,49 @@
+/* Cosmetic only. No animation owns input, movement, targeting, or command timing. */
+.cc-motion-layer { position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:90; contain:strict; }
+.cc-motion-layer * { position:absolute; pointer-events:none!important; }
+.cc-token-effect { background:center/contain no-repeat; filter:drop-shadow(0 0 7px #d9f5e066); }
+.cc-token-ring { border:2px solid; border-radius:50%; box-shadow:0 0 12px currentColor; }
+.cc-projectile { width:22px; height:4px; border-radius:50%; background:linear-gradient(90deg,transparent,#f6bd73,#fff9d1); box-shadow:0 0 7px #efb877; }
+.cc-resource-float { transform:translateX(-50%); white-space:nowrap; font:bold 14px/1.2 sans-serif; text-shadow:0 2px 3px #000,1px 0 2px #000; }
+.cc-pool-flight { width:26px; height:26px; background:center/contain no-repeat; filter:drop-shadow(0 0 8px #65e3da); transform:translate(-50%,-50%); }
+.cc-pool-ap { background-image:url('../assets/ui/card-combat/animation-art/ap-crystal.webp'); }
+.cc-pool-rp { background-image:url('../assets/ui/card-combat/animation-art/rp-crystal.webp'); }
+.cc-order-flight { border:1px solid #c2a476; border-radius:8px; background-color:#112a38; background-position:center; background-size:70% 70%,100% 100%; background-repeat:no-repeat; box-shadow:0 4px 14px #0008; }
+.cc-active-vessel { border-color:#90cfc3; box-shadow:0 0 0 1px #79c0b54d,0 8px 24px #0006; }
+.cc-motion-control { display:flex; align-items:center; gap:4px; color:#bbd0d8; font-size:10px; white-space:nowrap; }
+.cc-motion-control select { width:67px; min-height:25px; padding:2px; font-size:10px; }
+.cc-pool-crystal { width:32px!important; height:32px!important; object-fit:contain; margin:0 auto 2px; display:block; }
+.cc-lock-mechanism { display:block; flex:0 0 48px; height:28px; position:relative; overflow:hidden; }
+.cc-lock-mechanism i { display:block; position:absolute; inset:0; background:center/100% 100% no-repeat; pointer-events:none; }
+.cc-lock-bolt { background-image:url('../assets/ui/card-combat/animation-art/plan-latch-bolt.webp')!important; }
+.cc-lock-housing { background-image:url('../assets/ui/card-combat/animation-art/plan-latch-housing.webp')!important; }
+.cc-card-frame { position:absolute; inset:27px 0 0; z-index:2; pointer-events:none; background:url('../assets/ui/card-combat/animation-art/ability-card-frame.webp') center/100% 100% no-repeat; opacity:.65; }
+.cc-card-band { position:relative; overflow:hidden; z-index:3; }
+.cc-playing-card .cc-card-caption { padding-left:18px; padding-right:18px; }
+.cc-playing-card .cc-card-caption label { left:18px; right:18px; bottom:8px; z-index:3; background:#102330ee; border-radius:2px; }
+.cc-card-band::after { content:""; position:absolute; inset:0; transform:translateX(-120%); background:linear-gradient(100deg,transparent,#fff9,transparent); pointer-events:none; }
+[data-cc-motion="full"] .cc-playing-card:is(:hover,:focus-visible) .cc-card-band::after { animation:cc-band-glint .55s ease-out; }
+[data-cc-motion="full"] .cc-playing-card.is-selected { transform:translateY(-5px); }
+.cc-playing-card.cc-cooling .cc-card-illustration img { filter:saturate(.45) brightness(.7); }
+.cc-playing-card.cc-spent .cc-card-illustration img { filter:grayscale(.8) brightness(.6); }
+.cc-playing-card.cc-spent .cc-card-band { background:#a09579; }
+.cc-flux-timer { position:absolute; top:33px; left:8px; right:8px; height:17px; border:1px solid #a28bb8; background:#162034ee; z-index:3; font:9px/15px sans-serif; text-align:center; color:#f0e4ff; overflow:hidden; border-radius:3px; }
+.cc-flux-timer i { display:block; height:100%; background:#8e62b88c; }
+.cc-flux-timer span { position:absolute; inset:0; }
+.cc-last-outcome { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 8px; margin-top:5px; padding:4px 6px; border-left:2px solid #9bcfc3; background:#1b354299; font-size:10px; }
+.cc-last-outcome strong { color:#e9d6ad; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cc-last-outcome>span { color:#b9d3dd; }
+.cc-last-outcome small { grid-column:1/-1; color:#c3d7d9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cc-orders-panel .cc-order-chips { max-height:56px; }
+.cc-outcomes .cc-current-result { color:#d5ffe9; background:#28463f; box-shadow:inset 2px 0 #a0dac3; padding-left:6px; }
+.cc-outcomes dt { padding:3px; border-radius:3px; }
+/* Long card details scroll below the ribbon rather than covering its controls. */
+.cc-card-preview { max-height:calc(100vh - 565px); min-height:150px; }
+.cc-preview-content { max-height:calc(100vh - 610px); }
+[data-cc-motion="off"] :is(.cc-playing-card,.cc-card-band::after) { transition:none!important; animation:none!important; }
+[data-cc-motion="off"] .cc-playing-card:is(:hover,:focus-visible),[data-cc-motion="subtle"] .cc-playing-card:is(:hover,:focus-visible) { transform:none; }
+[data-cc-motion="subtle"] .cc-playing-card { transition:box-shadow .15s; }
+@keyframes cc-band-glint { to { transform:translateX(120%); } }
+@media(max-height:850px) { [data-hand-panel="ap"] .cc-card-caption p { -webkit-line-clamp:2; font-size:9px; line-height:1.2; margin:4px 0!important; }.cc-last-outcome { font-size:9px; }.cc-last-outcome small { display:none; }.cc-orders-panel .cc-order-chips { max-height:46px; }.cc-response-panel { top:210px; max-height:max(100px,calc(100vh - 635px)); }.cc-round-ribbon .card-eyebrow { display:none; } }
+@media(max-width:1200px) { .cc-motion-control { font-size:0; }.cc-lock-mechanism { display:none; }.cc-round-ribbon [data-cc-sound] { font-size:9px; } }
+@media(prefers-reduced-motion:reduce) { .cc-playing-card,.cc-card-band::after { animation:none!important; transition:none!important; }.cc-playing-card:is(:hover,:focus-visible) { transform:none!important; } }

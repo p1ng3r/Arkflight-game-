@@ -1,0 +1,59 @@
+/* Use actual Foundry controls/chat bounds, independent of browser zoom or screen count. */
+.arkflight-card-canvas,.arkflight-card-canvas * { box-sizing:border-box; }
+.arkflight-card-canvas { --cc-safe-left:92px; --cc-safe-right:340px; --cc-safe-top:12px; --cc-safe-bottom:83px; --cc-available-width:calc(100vw - var(--cc-safe-left) - var(--cc-safe-right)); }
+.arkflight-card-canvas :is(.cc-round-ribbon,.cc-orders-panel,.cc-hand-dock,.cc-response-panel,.cc-scene-alert) { left:var(--cc-safe-left); right:var(--cc-safe-right); min-width:0; }
+.arkflight-card-canvas .cc-round-ribbon { top:var(--cc-safe-top); flex-wrap:wrap; z-index:6; }
+.arkflight-card-canvas .cc-round-ribbon>div { flex:1 1 200px; }
+.arkflight-card-canvas .cc-orders-panel { top:var(--cc-orders-top,103px); max-height:160px; overflow:auto; z-index:1; }
+.arkflight-card-canvas .cc-hand-dock { bottom:var(--cc-safe-bottom); z-index:3; }
+.arkflight-card-canvas .cc-hand-dock>header { flex-wrap:wrap; gap:6px; }
+.arkflight-card-canvas .cc-hand-dock>header>select { max-width:min(145px,100%); }
+.arkflight-card-canvas .card-plan-footer { flex-wrap:wrap; min-width:0; }
+.arkflight-card-canvas .card-plan-footer>small { min-width:0; flex:1 1 170px; }
+.arkflight-card-canvas .card-lock-button { flex:0 1 auto; min-width:0; max-width:100%; white-space:normal; height:auto; overflow-wrap:anywhere; }
+.arkflight-card-canvas .cc-hand-dock .card-hand-scroll { min-width:0; }
+.arkflight-card-canvas .cc-response-panel { top:var(--cc-response-top,220px); width:min(360px,var(--cc-available-width)); right:auto; max-height:var(--cc-response-height,240px); z-index:5; }
+.arkflight-card-canvas .cc-card-preview { top:var(--cc-detail-top,190px); bottom:auto; right:var(--cc-safe-right); width:min(345px,var(--cc-available-width)); min-height:0; max-height:var(--cc-detail-height,300px); z-index:5; }
+.arkflight-card-canvas .cc-preview-content { max-height:max(20px,calc(var(--cc-detail-height,300px) - 34px)); }
+.arkflight-card-canvas .cc-scene-alert { bottom:calc(var(--cc-safe-bottom) + 350px); max-width:min(360px,var(--cc-available-width)); z-index:5; }
+/* The ship panel is a horizontal dashboard with a dedicated drag handle. */
+.arkflight-card-canvas .cc-ship-dashboard { position:absolute; left:var(--cc-safe-left); top:140px; right:auto; bottom:auto; width:min(1040px,var(--cc-available-width)); min-width:0; max-height:calc(100vh - 140px); overflow:auto; scrollbar-width:thin; z-index:4; visibility:hidden; container-type:inline-size; container-name:cc-ship-dashboard; }
+.arkflight-card-canvas[data-cc-layout-ready="true"] .cc-ship-dashboard { visibility:visible; }
+.cc-dashboard-header { display:flex; align-items:center; flex-wrap:wrap; gap:6px; position:sticky; top:0; z-index:2; padding:6px 8px; background:#102735; border-bottom:1px solid #45606c; border-radius:8px 8px 0 0; }
+.cc-dashboard-header .card-eyebrow { flex:none; font-size:9px; }
+.cc-dashboard-header [data-ship-picker] { flex:1 1 150px; width:auto; min-width:80px; max-width:300px; margin:0; font-size:11px; }
+.cc-dashboard-header button { flex:0 0 auto; padding:3px 7px; min-height:25px; font-size:10px; width:auto; }
+.cc-dashboard-header .cc-dashboard-grip { width:26px; cursor:grab; touch-action:none; color:#c4ad7c; }
+.cc-dashboard-grip:focus-visible { outline:2px solid #a0e1d6; outline-offset:2px; }
+.cc-ship-dashboard.is-dragging .cc-dashboard-grip { cursor:grabbing; }
+.cc-dashboard-mini { display:none; color:#c9dddc; font-size:10px; }
+.arkflight-card-canvas .cc-ship-dashboard .cc-vessel-body { display:grid; grid-template-columns:132px minmax(300px,1fr) 190px; align-items:center; gap:12px; padding:8px 10px; }
+.cc-ship-dashboard .card-point-pool { margin:0; gap:6px; }
+.cc-ship-dashboard .card-point-pool>div { display:grid; grid-template-columns:20px 1fr; align-items:center; padding:3px 5px; }
+.cc-ship-dashboard .card-point-pool strong { font-size:20px; line-height:1.1; }
+.cc-ship-dashboard .card-point-pool span { grid-column:1/-1; font-size:9px; }
+.cc-ship-dashboard .cc-pool-crystal { width:23px!important; height:23px!important; margin:0; }
+.cc-ship-dashboard .card-earned-ap { display:block; font-size:9px; margin:3px 0 0; color:#f1cf8b; }
+.cc-ship-dashboard .card-resource-meters { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:9px; }
+.cc-ship-dashboard .card-resource { margin:0; min-width:0; }
+.cc-ship-dashboard .card-resource label { display:block; font-size:9px; line-height:1.2; }
+.cc-ship-dashboard .card-resource label span { display:block; margin:3px 0; font-size:10px; }
+.arkflight-card-canvas .cc-ship-dashboard .cc-helm { border:0; padding:0; margin:0; }
+.cc-ship-dashboard .cc-helm p { margin:0 0 4px; font-size:10px; }
+.cc-dashboard-tools { border-top:1px solid #34525f; padding:4px 10px; font-size:10px; }
+.cc-dashboard-tools>summary { width:fit-content; cursor:pointer; color:#d4c49b; padding:3px 0; }
+.cc-dashboard-tool-body { display:flex; gap:8px 14px; align-items:center; flex-wrap:wrap; padding:5px 0; }
+.arkflight-card-canvas .cc-ship-dashboard .cc-coverage { flex:1 1 320px; display:flex; flex-wrap:wrap; align-items:center; gap:7px; border:0; margin:0; padding:0; }
+.cc-ship-dashboard .cc-coverage h3 { margin:0; font-size:11px; }
+.cc-ship-dashboard .cc-coverage select { flex:1 1 180px; width:auto; min-width:0; max-width:100%; margin:0; }
+.cc-ship-dashboard .cc-coverage button { flex:0 1 auto; width:auto; }
+.cc-ship-dashboard .cc-coverage>small { flex:1 0 100%; margin:0; }
+.cc-dashboard-help { flex:1 1 180px; color:#adc2cb; font-size:10px; margin:0; }
+.arkflight-card-canvas .cc-ship-dashboard .cc-end-encounter { flex:0 0 auto; width:auto!important; margin:0; }
+.cc-ship-dashboard.is-collapsed .cc-dashboard-header { border-bottom:0; border-radius:8px; }
+.cc-ship-dashboard.is-collapsed .cc-dashboard-header>.card-eyebrow,.cc-ship-dashboard.is-collapsed [data-hud-action="focus-token"] { display:none; }
+.cc-ship-dashboard.is-collapsed .cc-dashboard-header [data-ship-picker] { flex:1 1 110px; max-width:none; }
+.cc-ship-dashboard.is-collapsed .cc-dashboard-mini { display:block; flex:1 0 100%; order:5; padding-left:32px; }
+.arkflight-card-canvas .cc-ship-dashboard [hidden] { display:none!important; }
+@container cc-ship-dashboard (max-width:720px) { .arkflight-card-canvas .cc-ship-dashboard .cc-vessel-body { grid-template-columns:120px minmax(0,1fr); gap:8px; }.cc-ship-dashboard .cc-helm { grid-column:1/-1; display:flex; align-items:center; justify-content:space-between; gap:8px; }.cc-ship-dashboard .cc-helm .card-helm { flex:0 0 190px; }.cc-ship-dashboard .cc-helm p { margin:0; }.cc-dashboard-header>.card-eyebrow { display:none; } }
+@container cc-ship-dashboard (max-width:480px) { .arkflight-card-canvas .cc-ship-dashboard .cc-vessel-body { grid-template-columns:minmax(0,1fr); }.cc-ship-dashboard .card-point-pool { max-width:160px; }.cc-ship-dashboard .card-resource-meters { grid-template-columns:repeat(3,minmax(0,1fr)); }.cc-ship-dashboard .cc-helm { flex-wrap:wrap; } }

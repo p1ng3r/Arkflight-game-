@@ -1,7 +1,12 @@
 import { deriveShip } from "../ship/derive-ship.js";
 import { SHIP_CATALOGS } from "../content/index.js";
-import { canonicalDamageTarget, improveShipCondition } from "../ship/ship-conditions.js";
 import { resolveShipStrainGain } from "./ship-strain-runtime.js";
+import { SHIP_ABILITIES } from "../content/station-abilities.js";
+import { reconcileCombatantState } from "../combat/combatant-loadout-sync.js";
+import { applyAbilityStrainGuards, applyAbilityLossGuards, abilityAvailability } from "../combat/ship-ability-rules.js";
+import { abilityEquipped, normalizeAbilityLoadouts, equipShipAbilities, learnShipAbility } from "../ship/ability-loadouts.js";
+import { systemOperationBlock } from "../ship/system-damage.js";
+import { executeFoundryShipAbility, runShipCommand } from "./ship-ability-runtime.js";
 import {
   COMBAT_ACTION_TIMING,
   activeStationEffects,
@@ -12,9 +17,6 @@ import {
   stationActionAvailability,
   stationActionEconomy,
   stationEffectMagnitude,
-  reloadWeapon,
-  reduceWeaponReload,
-  weaponReloadRemaining,
   stationEffectProfile
 } from "../combat/index.js";
 
@@ -25,7 +27,7 @@ const STATION_ACTION_REQUEST = "station-action-request";
 const STATION_ACTION_RESULT = "station-action-result";
 const ENGAGEMENT_RESOLVERS = new Set(["ramShip", "grappleShip", "breakGrapple", "boardShip"]);
 const FACING_COMMIT_RESOLVERS = new Set(["ramShip", "boardShip", "setAttackVector"]);
-const MOORED_BLOCKED_RESOLVERS = new Set(["buyMovement", "buyManeuver", "hardTurn", "overchargeArkengine", "impossibleBurn", "turnBetweenHeartbeats"]);
+const MOORED_BLOCKED_RESOLVERS = new Set(["buyMovement", "buyManeuver", "hardTurn", "overchargeArkengine", "chartedCourse", "impossibleBurn", "turnBetweenHeartbeats"]);
 
 function shipPayload(actor) {
   return actor?.flags?.[MODULE_ID]?.ship ?? null;
@@ -129,7 +131,7 @@ function stationControl(base, actionId, reference = null, user = game.user) {
     return Object.freeze({ ok: false, reason: "not-ship-owner", combatant, action, crewActor: null });
   }
 
-  if (action.station === "common") {
+  if (["common", "reactions"].includes(action.station)) {
     const crewActor = actionCrewActor(combatant.actor, action, user) ?? combatant.actor;
     return Object.freeze({ ok: true, reason: null, combatant, action, crewActor });
   }
@@ -150,7 +152,9 @@ function sanitizeStationOptions(options = {}) {
     facing: options.facing ?? null,
     system: options.system ?? null,
     choice: options.choice ?? null,
-    weaponKey: options.weaponKey ?? null
+    weaponKey: options.weaponKey ?? null,
+    weaponKeys: Array.isArray(options.weaponKeys) ? options.weaponKeys.filter(k => typeof k === "string").slice(0, 24) : null,
+    push: options.push === true
   });
 }
 
@@ -172,111 +176,30 @@ function persistentCostAvailability(actor, action) {
   return Object.freeze({ ok: true, reason: null });
 }
 
-function effectiveStrainGain(beforeState, action, level) {
-  let gain = stationActionEconomy(action, level).strain;
-  if (gain <= 0) return 0;
-  if (action.station === "engineer" && action.timing === COMBAT_ACTION_TIMING.ACTION) {
-    const bypass = [...(beforeState?.stationRuntime?.effects ?? [])].find((effect) =>
-      effect.actionId === "engineer-emergency-bypass"
-      && (effect.charges == null || Number(effect.charges) > 0)
-    );
-    if (bypass) gain = Math.max(0, gain - Math.min(gain, stationEffectMagnitude(bypass, level)));
-  }
-  return gain;
-}
-
-async function applyPersistentAction(actor, action, options, beforeState, rawAfterState) {
+async function applyPersistentAction(actor, action, _options, beforeState, rawAfterState) {
   const original = shipPayload(actor);
-  if (!original) return Object.freeze({ ship: null, state: rawAfterState, notes: [], strainOutcome: null });
+  if (!original) return { ship: null, state: rawAfterState, notes: [], strainOutcome: null };
   let working = structuredClone(original);
+  const protection = applyAbilityStrainGuards(rawAfterState, stationActionEconomy(action, shipLevel(actor)).strain, action.station);
+  let state = protection.state, strainOutcome = null;
   const notes = [];
-  const resolver = action.rules?.resolver;
-  const selection = actionSelection(action, options);
-  const level = shipLevel(actor);
-  const profile = stationEffectProfile(level);
-  const cost = stationActionEconomy(action, level);
-
-  for (const key of ["morale", "supplies", "lifeveil"]) {
-    const amount = Math.max(0, Number(cost[key]) || 0);
-    if (!amount) continue;
-    const current = resourceValue(working, key);
-    if (current < amount) throw new Error(`${action.name} requires ${amount} ${key}.`);
-    const next = current - amount;
-    working.resources[key] = { ...(working.resources?.[key] ?? {}), value: next };
-    notes.push(`${key[0].toUpperCase()}${key.slice(1)} ${current} → ${next}`);
-  }
-
-  if (resolver === "rallyCrew") {
-    const current = resourceValue(working, "morale");
-    const next = Math.min(100, current + (20 * profile.bonus));
-    working.resources.morale = { ...(working.resources?.morale ?? {}), value: next, max: 100 };
-    notes.push(`Morale ${current} → ${next}`);
-  }
-
-  if (resolver === "emergencyRepair") {
-    const target = canonicalDamageTarget(selection);
-    const steps = profile.master ? 2 : 1;
-    if (["hull", "drive", "weapons"].includes(target)) {
-      const repaired = improveShipCondition(working, target, steps);
-      working = repaired.ship;
-      notes.push(`${target}: ${repaired.previous.label} → ${repaired.condition.label}`);
-    } else if (target === "lifeveil") {
-      const current = resourceValue(working, "lifeveil");
-      const next = Math.min(100, current + 25 * steps);
-      working.resources.lifeveil = { ...(working.resources?.lifeveil ?? {}), value: next, max: 100 };
-      notes.push(`Lifeveil ${current}% → ${next}%`);
-    } else {
-      throw new Error("Emergency Repair requires Hull, Drive, Weapons, or Lifeveil.");
-    }
-  }
-
-  if (resolver === "mendLifeveil") {
-    const current = resourceValue(working, "lifeveil");
-    const restore = 5 * profile.bonus;
-    const next = Math.min(100, current + restore);
-    working.resources.lifeveil = { ...(working.resources?.lifeveil ?? {}), value: next, max: 100 };
-    notes.push(`Lifeveil ${current}% → ${next}%`);
-  }
-
-  if (resolver === "purgeInterference") {
-    const conditions = [...(working.conditions ?? [])];
-    const index = Math.trunc(Number(selection));
-    if (Number.isInteger(index) && index >= 0 && index < conditions.length) {
-      const [removed] = conditions.splice(index, 1);
-      working.conditions = conditions;
-      notes.push(`Purged ${typeof removed === "string" ? removed : removed?.name ?? removed?.id ?? "interference"}`);
-    } else if (conditions.length) {
-      throw new Error("Choose a ship condition to purge.");
-    } else {
-      notes.push("No tracked ship interference is present.");
-    }
-  }
-
-  const strainGain = effectiveStrainGain(beforeState, action, level);
-  const strainMax = Math.max(0, Number(beforeState?.strain?.max) || Number(rawAfterState?.strain?.max) || Number(working.resources?.strain?.max) || 0);
-  let strainOutcome = null;
-  let state = rawAfterState;
-  if (strainGain > 0) {
+  if (protection.amount > 0) {
     strainOutcome = await resolveShipStrainGain(working, {
-      amount: strainGain,
-      currentStrain: Number(beforeState?.strain?.value ?? 0),
-      strainMax,
-      sourceLabel: action.name,
+      amount: protection.amount, currentStrain: beforeState.strain.value,
+      strainMax: beforeState.strain.max, sourceLabel: action.name,
       speaker: ChatMessage.getSpeaker({ actor })
     });
-    working = structuredClone(strainOutcome.ship);
-    state = Object.freeze({ ...rawAfterState, strain: strainOutcome.strain });
+    const guarded = applyAbilityLossGuards(working, strainOutcome.ship, state);
+    working = guarded.ship;
+    state = { ...guarded.state, strain: strainOutcome.strain };
     notes.push(...strainOutcome.notes);
   } else {
-    working.resources.strain = {
-      ...(working.resources?.strain ?? {}),
-      value: Math.max(0, Number(rawAfterState?.strain?.value ?? beforeState?.strain?.value ?? 0)),
-      max: strainMax
-    };
+    state = { ...state, strain: beforeState.strain };
+    working.resources.strain = { ...working.resources.strain, ...beforeState.strain };
   }
-
-  await actor.update({ [`flags.${MODULE_ID}.ship`]: working });
-  return Object.freeze({ ship: working, state, notes: Object.freeze(notes), strainOutcome });
+  state = reconcileCombatantState(working, state, { derived: deriveShip(working, SHIP_CATALOGS), catalogs: SHIP_CATALOGS, rotation: state.mobility.heading });
+  await actor.update({ [`flags.${MODULE_ID}.ship`]: working }, { arkflightAbilityTransaction: true });
+  return { ship: working, state, notes, strainOutcome };
 }
 
 function actionCostLabel(action, actor) {
@@ -317,7 +240,7 @@ function runtimeAvailability(base, actionId, reference = null) {
   const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
   const action = base.actions?.[actionId] ?? null;
   if (!combatant || !action) return Object.freeze({ ok: false, reason: !combatant ? "combatant-required" : "unknown-action" });
-  if (action.station !== "common" && !stationActor(combatant.actor, action.station)) {
+  if (!["common", "reactions"].includes(action.station) && !stationActor(combatant.actor, action.station)) {
     return Object.freeze({ ok: false, reason: "station-unassigned" });
   }
   if (!actionCapabilityAvailable(combatant.actor, action)) {
@@ -329,12 +252,16 @@ function runtimeAvailability(base, actionId, reference = null) {
   if (game.arkflight?.combatEngagement?.isMoored?.(combatant) && MOORED_BLOCKED_RESOLVERS.has(action.rules?.resolver)) {
     return Object.freeze({ ok: false, reason: "moored" });
   }
+  if (action.rules?.requiresMoored && !game.arkflight?.combatEngagement?.isMoored?.(combatant)) return { ok: false, reason: "requires-grapple" };
+  if (action.rules?.ability) return abilityAvailability(shipPayload(combatant.actor), base.state(combatant), actionId, game.combat?.round ?? 1);
+  const blocked = systemOperationBlock(shipPayload(combatant.actor), action);
+  if (blocked) return { ok: false, reason: blocked };
   const stateAvailability = stationActionAvailability(base.state(combatant), action, { round: game.combat?.round ?? 1, shipLevel: shipLevel(combatant.actor) });
   if (!stateAvailability.ok) return stateAvailability;
   return persistentCostAvailability(combatant.actor, action);
 }
 
-async function executeStationAction(base, actionId, options = {}, reference = null, {
+async function executeStationActionUnlocked(base, actionId, options = {}, reference = null, {
   crewActorOverride = null,
   requesterUser = game.user,
   requesterUserId = requesterUser?.id ?? null
@@ -358,7 +285,12 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   }
   const costCheck = persistentCostAvailability(combatant.actor, action);
   if (!costCheck.ok) throw new Error(`${action.name} is unavailable: ${costCheck.reason}.`);
+  if (game.arkflight?.combatEngagement?.isMoored?.(combatant) && MOORED_BLOCKED_RESOLVERS.has(action.rules?.resolver)) throw new Error("A grappled ship must break free before using this movement ability.");
+  if (action.rules?.ability) return executeFoundryShipAbility(base, combatant, actionId, options, crewActor, requesterUserId);
+  if (action.rules?.retired) throw new Error("Weapons reload automatically; use Work the Guns to reduce their timer.");
 
+  const blocked = systemOperationBlock(shipPayload(combatant.actor), action);
+  if (blocked) throw new Error(blocked);
   const resolver = action.rules?.resolver;
   let engagementTarget = null;
   if (ENGAGEMENT_RESOLVERS.has(resolver)) {
@@ -371,34 +303,13 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     engagementTarget = check.target;
   }
   if (resolver === "fireAtTarget") {
+    if (Array.isArray(options.weaponKeys)) {
+      if (!options.targetId) throw new Error("Salvo requires a target.");
+      return game.arkflight.combat.fireSalvoAtTarget(options.weaponKeys, options.targetId, combatant, { resolvedByStation: true, requesterUserId });
+    }
     if (!options.weaponKey || !options.targetId) throw new Error("Fire Weapon requires a weapon and target.");
     const fire = game.arkflight?.combat?.fireAtTarget ?? base.fireAtTarget;
-    return fire(options.weaponKey, options.targetId, combatant, { requesterUserId });
-  }
-  if (resolver === "reloadWeapon") {
-    if (!options.weaponKey) throw new Error("Reload requires an installed weapon.");
-    const before = base.state(combatant);
-    const round = Math.max(1, Number(game.combat?.round ?? 1));
-    const state = reloadWeapon(before, options.weaponKey, round);
-    const persistent = await applyPersistentAction(combatant.actor, action, options, before, state);
-    const finalState = persistent.state;
-    await combatant.update({ [STATE_PATH]: finalState });
-    const weapon = finalState.weapons?.[options.weaponKey];
-    const remaining = weaponReloadRemaining(weapon);
-    const notes = [...persistent.notes];
-    notes.push(`Reload action completed; ${remaining} Reload remaining.`);
-    if (!options.suppressChat) await postActionChat({ actor: combatant.actor, crewActor, action, selection: options.weaponKey, notes, userId: requesterUserId });
-    Hooks.callAll("arkflightStationActionResolved", {
-      combat: game.combat,
-      combatant,
-      actor: combatant.actor,
-      crewActor,
-      action,
-      selection: options.weaponKey,
-      state: finalState,
-      notes
-    });
-    return finalState;
+    return fire(options.weaponKey, options.targetId, combatant, { requesterUserId, resolvedByStation: true });
   }
 
   let before = base.state(combatant);
@@ -409,31 +320,8 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   const level = shipLevel(combatant.actor);
   const profile = stationEffectProfile(level);
   const round = Math.max(1, Number(game.combat?.round ?? 1));
-  let workTheGunsRemaining = null;
+  const rawAfter = executeStationStateAction(before, action, { round, selection, shipLevel: level });
 
-  if (resolver === "workTheGuns") {
-    const weaponKey = options.weaponKey ?? selection;
-    if (!weaponKey) throw new Error("Work the Guns requires an installed weapon.");
-    const weapon = before?.weapons?.[weaponKey];
-    if (!weapon) throw new Error(`Unknown installed weapon: ${weaponKey}`);
-    const remaining = weaponReloadRemaining(weapon);
-    if (remaining <= 0) throw new Error(`${weapon.name} is already ready.`);
-    const maxRemaining = Math.max(1, Number(action.rules?.maxReloadRemaining) || 2);
-    if (remaining > maxRemaining) {
-      throw new Error(`Work the Guns can target only a weapon with ${maxRemaining} or fewer Reload actions remaining.`);
-    }
-    selection = weaponKey;
-    workTheGunsRemaining = remaining;
-  }
-
-  let rawAfter = executeStationStateAction(before, action, {
-    round,
-    selection,
-    shipLevel: level
-  });
-  if (resolver === "workTheGuns") {
-    rawAfter = reduceWeaponReload(rawAfter, selection, round, workTheGunsRemaining);
-  }
   const persistent = await applyPersistentAction(combatant.actor, action, options, before, rawAfter);
   const after = persistent.state;
   await combatant.update({ [STATE_PATH]: after });
@@ -444,23 +332,7 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
     notes.push(...(result?.notes ?? []));
   }
 
-  if (resolver === "issueOrder") notes.push("Applies only to the chosen station's next qualifying roll; fixed effects are not inflated.");
-  if (resolver === "coordinateAssault") notes.push(`Target Hardness reduced by ${profile.bonus} for ${profile.advanced ? 2 : 1} qualifying attack${profile.advanced ? "s" : ""}.`);
-  if (resolver === "driveCrew") notes.push(`Gain +1 AP this turn; spend 20% Morale; +${stationActionEconomy(action, level).strain} Strain.`);
-  if (resolver === "ventStrain") notes.push(`Vents up to ${1 + profile.bonus} Strain.`);
   if (resolver === "hardTurn") notes.push(`+${30 * (Math.max(1, Number(before?.mobility?.maneuverability) || 1) + profile.bonus)}° facing allowance; pivot permitted.`);
-  if (resolver === "impossibleBurn") notes.push(`Once per battle: +${Math.max(1, Math.ceil(Number(before?.mobility?.speed ?? 1) * 0.5))} movement allowance; +2 Strain.`);
-  if (resolver === "turnBetweenHeartbeats") notes.push("Once per battle: +60° extraordinary facing allowance this turn.");
-  if (resolver === "overchargeArkengine") notes.push(`+${before?.mobility?.speed ?? 0} movement and +${30 * Number(before?.mobility?.maneuverability ?? 0)}° facing allowance; +2 Strain.`);
-  if (resolver === "redistributePower" && selection === "propulsion") notes.push(`+${profile.bonus} movement and +30° facing allowance; +1 Strain.`);
-  if (resolver === "redistributePower" && selection === "weapons") notes.push(`Next ${profile.advanced ? 2 : 1} weapon attack${profile.advanced ? "s" : ""} gain +${profile.bonus} damage; +1 Strain.`);
-  if (resolver === "redistributePower" && selection === "lifeveil") notes.push(`Next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} gain ${2 * profile.bonus} mitigation; +1 Strain.`);
-  if (resolver === "setAttackVector") notes.push(`Selected facing gains ${15 * profile.bonus}° extra firing-arc tolerance while heading is unchanged.`);
-  if (resolver === "workTheGuns") notes.push("Weapon immediately readied for 0 AP; spend 20% Morale; +1 Strain; once per round.");
-  if (resolver === "readyBroadside") notes.push(`Spend 1 Supply; selected battery's next shot gains +${2 * profile.bonus} damage${profile.master ? " and reduces reload by 1" : ""}.`);
-  if (resolver === "reinforceLifeveil") notes.push(`Spend 5% Lifeveil; next ${profile.advanced ? 2 : 1} wardable hit${profile.advanced ? "s" : ""} reduce damage by ${2 * profile.bonus}.`);
-  if (resolver === "focusWard") notes.push(`Spend 10% Lifeveil; next ${profile.advanced ? 2 : 1} matching hit${profile.advanced ? "s" : ""} reduce damage by ${3 * profile.bonus}.`);
-  if (action.timing === COMBAT_ACTION_TIMING.REACTION) notes.push("Reaction resolves against the current trigger and consumes shared RP.");
 
   if (persistent.strainOutcome?.degradation) {
     Hooks.callAll("arkflightShipDamageStateChanged", {
@@ -486,6 +358,11 @@ async function executeStationAction(base, actionId, options = {}, reference = nu
   return Object.freeze({ combatant, actor: combatant.actor, crewActor, action, selection, state: after, notes: Object.freeze([...notes]) });
 }
 
+async function executeStationAction(base, actionId, options = {}, reference = null, request = {}) {
+  const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant;
+  return runShipCommand(combatant?.id ?? "missing", () => executeStationActionUnlocked(base, actionId, options, reference, request));
+}
+
 async function requestStationAction(base, actionId, options = {}, reference = null) {
   const control = stationControl(base, actionId, reference);
   if (!control.ok) {
@@ -497,7 +374,8 @@ async function requestStationAction(base, actionId, options = {}, reference = nu
   const availability = runtimeAvailability(base, actionId, control.combatant);
   if (!availability.ok) throw new Error(`Station action unavailable: ${availability.reason}.`);
 
-  if (userCanResolveShipState(game.user, control.combatant)) {
+  const authority = activePrimaryGM();
+  if (userCanResolveShipState(game.user, control.combatant) && (!authority || authority.id === game.user.id)) {
     return executeStationAction(base, actionId, options, control.combatant, {
       crewActorOverride: control.crewActor,
       requesterUser: game.user,
@@ -602,7 +480,8 @@ Hooks.once("ready", () => {
       const combatant = reference ? base.findCombatant(reference) : game.combat?.combatant ?? null;
       const actor = combatant?.actor ?? null;
       return Object.freeze(Object.values(base.actions ?? {})
-        .filter((action) => action.station === station)
+        .filter((action) => action.station === station && !action.rules?.retired)
+        .filter((action) => action.rules?.ability ? abilityEquipped(shipPayload(actor), action.id) : action.station === "common")
         .filter((action) => !action.rules?.requiresCapability || actionCapabilityAvailable(actor, action)));
     },
     stationActor(reference, station) {
@@ -625,6 +504,19 @@ Hooks.once("ready", () => {
     },
     stationAction(actionId, options = {}, reference = null) {
       return requestStationAction(base, actionId, options, reference);
+    },
+    abilityLibrary(actor) { return normalizeAbilityLoadouts(shipPayload(actor)); },
+    async equipAbilities(actor, station, ids) {
+      if (!userOwnsActor(game.user, actor)) throw new Error("Ship Owner permission required.");
+      const inCombat = [...(game.combats?.contents ?? (game.combat ? [game.combat] : []))].some(combat => combat.started && [...combat.combatants].some(c => c.actorId === actor.id));
+      const ship = equipShipAbilities(shipPayload(actor), station, ids, { inCombat });
+      await actor.update({ "flags.arkflight-game.ship": ship }); return ship.abilities;
+    },
+    async learnAbility(actor, id) {
+      if (!userOwnsActor(game.user, actor)) throw new Error("Ship Owner permission required.");
+      const inCombat = [...(game.combats?.contents ?? (game.combat ? [game.combat] : []))].some(combat => combat.started && [...combat.combatants].some(c => c.actorId === actor.id));
+      const ship = learnShipAbility(shipPayload(actor), id, { inCombat });
+      await actor.update({ "flags.arkflight-game.ship": ship }); return ship.abilities;
     }
   });
   game.socket?.on?.(COMBAT_SOCKET, (payload) => handleStationActionSocket(base, payload));
@@ -632,7 +524,12 @@ Hooks.once("ready", () => {
 
 Hooks.on("arkflightCombatTurnChanged", async ({ combatant, state, round }) => {
   if (!game.user?.isGM || !combatant || !state) return;
-  const next = beginStationActionTurn(state, round);
-  await combatant.update({ [STATE_PATH]: next });
-  Hooks.callAll("arkflightStationActionsRefreshed", { combatant, state: next, round });
+  const primary = activePrimaryGM();
+  if (primary && primary.id !== game.user.id) return;
+  await runShipCommand(combatant.id, async () => {
+    const live = game.arkflight.combat.state(combatant) ?? state;
+    const next = beginStationActionTurn(live, round);
+    if (next !== live) await combatant.update({ [STATE_PATH]: next });
+    Hooks.callAll("arkflightStationActionsRefreshed", { combatant, state: next, round });
+  });
 });

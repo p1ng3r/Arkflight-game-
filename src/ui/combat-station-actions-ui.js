@@ -1,12 +1,19 @@
+import { activeSystemFaults, systemIntegrity } from "../ship/system-damage.js";
+import { faultDescription } from "../content/system-faults.js";
 import { lifeveilCondition, moraleCondition, shipConditionProfile } from "../ship/ship-conditions.js";
+import { SHIP_ABILITIES } from "../content/station-abilities.js";
+import { normalizeAbilityLoadouts } from "../ship/ability-loadouts.js";
+import { shipAbilityBonus, shipAbilityDC } from "../combat/ship-ability-rules.js";
 const MODULE_ID = "arkflight-game";
 const OPEN_TABS = new Map();
 const STATIONS = Object.freeze([
   ["captain", "Captain", "fa-solid fa-compass", "morale"],
-  ["battlewatch", "Battlewatch", "fa-solid fa-crosshairs", "weapons"],
+  ["battlewatch", "Battlewatch", "fa-solid fa-crosshairs", "hull"],
   ["navigator", "Navigator", "fa-solid fa-route", "drive"],
-  ["engineer", "Engineer", "fa-solid fa-gears", "drive"],
+  ["engineer", "Engineer", "fa-solid fa-gears", "arkengine"],
   ["veilwarden", "Veilwarden", "fa-solid fa-shield-halved", "lifeveil"]
+  , ["reactions", "Shared Reactions", "fa-solid fa-bolt", "hull"]
+  , ["common", "Basic Ship Controls", "fa-solid fa-ship", "hull"]
 ]);
 let refreshQueued = false;
 
@@ -32,6 +39,10 @@ function stationConditionText(ship, system) {
     const condition = moraleCondition(ship?.resources?.morale?.value ?? 0);
     return `Morale: ${condition.label} (${condition.value}%)`;
   }
+  if (["hull", "drive", "arkengine"].includes(system)) {
+    const integrity = systemIntegrity(ship, system);
+    return `${titleCase(system)}: ${integrity.label} (${Math.round(integrity.percent)}%)`;
+  }
   const condition = shipConditionProfile(ship, system);
   if (system === "weapons") {
     const hull = shipConditionProfile(ship, "hull");
@@ -45,6 +56,7 @@ function combatantFor(actor) {
 }
 
 function crewName(api, combatant, station, actor) {
+  if (["common", "reactions"].includes(station)) return "Any ship crew player";
   const crew = api?.stationActor?.(combatant, station);
   if (crew) return crew.name;
   const ref = shipFlag(actor)?.crew?.stations?.[station];
@@ -57,14 +69,15 @@ function crewName(api, combatant, station, actor) {
 function choiceOptions(action, api, combatant, actor) {
   const rules = action.rules ?? {};
   if (rules.chooseStation) {
-    return STATIONS.filter(([id]) => id !== action.station).map(([value, label]) => ({ value, label }));
+    return STATIONS.filter(([id]) => id !== action.station && !["common", "reactions"].includes(id)).map(([value, label]) => ({ value, label }));
   }
+  if (rules.chooseWeapon) return Object.values(api.state(combatant)?.weapons ?? {}).filter(w => w.reloadRemaining > 0).map(w => ({ value: w.key, label: `${w.name} · Reload ${w.reloadRemaining}` }));
   if (rules.chooseTarget) {
     return [...(api.targets?.(combatant) ?? [])].map((target) => ({ value: target.id, label: target.name }));
   }
   if (Array.isArray(rules.choices)) return rules.choices.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseSystem) {
-    return ["hull", "drive", "weapons", "lifeveil"].map((value) => ({ value, label: titleCase(value) }));
+    return [...activeSystemFaults(shipFlag(actor)).map(f => ({ value: `fault:${f.id}`, label: `Patch ${f.name} (${faultDescription(f)})` })), ...["hull", "drive", "weapons", "lifeveil"].map((value) => ({ value, label: titleCase(value) }))];
   }
   if (Array.isArray(rules.chooseFacing)) return rules.chooseFacing.map((value) => ({ value, label: titleCase(value) }));
   if (rules.chooseFacing) return ["fore", "port", "starboard", "aft"].map((value) => ({ value, label: titleCase(value) }));
@@ -83,11 +96,11 @@ function choiceOptions(action, api, combatant, actor) {
 
 function costLabel(action) {
   if (action.rules?.costSource === "weapon.fireAP") return "Weapon AP";
-  if (action.id === "battlewatch-reload-weapon") return "20% Morale · +1 Strain";
   const parts = [];
   if (Number(action.cost?.ap) > 0) parts.push(`${action.cost.ap} AP`);
   if (Number(action.cost?.rp) > 0) parts.push(`${action.cost.rp} RP`);
   if (Number(action.rules?.strain) > 0) parts.push(`+${action.rules.strain} Strain`);
+  for (const [key, label] of [["morale", "% Morale"], ["lifeveil", "% Lifeveil"], ["supplies", " Supplies"]]) if (action.rules?.[key]) parts.push(`${action.rules[key]}${label}`);
   return parts.join(" · ") || "—";
 }
 
@@ -97,6 +110,11 @@ function unavailableLabel(reason) {
     "not-this-ships-turn": "Wait for Turn",
     "insufficient-ap": "Not Enough AP",
     "insufficient-rp": "Not Enough RP",
+    "hull-wrecked": "Hull Wrecked",
+    "drive-disabled": "Drive Disabled",
+    "arkengine-disabled": "Arkengine Disabled",
+    "lifeveil-collapsed": "Lifeveil Collapsed",
+    "morale-broken": "Morale Broken",
     "insufficient-morale": "Not Enough Morale",
     "crew-unassigned": "Assign Crew",
     "not-assigned-crew": "Assigned Crew Only",
@@ -105,6 +123,11 @@ function unavailableLabel(reason) {
     "combatant-required": "Combat Offline",
     "not-your-station": "Assigned Crew Only",
     "not-ship-owner": "Ship Owner Only"
+    , "ability-not-equipped": "Equip This Ability"
+    , "requires-grapple": "Requires Grapple"
+    , "once-per-battle": "Signature Used"
+    , "cooldown": "Recovering"
+    , "automatic-reload": "Automatic Reload"
   })[reason] ?? "Unavailable";
 }
 
@@ -121,22 +144,37 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
   const availability = api.stationActionAvailability?.(action.id, combatant) ?? { ok: false, reason: "combatant-required" };
   const control = api.stationActionControl?.(action.id, combatant)
     ?? { ok: Boolean(game.user?.isGM), reason: game.user?.isGM ? null : "not-your-station" };
-  const weaponRoute = ["fireAtTarget", "workTheGuns"].includes(action.rules?.resolver);
+  const weaponRoute = action.rules?.resolver === "fireAtTarget";
 
   row.innerHTML = `<div class="arkflight-combat-action-head">
-      <div><span class="arkflight-combat-timing">${action.timing === "reaction" ? "REACTION" : "ACTION"}</span><strong>${esc(action.name)}</strong></div>
+      <div><span class="arkflight-combat-timing">${esc(action.tier?.toUpperCase() ?? (action.timing === "reaction" ? "REACTION" : "BASIC"))}${action.timing === "reaction" ? " · REACTION" : ""}</span><strong>${esc(action.name)}</strong></div>
       <span class="arkflight-combat-cost">${esc(costLabel(action))}</span>
     </div>
     <p>${esc(action.description)}</p>`;
+  if (action.outcomes) row.insertAdjacentHTML("beforeend", `<details><summary>Roll outcomes</summary>${["Critical Success", "Success", "Failure", "Critical Failure"].map((name, i) => `<p><strong>${name}:</strong> ${esc(action.outcomes[i])}</p>`).join("")}</details>`);
+  if (availability.readyRound) row.insertAdjacentHTML("beforeend", `<p><strong>Ready in Round ${Number(availability.readyRound)}</strong></p>`);
 
   let select = null;
-  if (choices.length || action.rules?.chooseTarget || action.rules?.chooseSystem || action.rules?.chooseStation || action.rules?.chooseFacing || action.rules?.chooseAreaOrEnergy) {
+  if (choices.length || action.rules?.chooseWeapon || action.rules?.chooseTarget || action.rules?.chooseSystem || action.rules?.chooseStation || action.rules?.chooseFacing || action.rules?.chooseAreaOrEnergy) {
     select = document.createElement("select");
     select.className = "arkflight-combat-action-choice";
     if (!choices.length) select.innerHTML = '<option value="">No valid choice available</option>';
     else select.innerHTML = choices.map((entry) => `<option value="${esc(entry.value)}">${esc(entry.label)}</option>`).join("");
     select.disabled = !choices.length;
     row.append(select);
+    if (action.rules?.multipleRoutes && Number(shipFlag(actor)?.progression?.level ?? 1) >= 10) {
+      select.multiple = true; select.size = 3; select.options[0].selected = true;
+      row.insertAdjacentHTML("beforeend", "<small>Choose up to two different routes.</small>");
+    }
+  }
+
+  let push = null;
+  if (action.rules?.ability) {
+    const label = document.createElement("label");
+    push = document.createElement("input"); push.type = "checkbox"; label.append(push);
+    const station = action.rules.originStation ?? action.station;
+    const resource = ({captain:"5% Morale",engineer:"1 Strain",navigator:"1 Supply",veilwarden:"5% Lifeveil",battlewatch:`${2*shipAbilityBonus(shipFlag(actor)?.progression?.level)} Hull`})[station] ?? "1 Strain";
+    label.append(document.createTextNode(` Push It: +2 to check; ${resource} (double on critical failure)`)); row.append(label);
   }
 
   const button = document.createElement("button");
@@ -161,7 +199,8 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
     if (weaponRoute) return routeToWeapons(root);
     try {
       button.disabled = true;
-      await api.stationAction(action.id, { selection: select?.value ?? null }, combatant);
+      const selection = select?.multiple ? [...select.selectedOptions].map(o => o.value) : select?.value ?? null;
+      await api.stationAction(action.id, { selection, push: push?.checked ?? false }, combatant);
       rerender();
     } catch (error) {
       console.error("Arkflight station combat action failed", error);
@@ -170,6 +209,33 @@ function buildActionRow({ action, api, combatant, actor, root, rerender }) {
     }
   });
   return row;
+}
+
+function renderAbilityLibrary(shell, actor, api, rerender) {
+  const library = normalizeAbilityLoadouts(shipFlag(actor));
+  const panel = document.createElement("details"); panel.className = "arkflight-ability-library";
+  panel.innerHTML = `<summary>Ability Library · ${library.learningCredits} leveling choices banked</summary><p>Ship-owned abilities. Equip two Regular, one Surge and one Signature per station; choose four shared reactions. Loadouts are locked during combat.</p>`;
+  const locked = Boolean(game.combat?.started && [...(game.combat.combatants ?? [])].some(c => c.actorId === actor.id));
+  for (const [group, learned] of Object.entries(library.learned)) {
+    const field = document.createElement("fieldset"), legend = document.createElement("legend"); legend.textContent = titleCase(group); field.append(legend);
+    const inputs = [];
+    for (const id of learned) {
+      const a = SHIP_ABILITIES[id]; if (!a) continue;
+      const label = document.createElement("label"), input = document.createElement("input"); input.type = "checkbox"; input.value = id;
+      input.checked = library.equipped[group].includes(id); input.disabled = locked;
+      label.append(input, document.createTextNode(` ${a.name} · ${a.tier}`)); field.append(label); inputs.push(input);
+    }
+    const save = document.createElement("button"); save.textContent = "Save Loadout"; save.type = "button"; save.disabled = locked || !api?.equipAbilities;
+    save.addEventListener("click", async () => { try { save.disabled = true; await api.equipAbilities(actor, group, inputs.filter(i => i.checked).map(i => i.value)); rerender(); } catch(e) { ui.notifications.error(e.message); save.disabled = locked; } });
+    field.append(save); panel.append(field);
+  }
+  const choices = Object.values(SHIP_ABILITIES).filter(a => a.station !== "common" && !library.learned[a.station]?.includes(a.id) && Number(a.rules.minLevel ?? 1) <= Number(shipFlag(actor)?.progression?.level ?? 1));
+  for (const choice of choices) {
+    const learn = document.createElement("button"); learn.type = "button"; learn.textContent = `Learn ${choice.name} · 1 leveling choice`; learn.disabled = locked || library.learningCredits < 1;
+    learn.addEventListener("click", async () => { try { learn.disabled = true; await api.learnAbility(actor, choice.id); rerender(); } catch(e) { ui.notifications.error(e.message); } }); panel.append(learn);
+  }
+  if (!choices.length) panel.insertAdjacentHTML("beforeend", "<p>All current starter abilities are learned. Leveling choices remain banked for future ability additions.</p>");
+  shell.append(panel);
 }
 
 export function renderArkflightCombatStations(app, root, actor) {
@@ -188,7 +254,8 @@ export function renderArkflightCombatStations(app, root, actor) {
 
   const api = game.arkflight?.combat;
   const combatant = combatantFor(actor);
-  shell.innerHTML = `<header class="arkflight-combat-stations-head"><div><span>ARKFLIGHT COMBAT CREW</span><h2>Station Actions</h2></div><p>Every station has four Actions and one Reaction. All five stations spend from the vessel's shared AP/RP economy.</p></header>`;
+  shell.innerHTML = `<header class="arkflight-combat-stations-head"><div><span>ARKFLIGHT COMBAT CREW</span><h2>Station Abilities</h2></div><p>Two Regular, one Surge, one Signature per station. Shared reactions use RP; ship abilities use AP.</p></header>`;
+  renderAbilityLibrary(shell, actor, api, () => renderArkflightCombatStations(app, root, actor));
 
   if (!api || !game.combat || !combatant || !api.state?.(combatant)) {
     shell.insertAdjacentHTML("beforeend", `<div class="arkflight-combat-stations-offline"><i class="fa-solid fa-circle-xmark"></i><div><strong>Combat Stations Offline</strong><span>Add ${esc(actor.name)} to Foundry combat to activate station Actions and Reactions.</span></div></div>`);
@@ -204,6 +271,7 @@ export function renderArkflightCombatStations(app, root, actor) {
     <span>AP <strong>${Number(state.economy?.ap?.value ?? 0)} / ${Number(state.economy?.ap?.max ?? 0)}</strong></span>
     <span>RP <strong>${Number(state.economy?.rp?.value ?? 0)} / ${Number(state.economy?.rp?.max ?? 0)}</strong></span>
     <span>Strain <strong>${Number(state.strain?.value ?? 0)} / ${Number(state.strain?.max ?? 0)}</strong></span>
+    <span>Ship Bonus <strong>+${shipAbilityBonus(shipFlag(actor)?.progression?.level)}</strong> · Ability DC <strong>${shipAbilityDC(shipFlag(actor)?.progression?.level)}</strong></span>
   </div>`);
 
   const grid = document.createElement("section");

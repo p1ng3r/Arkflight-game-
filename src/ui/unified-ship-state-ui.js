@@ -91,11 +91,11 @@ function decorateShipReadiness(app, root) {
   const panel = root.querySelector(".arkflight-systems-panel");
   if (panel) {
     const heading = panel.querySelector(".arkflight-panel-heading h2");
-    if (heading) heading.textContent = "Ship Conditions";
+    if (heading) heading.textContent = "Strain Conditions & Resource Bands";
     const kicker = panel.querySelector(".arkflight-panel-heading .arkflight-ship-kicker");
-    if (kicker) kicker.textContent = "PERSISTENT SHIP CONDITIONS";
+    if (kicker) kicker.textContent = "LEGACY STRAIN CONDITIONS";
     const help = panel.querySelector(".arkflight-panel-heading small");
-    if (help) help.textContent = "Hull, Drive, and Weapons can be cycled in Shipwright Mode. Lifeveil and Morale are derived from their percentages.";
+    if (help) help.textContent = "These existing Strain conditions are separate from the five integrity bands and named faults shown in Ship Systems.";
 
     const list = panel.querySelector(".arkflight-system-list");
     if (list) {

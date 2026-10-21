@@ -97,13 +97,13 @@ function inject(app, html = null) {
     button.className = "arkflight-salvo-fire";
     button.innerHTML = `<i class="fa-solid fa-burst"></i> Salvo ${titleCase(mount)} ×${selected.length} · ${cost} AP`;
     button.title = "Coordinated Salvo: one attack roll; compatible weapon damage is combined before Ward and Hardness. Every participating weapon reloads normally.";
-    button.disabled = !game.user?.isGM;
+    button.disabled = !api.stationActionControl?.("battlewatch-fire-weapon", combatant)?.ok;
     button.addEventListener("click", async () => {
       try {
         const result = await api.fireSalvoAtTarget(selected.map((weaponState) => weaponState.key), targetId, combatant);
         const damage = result?.damage?.hullDamage;
         if (damage != null) ui.notifications?.info(`Coordinated Salvo: ${damage} Hull damage.`);
-        else ui.notifications?.info("Coordinated Salvo resolved; no Hull damage applied.");
+        else ui.notifications?.info(result?.requested ? "Coordinated Salvo queued for automatic resolution." : "Coordinated Salvo resolved; no Hull damage applied.");
         app.render?.(false);
       } catch (error) {
         console.error("Arkflight coordinated salvo failed", error);

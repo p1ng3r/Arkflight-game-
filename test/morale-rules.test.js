@@ -30,9 +30,9 @@ test("only 100 percent Inspired Morale grants the once-per-round station bonus",
   }
 });
 
-test("Broken morale disables Crew Tactics but positive Morale does not", () => {
+test("Broken morale below ten percent disables Crew Tactics", () => {
   assert.equal(moraleState(0).crewTacticsAvailable, false);
-  assert.equal(moraleState(1).crewTacticsAvailable, true);
+  assert.equal(moraleState(1).crewTacticsAvailable, false);
   assert.equal(moraleState(100).crewTacticsAvailable, true);
 });
 

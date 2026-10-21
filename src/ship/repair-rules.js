@@ -1,3 +1,4 @@
+import { SYSTEM_FAULTS } from "../content/system-faults.js";
 import { SHIP_CONDITION_SYSTEMS, conditionProfileById } from "./ship-conditions.js";
 
 export const REPAIR_PACKAGES = Object.freeze({
@@ -44,7 +45,10 @@ export function improveAreaState(state, packageId, system = "hull") {
 }
 
 export function repairTargetLabel(targetType, targetKey) {
+  if (targetType === "fault") return SYSTEM_FAULTS[targetKey]?.name ?? targetKey;
   if (targetType === "resource") {
+    if (targetKey === "drive") return "Drive / Rigging Integrity";
+    if (targetKey === "arkengine") return "Arkengine Integrity";
     if (targetKey === "lifeveil") return "Lifeveil";
     return "Hull Integrity";
   }
@@ -53,7 +57,8 @@ export function repairTargetLabel(targetType, targetKey) {
 }
 
 export function validRepairTarget(targetType, targetKey) {
-  if (targetType === "resource") return ["hull", "lifeveil"].includes(targetKey);
+  if (targetType === "fault") return Boolean(SYSTEM_FAULTS[targetKey]);
+  if (targetType === "resource") return ["hull", "lifeveil", "drive", "arkengine"].includes(targetKey);
   if (["condition", "area"].includes(targetType)) return SHIP_CONDITION_SYSTEMS.includes(targetKey);
   return false;
 }

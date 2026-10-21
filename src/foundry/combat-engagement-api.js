@@ -446,6 +446,11 @@ Hooks.once("init", () => {
     adjacent,
     preflight,
     eligibleTargets,
+    async breakAutomatically(sourceReference, targetReference) {
+      const source = combatant(sourceReference), target = combatant(targetReference);
+      if (!game.user?.isGM) throw new Error("Automatic grapple release uses the primary combat authority.");
+      return applyPairMutation("clear", source, target);
+    },
     resolve
   });
   game.socket?.on?.(SOCKET, handleSocket);

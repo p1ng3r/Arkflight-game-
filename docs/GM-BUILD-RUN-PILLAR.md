@@ -1,18 +1,19 @@
 # Arkflight Fifth Pillar — GM Build & Run
 
-Status: **Future design pillar / not part of current combat alpha**
+Status: **Approved for the 1.0 update on 16 October 2026; completion and fixes pending.**
 
-This document preserves the intended fifth major gameplay/tooling pillar for Arkflight.
+This document preserves the intended fifth major gameplay/tooling pillar for Arkflight. The existing generator, PF2e resolution, package persistence, and GM Operations provide working foundations. All eight review areas are now approved in GM-01 through GM-08 of the [1.0 roadmap](ARKFLIGHT-1.0-ROADMAP.md); that roadmap records findings, acceptance criteria, open decisions, and validation requirements. Approval does not mean those improvements have shipped.
 
-## The Five Pillars
+## The Six Pillars
 
-Arkflight is intended to support five connected ways to use the same persistent ship and campaign rules:
+Arkflight is intended to support six connected gameplay, tooling, and interaction pillars around the same persistent ship and campaign rules. UI, Interaction & Ship Sheet was added as the sixth pillar in the [1.0 roadmap](ARKFLIGHT-1.0-ROADMAP.md) on 15 October 2026; GM Build & Run remains the fifth.
 
 1. **Voyage / Travel** — narrative ship events, station planning, PF2e skill resolution, Momentum, Risk, hazards, and persistent consequences.
 2. **Ship Combat** — tactical hex-based vessel combat using Foundry initiative, Actions, movement, facing, maneuver limits, weapon arcs, range bands, damage, system degradation, and Strain.
 3. **Ship Progression / Vessel Management** — ship level, player-directed development choices, discovered upgrades, ship mods, Arkengine mods, rooms, weapons, and refit.
 4. **Crew / Faction / Expedition** — officers, specialists, relationships, expedition support, faction consequences, salvage, and campaign-scale crew development.
 5. **GM Build & Run** — a GM-facing encounter construction and operation screen that can rapidly create, equip, populate, place, and run enemy Arkflight vessels.
+6. **UI, Interaction & Ship Sheet** — the persistent ship sheet and shared player/GM interaction experience, including clear navigation, previews, station controls, upgrade feedback, and visible results across the other pillars.
 
 The fifth pillar is not merely an enemy stat generator. Its purpose is to reduce GM preparation time enough that a complete enemy ship encounter can be built and placed into play from one workflow.
 
@@ -51,7 +52,7 @@ Generation should use the normal ship construction rules and produce valid persi
 
 - Hull / frame;
 - Arkengine and Arkengine pattern;
-- ship level / development choices once that system is implemented;
+- ship level and development choices using the supported progression rules;
 - ship mods;
 - Arkengine mods;
 - rooms or major functional spaces when relevant;
@@ -190,10 +191,10 @@ The GM Build & Run pillar should follow several strict rules:
 
 ---
 
-## Future Milestone
+## Approved 1.0 Milestone
 
-This pillar is intentionally deferred until the ship schema, progression rules, combat chassis, weapon system, system degradation, and PF2e boarding handoff are stable enough to serve as generation targets.
+Complete this pillar alongside the approved ship schema, progression, combat, condition, crew, and reward work. Generated results must use those same supported rules. Initial priorities are correct fresh resource initialization and readiness, encounter deployment, and authoritative active-combat detection in the GM dashboard. The full approved scope also covers coherent builds, selective rerolls, boarding-ready crews, recovery accounting, and reusable packages.
 
-The long-term promise is:
+The completion goal is:
 
 > **A GM should be able to build a complete Arkflight enemy force — ships, loadouts, officers, crew, equipment, tokens, and combat-ready placement — from one screen and then run the encounter immediately.**

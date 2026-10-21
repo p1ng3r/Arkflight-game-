@@ -1,0 +1,18 @@
+<section class="guided-demo-shell">
+<header><span class="guided-demo-eyebrow">TEST MODE · Fixed rolls</span><h2>Three rounds. Your pace.</h2><p>One click runs one action. Then everything waits.</p><div class="guided-demo-rounds">{{#each rounds}}<span class="{{#if current}}is-current{{/if}} {{#if complete}}is-complete{{/if}}">{{#if complete}}✓ {{/if}}Round {{number}}</span>{{/each}}</div></header>
+<div class="guided-demo-body">
+{{#if paused}}<p class="guided-demo-warning" role="status">Foundry is paused. Unpause to use Next Step.</p>{{/if}}
+{{#if blocked}}<p class="guided-demo-warning">Finish the running encounter before starting this test.</p>{{/if}}
+{{#if error}}<p class="guided-demo-error" role="alert">{{error}}</p>{{/if}}
+{{#if report}}<label class="guided-demo-report">Copy this debug report<textarea readonly rows="7" aria-label="Combat debug report">{{report}}</textarea></label>{{/if}}
+<section class="guided-demo-next"><small>Next · Step {{nextNumber}}</small><h3>{{nextTitle}}</h3><p>{{nextDetail}}</p>{{#if next.orders}}<ul>{{#each next.orders}}<li>{{name}} · 1 AP</li>{{/each}}</ul>{{/if}}</section>
+{{#if last}}<section class="guided-demo-receipt" role="status"><small>Last result · {{#if last.number}}Step {{last.number}}{{else}}Setup{{/if}}</small><h3>{{last.title}}</h3>{{#each last.lines}}<p>{{this}}</p>{{/each}}{{#if last.rolls}}<details data-demo-details="dice"><summary>Fixed test dice</summary>{{#each last.rolls}}<code>{{this}}</code>{{/each}}</details>{{/if}}</section>{{/if}}
+{{#if ships}}<details class="guided-demo-systems" data-demo-details="systems"><summary>Ship resources, weapons & cards</summary><select data-demo-ship aria-label="Inspect demo ship">{{#each ships}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select>
+{{#each ships}}{{#if selected}}<p><b>{{ap}} AP · {{rp}} RP</b><br>Hull {{hull}} · Lifeveil {{lifeveil}} · Strain {{strain}}<br>Morale {{morale}} · Supply {{supply}}</p>{{/if}}{{/each}}
+<button type="button" data-demo-arcs>Show firing coverage</button><ul class="guided-demo-weapons">{{#each weapons}}<li><b>{{name}}</b><span>{{mount}} · {{minRange}}–{{maxRange}} hex · {{status}}</span></li>{{/each}}</ul>
+<label><input type="checkbox" data-demo-ready {{#if onlyReady}}checked{{/if}}> Ready cards only</label><ul class="guided-demo-cards">{{#each cards}}<li class="card-{{type}}"><b>{{name}}</b><span>{{deck}} · {{type}} · {{status}}</span></li>{{/each}}</ul></details>{{/if}}
+{{#if checks}}<section class="guided-demo-checks"><h3>Walkthrough checks</h3>{{#each checks}}<p>{{#if passed}}✓{{else}}✗{{/if}} {{name}}</p>{{/each}}<small>These checks cover this demonstration. They do not establish multiplayer readiness or overall balance.</small></section>{{/if}}
+{{#if history}}<details data-demo-details="history"><summary>Step history · {{step}}</summary>{{#each history}}<p><b>{{number}} · R{{round}} · {{title}}</b></p>{{#each lines}}<p>{{this}}</p>{{/each}}{{/each}}</details>{{/if}}
+</div>
+<footer><span data-demo-progress role="status" {{#unless busy}}hidden{{/unless}}>{{progress}}</span><button type="button" class="guided-demo-primary" data-demo-next {{#if disabled}}disabled{{/if}}>{{#if busy}}Running step…{{else}}Next Step ▶{{/if}}</button><div>{{#if running}}<button type="button" data-demo-stop {{#if busy}}disabled{{/if}}>Stop Test</button>{{/if}}<button type="button" data-demo-reset {{#if busy}}disabled{{/if}}>Reset</button><button type="button" data-demo-reopen-hud>Card HUD</button></div><div><small>Build: {{build}}</small><button type="button" data-demo-report>Copy debug report</button></div><small>Closing this window pauses the walkthrough between steps. Reopen it from Combat Options.</small></footer>
+</section>

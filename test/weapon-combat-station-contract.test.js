@@ -43,17 +43,13 @@ test("weapon fire stays station-authorized and applies Hull from the damage chat
 });
 
 
-test("player reload UI separates common Reload from Battlewatch Work the Guns", () => {
+test("player weapon UI offers automatic Reload and the Work the Guns Surge", () => {
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
-  assert.match(source, /stationActionAvailability\?\.\("common-reload-weapon"/);
-  assert.match(source, /Reload · 1 AP/);
-  assert.match(source, /Work the Guns · 20% Morale · \+1 Strain/);
-  assert.match(source, /remaining <= 2/);
+  assert.doesNotMatch(source, /stationAction\("common-reload-weapon"/);
+  assert.match(source, /Reload timers decrease automatically/);
+  assert.match(source, /Work the Guns · 1 AP · Surge/);
+  assert.match(source, /remaining > 0/);
   assert.match(source, /arkflightStationActionRemoteResult/);
-  assert.match(stationApi, /resolver === "reloadWeapon"/);
-  assert.match(stationApi, /resolver === "workTheGuns"/);
-  assert.match(stationApi, /maxReloadRemaining/);
-  assert.match(stationApi, /reduceWeaponReload\(rawAfter, selection, round, workTheGunsRemaining\)/);
   assert.match(stationApi, /STATION_ACTION_RESULT = "station-action-result"/);
 });
 
@@ -61,9 +57,8 @@ test("player reload UI separates common Reload from Battlewatch Work the Guns", 
 test("shared-owner reload logic has one authoritative Foundry runtime", () => {
   const stationApi = readFileSync(new URL("../src/foundry/combat-station-actions-api.js", import.meta.url), "utf8");
   assert.ok(!moduleJson.esmodules.includes("src/foundry/combat-balance-runtime.js"));
-  assert.match(stationApi, /reduceWeaponReload/);
-  assert.match(stationApi, /resolver === "workTheGuns"[\s\S]*?maxReloadRemaining/);
-  assert.match(stationApi, /applyPersistentAction/);
+  assert.match(stationApi, /executeFoundryShipAbility/);
+  assert.match(stationApi, /runShipCommand/);
 });
 
 
