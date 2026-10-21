@@ -6,16 +6,25 @@ await import("../src/foundry/card-combat-playtest-api.js");
 const M = "arkflight-game";
 function collection() { const contents = []; return { contents, get: id => contents.find(d => d.id === id), [Symbol.iterator]: () => contents[Symbol.iterator]() }; }
 function world() {
-  let serial = 0; const values = new Map(), users = new Map([["gm", { id: "gm", isGM: true, active: true }]]), counts = { move: 0, scene: 0, actor: 0, writes: 0 };
+  let serial = 0; const values = new Map(), users = new Map([["gm", { id: "gm", isGM: true, active: true }]]), counts = { move: 0, scene: 0, actor: 0, writes: 0, notifications: [] };
   const point = c => ({ x: 1300 + c.q * 75, y: 1000 + (c.r + c.q / 2) * Math.sqrt(7500) });
   const grid = { type: 4, size: 100, isHexagonal: true, getCenterPoint: point, getCube(p) { const q = Math.round((p.x - 1300) / 75), r = Math.round((p.y - 1000) / Math.sqrt(7500) - q / 2); return { q, r, s: -q - r }; }, getAdjacentCubes: () => [[0,-1],[1,-1],[1,0],[0,1],[-1,1],[-1,0]].map(([q,r]) => ({ q,r,s:-q-r })) };
   globalThis.game = { user: users.get("gm"), users: { get: id => users.get(id), [Symbol.iterator]: () => users.values() }, paused: false, actors: collection(), scenes: collection(), combats: collection(), arkflight: {}, settings: { register(m,k,d) { values.set(k, structuredClone(d.default)); }, get(m,k) { return structuredClone(values.get(k)); }, async set(m,k,value) { counts.writes++; if (counts.failWrite) { counts.failWrite = false; throw Error("storage rejected"); } values.set(k, structuredClone(value)); } } };
-  globalThis.ui = { notifications: { warn() {}, error() {} } };
+  globalThis.ui = { notifications: { warn(message) { counts.notifications.push(message); }, error(message) { counts.notifications.push(message); } } };
   globalThis.foundry = { utils: { randomID: () => `id${++serial}` } };
   function token(source, scene) {
     const doc = { x: 0, y: 0, rotation: 0, flags: {}, ...structuredClone(source), id: source._id ?? `token${++serial}`, parent: scene,
       getCenterPoint(position = {}) { return { x: (position.x ?? this.x) + 50, y: (position.y ?? this.y) + 50 }; }, toObject() { const { x,y,rotation,actorId,actorLink,flags,width=1,height=1 } = this; return { x,y,rotation,actorId,actorLink,flags,width,height }; },
-      async update(change) { Object.assign(this, change); return this; }, async move(pose) { counts.move++; Object.assign(this, { x: pose.x, y: pose.y, rotation: pose.rotation }); return true; } };
+      async update(change, options = {}) {
+        if ((callbacks.get("preUpdateToken") ?? []).some(fn => fn(this, change, options) === false)) return this;
+        Object.assign(this, change); return this;
+      }, async move(pose, options = {}) {
+        counts.move++;
+        if ((callbacks.get("preMoveToken") ?? []).some(fn => fn(this, { destination: pose }, options) === false)) return false;
+        const changes = { x: pose.x, y: pose.y, rotation: pose.rotation };
+        if ((callbacks.get("preUpdateToken") ?? []).some(fn => fn(this, changes, options) === false)) return false;
+        Object.assign(this, changes); return true;
+      } };
     return doc;
   }
   globalThis.Actor = { async create(source) { counts.actor++; const actor = { ...structuredClone(source), id: `actor${++serial}`, async getTokenDocument(options) { return token({ ...this.prototypeToken, ...options, actorId: this.id }, null); } }; game.actors.contents.push(actor); return actor; } };
@@ -36,6 +45,7 @@ test("Next drives the native adapter through three rounds and reset reuses only 
   let steps=0; while(state.guidedDemo.status==="running" && steps++<180) state=await next(api);
   assert.equal(state.guidedDemo.status,"complete"); assert.ok(state.guidedDemo.checks.every(c=>c.passed)); assert.ok(counts.move>8);
   assert.deepEqual(game.actors.contents.map(a=>a.flags),originalActors,"combat leaves permanent Actor data unchanged");
+  assert.deepEqual(counts.notifications, [], "native Next hooks never submit rejected manual orders");
   await api.request({ type:"demo-start" }); assert.equal(counts.actor,4); assert.equal(counts.scene,1); assert.equal(game.scenes.contents[0].tokens.contents.length,4);
   await api.request({ type:"demo-stop",sessionId:api.state().id,revision:api.state().revision });
 });
@@ -59,4 +69,30 @@ test("failed movement persistence rolls native tokens back and keeps the same pe
 test("starting the demo refuses both card and native campaign encounters before creating documents", async () => {
   const {api,counts}=world();game.combats.contents.push({id:"campaign",active:true,started:true});
   await assert.rejects(()=>api.request({type:"demo-start"}),/active Foundry/);assert.equal(counts.scene,0);assert.equal(counts.actor,0);
+});
+test("native drag and rotation during the guide stay local without queuing rejected commands", async () => {
+  const { api, counts } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  const before = api.state(), ship = before.ships[before.turnOrder[0]], token = canvas.scene.tokens.get(ship.cardPlay.tokenId);
+  const submitted = [];
+  game.arkflight.cardCombat = Object.freeze({ ...api, request(command) { submitted.push(command); return api.request(command); } });
+  for (let i = 0; i < 6; i++) {
+    assert.ok((callbacks.get("preMoveToken") ?? []).some(fn => fn(token, { destination: { x: token.x + 75, y: token.y } }, {}) === false));
+    assert.ok((callbacks.get("preUpdateToken") ?? []).some(fn => fn(token, { rotation: token.rotation + 60 }, {}) === false));
+  }
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(submitted, []); assert.deepEqual(counts.notifications, []); assert.deepEqual(api.state(), before);
+  await next(api); assert.equal(api.state().guidedDemo.step, before.guidedDemo.step + 1);
+});
+test("marked native callbacks after a Next move do not become another helm order", async () => {
+  const { api, counts } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  await next(api);
+  const before = api.state(), token = canvas.scene.tokens.get(before.ships[before.turnOrder[0]].cardPlay.tokenId), submitted = [];
+  game.arkflight.cardCombat = Object.freeze({ ...api, request(command) { submitted.push(command); return api.request(command); } });
+  const options = { arkflightCardSync: true };
+  assert.ok((callbacks.get("preMoveToken") ?? []).every(fn => fn(token, { destination: token.getCenterPoint() }, options) !== false));
+  assert.ok((callbacks.get("preUpdateToken") ?? []).every(fn => fn(token, { rotation: token.rotation + 60 }, options) !== false));
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(submitted, []); assert.deepEqual(counts.notifications, []); assert.deepEqual(api.state(), before);
 });

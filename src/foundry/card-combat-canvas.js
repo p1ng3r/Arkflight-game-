@@ -75,7 +75,7 @@ async function setPose(token, pose, rollback = false) {
       await token.update({ rotation: pose.rotation }, { arkflightCardSync: true, animate: false });
       return true;
     }
-    return await token.move({ ...pose, snapped: true }, { method: "hud", autoRotate: false, showRuler: false, pan: false, ...(rollback ? { constrainOptions: { ignoreWalls: true, ignoreCost: true } } : {}) });
+    return await token.move({ ...pose, snapped: true }, { method: "hud", autoRotate: false, showRuler: false, pan: false, arkflightCardSync: true, ...(rollback ? { constrainOptions: { ignoreWalls: true, ignoreCost: true } } : {}) });
   } finally { moving.delete(token.id); }
 }
 export async function moveCanvasToken(before, next, shipId) {
@@ -162,17 +162,20 @@ export async function placeSelectedCanvasShips(command, user) {
 }
 function submitMovement(token, destination) {
   const state = game.arkflight?.cardCombat?.state(), shipId = boundShipForToken(token, state);
-  if (!shipId) return;
+  if (!shipId || state.guidedDemo?.status === "running") return;
   const cell = tokenCell(token, canvas.grid, destination);
   void game.arkflight.cardCombat.request({ type: "canvas-move", sessionId: state.id, revision: state.revision, shipId, destination: { q: cell.q, r: cell.r } }).catch(error => ui.notifications.error(error.message));
 }
-Hooks.on("preMoveToken", (token, movement) => {
-  if (!boundShipForToken(token) || moving.has(token.id)) return;
+Hooks.on("preMoveToken", (token, movement, options) => {
+  if (!boundShipForToken(token) || moving.has(token.id) || options?.arkflightCardSync) return;
   submitMovement(token, movement.destination);
   return false;
 });
-Hooks.on("preUpdateToken", (token, changes) => {
-  if (!boundShipForToken(token) || moving.has(token.id)) return;
+Hooks.on("preUpdateToken", (token, changes, options) => {
+  if (!boundShipForToken(token) || moving.has(token.id) || options?.arkflightCardSync) return;
+  // The guide owns movement. Native input and rotation automation must not
+  // enqueue ordinary helm orders (or repeat rejection notifications) here.
+  if (game.arkflight.cardCombat.state()?.guidedDemo?.status === "running" && ["x", "y", "rotation"].some(key => key in changes)) return false;
   if (["width", "height", "elevation", "actorId", "actorLink"].some(key => key in changes)) { ui.notifications.warn("Finish card combat before resizing or reassigning a bound ship token."); return false; }
   if (changes.rotation == null || changes.x != null || changes.y != null) return;
   const state = game.arkflight.cardCombat.state(), id = boundShipForToken(token, state), ship = state.ships[id];
