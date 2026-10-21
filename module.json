@@ -75,7 +75,8 @@
     "styles/card-combat-motion.css",
     "styles/card-combat-hud-layout.css",
     "styles/card-combat-workspace.css",
-    "styles/guided-combat-demo.css"
+    "styles/guided-combat-demo.css",
+    "styles/card-combat-card-face.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",

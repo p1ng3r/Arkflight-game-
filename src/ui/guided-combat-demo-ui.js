@@ -66,11 +66,14 @@ export class GuidedCombatDemoWindow extends HandlebarsApplicationMixin(Applicati
       } else {
         const state = await api.request(demo ? { type: "demo-next", sessionId: before.id, revision: before.revision } : { type: "demo-start" });
         this.fresh = false;
-        const last = state.guidedDemo.last; this.selectedShip = last.shipId ?? state.turnOrder[state.turnIndex] ?? Object.keys(state.ships)[0];
+        const last = state.guidedDemo.last, upcoming = nextDemoStep(state);
+        const planning = ["lock", "bonus"].includes(upcoming?.kind);
+        this.selectedShip = (planning ? upcoming.shipId : last.shipId) ?? state.turnOrder[state.turnIndex] ?? Object.keys(state.ships)[0];
         if (state.guidedDemo.status === "running") {
           const hud = await api.open(); hud.selectedShipId = this.selectedShip;
+          if (planning) hud.selectedFilter = "all";
           await hud.render({ force: true });
-          if (["lock", "bonus"].includes(last.kind)) hud.layoutController?.setHandMinimized(true, { automatic: true });
+          if (!planning && ["lock", "bonus"].includes(last.kind)) hud.layoutController?.setHandMinimized(true, { automatic: true });
           if (last.kind === "coverage") {
             const ship = state.ships[last.shipId];
             if (last.selection.assignments) showCardFireOverlay(last.shipId, last.selection.assignments);

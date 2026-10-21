@@ -42,6 +42,7 @@ export class CardCombatWorkspace {
   }
   bind(root, context = {}) {
     this.unbind(); this.root = root; this.abort = new AbortController();
+    this.scriptPlanOpen = Boolean(context.guidedPlan?.length);
     const reactionKey = context.response?.canRespond && context.state?.pendingAttack?.targetId === context.selectedShipId ? `${context.state.id}:${context.state.revision}:${context.selectedShipId}` : null;
     if (reactionKey !== this.reactionKey) { this.reactionKey = reactionKey; this.reactionOpen = Boolean(reactionKey); }
     this.hand = root.querySelector(".cc-hand-workspace"); this.handBody = root.querySelector(".cc-hand-dock"); this.ship = root.querySelector(".cc-ship-dashboard");
@@ -83,7 +84,7 @@ export class CardCombatWorkspace {
     if (!this.root) return;
     const scaleControl = this.root.querySelector("[data-hud-scale]"); if (scaleControl) scaleControl.value = this.workspace.scale;
     const autoControl = this.root.querySelector("[data-auto-minimize]"); if (autoControl) autoControl.checked = this.workspace.autoMinimize;
-    const minimized = this.workspace.hand.minimized && !this.reactionOpen;
+    const minimized = this.handMinimized;
     if (this.handBody) { this.handBody.hidden = minimized; this.handBody.classList.remove("is-collapsed"); }
     this.hand?.classList.toggle("is-minimized", minimized);
     if (this.ship) this.ship.hidden = !this.workspace.shipVisible;
@@ -102,7 +103,7 @@ export class CardCombatWorkspace {
     if (automatic && !this.workspace.autoMinimize) return;
     this.cue(minimized ? "close" : "open", this.hand);
     if (minimized && !this.workspace.hand.minimized) this.workspace.hand.foldedPosition = null;
-    if (minimized) this.reactionOpen = false;
+    if (minimized) { this.reactionOpen = false; this.scriptPlanOpen = false; }
     this.workspace.hand.minimized = minimized; this.apply(); this.update(); this.save();
   }
   setShipVisible(visible) {
@@ -110,6 +111,7 @@ export class CardCombatWorkspace {
     this.workspace.shipVisible = visible; this.apply(); this.update(); this.save();
   }
   reset() { this.workspace = normalizeWorkspace(); this.apply(); this.update(); this.save(); this.cue("open", this.hand); }
+  get handMinimized() { return this.workspace.hand.minimized && !this.reactionOpen && !this.scriptPlanOpen; }
   update() {
     if (!this.root?.isConnected) return;
     const root = this.root, width = window.innerWidth, height = window.innerHeight, scale = this.workspace.scale / 100;
@@ -122,11 +124,14 @@ export class CardCombatWorkspace {
     this.bounds = safe;
     if (this.hand) this.hand.style.width = `${Math.round(Math.min(safe.width, this.workspace.hand.width * scale))}px`;
     this.stripHeight = root.querySelector(".cc-command-strip")?.getBoundingClientRect().height ?? 46 * scale;
-    const minimized = this.workspace.hand.minimized && !this.reactionOpen;
-    const box = handWorkspaceBox(safe, this.workspace.hand, scale, this.stripHeight, minimized);
+    this.handExtra = 26 * scale + (root.querySelector(".cc-guided-hand-note")?.getBoundingClientRect().height ?? 0);
+    const minimized = this.handMinimized;
+    const handPreference = { ...this.workspace.hand, height: this.workspace.hand.height + this.handExtra / scale };
+    const box = handWorkspaceBox(safe, handPreference, scale, this.stripHeight, minimized);
     this.place(this.hand, box); this.place(this.ship, workspacePanelBox(safe, this.workspace.ship, scale, "ship"));
     const top = safe.top, floor = box.top - 8;
     px("--cc-detail-top", top); px("--cc-detail-height", Math.max(120, Math.min(520 * scale, floor - top)));
+    px("--cc-preview-height", Math.min(safe.height, 620 * scale));
     px("--cc-response-top", top); px("--cc-response-height", Math.max(120, Math.min(300 * scale, floor - top)));
     px("--cc-orders-top", top);
     const options = root.querySelector(".cc-options-body");
@@ -164,13 +169,13 @@ export class CardCombatWorkspace {
   adjust(kind, mode, box, dx, dy) {
     const pref = this.workspace[kind], scale = this.workspace.scale / 100;
     if (mode === "resize") {
-      const strip = kind === "hand" ? this.stripHeight ?? 0 : 0;
+      const strip = kind === "hand" ? (this.stripHeight ?? 0) + (this.handExtra ?? 0) : 0;
       pref.width = clamp((box.width + dx) / scale, 300, 1300); pref.height = clamp((box.height + dy - strip) / scale, 220, 650);
       pref.position = dashboardPosition(this.bounds, { left: box.left, top: box.top, width: Math.min(pref.width * scale, this.bounds.width), height: Math.min(pref.height * scale + strip, this.bounds.height) });
     } else {
-      const expandedHeight = kind === "hand" ? Math.min(this.bounds.height, pref.height * scale + (this.stripHeight ?? 0)) : box.height;
+      const expandedHeight = kind === "hand" ? Math.min(this.bounds.height, pref.height * scale + (this.stripHeight ?? 0) + (this.handExtra ?? 0)) : box.height;
       const moved = { left: box.left + dx, top: box.top + dy, width: box.width, height: box.height };
-      if (kind === "hand" && this.workspace.hand.minimized && !this.reactionOpen) pref.foldedPosition = dashboardPosition(this.bounds, moved);
+      if (kind === "hand" && this.handMinimized) pref.foldedPosition = dashboardPosition(this.bounds, moved);
       // Always derive deltas from the gesture's starting box, never the last
       // pointer update. Restoring a high folded bar clamps the larger hand.
       pref.position = dashboardPosition(this.bounds, { ...moved, top: moved.top + box.height - expandedHeight, height: expandedHeight });

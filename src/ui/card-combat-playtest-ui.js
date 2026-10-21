@@ -7,6 +7,7 @@ import { CARD_SKILLS } from "../cards/card-playtest-session.js";
 import { cardAvailability } from "../cards/card-library.js";
 import { BASIC_CARD_ORDERS, getOrderQueue } from "../cards/committed-orders.js";
 import { shipAbilityBonus } from "../combat/ship-ability-rules.js";
+import { nextDemoStep } from "../cards/guided-combat-demo.js";
 
 import { STATION_PRESENTATION, cardArt, resourceMeters } from "./card-combat-presentation.js";
 
@@ -123,10 +124,13 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     const stations = STATION_PRESENTATION.map(station => ({ ...station, operator: actorName(ship.crew.stations[station.id]), count: cards.filter(card => card.filter === station.id).length }));
     const previewCard = cardById(this.expandedCardId);
     const focusedOrder = orders.find(order => order.id === this.expandedOrderId) ?? null;
-    const preview = previewCard ? { ...previewCard, art: cardArt(previewCard), typeLabel: previewCard.type === "flux" ? `Flux ${previewCard.cooldownRounds}` : label(previewCard.type) } : focusedOrder ? { name: focusedOrder.name, description: "Basic ship order · 1 AP committed. Targets and batteries are selected now.", art: focusedOrder.art, type: "general", typeLabel: "Basic" } : null;
+    const preview = previewCard ? { ...previewCard, art: cardArt(previewCard), stationLabel: label(previewCard.originStation ?? previewCard.stations[0]), pool: previewCard.deck.toUpperCase(), status: [...cards, ...reactions].find(c => c.id === previewCard.id)?.status, typeLabel: previewCard.type === "flux" ? `Flux ${previewCard.cooldownRounds}` : label(previewCard.type) } : focusedOrder ? { name: focusedOrder.name, description: "Basic ship order · 1 AP committed. Targets and batteries are selected now.", art: focusedOrder.art, type: "general", typeLabel: "Basic", pool: "AP", stationLabel: label(focusedOrder.station), status: label(focusedOrder.status) } : null;
+    const upcoming = guided ? nextDemoStep(state) : null;
+    const guidedOrders = ["lock", "bonus"].includes(upcoming?.kind) && upcoming.shipId === this.selectedShipId ? upcoming.orders : [];
+    const guidedPlan = guidedOrders.filter(o => o.kind === "card").map(o => o.abilityId);
     const weaponChoices = ship.cardPlay.weapons.map(weapon => ({ id: weapon.key, name: `${label(weapon.mount)} · ${weapon.name} · ${label(weapon.arcTemplate ?? "wide")} ${2 * weaponArcCheck({ arcTemplate: weapon.arcTemplate ?? "wide" }).halfWidth}° · ${weapon.minRange}–${weapon.maxRange} hex · ${weapon.readyRound <= state.round ? "Ready" : `Ready R${weapon.readyRound}`}`, selected: weapon.key === this.selectedWeaponKey }));
     const canvasBound = Boolean(state.canvas), sceneMatches = canvasBound && state.canvas.sceneId === scene?.id;
-    return { ...context, guided, phaseShort: guided ? "Guided Test" : phaseShort, motionPreferences: motionPreferences(), lastOutcome: lastCombatOutcome(state, this.selectedShipId), canAddPreview: canPlan && previewCard?.deck === "ap", canChoosePreviewReaction: !guided && response?.canRespond && previewCard?.deck === "rp", preview, focusedOrders: focusedOrder ? [focusedOrder] : [], ownedStations, handCollapsed: this.handCollapsed, weaponChoices, arcsVisible: cardWeaponOverlayVisible(this.selectedShipId), canvasBound, sceneMatches, sceneName: scene?.name, sceneReady: Boolean(globalThis.canvas?.grid?.isHexagonal), budget, phaseLabel, phaseHint, stations, meters: resourceMeters(ship.resources), pendingCount: orders.filter(order => order.status === "pending").length, state, isGM: game.user.isGM, selectable, active, complete: state.phase === "complete", shipName: ship.cardPlay.name, ships, selectedShipId: this.selectedShipId, cards: cards.map(card => ({ ...card, dragOrderId: orders.find(order => order.abilityId === card.id && order.status === "pending")?.id })), reactions: reactions.map(card => ({ ...card, canDragReaction: response?.canRespond && state.pendingAttack?.targetId === this.selectedShipId && ship.cardPlay.rp > 0 && card.status === "Ready" })), orders, crew, targets, batteries, response, canPlan, bonus: q.phase === "execution", ap: q.ap, rp: ship.cardPlay.rp, b: shipAbilityBonus(ship.progression?.level), resources: ship.resources, motion: { ...ship.cardPlay.motion, allowance: ship.cardPlay.motion.speed + ship.cardPlay.motion.extra, turnAllowance: ship.cardPlay.motion.baseTurns + ship.cardPlay.motion.bonusTurns }, canMove: !guided && turn && (game.user.isGM || owns(ship.crew.stations.navigator)), canEnd: !guided && turn && captain, basics: BASIC_CARD_ORDERS.map(b => ({ ...b, max: canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0 })), log: [...state.log].reverse().slice(0, 15).map(entry => ({ ...entry, label: cardById(entry.label)?.name ?? label(entry.label), name: state.ships[entry.shipId]?.cardPlay.name, text: logText(entry, state) })), viewBox: `${bounds.left} ${bounds.top} ${bounds.width} ${bounds.height}` };
+    return { ...context, guided, guidedPlan, guidedPlanCount: guidedOrders.length, phaseShort: guided ? "Guided Test" : phaseShort, motionPreferences: motionPreferences(), lastOutcome: lastCombatOutcome(state, this.selectedShipId), canAddPreview: canPlan && previewCard?.deck === "ap", canChoosePreviewReaction: !guided && response?.canRespond && previewCard?.deck === "rp", preview, focusedOrders: focusedOrder ? [focusedOrder] : [], ownedStations, handCollapsed: this.handCollapsed, weaponChoices, arcsVisible: cardWeaponOverlayVisible(this.selectedShipId), canvasBound, sceneMatches, sceneName: scene?.name, sceneReady: Boolean(globalThis.canvas?.grid?.isHexagonal), budget, phaseLabel, phaseHint, stations, meters: resourceMeters(ship.resources), pendingCount: orders.filter(order => order.status === "pending").length, state, isGM: game.user.isGM, selectable, active, complete: state.phase === "complete", shipName: ship.cardPlay.name, ships, selectedShipId: this.selectedShipId, cards: cards.map(card => ({ ...card, dragOrderId: orders.find(order => order.abilityId === card.id && order.status === "pending")?.id })), reactions: reactions.map(card => ({ ...card, canDragReaction: !guided && response?.canRespond && state.pendingAttack?.targetId === this.selectedShipId && ship.cardPlay.rp > 0 && card.status === "Ready" })), orders, crew, targets, batteries, response, canPlan, bonus: q.phase === "execution", ap: q.ap, rp: ship.cardPlay.rp, b: shipAbilityBonus(ship.progression?.level), resources: ship.resources, motion: { ...ship.cardPlay.motion, allowance: ship.cardPlay.motion.speed + ship.cardPlay.motion.extra, turnAllowance: ship.cardPlay.motion.baseTurns + ship.cardPlay.motion.bonusTurns }, canMove: !guided && turn && (game.user.isGM || owns(ship.crew.stations.navigator)), canEnd: !guided && turn && captain, basics: BASIC_CARD_ORDERS.map(b => ({ ...b, max: canPlan ? (q.phase === "planning" ? q.ap.remaining : q.ap.bonusAvailable) : 0 })), log: [...state.log].reverse().slice(0, 15).map(entry => ({ ...entry, label: cardById(entry.label)?.name ?? label(entry.label), name: state.ships[entry.shipId]?.cardPlay.name, text: logText(entry, state) })), viewBox: `${bounds.left} ${bounds.top} ${bounds.width} ${bounds.height}` };
   }
   async _onRender(context, options) {
     await super._onRender(context, options);
@@ -148,10 +152,18 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
     const updateBudget = () => {
       const count = this.element.querySelectorAll("[data-plan-card]:checked").length + [...this.element.querySelectorAll("[data-plan-basic]")].reduce((sum, input) => sum + Math.max(0, Number(input.value) || 0), 0);
       const meter = this.element.querySelector("[data-plan-budget]");
-      if (meter) { meter.textContent = `${count} / ${context.budget} AP selected`; meter.classList.toggle("over-budget", count > context.budget); }
+      if (meter) { meter.textContent = context.guided ? context.guidedPlanCount ? `Scripted plan · ${context.guidedPlanCount} AP · Use Next Step` : "Guided test · Manual selection locked" : `${count} / ${context.budget} AP selected`; meter.classList.toggle("over-budget", !context.guided && count > context.budget); }
       const lock = this.element.querySelector('[data-card-command="lock"]');
       if (lock) lock.disabled = !context.canPlan || count > context.budget;
-      for (const input of this.element.querySelectorAll("[data-plan-card]")) input.closest("article").classList.toggle("is-selected", input.checked);
+      for (const input of this.element.querySelectorAll("[data-plan-card]")) {
+        const card = input.closest("article"), scripted = context.guided && context.guidedPlan?.includes(input.value);
+        card.classList.toggle("is-selected", input.checked); card.classList.toggle("is-scripted", Boolean(scripted));
+        const button = card.querySelector("[data-select-card]"); button?.setAttribute("aria-pressed", String(input.checked));
+        const status = card.querySelector("[data-card-selection-status]");
+        if (status) status.textContent = scripted ? "Next scripted choice" : context.guided ? "Guided · Inspect only" : input.checked ? "Selected" : input.disabled ? card.dataset.cardStatus : "Select";
+      }
+      const add = this.element.querySelector('[data-hud-action="add-plan"]');
+      if (add) { const selected = [...this.element.querySelectorAll("[data-plan-card]")].some(i => i.value === this.expandedCardId && i.checked); add.textContent = selected ? "Remove From Plan" : "Select for Plan · 1 AP"; add.setAttribute("aria-pressed", String(selected)); }
     };
     const applyFilter = filter => {
       this.selectedFilter = filter;
@@ -220,6 +232,7 @@ export class ArkflightCardCombatWindow extends HandlebarsApplicationMixin(Applic
         select.addEventListener("change", () => {
           saved[field] = select.value;
           if (field === "station") saved.skill = this.element.querySelector("[data-response-skill]").value;
+          this.updateReactionCards?.();
         });
       }
     }
@@ -345,16 +358,34 @@ export class ArkflightCardCanvasHUD extends ArkflightCardCombatWindow {
     this.motionView = motionView;
     this.layoutController ??= new CardCombatWorkspace({ feedback: combatPanelFeedback });
     this.layoutController.bind(this.element, context);
-    for (const card of this.element.querySelectorAll("[data-preview-card]")) {
-      const open = () => {
-        playCombatSound("open"); this.expandedCardId = card.dataset.previewCard;
+    for (const button of this.element.querySelectorAll("[data-inspect-card]")) {
+      button.addEventListener("click", () => {
+        playCombatSound("open"); this.expandedCardId = button.dataset.inspectCard;
         const order = context.orders.find(row => row.abilityId === this.expandedCardId && row.status === "pending");
         this.expandedOrderId = order?.id ?? null;
         this.render({ force: true });
-      };
-      card.addEventListener("click", event => { if (!event.target.closest("input,label,button")) open(); });
-      card.addEventListener("keydown", event => { if ((event.key === "Enter" || event.key === " ") && event.target === card) { event.preventDefault(); open(); } });
+      });
     }
+    for (const button of this.element.querySelectorAll("[data-select-card]")) button.addEventListener("click", () => {
+      const input = [...this.element.querySelectorAll("[data-plan-card]")].find(i => i.value === button.dataset.selectCard);
+      if (!input || input.disabled) return;
+      input.checked = !input.checked; input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    this.updateReactionCards = () => {
+      const selected = this.element.querySelector("[data-response-card]")?.value;
+      for (const button of this.element.querySelectorAll("[data-select-reaction]")) {
+        const active = button.getAttribute("aria-disabled") === "false" && button.dataset.selectReaction === selected;
+        button.setAttribute("aria-pressed", String(active)); button.closest("article").classList.toggle("is-selected", active);
+        const status = button.closest("article").querySelector("[data-card-selection-status]");
+        status.textContent = context.guided ? "Guided · Inspect only" : active ? "Reaction selected" : button.getAttribute("aria-disabled") === "true" ? "Inspect only" : "Choose reaction";
+      }
+    };
+    for (const button of this.element.querySelectorAll("[data-select-reaction]")) button.addEventListener("click", () => {
+      const select = this.element.querySelector("[data-response-card]"); if (!select || button.getAttribute("aria-disabled") === "true") return;
+      select.value = select.value === button.dataset.selectReaction ? "" : button.dataset.selectReaction;
+      select.dispatchEvent(new Event("change")); playCombatSound(select.value ? "select" : "deselect"); this.updateReactionCards();
+    });
+    this.updateReactionCards();
     for (const button of this.element.querySelectorAll("[data-preview-order]")) button.addEventListener("click", () => this.focusOrder(this.selectedShipId, button.dataset.previewOrder).catch(error => ui.notifications.error(error.message)));
     for (const card of this.element.querySelectorAll("[data-drag-order]")) {
       card.addEventListener("dragstart", event => {
