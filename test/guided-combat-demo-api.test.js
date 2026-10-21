@@ -152,7 +152,7 @@ test("fixture synchronization refuses campaign tokens, stale requests and paused
 test("blocked fixture correction keeps the pending step and reports an actionable error", async () => {
   const { api } = world(); await api.request({ type: "demo-start" });
   const before = api.state(), token = canvas.scene.tokens.get(Object.values(before.ships)[0].cardPlay.tokenId);
-  token.x += 17; token.update = async () => token;
+  token.x += 150; token.update = async () => token;
   await assert.rejects(() => next(api), /prevented guided token synchronization/);
   assert.deepEqual(api.state(), before);
 });
@@ -218,6 +218,31 @@ test("Step 5 commits when updateToken confirms the write but the update wrapper 
   assert.equal((callbacks.get("updateToken") ?? []).length, 0, "commit observer is removed even though the wrapper never settles");
 });
 
+test("native token anchoring survives all three guided rounds without correction on support steps", async () => {
+  const { api, counts } = world(); let state = await api.request({ type: "demo-start" });
+  for (const token of canvas.scene.tokens.contents) {
+    const update = token.update.bind(token);
+    token.update = (changes, options) => update("x" in changes ? {
+      ...changes, x: Math.round(changes.x) + 3, y: Math.round(changes.y) + 3
+    } : changes, options);
+  }
+  while (state.guidedDemo.step < 4) state = await next(api);
+  state = await next(api);
+  assert.equal(state.guidedDemo.step, 5); assert.equal(state.revision, 5);
+  const token = canvas.scene.tokens.get(state.ships[state.turnOrder[0]].cardPlay.tokenId);
+  const pose = { x: token.x, y: token.y }, moves = counts.move;
+  const report = api.diagnostics(); report.progress.destination.q = -999;
+  assert.notEqual(api.diagnostics().progress.destination.q, -999, "diagnostics cannot mutate the recorded destination");
+  state = await next(api);
+  assert.equal(state.guidedDemo.step, 6); assert.equal(counts.move, moves);
+  assert.deepEqual({ x: token.x, y: token.y }, pose, "support never recenters a valid token");
+  assert.equal(api.diagnostics().progress.destination, null, "a later command never reports a stale destination");
+  let steps = 0;
+  while (state.guidedDemo.status === "running" && steps++ < 180) state = await next(api);
+  assert.equal(state.guidedDemo.step, 108); assert.equal(state.guidedDemo.status, "complete");
+  assert.ok(state.guidedDemo.checks.every(check => check.passed)); assert.deepEqual(counts.notifications, []);
+});
+
 test("an unrelated update event cannot confirm the pending token operation", async () => {
   const { api } = world(); await api.request({ type: "demo-start" });
   while (api.state().phase === "planning") await next(api);
@@ -239,7 +264,7 @@ test("an unrelated update event cannot confirm the pending token operation", asy
 test("debug reports expose the loaded build, command stage and saved/actual positions read-only", async () => {
   const { api, counts } = world(); await api.request({ type: "demo-start" });
   const before = api.state(), writes = counts.writes, moves = counts.move, report = api.diagnostics();
-  assert.equal(report.build, "movement-confirmation-20261021"); assert.equal(report.progress.stage, "Complete");
+  assert.equal(report.build, "hex-movement-20261021"); assert.equal(report.progress.stage, "Complete");
   assert.equal(report.ships.length, 4); assert.equal(report.step, 0);
   assert.equal(counts.writes, writes); assert.equal(counts.move, moves); assert.deepEqual(api.state(), before);
   report.ships[0].saved.q = -999; assert.deepEqual(api.state(), before);
@@ -251,7 +276,7 @@ test("an intermediate waypoint from the right operation does not finish or roll 
   const before = api.state(), token = canvas.scene.tokens.get(before.ships[before.turnOrder[0]].cardPlay.tokenId), update = token.update.bind(token);
   token.update = async (changes, options) => {
     if (("x" in changes || "y" in changes) && options.animate !== false) {
-      await update({ ...changes, x: (token.x + changes.x) / 2, y: (token.y + changes.y) / 2 }, options);
+      await update({ ...changes, x: token.x + (changes.x - token.x) / 4, y: token.y + (changes.y - token.y) / 4 }, options);
       await new Promise(resolve => setTimeout(resolve, 10));
       assert.equal(api.state().revision, before.revision);
     }

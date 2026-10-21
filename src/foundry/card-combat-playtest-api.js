@@ -80,7 +80,7 @@ async function startEncounter(command, user) {
   return binding ? bindCanvasSession(session, binding) : session;
 }
 async function handle(command, user) {
-  cardCombatProgress("Checking request", { command: command?.type, error: null, tokenId: null, operationId: null });
+  cardCombatProgress("Checking request", { command: command?.type, error: null, tokenId: null, operationId: null, destination: null });
   if (!command || JSON.stringify(command).length > 30000) throw new Error("Invalid card command.");
   if (command.type === "place-ships") return placeSelectedCanvasShips(command, user);
   if (command.type === "import-test-ships") {

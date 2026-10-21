@@ -112,6 +112,16 @@ The guide footer now shows the loaded build, a live command stage while busy, an
 
 **801 Node tests pass.** Added checks cover a confirmed write with a pending update wrapper, observer cleanup, unrelated operations, intermediate waypoints, read-only diagnostics and an unchanged save. The pending-wrapper regression failed before this follow-up. Chromium verifies the visible build/stage, report fallback and the full 108-step walkthrough with 12 coverage previews and 13 defender responses. These checks use mocked Foundry documents; the live installed-module callback chain remains unverified.
 
+### Confirm hexes rather than pixel centers
+
+The next live report explicitly failed at Step 4 / Revision 4 with “Foundry prevented the move,” even though Wayfarer's actual hex was the intended destination, **15,3**. Inspection found a separate false-rejection path: both native write confirmation and the encounter guard required pixels within one pixel of a calculated center. A legal native anchor within the correct hex could therefore reject the move and trigger rollback. The earlier callback changes did not correct this validation rule.
+
+Build **hex-movement-20261021** validates the requested **hex and facing**. It retains valid native positions within that hex, rotates without recentering, and does not correct valid fixture anchors before support steps. A wrong hex or facing still rejects without charging movement. Wall/occupancy checks, authenticated requests, correlated document confirmation and failed-save rollback remain enforced. Debug reports also include the most recent native write's requested hex, facing and pixels; each command clears stale destination details.
+
+**804 Node tests pass.** Three new regressions cover anchored movement/rotation on all four hex-grid types, wrong-hex/wrong-facing rejection with rollback, and the full 108-step guide with native anchoring and no recentering on Step 6. The anchoring regression failed before the change. The browser walkthrough also completes 108 steps, 12 coverage previews and 13 defender responses using mocked Foundry documents. Live confirmation in the user's Foundry/PF2e world remains pending.
+
+To install on the laptop, pull `feat/station-ability-loadouts`, refresh the Foundry client with **Ctrl+F5**, and confirm **hex-movement-20261021** in the guide footer. Use **Reset**, then **Next Step** through the four plans and the first movement. Step 5 should save the move, and Step 6 should retain it. If it fails, copy the guide's debug report before Stop/Reset replaces the failed command's details.
+
 ## Weapon arcs and firing range
 
 ![Weapon coverage on scene hexes](images/card-combat-canvas-arcs.webp)

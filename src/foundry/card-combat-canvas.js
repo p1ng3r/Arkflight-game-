@@ -6,6 +6,8 @@ const moving = new Set();
 const angle = value => (Number(value) % 360 + 360) % 360;
 const difference = (a, b) => Math.abs((a - b + 540) % 360 - 180);
 const cube = cell => ({ q: cell.q, r: cell.r, s: -cell.q - cell.r });
+const sameCell = (a, b) => a.q === b.q && a.r === b.r;
+const matchesCellAndFacing = (token, cell, rotation, grid) => sameCell(tokenCell(token, grid), cell) && difference(angle(token.rotation), rotation) <= .1;
 export function canvasGrid(sceneId) {
   const c = globalThis.canvas;
   if (!sceneId || c?.scene?.id !== sceneId || !c.grid?.isHexagonal) throw new Error("View the encounter's hex-grid scene. The primary GM must view the same scene.");
@@ -65,7 +67,7 @@ export function assertCanvasPositions(session) {
     const token = c.scene.tokens.get(ship.cardPlay.tokenId);
     if (!token) throw new Error(`The scene token for ${ship.cardPlay.name} is missing.`);
     const pose = tokenPose(token, ship.cardPlay.motion, session.canvas, c.grid);
-    if (Math.hypot(token.x - pose.x, token.y - pose.y) > 1 || difference(angle(token.rotation), pose.rotation) > .1) {
+    if (!matchesCellAndFacing(token, ship.cardPlay.motion, pose.rotation, c.grid)) {
       const actual = tokenCell(token, c.grid);
       throw new Error(`${ship.cardPlay.name}'s token is out of sync: expected hex (${ship.cardPlay.motion.q}, ${ship.cardPlay.motion.r}) at ${Math.round(pose.rotation)}°, found hex (${actual.q}, ${actual.r}) at ${Math.round(angle(token.rotation))}°. ${session.guidedDemo?.status === "running" ? "The guided test could not restore its demo token; check for token-control automation blocking updates." : "Use the HUD and normal token drag controls during combat."}`);
     }
@@ -86,16 +88,21 @@ export async function synchronizeGuidedDemoTokens(session) {
   });
   // Validate every fixture before changing any document.
   for (const { token, motion } of rows) {
-    if (!await setPose(token, tokenPose(token, motion, session.canvas, c.grid), true)) throw new Error("Foundry prevented guided token synchronization. The pending step has not advanced.");
+    if (matchesCellAndFacing(token, motion, session.canvas.headings[motion.heading], c.grid)) continue;
+    if (!await setPose(token, tokenPose(token, motion, session.canvas, c.grid), c.grid, true)) throw new Error("Foundry prevented guided token synchronization. The pending step has not advanced.");
   }
   assertCanvasPositions(session);
 }
-async function setPose(token, pose, rollback = false) {
-  if (Math.hypot(token.x - pose.x, token.y - pose.y) < .01 && difference(angle(token.rotation), pose.rotation) < .01) return true;
+async function setPose(token, pose, grid, rollback = false) {
+  const destination = tokenCell(token, grid, pose);
+  const matches = updated => matchesCellAndFacing(updated, destination, pose.rotation, grid);
+  // Foundry may anchor a token away from the mathematical hex center. Keep
+  // that valid position; combat operates on hexes, not sub-hex pixel offsets.
+  // A rollback still writes the original pixels when a failed update moved it.
+  if (matches(token) && (!rollback || Math.hypot(token.x - pose.x, token.y - pose.y) < .01)) return true;
   moving.add(token.id);
   let confirm;
   const operationId = foundry.utils.randomID();
-  const matches = updated => Math.hypot(updated.x - pose.x, updated.y - pose.y) <= 1 && difference(angle(updated.rotation), pose.rotation) <= .1;
   const committed = new Promise(resolve => { confirm = resolve; });
   const onUpdate = (updated, _changes, options) => {
     if (updated.id !== token.id || updated.parent?.id !== token.parent?.id || options?.arkflightCardUpdateId !== operationId) return;
@@ -105,11 +112,11 @@ async function setPose(token, pose, rollback = false) {
   };
   Hooks.on("updateToken", onUpdate);
   try {
-    const rotationOnly = Math.hypot(token.x - pose.x, token.y - pose.y) < .01;
+    const rotationOnly = rollback ? Math.hypot(token.x - pose.x, token.y - pose.y) < .01 : sameCell(tokenCell(token, grid), destination);
     // A wrapper around update(), like move(), can remain pending after the
     // server has committed the document. Confirm our exact operation through
     // the public post-update hook; never infer a commit from a rendered pose.
-    cardCombatProgress("Writing token document", { tokenId: token.id, operationId });
+    cardCombatProgress("Writing token document", { tokenId: token.id, operationId, destination: { q: destination.q, r: destination.r, facing: pose.rotation, x: pose.x, y: pose.y } });
     const operation = Promise.resolve().then(() => token.update(rotationOnly ? { rotation: pose.rotation } : pose, {
       method: "hud", autoRotate: false, showRuler: false, pan: false,
       arkflightCardSync: true, arkflightCardUpdateId: operationId,
@@ -134,12 +141,12 @@ export async function moveCanvasToken(before, next, shipId) {
     previous = point;
   }
   const rollback = async () => {
-    const done = await setPose(token, original, true);
+    const done = await setPose(token, original, c.grid, true);
     if (!done) throw new Error("Foundry prevented token movement rollback; the encounter has not charged movement.");
   };
   try {
-    const done = await setPose(token, pose);
-    if (!done || Math.hypot(token.x - pose.x, token.y - pose.y) > 1) throw new Error("Foundry prevented the move; movement was not spent.");
+    const done = await setPose(token, pose, c.grid);
+    if (!done || !matchesCellAndFacing(token, end, pose.rotation, c.grid)) throw new Error("Foundry prevented the move; movement was not spent.");
   } catch (error) { await rollback(); throw error; }
   return rollback;
 }
@@ -149,12 +156,12 @@ export async function createCanvasCombat(session) {
     for (const ship of Object.values(session.ships)) {
       const token = c.scene.tokens.get(ship.cardPlay.tokenId);
       poses.push({ token, pose: { x: token.x, y: token.y, rotation: token.rotation } });
-      if (!await setPose(token, tokenPose(token, ship.cardPlay.motion, session.canvas, c.grid))) throw new Error("Foundry could not align a ship token to its starting hex.");
+      if (!await setPose(token, tokenPose(token, ship.cardPlay.motion, session.canvas, c.grid), c.grid)) throw new Error("Foundry could not align a ship token to its starting hex.");
     }
     const combat = await Combat.create({ scene: c.scene.id, active: true, flags: { [MODULE]: { cardCombatSession: session.id } }, combatants: Object.entries(session.ships).map(([id, ship]) => ({ actorId: id, tokenId: ship.cardPlay.tokenId, sceneId: c.scene.id, flags: { [MODULE]: { cardCombatShipId: id } } })) });
     session.canvas.combatId = combat.id;
-    return async () => { await combat.delete({ arkflightCardSync: true }); for (const row of poses) await setPose(row.token, row.pose, true); };
-  } catch (error) { for (const row of poses) await setPose(row.token, row.pose, true); throw error; }
+    return async () => { await combat.delete({ arkflightCardSync: true }); for (const row of poses) await setPose(row.token, row.pose, c.grid, true); };
+  } catch (error) { for (const row of poses) await setPose(row.token, row.pose, c.grid, true); throw error; }
 }
 export async function syncCanvasCombat(session) {
   if (!session.canvas) return;

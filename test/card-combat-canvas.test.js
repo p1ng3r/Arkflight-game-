@@ -101,6 +101,35 @@ test("multi-hex forward drag spends movement once and the native combat follows 
   assert.equal(w.api.state().ships.a.cardPlay.motion.used,2);assert.equal(bridge.tokenCell(w.a,canvas.grid).q,m.q+2*q);assert.equal(getOrderQueue(w.api.state().ships.a).ap.remaining,4);assert.equal(game.combat.turns[game.combat.turn].actorId,"a");
   assert.throws(()=>movePlaytestShipTo(w.api.state(),"a",{q:0,r:1}),/course|allowance/);
 });
+
+test("native anchoring inside the requested hex is a successful move and never snaps back", async () => {
+ for (const type of [2, 3, 4, 5]) {
+  const w = world(type); await execution(w);
+  const before = w.api.state(), m = before.ships.a.cardPlay.motion, [q, r] = before.canvas.directions[m.heading];
+  const update = w.a.update.bind(w.a);
+  w.a.update = async (patch, options) => update("x" in patch ? { ...patch, x: Math.round(patch.x) + 3, y: Math.round(patch.y) + 3 } : patch, options);
+  await w.api.request(cmd(w, "helm", { direction: "forward" }));
+  const after = w.api.state(), cell = bridge.tokenCell(w.a, canvas.grid);
+  assert.deepEqual({ q: cell.q, r: cell.r }, { q: m.q + q, r: m.r + r });
+  assert.equal(after.ships.a.cardPlay.motion.used, 1); bridge.assertCanvasPositions(after);
+  assert.equal(getOrderQueue(after.ships.a).ap.remaining, 4);
+  const pose = { x: w.a.x, y: w.a.y }, moved = w.moves.length;
+  await w.api.request(cmd(w, "helm", { direction: "left" }));
+  assert.deepEqual({ x: w.a.x, y: w.a.y }, pose); assert.equal(w.moves.length, moved);
+ }
+});
+test("a wrong destination hex or facing still rejects and rolls back without spending movement", async () => {
+  for (const fault of ["hex", "facing"]) {
+    const w = world(); await execution(w);
+    const before = w.api.state(), pose = { x: w.a.x, y: w.a.y, rotation: w.a.rotation }, update = w.a.update.bind(w.a);
+    w.a.update = async (patch, options) => update(options.animate === false ? patch : {
+      ...patch, ...(fault === "hex" ? { x: patch.x + 240 } : { rotation: patch.rotation + 60 })
+    }, options);
+    await assert.rejects(w.api.request(cmd(w, "helm", { direction: "forward" })), /prevented the move/);
+    assert.deepEqual(w.api.state(), before);
+    assert.deepEqual({ x: w.a.x, y: w.a.y, rotation: w.a.rotation }, pose);
+  }
+});
 test("normal native token drag is routed through the authenticated command queue", async () => {
   const w=world();await execution(w);const s=w.api.state(),m=s.ships.a.cardPlay.motion,[q,r]=s.canvas.directions[m.heading];const point=canvas.grid.getCenterPoint({q:m.q+q,r:m.r+r});
   const result=(hooks.get("preMoveToken")??[]).map(fn=>fn(w.a,{destination:{x:point.x-60,y:point.y-60}}));assert.ok(result.includes(false));
