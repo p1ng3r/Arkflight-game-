@@ -7,6 +7,8 @@ import { dispatchPlaytestCommand } from "../cards/playtest-commands.js";
 import { deriveShip } from "../ship/derive-ship.js";
 import { SHIP_CATALOGS } from "../content/index.js";
 import { weaponDamageProfile } from "../combat/weapon-combat.js";
+import { prepareGuidedDemoScene } from "./guided-combat-demo.js";
+import { runDemoStep } from "../cards/guided-combat-demo.js";
 
 const MODULE = "arkflight-game", SETTING = "cardCombatPlaytest";
 let commandQueue = Promise.resolve();
@@ -84,14 +86,26 @@ async function handle(command, user) {
     return importCardCombatTestFleet();
   }
   const before = clone(game.settings.get(MODULE, SETTING));
-  if (command.type !== "start" && command.type !== "end") assertCanvasPositions(before);
+  const demoCommand = ["demo-start", "demo-next", "demo-stop"].includes(command.type);
+  if (demoCommand && !user.isGM) throw new Error("Only the GM controls the guided test.");
+  if (demoCommand && command.type !== "demo-stop" && game.paused) throw new Error("Unpause Foundry before advancing the guided test.");
+  if (before?.guidedDemo?.status === "running" && !["demo-next", "demo-stop", "end"].includes(command.type)) throw new Error("Use Next Step or Stop in the guided test. Manual orders are disabled during the demonstration.");
+  if (!["start", "demo-start", "end", "demo-stop"].includes(command.type)) assertCanvasPositions(before);
   let next;
-  if (command.type === "start") next = await startEncounter(command, user);
+  if (command.type === "demo-start") next = await prepareGuidedDemoScene({ user, current: before, weaponEntries });
+  else if (command.type === "demo-next" || command.type === "demo-stop") {
+    if (!before?.guidedDemo || command.sessionId !== before.id || command.revision !== before.revision) throw new Error("The guided test changed; refresh before advancing.");
+    if (command.type === "demo-next") next = await runDemoStep(before, { user, ownsOperator: ownsCardOperator, isEligibleOperator: operatorEligible, rank: cardOperatorRank });
+    else { next = await dispatchPlaytestCommand(before, { type: "end", sessionId: before.id, revision: before.revision }, { user, ownsOperator: ownsCardOperator, isEligibleOperator: operatorEligible, rank: cardOperatorRank, roll }); next.guidedDemo.status = "stopped"; }
+  }
+  else if (command.type === "start") next = await startEncounter(command, user);
   else next = await dispatchPlaytestCommand(before, command, { user, ownsOperator: ownsCardOperator, isEligibleOperator: operatorEligible, rank: cardOperatorRank, roll });
+  if (command.type === "end" && next.guidedDemo) next.guidedDemo.status = "stopped";
   // One primary GM serializes all commands, including both ships in a shot.
   if (JSON.stringify(game.settings.get(MODULE, SETTING)) !== JSON.stringify(before)) throw new Error("Encounter changed during this command; retry from its latest state.");
   let rollback = async () => {};
-  if (command.type === "start" && next.canvas) rollback = await createCanvasCombat(next);
+  if (["start", "demo-start"].includes(command.type) && next.canvas) rollback = await createCanvasCombat(next);
+  else if (command.type === "demo-next" && next.guidedDemo.last.kind === "movement") rollback = await moveCanvasToken(before, next, next.guidedDemo.last.shipId);
   else if (before?.canvas && ["helm", "canvas-move"].includes(command.type)) rollback = await moveCanvasToken(before, next, command.shipId);
   try { await game.settings.set(MODULE, SETTING, next); }
   catch (error) { await rollback(); throw error; }

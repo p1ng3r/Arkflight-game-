@@ -3,7 +3,7 @@ import { hudSafeBounds, dashboardPlacement, dashboardPosition } from "./card-com
 const MODULE = "arkflight-game", SETTING = "cardCombatWorkspace";
 const ANCHORS = {
   left: "#controls, #scene-controls, #ui-left",
-  right: "#sidebar, #sidebar-content, #sidebar-tabs, #ui-right, #chat, #chat-notifications, #chat-controls, #chat-message, #chat-form, #chat-input, .chat-sidebar, .chat-popout",
+  right: "#sidebar, #sidebar-content, #sidebar-tabs, #ui-right, #chat, #chat-notifications, #chat-controls, #chat-message, #chat-form, #chat-input, .chat-sidebar, .chat-popout, #arkflight-guided-combat",
   top: "#navigation, #scene-navigation, #navigation > *, #scene-navigation > *, #scene-navigation .scene-list", bottom: "#hotbar, #action-bar"
 };
 const ALL = Object.values(ANCHORS).join(", "), OWN = ".arkflight-card-canvas, .cc-motion-layer";

@@ -51,6 +51,23 @@ await game.arkflight.cardCombat.open();
 
 ## Canvas HUD and card hand
 
+### Guided three-round test — you click every step
+
+As GM, open **Configure Settings → Arkflight Game → Open 3-Round Test**, or choose **Guided 3-Round Test · Next Step** in the card HUD's Options. The encounter setup window also has a **Guided 3-Round Combat Test** button. Opening the guide only displays it; it does not start or advance combat.
+
+1. End any running card/native Foundry encounter and unpause Foundry. The test refuses to take over an active encounter.
+2. Click **Next Step** to prepare a separate **[Test] Arkflight — Guided Combat** hex scene with four dedicated **[Demo]** ship Actors/tokens. It views that scene for the executing GM, without activating it for all players. These fixtures are distinct from both campaign vessels and the editable four-ship test fleet.
+3. Read **Next** and click **Next Step** once per action. One click locks one Captain's plan, moves/turns a ship, executes a card, inspects coverage, fires a battery, answers one defender, or finishes a ship turn. The final Captain's lock automatically rolls initiative through the ordinary rules. Coverage inspection and firing are separate steps; split-volley defenders resolve separately. There is no autoplay or timer advancing the sequence.
+4. Inspect the persistent **Last result**, fixed dice and step history. Results include authored card outcomes, actual resource changes, attack-vs-AC, combined defense reduction and final Hull damage. Movement reports hexes, facing and remaining free allowance. **Ship resources, weapons & cards** shows each weapon's range/ready round and a **Ready cards only** filter; **Show firing coverage** allows an additional local inspection.
+5. Continue through all three rounds. Round 1 includes support, a split broadside, reactions and Work the Guns; round 2 includes Drive the Crew and a separate plan for its earned AP; round 3 reuses the Flux 2 Breakaway Vector. Initial/final movement, turning, round reload readiness, fresh initiative and resource/AP/RP changes use the actual combat dispatcher and native token adapter.
+6. Review the final checklist. The engine reaches round 4 planning only to establish that round 3 finished, then the next click ends the demonstration before any round 4 actions or initiative. The scripted sequence currently takes about 108 combat/inspection clicks after setup; labels explain each one.
+
+**Stop Test** ends only the demonstration and leaves its ships/scene for inspection. **Reset** stops a running demonstration and returns the guide to its setup prompt; the next click reuses and resets only the marked demo tokens and fresh encounter copies. It does not delete documents or alter campaign ships. A demo scene with added walls or non-demo tokens refuses reset so that added content is not disturbed. Closing/minimizing the guide does not advance anything; reopen it from settings or Combat Options. The active primary GM must view the bound demo scene to advance. Stop remains available while Foundry is paused.
+
+The test deliberately uses **fixed, labeled demonstration dice** rather than live random rolls, with normal card/attack/defense/cost rules and NPC Trained skill ranks. It is a repeatable teaching/flow test, not an AI opponent or a balance simulation. Native tracker changes, token moves, cards, animations and sound use the existing integration; enable sound in Combat Options as usual. Manual order buttons are disabled during the guide, and the authority rejects manual commands that would desynchronize the script. Stale/double clicks and storage failures leave the pending step recoverable.
+
+Current validation: **788 Node tests pass**. Eight new tests run the full three-round script, check read-only next-step queries/replay, authorization, pause/takeover guards, real adapter sequencing over mocked documents, fixture reuse, duplicate requests, Actor data preservation and movement rollback after a rejected save. Chromium clicks the actual guide through 108 steps with 12 coverage previews and 13 defender responses, then exercises Reset/Stop, pause, filtering and a smaller viewport without JavaScript errors. The Foundry documents/frame are mocked in these checks; live v14/PF2e scene construction, native rendering, speakers and multiplayer remain acceptance work.
+
 ![Canvas HUD with portrait cards](images/card-combat-canvas-hud.webp)
 
 This earlier preview renders the actual HUD over a mock canvas, not a running Foundry world. The current compact controls are described below.

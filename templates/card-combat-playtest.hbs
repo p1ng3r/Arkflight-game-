@@ -1,6 +1,7 @@
 <section class="card-combat-shell">
   <header class="card-command-banner"><div><span class="card-eyebrow">Arkflight · Crew Command</span><h1>Take the helm</h1><p>Real ships. Real canvas. One crew.</p></div><span class="card-playtest-badge">Canvas combat playtest</span></header>
   <section class="card-launch-panel">
+    {{#if isGM}}<button type="button" data-guided-demo>Guided 3-Round Combat Test · Next Step</button>{{/if}}
     {{#if active}}
       <h2>Encounter already running</h2><p>Open the card HUD to continue a canvas encounter. An earlier standalone encounter must end before starting on the canvas.</p>{{#if isGM}}<button type="button" data-card-command="end">End Encounter</button>{{/if}}
     {{else}}
