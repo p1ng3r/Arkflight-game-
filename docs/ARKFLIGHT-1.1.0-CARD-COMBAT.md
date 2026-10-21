@@ -150,3 +150,11 @@ The approved five UI fixes are connected: one compact command strip; Ship/Orders
 Eighteen locally synthesized sound cues cover card controls, plan locking, cannon fire, impacts, movement, incoming reactions, wards, Signatures, readiness and roll degrees. Sound is opt-in with a volume slider, user-gesture unlock, bounded voices and cleanup. It requires no external audio/effects module and never changes mechanics.
 
 Validation: **774 Node tests pass**. Chromium checks use the real templates/styles and pure combat dispatcher with mocked Foundry documents; they cover compact layouts, controls, saved state, reactions, split targeting, motion preferences and real Web Audio scheduling. Live Foundry v14/PF2e multiplayer, native chrome and audible output still require acceptance. This remains a feature-branch playtest, with no module version bump or 1.1.0 release.
+
+### Attached commands and physical cards — 21 October follow-up
+
+The command strip now attaches to the card hand and moves with it, rather than occupying Foundry's scene-navigation area. Larger text sits on a solid dark background. Minimize leaves one strip containing Ship, Orders, AP/RP, Options and Cards restore; its move/pin controls remain available. Options opens within available space without covering its toggle.
+
+Eight bundled CC0 Kenney card-handling samples replace electronic card cues with paper slides, fanning and tabletop taps. Variant selection and small playback-rate variation reduce repetition; hover/scroll/drag stay silent and rapid bursts do not queue. Existing combat sounds remain separate. License/source information ships beside the files.
+
+**780 Node tests pass.** Chromium reproduces expanded scene navigation and checks attached/folded movement, menu clearance, saved state, scaled desktop/laptop layouts and combat flow. All eight Ogg files decode, and card interactions schedule samples without oscillator tones. Live Foundry chrome, audio quality and multiplayer acceptance still require testing.

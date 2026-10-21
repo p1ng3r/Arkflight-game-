@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeWorkspace, workspacePanelBox, CardCombatWorkspace } from "../src/ui/card-combat-workspace.js";
-import { CombatAudio, combatSoundCues, soundRecipe } from "../src/ui/card-combat-audio.js";
+import { normalizeWorkspace, workspacePanelBox, handWorkspaceBox, CardCombatWorkspace } from "../src/ui/card-combat-workspace.js";
+import { CombatAudio, combatSoundCues, soundRecipe, cardSoundSamples } from "../src/ui/card-combat-audio.js";
 
 const bounds = { left: 100, right: 1300, top: 80, bottom: 900, width: 1200, height: 820 };
 test("compact defaults keep systems closed, preserve readable cards and fold after locking", () => {
@@ -24,6 +24,20 @@ test("scaling and restored drag positions fit a newly narrowed viewport", () => 
   const pref = normalizeWorkspace({ hand: { position: { x: 1, y: 1 } } }).hand;
   const box = workspacePanelBox({ ...bounds, right: 700, width: 600 }, pref, 1.4, "hand");
   assert.equal(box.left, 100); assert.equal(box.width, 600); assert.ok(box.top + box.height <= 900);
+});
+test("attached commands and folded hand keep one saved anchor and bottom edge", () => {
+  const pref = normalizeWorkspace().hand;
+  const expanded = handWorkspaceBox(bounds, pref, 1, 50);
+  const folded = handWorkspaceBox(bounds, pref, 1, 50, true);
+  assert.equal(expanded.height, 380); assert.equal(expanded.top, 520);
+  assert.equal(folded.height, 50); assert.equal(folded.top, 850);
+  assert.equal(expanded.left, folded.left); assert.equal(expanded.top + expanded.height, folded.top + folded.height);
+});
+test("attached commands fit below expanded navigation at larger interface scales", () => {
+  const safe = { left: 200, right: 1000, top: 240, bottom: 700, width: 800, height: 460 };
+  const pref = normalizeWorkspace({ hand: { position: { x: 1, y: 0 } } }).hand;
+  const box = handWorkspaceBox(safe, pref, 1.4, 100);
+  assert.equal(box.top, 240); assert.ok(box.height <= 460); assert.equal(box.width, 800);
 });
 test("manual minimize persists while temporary reactions leave the saved choice unchanged", () => {
   const saved = globalThis.game;
@@ -57,12 +71,32 @@ test("panel resize and movement preserve a clamped normalized anchor", () => {
     assert.deepEqual(layout.workspace.hand.position, { x: 0, y: 1 });
   } finally { globalThis.game = saved; }
 });
+test("pointer movement uses the gesture origin rather than accumulating each delta", () => {
+  const previous = globalThis.game; globalThis.game = { settings: { get: () => undefined } };
+  const layout = new CardCombatWorkspace(); layout.bounds = bounds; layout.stripHeight = 50; layout.update = () => {};
+  try {
+    const origin = { left: 100, top: 520, width: 900, height: 380 };
+    layout.adjust("hand", "drag", origin, 0, -10); layout.adjust("hand", "drag", origin, 0, -20);
+    assert.equal(handWorkspaceBox(bounds, layout.workspace.hand, 1, 50).top, 500);
+  } finally { globalThis.game = previous; }
+});
+test("folded commands can move above the expanded hand's minimum and restore safely", () => {
+  const previous = globalThis.game; globalThis.game = { settings: { get: () => undefined } };
+  const layout = new CardCombatWorkspace(); layout.bounds = bounds; layout.stripHeight = 50; layout.update = () => {};
+  try {
+    layout.workspace.hand.minimized = true;
+    layout.adjust("hand", "drag", { left: 100, top: 850, width: 900, height: 50 }, 0, -700);
+    assert.equal(handWorkspaceBox(bounds, layout.workspace.hand, 1, 50, true).top, 150);
+    assert.equal(handWorkspaceBox(bounds, layout.workspace.hand, 1, 50).top, bounds.top);
+    assert.equal(normalizeWorkspace(layout.workspace).hand.foldedPosition.y, layout.workspace.hand.foldedPosition.y);
+  } finally { globalThis.game = previous; }
+});
 
 function audioFixture() {
   const calls = [], parameter = () => ({ value: 0, setValueAtTime: (...args) => calls.push(["set", ...args]), linearRampToValueAtTime: (...args) => calls.push(["linear", ...args]), exponentialRampToValueAtTime: (...args) => calls.push(["ramp", ...args]) });
-  const node = () => ({ connect() {}, disconnect() { calls.push(["disconnect"]); }, start(at) { calls.push(["start", at]); }, stop() { calls.push(["stop"]); }, frequency: parameter(), gain: parameter() });
+  const node = () => ({ connect() {}, disconnect() { calls.push(["disconnect"]); }, start(at) { calls.push(["start", at]); }, stop() { calls.push(["stop"]); }, frequency: parameter(), gain: parameter(), playbackRate: parameter() });
   const context = { state: "suspended", currentTime: 2, sampleRate: 8000, destination: {}, resume: async () => { context.state = "running"; }, createOscillator: node, createGain: node, createBufferSource: node, createBiquadFilter: node, createBuffer: (_, length) => ({ getChannelData: () => new Float32Array(length) }) };
-  return { context, calls, player: new CombatAudio({ contextFactory: () => context }) };
+  return { context, calls, player: new CombatAudio({ contextFactory: () => context, loadSample: async (_, name) => ({ name, duration: .4 }), random: () => .5 }) };
 }
 test("audio waits for user unlock and a zero volume remains silent", async () => {
   const { player, calls } = audioFixture();
@@ -80,15 +114,32 @@ test("mute/cleanup cancels every active source and repeated cleanup is safe", as
 });
 test("rapid cosmetic clicks cannot create an unbounded audio queue", async () => {
   const { player } = audioFixture(); await player.unlock();
-  for (let i = 0; i < 100; i++) player.play("select");
+  for (let i = 0; i < 100; i++) player.play("fire");
   assert.ok(player.voices.size <= 24); player.stop();
 });
 test("every named effect has a short finite envelope and unknown effects are silent", () => {
   for (const kind of ["select", "deselect", "open", "close", "pin", "lock", "fire", "incoming", "reaction", "impact", "ward", "move", "signature", "ready", "success", "failure", "criticalSuccess", "criticalFailure"]) {
-    assert.ok(soundRecipe(kind).length);
+    assert.ok(soundRecipe(kind).length || cardSoundSamples(kind).length);
     for (const part of soundRecipe(kind)) assert.ok(part.duration > 0 && part.duration + part.delay < 1 && part.gain > 0 && part.gain <= .5);
   }
   assert.deepEqual(soundRecipe("unknown"), []);
+});
+test("card interactions use cached physical samples and vary without electronic tones", async () => {
+  const { player, context, calls } = audioFixture(); await player.unlock();
+  assert.equal(player.buffers.size, 8); assert.deepEqual(soundRecipe("select"), []);
+  assert.equal(player.play("select"), true); const first = player.lastSamples.get("select");
+  assert.equal(player.play("open"), false, "rapid bursts drop instead of queueing");
+  context.currentTime += .1; assert.equal(player.play("select"), true);
+  assert.notEqual(player.lastSamples.get("select"), first);
+  assert.equal(calls.filter(c => c[0] === "ramp").length, 0, "no oscillator sweeps for paper");
+  assert.deepEqual(cardSoundSamples("hover"), []); player.stop(); assert.equal(player.voices.size, 0);
+});
+test("unavailable paper samples never block or queue playback after loading", async () => {
+  const { context } = audioFixture(), finishes = [];
+  const player = new CombatAudio({ contextFactory: () => context, loadSample: () => new Promise(resolve => { finishes.push(resolve); }) });
+  const loading = player.unlock(); assert.equal(player.play("open"), false);
+  player.stop(); finishes.forEach(finish => finish(null)); await loading;
+  assert.equal(player.voices.size, 0); assert.equal(player.play("open"), false);
 });
 test("one split volley schedules one firing cue and at most one secondary alert", () => {
   assert.deepEqual(combatSoundCues([{ kind: "fire" }, { kind: "incoming" }, { kind: "resource", resource: "hull", delta: -10 }]), ["fire", "incoming"]);

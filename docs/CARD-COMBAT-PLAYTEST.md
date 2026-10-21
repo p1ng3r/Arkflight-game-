@@ -57,10 +57,10 @@ This earlier preview renders the actual HUD over a mock canvas, not a running Fo
 
 - The movable hand shows about five readable portrait cards at its default size, with horizontal scrolling for the rest. Full-width **General teal, Flux violet and Signature gold** bands identify each type. Click a card to expand its artwork and all four outcomes.
 - Everyone can inspect the shared hand. **All stations / My stations / a named station** filters preserve the selected AP plan. **Actions / Reactions** use separate tabs and pool readouts. **Basic Orders** jumps to the repeatable basic-order counts; these do not occupy card slots.
-- A compact command strip shows the selected vessel, phase, AP/RP and **Ship / Orders / Cards / Options**. **Ship** opens its movable resource/helm dashboard. Selecting an encounter token follows that vessel in the HUD.
+- A solid, readable command strip is attached immediately above the card hand: selected vessel, phase, AP/RP and **Ship / Orders / Cards / Options**. **Move** moves the strip and cards together. **Ship** opens its resource/helm dashboard. Selecting an encounter token follows that vessel in the HUD.
 - **Orders** opens the committed queue. Click an order or drag it onto a participating canvas token to open the same execution preview. For Fire Battery, dropping selects an enemy, or use normal Foundry targeting and **Use Foundry Target**. Choose a skill and battery, then click **Roll / Execute**. Dropping alone never spends or rolls the order.
 - A pending attack opens the defending crew's Reactions tab. Inspect a reaction and choose it, or drag it onto the defending token. Then **Resolve Response**, or pass. The engine continues automatically after a legal response; the GM does not approve player commands.
-- **Minimize** folds the hand into a small **Cards** tab. A successful **Lock Plan** does this automatically by default. An eligible pending reaction temporarily reopens the hand, then restores your minimized preference. Local selections, execution fields, reaction choices and scroll survive shared-state refreshes.
+- **Minimize** hides the cards and leaves just the command strip, including **Cards** to restore them. A successful **Lock Plan** does this automatically by default. An eligible pending reaction temporarily reopens the hand, then restores your minimized preference. Local selections, execution fields, reaction choices and scroll survive shared-state refreshes.
 
 ## Weapon arcs and firing range
 
@@ -145,12 +145,12 @@ These numerical defaults remain provisional while the connected card flow is pla
 
 ## HUD placement and dashboard controls
 
-The command strip and floating panels fit between Foundry's visible left controls and its right sidebar/chat area, including a floating chat input. Navigation and the hotbar also reserve space. Resizing the browser, expanding tools or opening/closing chat recalculates the layout without rebuilding the hand or changing selected orders. **Lock Plan** is a large button beside the AP counter in the hand footer.
+The command strip lives on the hand rather than at the top of Foundry's canvas, avoiding the reported scene-menu collision. Both move together and fit between visible left controls and the sidebar/chat area, including a floating chat input. Expanded navigation and the hotbar reserve space. Resizing or toggling Foundry panels recalculates placement without rebuilding the hand or changing selections. **Lock Plan** remains beside the AP counter in the hand footer.
 
 The hand defaults to 900 × 330 pixels with about five cards visible. **Ship** opens a separate dashboard for resources, helm and weapon coverage; **Orders** opens the queue. Both start hidden. These are client presentation controls and do not spend AP/RP or alter ship data.
 
 - Use either panel's **Move** handle, right/bottom edges or corner resize grip. **Pin** prevents accidental moving/resizing; **Unpin** restores it.
-- **Minimize** hides the hand completely except for its **Cards** restore tab; the Ship panel has its own Minimize control.
+- **Minimize** leaves the attached command strip, with Ship, Orders, AP/RP, Options and the **Cards** restore button. It keeps its bottom edge and can still move or pin. The Ship panel has its own Minimize control.
 - Sizes, positions, pins, minimized state and Ship visibility are saved per client. Viewport changes clamp panels into available space.
 - **Options → UI scale** changes card/control size independently of browser zoom (85–140%). **Auto-minimize after lock** can be disabled there.
 - **Reset panels** restores compact defaults. Focused move/resize handles support arrow keys (10 pixels), Shift+arrow (40), and Home to reset position.
@@ -160,7 +160,9 @@ Automated layout/workspace tests cover safe bounds, compact defaults, scaled pla
 
 ## Motion and sound
 
-Open **Options** for **Motion: Full / Subtle / Off**, independent **Sound on/off** and volume percentage. Motion/sound controls also appear in Configure Settings → Arkflight Game. Preferences belong to each client. Sound starts off and unlocks after a browser interaction. Eighteen short synthesized cues combine noise and tones for cannon blasts, impacts, movement, wards, Signatures, incoming reactions, plan locking, card controls and roll outcomes. No downloaded samples or extra module are needed. OS reduced motion disables visual movement; sound remains separately controlled.
+Open **Options** on the attached strip for **Motion: Full / Subtle / Off**, independent **Sound on/off** and volume percentage. The menu opens into available space without covering its toggle. Motion/sound controls also appear in Configure Settings → Arkflight Game. Preferences belong to each client. Sound starts off and unlocks after a browser interaction. Card selection, inspection, closing, pinning, locking and recovery now use eight bundled **physical card slides, tabletop taps and fanning samples**, with slight variations. Hovering, scrolling and dragging stay silent; rapid bursts drop instead of queuing. Combat retains synthesized cannon blasts, impacts, engines, wards, Signatures, reactions and roll outcomes. No extra module or external audio download is needed during play. OS reduced motion disables visual movement; sound remains separately controlled.
+
+The physical samples are Kenney's Casino Audio 1.1 (CC0). Source, original license and cue mapping are included in [the audio credits](../assets/audio/card-combat/README.md). Missing or unsupported samples stay silent without blocking commands.
 
 Full motion adds card lift and band glints, a card-to-order transition, separate AP/RP crystal feedback, the brass plan latch, panel opening/minimizing feedback, a brief active-vessel accent, roll/outcome highlights, reaction-hand entrance, round-based Flux recovery and spent Signature styling. Confirmed cannon fire draws flashes/trails to assigned tokens; translated ships get a short stern flare. Ward reactions get green/gold Lifeveil accents. Signature effects distinguish the Captain's compass burst from Last Bastion's veil ring. Resource deltas float over tokens and bars ease to new values. A brief result message includes the unique authored outcome; the last result remains in Orders after the message disappears, including with motion off.
 
@@ -170,7 +172,7 @@ Playback follows confirmed shared encounter revisions on each client. Duplicate 
 
 ## Acceptance checks
 
-- Move, resize, pin and minimize both panels; restore Cards and reopen the HUD. Confirm saved positions/sizes, no overlap with floating chat, readable Lock Plan and usable UI scaling on the smaller screen. Confirm a rejected lock keeps the hand open, a successful lock folds it, and a pending reaction temporarily reopens it. Disable automatic minimizing and repeat.
+- Expand Foundry's scene menu. Move the hand and confirm the attached strip follows, then minimize and move the remaining bar; Cards must restore at the new anchor. Resize, pin and reopen both panels. Check floating chat clearance, readable Lock Plan and UI scaling. Confirm a rejected lock keeps the hand open, a successful lock folds it, and a pending reaction temporarily reopens it. Disable automatic minimizing and repeat.
 - Before the first roll, enable sound in Options, adjust volume, select a card, lock a plan and fire. Confirm distinct sounds, silence at zero/mute, and independent motion settings. Check actual speaker output on both clients.
 - Compare Full/Subtle/Off and sound on each client. Enable OS reduced motion; confirm card lift, smooth HUD scrolling/panning and canvas effects stop while controls and static outcomes remain usable. Toggle Off during a volley, then change scenes; effects must disappear without changing combat state.
 - On both clients, lock a plan, resolve a card and its unique outcome, fire a split volley, react, and watch a Flux return at its printed round. Confirm one volley per command despite duplicate notifications, readable resource deltas, no blocked controls and no old effects after a reload.
@@ -192,11 +194,11 @@ The player request adapter uses Foundry's server-provided creation user ID and m
 
 ## Validation recorded
 
-The compact workspace/audio build passes **774 Node tests**, including 15 workspace/audio checks and a regression for binding sound controls before the first roll. Existing layout, presentation, card, fleet, authority, movement, rollback, targeting, coverage and deployment tests remain passing. Audio checks cover user-gesture gating, zero volume, layered recipes, voice limits, unavailable audio and mute cleanup; they do not establish speaker quality.
+The attached workspace/audio build passes **780 Node tests**, including geometry checks for the attached/minimized strip, sample-only paper playback/variation and unavailable or still-loading files. Existing layout, presentation, rules, authority, movement, rollback, targeting, coverage and deployment tests remain passing. Audio checks cover user-gesture gating, zero volume, bounded voices and cleanup; they do not establish speaker quality.
 
-The real launch/HUD templates, full module styles and pure combat dispatcher were exercised in Chromium with mocked Foundry applications/documents and a simulated scene. The compact harness passes five-card visibility, move/resize/pin/minimize/restore, saved state, UI scaling, preview/selection preservation, successful-lock folding, temporary reaction reopening, split-broadside targeting and sequential defender responses. Screenshots were inspected at 1600×1000 and 1366×768, including expanded tools and a floating chat input, with no horizontal page overflow or JavaScript errors.
+The real templates/styles and pure combat dispatcher were exercised in Chromium with mocked Foundry applications/documents and a simulated scene. Checks cover attached placement below an expanded scene list, a solid background, movement in expanded/folded states, menu clearance, five-card visibility, resizing/pinning, saved state, scaling, draft preservation, lock folding, reaction reopening and split targeting. Screenshots were inspected at 1600×1000 and 1366×768 with expanded tools/floating chat, no page overflow and no JavaScript errors.
 
-Presentation checks also cover confirmed effects, duplicate suppression, Full/Subtle/Off, OS reduced motion and teardown. The compact browser run schedules 72 real Web Audio sources while exercising controls and combat. This verifies audio scheduling, not audible output or sound quality.
+Presentation checks cover confirmed effects, duplicate suppression, Full/Subtle/Off, OS reduced motion and teardown. Chromium decodes all eight bundled Ogg files and schedules sample playback without oscillators for card interactions. Combat sources still schedule separately. These checks verify decoding/playback scheduling, not audible output or sound quality.
 
 Actual Foundry v14/PF2e token movement, token HUD chrome, native canvas placement, audio output, ownership and multiplayer acceptance remain pending. The mock/browser checks do not establish those live-world results. Use one GM and one player client for acceptance before campaign play.
 

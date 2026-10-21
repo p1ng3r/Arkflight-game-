@@ -1,19 +1,21 @@
-/* Compact default view: one command strip and a five-card floating hand. */
+/* The command strip belongs to the hand, including its minimized state. */
 .arkflight-card-canvas { --cc-ui-scale:1; }
-.arkflight-card-canvas .cc-command-strip { width:fit-content; max-width:var(--cc-available-width); right:auto; gap:6px; padding:5px 7px; min-height:40px; border-radius:7px; z-index:8; }
-.cc-command-strip [data-ship-picker] { flex:1 1 130px; max-width:190px; min-width:90px; width:auto; font-size:calc(12px * var(--cc-ui-scale)); }
-.cc-command-strip .cc-round-status { font:600 calc(12px * var(--cc-ui-scale))/1.2 sans-serif; margin:0; color:#e7d4ac; max-width:210px; }
-.cc-command-points { font-size:calc(12px * var(--cc-ui-scale)); color:#a5ded2; white-space:nowrap; }
-.arkflight-card-canvas .cc-command-strip button,.cc-command-strip summary { min-height:calc(30px * var(--cc-ui-scale)); padding:4px 7px; font-size:calc(12px * var(--cc-ui-scale)); white-space:nowrap; }
+.arkflight-card-canvas .cc-hand-workspace { position:absolute; display:flex; flex-direction:column; pointer-events:none; min-width:0; z-index:8; }
+.arkflight-card-canvas .cc-command-strip { position:relative; inset:auto; width:100%; max-width:100%; flex:none; gap:6px; padding:6px 8px; min-height:44px; border-radius:7px 7px 0 0; z-index:8; background:#102735; color:#f4ecdf; box-shadow:0 4px 16px #0008; }
+.cc-hand-workspace.is-minimized .cc-command-strip { border-radius:7px; }
+.cc-command-strip [data-ship-picker] { flex:1 1 130px; max-width:190px; min-width:90px; width:auto; font-size:calc(14px * var(--cc-ui-scale)); }
+.cc-command-strip .cc-round-status { font:600 calc(14px * var(--cc-ui-scale))/1.2 sans-serif; margin:0; color:#f0dbb2; max-width:210px; }
+.cc-command-points { font-size:calc(14px * var(--cc-ui-scale)); color:#b5ebde; white-space:nowrap; }
+.arkflight-card-canvas .cc-command-strip button,.cc-command-strip summary { min-height:calc(32px * var(--cc-ui-scale)); padding:4px 7px; font-size:calc(14px * var(--cc-ui-scale)); white-space:nowrap; }
 .cc-hud-options { position:relative; flex:none; }
 .cc-hud-options>summary { cursor:pointer; color:#d9c398; border:1px solid #456272; border-radius:4px; }
-.cc-options-body { position:absolute; right:0; top:calc(100% + 8px); width:280px; max-width:var(--cc-available-width); max-height:65vh; overflow:auto; background:#102735; border:1px solid #a48a59; box-shadow:0 8px 24px #0009; border-radius:7px; padding:12px; display:grid; gap:10px; z-index:20; }
+.cc-options-body { position:fixed; right:auto; bottom:auto; width:280px; max-width:var(--cc-available-width); max-height:65vh; overflow:auto; background:#102735; border:1px solid #a48a59; box-shadow:0 8px 24px #0009; border-radius:7px; padding:12px; display:grid; gap:10px; z-index:20; }
 .cc-options-body>label { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; }
 .cc-options-body input[type=range] { flex:1 1 120px; min-width:0; width:100%; }
 .cc-options-body select { width:auto; }
 .cc-options-body output { width:38px; color:#e6c68e; }
 .cc-options-body input[type=checkbox] { width:16px; height:16px; flex:none; }
-.arkflight-card-canvas .cc-hand-dock { right:auto; bottom:auto; display:flex; flex-direction:column; min-width:0; min-height:0; z-index:5; container-type:inline-size; container-name:cc-hand; }
+.arkflight-card-canvas .cc-hand-dock { position:relative; inset:auto; width:100%; flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; z-index:5; border-radius:0 0 9px 9px; border-top:0; container-type:inline-size; container-name:cc-hand; }
 .arkflight-card-canvas .cc-hand-dock>header { flex:none; flex-wrap:wrap; padding:5px 8px; gap:5px; }
 .cc-hand-dock>header [data-hand-title] { display:none; }
 .arkflight-card-canvas .cc-hand-dock>header button,.cc-hand-dock>header select { font-size:calc(12px * var(--cc-ui-scale)); min-height:calc(30px * var(--cc-ui-scale)); padding:3px 7px; }
@@ -71,7 +73,7 @@
 .cc-outcome-toast { position:fixed; padding:10px 13px; border:1px solid #b69c67; border-radius:7px; background:#112b39f0; color:#d6e7e8; box-shadow:0 5px 20px #0008; pointer-events:none; z-index:90; font:13px/1.35 sans-serif; }
 .cc-outcome-toast strong { display:block; color:#ecd09b; margin-bottom:4px; }
 
-.is-pinned>.cc-resize-edge { display:none; }
+.is-pinned .cc-resize-edge { display:none; }
 
 .cc-card-preview.is-card .cc-preview-art { float:none; width:100%; height:140px; margin:0 0 10px; object-fit:contain; background:radial-gradient(ellipse,#405d6c66,transparent 75%); }
 .cc-card-preview.is-basic .cc-preview-art { width:48px; height:48px; }

@@ -175,8 +175,8 @@ function showOutcomeToast(state, event, hud) {
   const title = document.createElement("strong"), text = document.createElement("span");
   title.textContent = `${state.ships[event.shipId]?.cardPlay.name ?? "Ship"} · ${definition?.name ?? "Attack"} · ${degreeName(result.degree) ?? "Resolved"}`;
   text.textContent = definition?.outcomes?.[["criticalFailure", "failure", "success", "criticalSuccess"][result.degree + 1]] ?? (event.attack ? `${event.attack.damage ?? 0} Hull damage after defenses.` : `Total ${result.total}`);
-  toast.append(title, text); toast.style.left = `${box.left}px`; toast.style.top = `${box.bottom + 8}px`; toast.style.maxWidth = `${Math.min(420, parseFloat(getComputedStyle(hud).getPropertyValue("--cc-available-width")) || 420)}px`;
-  document.body.append(toast); animate(toast, [{ opacity: .3 }, { opacity: 1 }], 180);
+  toast.append(title, text); toast.style.left = `${box.left}px`; toast.style.maxWidth = `${Math.min(420, parseFloat(getComputedStyle(hud).getPropertyValue("--cc-available-width")) || 420)}px`;
+  document.body.append(toast); toast.style.top = `${Math.max(12, box.top - toast.getBoundingClientRect().height - 8)}px`; animate(toast, [{ opacity: .3 }, { opacity: 1 }], 180);
   const timer = setTimeout(() => cancel(), 4000);
   const cancel = () => { clearTimeout(timer); toast.remove(); live.delete(cancel); if (toastCancel === cancel) toastCancel = null; };
   toastCancel = cancel; live.add(cancel);

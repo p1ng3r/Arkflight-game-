@@ -4,7 +4,7 @@ const MODULE = "arkflight-game", SETTING = "cardCombatWorkspace";
 const ANCHORS = {
   left: "#controls, #scene-controls, #ui-left",
   right: "#sidebar, #sidebar-content, #sidebar-tabs, #ui-right, #chat, #chat-notifications, #chat-controls, #chat-message, #chat-form, #chat-input, .chat-sidebar, .chat-popout",
-  top: "#navigation, #scene-navigation", bottom: "#hotbar, #action-bar"
+  top: "#navigation, #scene-navigation, #navigation > *, #scene-navigation > *, #scene-navigation .scene-list", bottom: "#hotbar, #action-bar"
 };
 const ALL = Object.values(ANCHORS).join(", "), OWN = ".arkflight-card-canvas, .cc-motion-layer";
 const clamp = (value, min, max) => Math.min(Math.max(value, min), Math.max(min, max));
@@ -12,12 +12,19 @@ const number = (value, fallback, min, max) => Number.isFinite(value) ? clamp(val
 const position = p => p && Number.isFinite(p.x) && Number.isFinite(p.y) ? { x: clamp(p.x, 0, 1), y: clamp(p.y, 0, 1) } : null;
 export function normalizeWorkspace(value = {}) {
   const panel = (p, width, height) => ({ position: position(p?.position), pinned: p?.pinned === true, width: number(p?.width, width, 300, 1300), height: number(p?.height, height, 220, 650) });
-  return { version: 1, scale: number(value?.scale, 100, 85, 140), autoMinimize: value?.autoMinimize !== false, shipVisible: value?.shipVisible === true, hand: { ...panel(value?.hand, 900, 330), minimized: value?.hand?.minimized === true }, ship: panel(value?.ship, 650, 220) };
+  return { version: 1, scale: number(value?.scale, 100, 85, 140), autoMinimize: value?.autoMinimize !== false, shipVisible: value?.shipVisible === true, hand: { ...panel(value?.hand, 900, 330), minimized: value?.hand?.minimized === true, foldedPosition: position(value?.hand?.foldedPosition) }, ship: panel(value?.ship, 650, 220) };
 }
 export function workspacePanelBox(bounds, preference, scale, kind) {
   const width = Math.min(bounds.width, preference.width * scale), height = Math.min(bounds.height, preference.height * scale);
   const saved = preference.position ?? (kind === "hand" ? { x: 0, y: 1 } : { x: 0, y: 0 });
   return dashboardPlacement(bounds, { width, height }, saved);
+}
+// The saved card height excludes the attached command strip. Folding keeps the
+// bottom edge; a separately dragged folded bar remembers its own safe position.
+export function handWorkspaceBox(bounds, preference, scale, stripHeight, minimized = false) {
+  const expanded = workspacePanelBox(bounds, { ...preference, height: preference.height + stripHeight / scale }, scale, "hand");
+  if (minimized && preference.foldedPosition) return dashboardPlacement(bounds, { width: expanded.width, height: stripHeight }, preference.foldedPosition);
+  return minimized ? { ...expanded, top: expanded.top + expanded.height - stripHeight, height: stripHeight } : expanded;
 }
 function visible(node) {
   if (!node?.isConnected || node.closest?.(OWN) || node.checkVisibility?.({ checkOpacity: true, checkVisibilityCSS: true }) === false) return null;
@@ -37,7 +44,7 @@ export class CardCombatWorkspace {
     this.unbind(); this.root = root; this.abort = new AbortController();
     const reactionKey = context.response?.canRespond && context.state?.pendingAttack?.targetId === context.selectedShipId ? `${context.state.id}:${context.state.revision}:${context.selectedShipId}` : null;
     if (reactionKey !== this.reactionKey) { this.reactionKey = reactionKey; this.reactionOpen = Boolean(reactionKey); }
-    this.hand = root.querySelector(".cc-hand-dock"); this.ship = root.querySelector(".cc-ship-dashboard");
+    this.hand = root.querySelector(".cc-hand-workspace"); this.handBody = root.querySelector(".cc-hand-dock"); this.ship = root.querySelector(".cc-ship-dashboard");
     this.on("[data-hand-toggle]", "click", () => this.setHandMinimized(!this.workspace.hand.minimized));
     this.on("[data-hand-restore]", "click", () => this.setHandMinimized(false));
     this.on("[data-hand-minimize]", "click", () => this.setHandMinimized(true));
@@ -60,7 +67,7 @@ export class CardCombatWorkspace {
       this.on(selector, "keydown", event => this.keyMove(event, kind, mode));
     }
     const options = root.querySelector(".cc-hud-options");
-    if (options) { options.open = this.optionsOpen; options.addEventListener("toggle", () => { this.optionsOpen = options.open; }, { signal: this.abort.signal }); }
+    if (options) { options.open = this.optionsOpen; options.addEventListener("toggle", () => { this.optionsOpen = options.open; this.schedule(); }, { signal: this.abort.signal }); }
     const scale = root.querySelector("[data-hud-scale]"); if (scale) scale.value = this.workspace.scale;
     const auto = root.querySelector("[data-auto-minimize]"); if (auto) auto.checked = this.workspace.autoMinimize;
     window.addEventListener("resize", () => this.schedule(), { signal: this.abort.signal });
@@ -77,8 +84,8 @@ export class CardCombatWorkspace {
     const scaleControl = this.root.querySelector("[data-hud-scale]"); if (scaleControl) scaleControl.value = this.workspace.scale;
     const autoControl = this.root.querySelector("[data-auto-minimize]"); if (autoControl) autoControl.checked = this.workspace.autoMinimize;
     const minimized = this.workspace.hand.minimized && !this.reactionOpen;
-    if (this.hand) { this.hand.hidden = minimized; this.hand.classList.remove("is-collapsed"); }
-    const tab = this.root.querySelector(".cc-hand-tab"); if (tab) tab.hidden = !minimized;
+    if (this.handBody) { this.handBody.hidden = minimized; this.handBody.classList.remove("is-collapsed"); }
+    this.hand?.classList.toggle("is-minimized", minimized);
     if (this.ship) this.ship.hidden = !this.workspace.shipVisible;
     const orders = this.root.querySelector(".cc-orders-panel"); if (orders) orders.hidden = !this.ordersOpen;
     for (const key of ["hand", "ship"]) {
@@ -94,6 +101,7 @@ export class CardCombatWorkspace {
   setHandMinimized(minimized, { automatic = false } = {}) {
     if (automatic && !this.workspace.autoMinimize) return;
     this.cue(minimized ? "close" : "open", this.hand);
+    if (minimized && !this.workspace.hand.minimized) this.workspace.hand.foldedPosition = null;
     if (minimized) this.reactionOpen = false;
     this.workspace.hand.minimized = minimized; this.apply(); this.update(); this.save();
   }
@@ -111,17 +119,26 @@ export class CardCombatWorkspace {
     const px = (key, value) => root.style.setProperty(key, `${Math.round(value)}px`);
     root.style.setProperty("--cc-ui-scale", String(scale));
     px("--cc-safe-left", safe.left); px("--cc-safe-right", width - safe.right); px("--cc-safe-top", safe.top); px("--cc-safe-bottom", height - safe.bottom); px("--cc-available-width", safe.width);
-    const ribbon = root.querySelector(".cc-round-ribbon")?.getBoundingClientRect();
-    const top = Math.min((ribbon?.bottom ?? safe.top + 44) + 10, safe.bottom - 1);
-    this.bounds = { ...safe, top, height: safe.bottom - top };
-    const box = workspacePanelBox(this.bounds, this.workspace.hand, scale, "hand");
-    this.place(this.hand, box); this.place(this.ship, workspacePanelBox(this.bounds, this.workspace.ship, scale, "ship"));
-    const tab = root.querySelector(".cc-hand-tab");
-    if (tab) { tab.style.left = `${Math.round(box.left)}px`; tab.style.top = `${Math.round(box.top + box.height - 42 * scale)}px`; tab.style.maxWidth = `${safe.width}px`; }
-    const floor = this.hand && !this.hand.hidden ? box.top - 8 : safe.bottom;
+    this.bounds = safe;
+    if (this.hand) this.hand.style.width = `${Math.round(Math.min(safe.width, this.workspace.hand.width * scale))}px`;
+    this.stripHeight = root.querySelector(".cc-command-strip")?.getBoundingClientRect().height ?? 46 * scale;
+    const minimized = this.workspace.hand.minimized && !this.reactionOpen;
+    const box = handWorkspaceBox(safe, this.workspace.hand, scale, this.stripHeight, minimized);
+    this.place(this.hand, box); this.place(this.ship, workspacePanelBox(safe, this.workspace.ship, scale, "ship"));
+    const top = safe.top, floor = box.top - 8;
     px("--cc-detail-top", top); px("--cc-detail-height", Math.max(120, Math.min(520 * scale, floor - top)));
     px("--cc-response-top", top); px("--cc-response-height", Math.max(120, Math.min(300 * scale, floor - top)));
     px("--cc-orders-top", top);
+    const options = root.querySelector(".cc-options-body");
+    if (options && this.optionsOpen) {
+      const summary = root.querySelector(".cc-hud-options>summary").getBoundingClientRect();
+      const above = Math.max(0, box.top - safe.top - 8), below = Math.max(0, safe.bottom - box.top - this.stripHeight - 8);
+      const openAbove = above >= 180 || above >= below;
+      options.style.maxHeight = `${Math.max(1, Math.min(openAbove ? above : below, 420 * scale))}px`;
+      const menu = options.getBoundingClientRect();
+      options.style.left = `${Math.round(clamp(summary.left, safe.left, safe.right - menu.width))}px`;
+      options.style.top = `${Math.round(openAbove ? box.top - menu.height - 8 : box.top + this.stripHeight + 8)}px`;
+    }
     const label = root.querySelector("[data-scale-label]"); if (label) label.textContent = `${this.workspace.scale}%`;
     root.dataset.ccLayoutReady = "true";
     const observed = new Set([...nodes, root.querySelector(".cc-round-ribbon")].filter(Boolean));
@@ -147,15 +164,23 @@ export class CardCombatWorkspace {
   adjust(kind, mode, box, dx, dy) {
     const pref = this.workspace[kind], scale = this.workspace.scale / 100;
     if (mode === "resize") {
-      pref.width = clamp((box.width + dx) / scale, 300, 1300); pref.height = clamp((box.height + dy) / scale, 220, 650);
-      pref.position = dashboardPosition(this.bounds, { left: box.left, top: box.top, width: Math.min(pref.width * scale, this.bounds.width), height: Math.min(pref.height * scale, this.bounds.height) });
-    } else pref.position = dashboardPosition(this.bounds, { left: box.left + dx, top: box.top + dy, width: box.width, height: box.height });
+      const strip = kind === "hand" ? this.stripHeight ?? 0 : 0;
+      pref.width = clamp((box.width + dx) / scale, 300, 1300); pref.height = clamp((box.height + dy - strip) / scale, 220, 650);
+      pref.position = dashboardPosition(this.bounds, { left: box.left, top: box.top, width: Math.min(pref.width * scale, this.bounds.width), height: Math.min(pref.height * scale + strip, this.bounds.height) });
+    } else {
+      const expandedHeight = kind === "hand" ? Math.min(this.bounds.height, pref.height * scale + (this.stripHeight ?? 0)) : box.height;
+      const moved = { left: box.left + dx, top: box.top + dy, width: box.width, height: box.height };
+      if (kind === "hand" && this.workspace.hand.minimized && !this.reactionOpen) pref.foldedPosition = dashboardPosition(this.bounds, moved);
+      // Always derive deltas from the gesture's starting box, never the last
+      // pointer update. Restoring a high folded bar clamps the larger hand.
+      pref.position = dashboardPosition(this.bounds, { ...moved, top: moved.top + box.height - expandedHeight, height: expandedHeight });
+    }
     this.update();
   }
   finish(event) { if (this.operation && this.operation.id === event.pointerId) { this.operation = null; this.save(); } }
   keyMove(event, kind, mode) {
     if (this.workspace[kind].pinned) return;
-    if (event.key === "Home") { event.preventDefault(); this.workspace[kind].position = null; this.update(); this.save(); return; }
+    if (event.key === "Home") { event.preventDefault(); this.workspace[kind].position = null; if (kind === "hand") this.workspace.hand.foldedPosition = null; this.update(); this.save(); return; }
     const direction = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
     if (!direction) return;
     event.preventDefault(); event.stopPropagation();
@@ -168,6 +193,6 @@ export class CardCombatWorkspace {
     this.abort?.abort(); this.resizeObserver?.disconnect(); this.mutationObserver?.disconnect();
     if (this.frame) cancelAnimationFrame(this.frame); this.frame = null; this.observed.clear();
   }
-  destroy() { this.unbind(); this.root = this.hand = this.ship = null; }
+  destroy() { this.unbind(); this.root = this.hand = this.handBody = this.ship = null; }
 }
 globalThis.Hooks?.once("init", () => game.settings.register(MODULE, SETTING, { name: "Compact combat workspace", scope: "client", config: false, type: Object, default: normalizeWorkspace() }));
