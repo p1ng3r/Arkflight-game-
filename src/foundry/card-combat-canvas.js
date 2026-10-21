@@ -93,11 +93,17 @@ async function setPose(token, pose, rollback = false) {
   if (Math.hypot(token.x - pose.x, token.y - pose.y) < .01 && difference(angle(token.rotation), pose.rotation) < .01) return true;
   moving.add(token.id);
   try {
-    if (Math.hypot(token.x - pose.x, token.y - pose.y) < .01) {
-      await token.update({ rotation: pose.rotation }, { arkflightCardSync: true, animate: false });
-      return true;
-    }
-    return await token.move({ ...pose, snapped: true }, { method: "hud", autoRotate: false, showRuler: false, pan: false, arkflightCardSync: true, ...(rollback ? { constrainOptions: { ignoreWalls: true, ignoreCost: true } } : {}) });
+    const rotationOnly = Math.hypot(token.x - pose.x, token.y - pose.y) < .01;
+    // v14 update() commits position through native movement, whereas move()
+    // waits for the entire movement lifecycle. A pending completion callback
+    // must not leave the real token ahead of the saved combat revision.
+    await token.update(rotationOnly ? { rotation: pose.rotation } : pose, {
+      method: "hud", autoRotate: false, showRuler: false, pan: false,
+      arkflightCardSync: true,
+      ...(rotationOnly || rollback ? { animate: false } : {}),
+      ...(rollback ? { constrainOptions: { ignoreWalls: true, ignoreCost: true } } : {})
+    });
+    return Math.hypot(token.x - pose.x, token.y - pose.y) <= 1 && difference(angle(token.rotation), pose.rotation) <= .1;
   } finally { moving.delete(token.id); }
 }
 export async function moveCanvasToken(before, next, shipId) {

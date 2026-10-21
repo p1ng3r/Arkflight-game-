@@ -98,6 +98,12 @@ New demo tokens disable PF2e actor-size linking and automatic scaling. Reset als
 
 **795 Node tests pass**, including five new regressions for the Step 5 failure, repeated drift throughout the full three-round run, fixture identity/paused/stale guards, blocked corrections and resized-fixture reset. Browser validation completes the same 108-step sequence with token camera follow. The original trigger of the reported drift and interactions with the user's installed modules remain unverified in a live Foundry world; this fix provides automatic fixture recovery within the guide.
 
+### Movement commits before completion callbacks
+
+The subsequent live trace showed Wayfarer at actual hex **15,3** while the encounter still held saved hex **15,4**, **Step 4 / Revision 4**. Fixture recovery alone did not solve this: the position had changed without the movement step committing. The adapter had awaited `TokenDocument.move()`, whose result waits for the full movement lifecycle. It now uses the documented native `TokenDocument.update()` position workflow and verifies the destination/facing before saving the combat revision. Native animation remains available, but its completion is not the combat persistence barrier. Wall/occupancy/ownership checks and failed-save rollback remain enforced.
+
+**796 Node tests pass.** A new regression holds native movement completion pending after its document reaches the destination. It failed on the previous adapter; the revised adapter commits Step 5, and the following support step reaches Step 6 without any corrective token update or extra movement/AP charge. Existing full three-round, native-hook, blocked-update and persistence-rollback tests pass. This reproduces the reported state mismatch with mocked lifecycle behavior; confirmation against the user's live Foundry/PF2e module combination remains necessary.
+
 ## Weapon arcs and firing range
 
 ![Weapon coverage on scene hexes](images/card-combat-canvas-arcs.webp)

@@ -17,6 +17,10 @@ function world() {
     const doc = { x: 0, y: 0, rotation: 0, flags: {}, ...structuredClone(source), id: source._id ?? `token${++serial}`, parent: scene,
       getCenterPoint(position = {}) { return { x: (position.x ?? this.x) + 50 * (this.width ?? 1), y: (position.y ?? this.y) + 50 * (this.height ?? 1) }; }, toObject() { const { x,y,rotation,actorId,actorLink,flags,width=1,height=1 } = this; return { x,y,rotation,actorId,actorLink,flags,width,height }; },
       async update(change, options = {}) {
+        if ("x" in change || "y" in change) {
+          counts.move++;
+          if ((callbacks.get("preMoveToken") ?? []).some(fn => fn(this, { destination: change }, options) === false)) return this;
+        }
         if ((callbacks.get("preUpdateToken") ?? []).some(fn => fn(this, change, options) === false)) return this;
         for (const [key, value] of Object.entries(change)) {
           const parts = key.split("."), leaf = parts.pop(); let target = this;
@@ -147,7 +151,7 @@ test("fixture synchronization refuses campaign tokens, stale requests and paused
 test("blocked fixture correction keeps the pending step and reports an actionable error", async () => {
   const { api } = world(); await api.request({ type: "demo-start" });
   const before = api.state(), token = canvas.scene.tokens.get(Object.values(before.ships)[0].cardPlay.tokenId);
-  token.x += 17; token.move = async () => false;
+  token.x += 17; token.update = async () => token;
   await assert.rejects(() => next(api), /prevented guided token synchronization/);
   assert.deepEqual(api.state(), before);
 });
@@ -167,4 +171,27 @@ test("reset fixes resized fixtures and disables actor-size linking on demo token
   }
   const { assertCanvasPositions } = await import("../src/foundry/card-combat-canvas.js");
   assertCanvasPositions(state); assert.deepEqual(game.actors.contents.map(a => a.flags), actors);
+});
+
+test("a committed native move advances Step 5 without waiting on movement-completion callbacks", async () => {
+  const { api, counts } = world(); await api.request({ type: "demo-start" });
+  while (api.state().phase === "planning") await next(api);
+  const before = api.state(), id = before.turnOrder[0], token = canvas.scene.tokens.get(before.ships[id].cardPlay.tokenId);
+  const update = token.update.bind(token);
+  // Foundry can commit the document position while its movement lifecycle is
+  // still pending. This reproduces saved Step 4 / actual token one hex ahead.
+  token.move = async pose => { await update(pose, { arkflightCardSync: true }); return new Promise(() => {}); };
+  let timeout;
+  try {
+    await Promise.race([next(api), new Promise((_, reject) => { timeout = setTimeout(() => reject(Error("Native move reached its destination but Step 5 never committed")), 1000); })]);
+  } finally { clearTimeout(timeout); }
+  const moved = api.state(), pose = { x: token.x, y: token.y, rotation: token.rotation };
+  assert.equal(moved.guidedDemo.step, 5); assert.equal(moved.revision, before.revision + 1);
+  assert.equal(moved.ships[id].cardPlay.motion.used, 1);
+  const moves = counts.move;
+  await next(api);
+  assert.equal(api.state().guidedDemo.step, 6);
+  assert.deepEqual({ x: token.x, y: token.y, rotation: token.rotation }, pose, "the following support step never resets the committed movement");
+  assert.equal(counts.move, moves, "the following step does not issue a corrective token update");
+  assert.deepEqual(getOrderQueue(api.state().ships[id]).ap, getOrderQueue(moved.ships[id]).ap);
 });

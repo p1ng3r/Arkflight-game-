@@ -30,7 +30,16 @@ function world(type = 4) {
   const g = grid(type);
   function token(actor, id, q, r, rotation = 120) {
     const p = g.getCenterPoint({q,r});
-    const t = { id, name: id, actorId: actor.id, actor, actorLink: true, parent: scene, x: p.x - 60, y: p.y - 60, rotation, width: 1, height: 1, getCenterPoint(data = {}) { return { x: (data.x ?? this.x) + 60, y: (data.y ?? this.y) + 60 }; }, object: { checkCollision: () => t.blocked ?? false }, async update(patch) { Object.assign(this, patch); }, async move(pose, options) {
+    const t = { id, name: id, actorId: actor.id, actor, actorLink: true, parent: scene, x: p.x - 60, y: p.y - 60, rotation, width: 1, height: 1, getCenterPoint(data = {}) { return { x: (data.x ?? this.x) + 60, y: (data.y ?? this.y) + 60 }; }, object: { checkCollision: () => t.blocked ?? false }, async update(patch, options = {}) {
+      if ("x" in patch || "y" in patch) {
+        const denied = (hooks.get("preMoveToken") ?? []).some(fn => fn(t, { destination: patch }, options) === false);
+        assert.equal(denied, false, "authority update passes native movement routing");
+        moves.push({ id, pose: patch, options });
+        if (this.failNext) { this.failNext = false; this.x += 15; return this; }
+      }
+      if ((hooks.get("preUpdateToken") ?? []).some(fn => fn(t, patch, options) === false)) return this;
+      Object.assign(this, patch); return this;
+    }, async move(pose, options) {
       assert.equal(options.method, "hud"); assert.equal(options.autoRotate, false);
       const denied = (hooks.get("preMoveToken") ?? []).some(fn => fn(t, { destination: pose }, options) === false);
       assert.equal(denied, false, "authority move bypasses only the local routing hook");
