@@ -1,41 +1,37 @@
 # Arkflight 1.1.0 implementation plan
 
-Updated 24 October 2026. This is a staged rebuild, with the existing prototype retained until its replacement passes acceptance. The accepted rules are in `ARKFLIGHT-1.1.0-DECK-COMBAT-FOUNDATION.md`; the earlier equipped AP/RP hand is superseded for the future design. No merge, version bump or release is implied by a completed increment.
+Updated 26 October 2026. Accepted rules: `ARKFLIGHT-1.1.0-DECK-COMBAT-FOUNDATION.md`. The earlier equipped AP/RP hand is superseded for the new design. The previous prototype remains separate. No completed increment implies a merge, version bump, campaign migration or release.
 
-## 1. Complication foundation — programmed for lab testing
+## 1. Complication foundation — implemented for testing
 
-- 24 original themed cards; Impact plus the five station entries gives 144 outcomes.
-- Critical-failure-only draws; no normal-failure exception or double negative kicker.
-- Deterministic deck, one draw per source/ship, serializable receipts, resource tradeoffs, context fallbacks, expiry and typed effect records.
-- Foundry GM Complication Lab, separate client-local sample ships, six-entry inspection, test degrees, choices, paid-opportunity claims and simulated effect consumption.
-- Local automated and mocked-browser checks establish the catalog/engine/Lab behavior, not native Foundry acceptance or balanced live combat.
+Twenty-four original cards each have Impact plus five station entries: 144 contextual outcomes. Deterministic deck handling, final-critical-failure gate, per-source/ship idempotency, choices, resource costs, expiry and typed effects are implemented. The independent GM Complication Lab can inspect all entries. The alpha now consumes modifiers/restrictions, reload scheduling and paid opportunities in its own action/movement controller. Explicit ship-held system critical failures use matching entries; travel/event draws are not implied.
 
-The Lab is an integration seam for the new controller, not a retrofit of the old combat economy. Restrictions, reload scheduling and paid-opportunity permissions must be enforced by the appropriate new action/movement/damage consumers before actual encounters use them.
+## 2. Hull and maneuver contracts — alpha implemented
 
-## 2. Hull and maneuver contracts
+Ten opt-in hulls have distinct handling, capacity, defenses and one-to-three-hex footprints. Complete forward/60-degree-turn routes have exact previews and costs. Hold remains legal. Translation advances one hex per shared step; printed turns do not add a beat. Collision contests compare degree then total, with safe displacement of a stopped loser and both stopping on a tie/no-space result. Hull progression is test data, not the final production budget.
 
-Define the ten initial hull profiles, differentiating maneuver access, weapon locations, fitting/cargo capacity, baseline defenses and deck/hand progression. Begin with the paper-test Brigantine and Cutter; author exact forward/60-degree-turn sequences, final heading, footprint and costs for every route. Preserve Hold as a legal option under temporary restrictions. Complete the step-timing and collision placement contracts before a native executor is written.
+## 3. Planning and native movement — adapter implemented; live acceptance pending
 
-## 3. Planning and native simultaneous movement
+Navigator stages → Captain locks → shared reveal → batched native movement → position/facing confirmation. One primary GM serializes commands. Movement intent and resolved rolls are journaled before native execution. Partial completion can resume without rerolling or restore starting poses. Tests cover document acknowledgements, mutable native payloads, blocked partial batches and save failure. These public-document mocks do not establish a fix for the previously reported live guided-demo rollback. Actual Foundry v14/PF2e and module-interaction tests remain required.
 
-Build preview → locked choice → shared reveal → movement → confirmation. One authoritative controller validates all routes and collision contacts before animation. Test one-hex and up-to-three-hex footprints, stationary ships, head-on crossings, contested destinations, obstacles, stale requests, reconnects and partial native completion. Save accepted movement only after the actual native documents and final facings agree. The previously reported live guided-demo rollback remains unverified; a new executor must pass actual PF2e-world acceptance rather than inherit a claim that the old bug was fixed.
+## 4. Deck and phase controller — alpha implemented
 
-## 4. New deck and phase controller
+Shared AP only; opening draw/mulligan; Hand/Draw/Discard/Prepared/Burn zones; one later-round draw; hand overflow; delayed AP after refresh; per-round initiative; ship-ordered Card phases; all targets declared before rolls; bounded incoming-attack Instants; one replacement target or held shot; simultaneous Hull exchange. The saved paper encounter's hand, random state and opponent course are untouched.
 
-Implement shared AP only, opening draw/mulligan, hand/deck/discard/Prepared/Burn zones, subsequent-round draws, delayed AP after refresh, Card-phase initiative, simultaneous damage and bounded Instant windows. Keep the saved paper encounter's opening hand, opponent course and random state intact. Prove one full two-ship round before expanding the catalog.
+## 5. Actions and effect consumers — playable slice implemented
 
-## 5. Actions, collisions and complication consumers
+Twenty-one cards demonstrate basic support, coordinated attacks, maneuver adjustments, Supply-consuming repair, Lifeveil defenses, Burn, delayed effects, limited ammunition, optional boarding and reload manipulation. Basic Fire Battery remains available for AP. Three ship-held system saves replace old flat checks in this slice; no recursive critical-failure draw or duplicated fixed penalty. A twelve-seed rules-only pacing probe is reproducible with `npm run alpha:simulate`. Expand numerical/edge-case coverage after live play identifies concrete issues, then author the full 75-card production collection.
 
-Rewrite card effects around the new timing; retain Fire Battery as an AP-costing basic action and repair as a Supply-consuming card. Connect critical-failure receipts to this deck without applying the source's old fixed complication as well. Implement actual modifier/restriction consumption, legal target choices, reload scheduling and paid opportunities, including rejection/refund behavior if an attempted exploit is not legal. Add the collision impact/save rules, severity scaling and optional AP-costing boarding transition once their detailed contracts are settled.
+## 6. Persistent progression across pillars — partial foundation
 
-## 6. Persistent ship progression across pillars
+Six upgrades and six talents validate level/fitting limits and affect the alpha profile. Bulk capacity and travel/trade/event capability records establish a data seam; legacy pillar consumers are not connected. Remaining work: major play-changing talents, complete weapon/equipment catalog, cargo packing/overload, permanent library acquisition, campaign resource persistence and versioned migration preserving crew/assets/libraries. Ask focused questions when those contracts are reached, without reopening accepted combat decisions unnecessarily.
 
-Reconcile hull/engine math, equipment, fitting limits, weapons, level/talents, Bulk cargo, travel and event benefits with the new core. Major talents change how a ship plays; equipment specializes it without an obligatory numerical-purchase tax. Migration must preserve crew, libraries, assets and campaign resource state. Do not automatically expand combat complication draws into events or travel without pillar-appropriate timing and recovery.
+## 7. Builder, sheet, HUD and introduction — temporary alpha UI implemented
 
-## 7. Ship builder, sheet, HUD and introduction
+The compact movable/resizable/minimizable native window provides Builder, Maneuver, Cards, Ship/Crew and Log views. It includes raised card selection, readable outcomes, canvas route/arcs, assigned crew skills, diagnostics and one actual suggested command per click. Prepared deck scenes can pause/resume the ship battle. It is not the final ship sheet or a complete new-player introduction. Remaining work: refit/level-up wizard, persistent library UI, visual mockup choices after mechanics settle, searchable guide and skippable/resumable introduction.
 
-Build/refit/level-up wizard, permanent library/deck management, phase-sensitive compact HUD and readable maneuver/card previews. Preserve movable/resizable/minimizable windows and visible restore controls. Reassess the full visual layout with mockup choices after the new behavior is implemented, as agreed. Add a skippable/resumable new-player introduction and a searchable guide.
+## Next gate: native alpha acceptance
 
-## Acceptance before replacing the old prototype
+Follow `ARKFLIGHT-1.1.0-ALPHA-TESTING.md`. Test a GM and assigned player, ordinary/poor hands, two/four ships, actual collision/footprint movement, reconnect/reopen, Instants, delayed effects, ammunition/reload, deck exhaustion and recovery. Capture diagnostics on failure. Measure the 4–6-round goal without forcing outcomes; large critical bursts already produce outliers in scripted pacing.
 
-Use actual Foundry v14/PF2e, a GM plus player-owned ship, reload/reopen/reconnect, ordinary and poor opening hands, coordinated rolls, delayed effects, collisions, Instants, deck exhaustion and resource recovery. Measure pacing against the 4–6-round target without forcing the outcome. Show which checks were native-world versus mock/Node checks. No live-readiness claim follows solely from a passing unit suite.
+Only after those checks should campaign migration, catalog expansion and cross-pillar integration proceed toward replacing the old combat prototype. Distinguish Node/browser mock verification from live-world results in every acceptance report.

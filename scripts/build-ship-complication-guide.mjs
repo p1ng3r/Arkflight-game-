@@ -6,13 +6,13 @@ import { validateComplicationCatalog } from "../src/combat/ship-complications.js
 validateComplicationCatalog();
 const header = `# Ship Complications — 24 cards, 144 outcomes
 
-Updated 24 October 2026. The six-entry format and critical-failure-only trigger are approved. All 144 entries are now authored as original Arkflight draft content in \`src/content/ship-complications.js\`. Individual numerical effects are playtest values, not a balanced release.
+Updated 26 October 2026. The six-entry format and critical-failure-only trigger are approved. All 144 entries are now authored as original Arkflight draft content in \`src/content/ship-complications.js\`. Individual numerical effects are playtest values, not a balanced release.
 
 ## First programmed increment
 
 The catalog, deterministic shuffled deck, six-context selection, final-degree gate, resource choices, one-use effect records, expiry, idempotent draws and a Foundry Complication Lab are implemented. The Lab uses its own client-local setting and two sample ships. It does not change campaign Actors, native tokens, the saved paper encounter or the existing AP/RP combat prototype.
 
-Temporary restrictions and paid enemy opportunities are machine-readable descriptors. The Lab records them and can simulate their consumption and AP claims; the future phased combat controller must enforce them during actual card play, attacks, reload and maneuvers. The old combat path is not automatically connected to this deck. No live Foundry/PF2e acceptance has been established by local tests or browser mocks.
+Temporary restrictions and paid enemy opportunities are machine-readable descriptors. The Lab records them and can simulate their consumption and AP claims; the new opt-in phased alpha enforces them during card play, attacks, reload and maneuvers. See \`ARKFLIGHT-1.1.0-ALPHA-TESTING.md\` for the separate encounter controller and current limitations. The old combat path is not automatically connected to this deck. No live Foundry/PF2e acceptance has been established by local tests or browser mocks.
 
 ## Open the Lab
 
@@ -28,7 +28,7 @@ Choose Impact or a station, then choose the final check result. **Resolve test c
 
 - Exactly 24 cards, one copy each, one shared deck. Shuffle at encounter start and reshuffle eligible discards when empty. No AP, hand capacity or normal combat draw is consumed by a complication draw.
 - Only a final **critical failure** can draw. Ordinary failure never draws, including by card-specific exception. A natural 1 uses the normal degree adjustment; it is not an independent draw trigger.
-- Read **one** entry: Impact for a collision Structure critical failure; otherwise the station whose contribution critically failed. A basic weapon attack uses Battle Watch. Character checks, unrelated resource saves and events do not implicitly use this deck.
+- Read **one** entry: Impact for a collision Structure critical failure; otherwise the station whose contribution critically failed. A basic weapon attack uses Battle Watch. The alpha explicitly adds ship-held system critical failures: Structure → Impact, Engineering → Engineer, Veil → Veil Warden. Character checks, unrelated resource saves and events do not implicitly use this deck.
 - At most one draw per ship per source event/activation. Coordinated contributions use the same source ID and resolve in the card's printed order; the first critical failure supplies the entry. Each ship in a collision can draw once. Repeated commands do not redraw or reapply resource losses.
 - The complication replaces the source result's fixed negative kicker. The original support base effect remains, while an attack can still miss and spend its ordinary ammunition/reload. Apply the new complication after the original action resolves; it cannot retroactively alter that action. Complications cannot recursively draw more complications.
 - Resource losses/Strain gains apply immediately, clamped to the sample track limits. Resource options in a choice must actually be affordable; an empty track or full Strain cannot buy a free escape, and a Hull-cost option cannot destroy the ship. Percentage losses use the track maximum. Normal resource recovery, not shuffling or cleanup, replenishes losses.
@@ -38,7 +38,7 @@ Choose Impact or a station, then choose the final check result. **Resolve test c
 - Contact-only results have an explicit Structure-check fallback when no opposing ship is alongside. Boarding opportunities still require legal contact and a normal boarding attempt; neither boarding nor a free attack happens automatically.
 - A paid opportunity costs its exploiting opponent **1 additional AP**, for one specified benefit on an otherwise legal action. It does not replace the action's own AP cost. The Lab's AP claim reserves the permission; the action controller must validate the target, mitigation and timing before consuming it.
 - Identical temporary effects refresh rather than add. Numerical complication penalties to one check use only the greatest applicable penalty. Distinct resource losses from distinct triggers still apply. Existing AC/DR/resistance card play limits remain unchanged.
-- Every temporary entry has automatic expiry; recovery never requires drawing a particular random card. Encounter end clears unscheduled temporary complications, not resource losses. Once an extra reload has been scheduled on a weapon, that weapon's reload timer must persist until ready. The standalone engine stores the scheduling descriptor; the future weapon controller owns the actual timer.
+- Every temporary entry has automatic expiry; recovery never requires drawing a particular random card. Encounter end clears unscheduled temporary complications, not resource losses. Once an extra reload has been scheduled on a weapon, that weapon's reload timer must persist until ready. The standalone engine stores the scheduling descriptor; the alpha weapon controller owns the actual timer; the isolated Lab only simulates its consumption.
 
 ## Design reference
 

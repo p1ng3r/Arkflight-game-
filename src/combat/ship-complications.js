@@ -136,7 +136,7 @@ export function resolveShipComplication(before, { eventId, shipId, scenario, deg
   assertState(before); id(eventId, "source event ID");
   shipFor(before, shipId);
   if (!Object.hasOwn(COMPLICATION_SCENARIOS, scenario) || ![-1, 0, 1, 2].includes(degree)) throw new Error("Provide a scenario and final degree of success.");
-  if (!["card", "attack", "collision"].includes(source) || (scenario === "impact") !== (source === "collision")) throw new Error("Complications require an authored card, attack or collision source.");
+  if (!["card", "attack", "collision", "system"].includes(source) || (source === "collision" && scenario !== "impact") || (scenario === "impact" && !["collision", "system"].includes(source)) || (source === "system" && !["impact", "engineer", "veilwarden"].includes(scenario))) throw new Error("Complications require an authored card, attack or collision source.");
   if (source === "attack" && scenario !== "battlewatch") throw new Error("Weapon attack complications use Battle Watch.");
   if (before.complete) throw new Error("This complication encounter has ended.");
   const previous = before.history.find(row => row.eventId === eventId && row.shipId === shipId);
