@@ -27,10 +27,11 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
   constructor(options={}){super({...options,position:{width:Math.min(560,innerWidth-32),height:Math.min(600,innerHeight-70),...options.position}});}
   async _prepareContext(options){
     const base=await super._prepareContext(options),api=game.arkflight.alphaCombat,s=api.state();
-    this.shipId=s?.ships[this.shipId]?this.shipId:Object.values(s?.ships??{}).find(x=>api.ownsShip(x.id))?.id??Object.keys(s?.ships??{})[0];
+    const accessibleShips=Object.values(s?.ships??{}).filter(x=>api.ownsShip(x.id));
+    this.shipId=accessibleShips.some(x=>x.id===this.shipId)?this.shipId:accessibleShips[0]?.id;
     const ship=s?.ships[this.shipId],pending=s?.attacks[s.attackIndex],canControl=ship&&api.ownsShip(ship.id);
     let profile,buildError="";try{profile=deriveAlphaProfile(this.build);if(this.build.deck.length<15||this.build.deck.length>profile.deck)buildError=`Choose 15–${profile.deck} cards.`;}catch(e){buildError=e.message;profile=deriveAlphaProfile({hullId:this.build.hullId,level:this.build.level});}
-    const routes=ship?legalHullManeuvers(ship,alphaComplications(s,ship.id)):[];
+    const routes=ship&&api.canOperate(ship.id,"navigator")?legalHullManeuvers(ship,alphaComplications(s,ship.id)):[];
     const selectedRoute=routes.find(m=>m.id===(this.maneuvers[ship?.id]??s?.plans[ship?.id]))??routes[0];
     const selected=ship?.hand.find(id=>id===this.inspectId),card=selected?alphaCardFor(ship,selected):null;
     const station=card?.stations[0]??"battlewatch";
@@ -46,7 +47,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
       hulls:Object.values(ALPHA_HULLS).map(h=>({...h,selected:h.id===this.build.hullId,enemySelected:h.id===this.build.enemyHullId})),
       upgrades:Object.entries(ALPHA_UPGRADES).map(([id,item])=>({id,...item,checked:this.build.upgrades.includes(id)})),talents:Object.entries(ALPHA_TALENTS).map(([id,item])=>({id,...item,checked:this.build.talents.includes(id)})),
       deckOptions:Object.values(ALPHA_CARDS).map(c=>({...c,count:this.build.deck.filter(id=>id===c.id).length,max:c.unique?1:2})),deckCount:this.build.deck.length,build:this.build,canStart:game.user.isGM&&(!s||s.complete)&&!buildError,
-      ships:Object.values(s?.ships??{}).map(x=>({id:x.id,name:x.name,selected:x.id===this.shipId,ap:x.ap,hull:x.resources.hull.value,locked:s.locked[x.id],active:x.id===active})),
+      ships:accessibleShips.map(x=>({id:x.id,name:x.name,selected:x.id===this.shipId,ap:x.ap,hull:x.resources.hull.value,locked:s.locked[x.id],active:x.id===active})),
       meters:ship?Object.entries(ship.resources).map(([name,r])=>({name,...r,percent:100*r.value/r.max,warning:name==="strain"?r.value/r.max>=.5:r.value/r.max<=.5})):[],
       planning:phase==="planning",cardPhase:phase==="cards",targeting:phase==="targeting",responding:phase==="response",canRollAttack:pending&&api.ownsShip(pending.shipId),retargeting:phase==="retarget",cleanup:phase==="cleanup",complete:s?.complete,
       activeName:s?.ships[active]?.name,pending:pending&&{...pending,attacker:s.ships[pending.shipId].name,defender:s.ships[pending.targetId]?.name,ready:Boolean(pending.responses[pending.targetId])},
@@ -96,7 +97,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
   async act(type,data={}){
     if(this.busy)return;
     const api=game.arkflight.alphaCombat,s=api.state(),ship=s?.ships[this.shipId];
-    if(type==="preview"){const m=legalHullManeuvers(ship,alphaComplications(s,ship.id)).find(m=>m.id===(this.maneuvers[ship.id]??s.plans[ship.id]??"hold"));showAlphaManeuver(s,ship.id,m);return;}
+    if(type==="preview"){if(!ship||!api.canOperate(ship.id,"navigator"))return;const m=legalHullManeuvers(ship,alphaComplications(s,ship.id)).find(m=>m.id===(this.maneuvers[ship.id]??s.plans[ship.id]??"hold"));showAlphaManeuver(s,ship.id,m);return;}
     if(type==="arcs"){showAlphaBattery(s,ship.id,data.batteryId??this.batteryId);return;}
     if(type==="hide-overlay"){clearAlphaOverlay();return;}
     if(type==="report"){const report=JSON.stringify(api.diagnostics(),null,2);try{await navigator.clipboard.writeText(report);this.report="";}catch{this.report=report;}await this.render({force:true});return;}

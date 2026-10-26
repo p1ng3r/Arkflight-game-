@@ -1,6 +1,6 @@
 # Arkflight phased combat alpha — testing guide
 
-Build: `alpha-phased-combat-20261026`. Updated 26 October 2026.
+Build: `alpha-maneuver-permissions-20261026`. Updated 26 October 2026.
 
 This is an opt-in vertical slice of the new combat rules. It creates marked test Actors, tokens, a hex scene and a native Combat. It preserves campaign ships and the older prototype. The feature branch is not a versioned release or a migration.
 
@@ -48,7 +48,7 @@ The window uses native movable/resizable chrome. **Minimize** folds it; the same
 
 ## Crew ownership
 
-In **Ship / Crew**, the GM can assign PF2e character Actors to stations during planning. Give the relevant players Owner permission on the party test vehicle and on their own characters. The party test vehicles initially have default Owner permission for easy alpha testing; opposing test ships do not.
+In **Ship / Crew**, the GM can assign PF2e character Actors to stations during planning. Give the relevant players Owner permission on the party test vehicle and on their own characters. New test vehicles start with no default player ownership. In the Actors directory, use Configure Ownership on the intended ship and grant Owner to its crew only. Existing test ships retain their permissions: review their Default entry and use None if access should be restricted to named players. Players see only ships they own in the HUD selector; opponents remain available as targets. An assigned Navigator sees only the hull’s currently legal maneuvers. Other crew cannot stage or preview maneuvers; the assigned Captain may still lock the staged choice. The GM sees and operates every ship, and alone reveals movement or advances phases.
 
 The Navigator controls staging; the Captain controls locking/finishing; Battle Watch controls basic battery fire/attack rolls. A card's primary station initiates its contribution. Coordinated cards resolve their printed station checks in order as one activation. This alpha does not provide a separate asynchronous confirmation popup for every contributing player. The GM can operate all test ships and use NPC crew baselines if no PC is assigned.
 

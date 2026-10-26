@@ -112,7 +112,7 @@ export async function prepareAlphaFleet(command){
   for(const [i,spec]of specs.entries()){
     let actor=game.actors.contents.find(a=>a.flags?.[MODULE]?.alphaCombatShip===spec.id);
     const art=i%2?"modules/arkflight-game/assets/art/ships/tokens/rime-serpent.webp":ART;
-    if(!actor)actor=await Actor.create({name:spec.name,type:"vehicle",img:art,ownership:{default:spec.team==="crew"?3:0},prototypeToken:{texture:{src:art},width:1,height:1,lockRotation:false,flags:{pf2e:{linkToActorSize:false,autoscale:false}}},flags:{[MODULE]:{alphaCombatShip:spec.id,alphaShip:spec}}},{renderSheet:false});
+    if(!actor)actor=await Actor.create({name:spec.name,type:"vehicle",img:art,ownership:{default:0},prototypeToken:{texture:{src:art},width:1,height:1,lockRotation:false,flags:{pf2e:{linkToActorSize:false,autoscale:false}}},flags:{[MODULE]:{alphaCombatShip:spec.id,alphaShip:spec}}},{renderSheet:false});
     const pose={q:origin.q+(i%2?0:-3),r:origin.r+(i%2?-4:2)+Math.floor(i/2)*7,heading:i%2?3:0};
     entries.push({...spec,actorId:actor.id,pose,stationActors:actor.flags?.[MODULE]?.alphaStationActors??{}});
   }

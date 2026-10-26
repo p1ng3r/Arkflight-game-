@@ -3,12 +3,16 @@ import { ALPHA_CARDS, ALPHA_SKILLS } from "../alpha/cards.js";
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS } from "../alpha/hulls.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-phased-combat-20261026";
+export const ALPHA_BUILD="alpha-maneuver-permissions-20261026";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
 const primary=()=>[...game.users].filter(u=>u.active&&u.isGM).sort((a,b)=>a.id.localeCompare(b.id))[0];
 const owns=(user,id)=>Boolean(id&&game.actors.get(id)?.testUserPermission(user,"OWNER"));
+export function canOperateAlphaShip(s,shipId,station,user=game.user){
+  const ship=s?.ships?.[shipId];
+  return Boolean(user?.active&&ship&&(user.isGM||owns(user,ship.actorId)&&(!ship.stationActors[station]||owns(user,ship.stationActors[station]))));
+}
 export function authorizeAlphaCommand(s,cmd,user){
   if(!user?.active)throw new Error("An active authenticated user is required.");
   if(user.isGM)return;
@@ -107,7 +111,7 @@ Hooks.once("init",()=>{
   for(const key of [STATE,JOURNAL])game.settings.register(MODULE,key,{name:key,scope:"world",config:false,type:Object,default:{}});
 });
 Hooks.once("ready",()=>{
-  game.arkflight??={};game.arkflight.alphaCombat=Object.freeze({build:ALPHA_BUILD,state:alphaPlayerState,request,diagnostics:alphaDiagnostics,cards:ALPHA_CARDS,hulls:ALPHA_HULLS,upgrades:ALPHA_UPGRADES,talents:ALPHA_TALENTS,recovery:()=>game.user.isGM?copy(journal()):{pending:Boolean(journal()?.next)},ownsShip:shipId=>game.user.isGM||owns(game.user,raw()?.ships?.[shipId]?.actorId),canOperate:(shipId,station)=>{const ship=raw()?.ships?.[shipId];return Boolean(ship&&(game.user.isGM||owns(game.user,ship.actorId)&&(!ship.stationActors[station]||owns(game.user,ship.stationActors[station]))));}});
+  game.arkflight??={};game.arkflight.alphaCombat=Object.freeze({build:ALPHA_BUILD,state:alphaPlayerState,request,diagnostics:alphaDiagnostics,cards:ALPHA_CARDS,hulls:ALPHA_HULLS,upgrades:ALPHA_UPGRADES,talents:ALPHA_TALENTS,recovery:()=>game.user.isGM?copy(journal()):{pending:Boolean(journal()?.next)},ownsShip:shipId=>canOperateAlphaShip(raw(),shipId,null),canOperate:(shipId,station)=>canOperateAlphaShip(raw(),shipId,station)});
 });
 Hooks.on("createChatMessage",(message,_options,userId)=>{
   const input=message.flags?.[MODULE]?.alphaCommand;if(!input||primary()?.id!==game.user.id)return;
@@ -127,3 +131,5 @@ Hooks.on("preUpdateToken",(token,changes,options)=>{
   if(["x","y","rotation","width","height","actorId","actorLink"].some(key=>key in changes)){ui.notifications.warn("Use the alpha maneuver/card controls while this encounter is running.");return false;}
 });
 Hooks.on("preUpdateCombat",(combat,changes,options)=>{if(combat.flags?.[MODULE]?.alphaCombat&&!options?.arkflightAlpha&&["round","turn"].some(key=>key in changes)){ui.notifications.warn("Advance alpha phases in the Arkflight HUD.");return false;}});
+
+Hooks.on("updateActor",(_actor,changes)=>{if(Object.keys(changes).some(key=>key==="ownership"||key.startsWith("ownership.")))Hooks.callAll("arkflightAlphaChanged");});

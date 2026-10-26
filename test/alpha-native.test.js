@@ -52,6 +52,7 @@ test("stale double actions, manual token movement, paused execution and unauthor
   game.paused=true;await assert.rejects(()=>command(api,"start"),/Unpause/);game.paused=false;
   const player=game.users.get("player");assert.throws(()=>authorizeAlphaCommand(api.state(),{type:"move"},player),/GM/);
   assert.throws(()=>authorizeAlphaCommand(api.state(),{type:"fire",shipId:"alpha-1"},player),/do not own/);
+  game.actors.get(s.ships["alpha-0"].actorId).ownership.player=3;
   assert.doesNotThrow(()=>authorizeAlphaCommand(api.state(),{type:"fire",shipId:"alpha-0"},player));
 });
 test("recovery settings survive reopening and another setup cannot overwrite a pending move",async()=>{
@@ -64,8 +65,51 @@ test("assigned Navigator and Captain permissions distinguish staging from lockin
   game.actors.contents.push({id:"navpc",testUserPermission:u=>u.id==="navigator"},{id:"cappc",testUserPermission:u=>u.id==="captain"});
   s.ships["alpha-0"].stationActors={navigator:"navpc",captain:"cappc"};
   const nav={id:"navigator",active:true,isGM:false},cap={id:"captain",active:true,isGM:false};
+  Object.assign(game.actors.get(s.ships["alpha-0"].actorId).ownership,{navigator:3,captain:3});
   assert.doesNotThrow(()=>authorizeAlphaCommand(s,{type:"plan",shipId:"alpha-0"},nav));
   assert.throws(()=>authorizeAlphaCommand(s,{type:"plan",shipId:"alpha-0"},cap),/assigned navigator/);
   assert.doesNotThrow(()=>authorizeAlphaCommand(s,{type:"lock",shipId:"alpha-0"},cap));
   assert.throws(()=>authorizeAlphaCommand(s,{type:"lock",shipId:"alpha-0"},nav),/assigned captain/);
+});
+
+test("test ships require GM-granted ownership; owning a Navigator alone grants no vessel access",async()=>{
+  const w=alphaWorld(),api=w.initialize();await command(api,"start");const s=api.state(),player=game.users.get("player");
+  for(const ship of Object.values(s.ships))assert.equal(game.actors.get(ship.actorId).ownership.default,0);
+  game.actors.contents.push({id:"nav-owned",testUserPermission:u=>u.id==="player"});
+  s.ships["alpha-0"].stationActors.navigator="nav-owned";
+  assert.throws(()=>authorizeAlphaCommand(s,{type:"plan",shipId:"alpha-0"},player),/do not own/);
+  game.actors.get(s.ships["alpha-0"].actorId).ownership.player=3;
+  assert.doesNotThrow(()=>authorizeAlphaCommand(s,{type:"plan",shipId:"alpha-0"},player));
+  for(const type of ["plan","lock","fire"])assert.throws(()=>authorizeAlphaCommand(s,{type,shipId:"alpha-1"},player),/do not own/);
+  for(const type of ["move","begin-damage","round","assign-station","restore-movement"])assert.throws(()=>authorizeAlphaCommand(s,{type,shipId:"alpha-0"},player),/GM/);
+});
+
+test("player HUD shows only owned ships and the assigned Navigator's legal hull menu; GM retains all ships",async()=>{
+  class Base{constructor(options){this.options=options;}async _prepareContext(){return{};}}
+  globalThis.innerWidth=1366;globalThis.innerHeight=768;
+  const w=alphaWorld({applicationAPI:{ApplicationV2:Base,HandlebarsApplicationMixin:x=>x}});
+  const {AlphaCombatWindow}=await import("../src/ui/alpha-combat-ui.js");
+  const api=w.initialize();await command(api,"start",{hullId:"dread-caravel",count:4});
+  const original=api.state(),ship=original.ships["alpha-0"],actor=game.actors.get(ship.actorId);
+  actor.ownership.player=3;
+  game.actors.contents.push({id:"navigator-pc",name:"Navigator",type:"character",testUserPermission:u=>u.id==="player"},{id:"other-pc",name:"Other Navigator",type:"character",testUserPermission:()=>false});
+  await command(api,"assign-station",{shipId:ship.id,station:"navigator",actorId:"navigator-pc"});
+  game.user=game.users.get("player");
+  const hud=new AlphaCombatWindow();hud.shipId="alpha-1";
+  let context=await hud._prepareContext({});assert.deepEqual(context.ships.map(s=>s.id),[ship.id]);assert.equal(hud.shipId,ship.id);assert.equal(context.canPlan,true);assert.ok(context.routes.length>0);assert.ok(context.routes.every(m=>!m.id.includes("hard")&&!m.id.includes("pivot")));assert.equal(context.canMove,false);
+  assert.equal(context.s.plans["alpha-1"],undefined);assert.equal(context.targets.length,2,"opponents remain targetable without maneuver access");
+  game.user=game.users.get("gm");await command(api,"assign-station",{shipId:ship.id,station:"navigator",actorId:"other-pc"});
+  game.user=game.users.get("player");context=await hud._prepareContext({});assert.equal(context.canPlan,false);assert.deepEqual(context.routes,[]);assert.equal(context.route,undefined);assert.equal(context.canLock,true);
+  delete actor.ownership.player;context=await hud._prepareContext({});assert.deepEqual(context.ships,[]);assert.equal(context.ship,undefined);assert.deepEqual(context.routes,[]);
+  game.user=game.users.get("gm");context=await hud._prepareContext({});assert.equal(context.ships.length,4);assert.ok(context.routes.length>0);assert.equal(context.canPlan,true);
+});
+
+test("the GM relay rejects forged enemy plans and hull-incompatible routes without saving changes",async()=>{
+  const w=alphaWorld(),api=w.initialize();await command(api,"start");const s=api.state();game.actors.get(s.ships["alpha-0"].actorId).ownership.player=3;
+  const relay=input=>new Promise(resolve=>Hooks.callAll("createChatMessage",{author:{id:"player"},flags:{[M]:{alphaCommand:{requestId:"permission-probe",command:{encounterId:api.state().id,revision:api.state().revision,...input}}}},update:async changes=>resolve(changes[`flags.${M}.alphaResult`])},{},"player"));
+  let result=await relay({type:"plan",shipId:"alpha-1",maneuverId:"hold"});assert.equal(result.ok,false);assert.match(result.error,/do not own/);assert.deepEqual(api.state(),s);
+  result=await relay({type:"plan",shipId:"alpha-0",maneuverId:"skiff-quick-port"});assert.equal(result.ok,false);assert.match(result.error,/legal affordable hull maneuver/);assert.deepEqual(api.state(),s);
+  result=await relay({type:"plan",shipId:"alpha-0",maneuverId:"straight-1"});assert.equal(result.ok,true);assert.equal(api.state().plans["alpha-0"],"straight-1");
+  game.actors.get(s.ships["alpha-0"].actorId).ownership.player=0;
+  const before=api.state();result=await relay({type:"plan",shipId:"alpha-0",maneuverId:"hold"});assert.equal(result.ok,false);assert.deepEqual(api.state(),before);
 });
