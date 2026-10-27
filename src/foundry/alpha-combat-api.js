@@ -1,9 +1,11 @@
 import { dispatchAlphaCommand } from "../alpha/combat.js";
 import { ALPHA_CARDS, ALPHA_SKILLS } from "../alpha/cards.js";
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS } from "../alpha/hulls.js";
+import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
+import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-maneuver-permissions-20261026";
+export const ALPHA_BUILD="alpha-ship-libraries-20261026";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -32,7 +34,7 @@ export function alphaPlayerState(user=game.user){
   delete s.randomState;
   for(const ship of Object.values(s.ships)){
     ship.drawCount=ship.drawPile.length;
-    if(!owns(user,ship.actorId)){ship.hand=[];ship.drawPile=[];ship.instances={};if(s.phase==="planning")delete s.plans[ship.id];}
+    if(!owns(user,ship.actorId)){ship.hand=[];ship.drawPile=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
   }
   delete s.complications.randomState;return s;
 }
@@ -60,6 +62,7 @@ async function completeJournal(job){
 }
 async function handle(cmd,user){
   if(!cmd||JSON.stringify(cmd).length>50000)throw new Error("Invalid alpha request.");
+  if(LIBRARY_COMMANDS.has(cmd.type))return handleLibraryCommand(cmd,user);
   const before=copy(raw());authorizeAlphaCommand(before,cmd,user);
   if(cmd.type==="resume-movement"){
     const job=copy(journal());if(!job?.next)throw new Error("There is no saved movement to resume.");return completeJournal(job);
@@ -111,7 +114,7 @@ Hooks.once("init",()=>{
   for(const key of [STATE,JOURNAL])game.settings.register(MODULE,key,{name:key,scope:"world",config:false,type:Object,default:{}});
 });
 Hooks.once("ready",()=>{
-  game.arkflight??={};game.arkflight.alphaCombat=Object.freeze({build:ALPHA_BUILD,state:alphaPlayerState,request,diagnostics:alphaDiagnostics,cards:ALPHA_CARDS,hulls:ALPHA_HULLS,upgrades:ALPHA_UPGRADES,talents:ALPHA_TALENTS,recovery:()=>game.user.isGM?copy(journal()):{pending:Boolean(journal()?.next)},ownsShip:shipId=>canOperateAlphaShip(raw(),shipId,null),canOperate:(shipId,station)=>canOperateAlphaShip(raw(),shipId,station)});
+  game.arkflight??={};game.arkflight.alphaCombat=Object.freeze({build:ALPHA_BUILD,state:alphaPlayerState,request,diagnostics:alphaDiagnostics,get cards(){if(game.user.isGM)return ALPHA_CARDS;const known=new Set(libraryShips().flatMap(s=>viewShipLibrary(s.id).learned));return Object.fromEntries(Object.entries(ALPHA_CARDS).filter(([id])=>known.has(id)));},library:Object.freeze({ships:libraryShips,view:viewShipLibrary}),hulls:ALPHA_HULLS,upgrades:ALPHA_UPGRADES,talents:ALPHA_TALENTS,recovery:()=>game.user.isGM?copy(journal()):{pending:Boolean(journal()?.next)},ownsShip:shipId=>canOperateAlphaShip(raw(),shipId,null),canOperate:(shipId,station)=>canOperateAlphaShip(raw(),shipId,station)});
 });
 Hooks.on("createChatMessage",(message,_options,userId)=>{
   const input=message.flags?.[MODULE]?.alphaCommand;if(!input||primary()?.id!==game.user.id)return;
@@ -132,4 +135,4 @@ Hooks.on("preUpdateToken",(token,changes,options)=>{
 });
 Hooks.on("preUpdateCombat",(combat,changes,options)=>{if(combat.flags?.[MODULE]?.alphaCombat&&!options?.arkflightAlpha&&["round","turn"].some(key=>key in changes)){ui.notifications.warn("Advance alpha phases in the Arkflight HUD.");return false;}});
 
-Hooks.on("updateActor",(_actor,changes)=>{if(Object.keys(changes).some(key=>key==="ownership"||key.startsWith("ownership.")))Hooks.callAll("arkflightAlphaChanged");});
+Hooks.on("updateActor",(_actor,changes)=>{if(Object.keys(changes).some(key=>key==="name"||key==="ownership"||key.startsWith("ownership.")||key.startsWith(`flags.${MODULE}.`)||key==="flags"&&Object.hasOwn(changes.flags??{},MODULE)))Hooks.callAll("arkflightAlphaChanged");});

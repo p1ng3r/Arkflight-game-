@@ -1,6 +1,6 @@
 # Arkflight phased combat alpha — testing guide
 
-Build: `alpha-maneuver-permissions-20261026`. Updated 26 October 2026.
+Build: `alpha-ship-libraries-20261026`. Updated 26 October 2026.
 
 This is an opt-in vertical slice of the new combat rules. It creates marked test Actors, tokens, a hex scene and a native Combat. It preserves campaign ships and the older prototype. The feature branch is not a versioned release or a migration.
 
@@ -45,6 +45,10 @@ The window uses native movable/resizable chrome. **Minimize** folds it; the same
 - **Targeting:** declare every queued battery's target before any attack roll. **Show weapon arc / range** previews its legal firing area. A broadside is a 90° sector; the fore swivel has a 180° targeting arc. These are single-target batteries, not automatic damage to every token inside an overlay. Hold an unworkable shot rather than spending ammunition.
 - **Damage:** the defender may play one eligible Instant or pass for each incoming attack. The attacking crew then rolls. A movement response can invalidate the target; the attacker gets at most one replacement target or holds the shot. Hull damage from all committed attacks is applied together after those rolls, so a ship can fire in the exchange that disables it.
 - **Next round:** resolve any complication choice or excess-hand discard, then refresh AP, apply delayed effects and draw one card. Reload N fired in round R is ready at the beginning of R + N; each battery still fires at most once per round unless a future explicit effect says otherwise.
+
+## Permanent libraries and saved decks
+
+The new **Library / Decks** footer button opens ship-owned learned cards and three named loadouts. Owners edit/select decks outside combat; the GM grants/removes knowledge. Existing ships retain their selected deck across encounters. See `ARKFLIGHT-1.1.0-SHIP-LIBRARIES.md` for exact clicks, refit validation, saved-ship launch and acceptance.
 
 ## Crew ownership
 
@@ -92,6 +96,6 @@ Use **Log → Copy alpha diagnostic report** after a failure. It includes build,
 
 ## Still to build or prove
 
-The test catalog has 10 hulls, 21 combat cards, 6 upgrades and 6 talents. It is not the promised complete 75-card production collection. Permanent acquisition/loot, full refit/level-up workflow, campaign migration, production sheet, onboarding and cross-pillar effect consumers remain work. Cargo Bulk and travel/trade/event capabilities are recorded on the alpha profile; they do not yet change the existing event/travel systems. Weapon equipment/loadout expansion and the full reaction/Instant catalog also remain work.
+The test catalog has 10 hulls, 21 combat cards, 6 upgrades and 6 talents. It is not the promised complete 75-card production collection. Ship-owned libraries, three saved decks, GM grant/remove tools and a basic alpha profile/refit editor are implemented. Automatic acquisition/loot, a complete refit/level-up workflow, campaign migration, production sheet, onboarding and cross-pillar effect consumers remain work. Cargo Bulk and travel/trade/event capabilities are recorded on the alpha profile; they do not yet change the existing event/travel systems. Weapon equipment/loadout expansion and the full reaction/Instant catalog also remain work.
 
 Local Node tests and a browser using mocked public documents exercise the rules, UI and recovery contracts. They do not prove native movement with this world's modules, reconnect behavior or encounter balance. This build does not establish that the old guided-demo rollback was fixed. Test the new alpha separately before replacing campaign combat.

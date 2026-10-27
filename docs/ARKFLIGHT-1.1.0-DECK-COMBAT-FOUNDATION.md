@@ -183,3 +183,14 @@ These clarify or supersede earlier open proposals above; the saved paper encount
 - Initial playable catalog: ten hulls, twenty-one combat cards, six upgrades and six talents, plus the existing twenty-four Complication cards. Card collection and progression are not production-complete. Travel/trade/event capability records do not yet drive legacy pillar consumers.
 
 See `ARKFLIGHT-1.1.0-ALPHA-TESTING.md` for launch, manual play, recovery and acceptance checks. The new executor's mock tests do not establish a fix for the old guided-demo movement failure in the user's actual world.
+
+
+## Accepted permanent library decisions — 26 October 2026
+
+- Learning a card unlocks its permitted deck copies: two ordinary, one Unique. Individual copies need not be separately acquired.
+- Each ship holds three named loadouts with one selected before combat. Library/loadout editing remains outside combat.
+- Players browse learned cards; the GM browses the full catalog.
+- Begin acquisition with GM grant/remove tools; connect loot, training and trade later.
+- Refit/removal changes flag invalid loadouts and block launch without deleting their cards or silently selecting a replacement.
+
+These are implemented for opt-in alpha ship Actors; see `ARKFLIGHT-1.1.0-SHIP-LIBRARIES.md`. The permanent collection and loadouts are distinct from each encounter's Hand/Draw/Discard/Burn instances. This does not migrate campaign ships or persist test encounter Hull/Supply between fixture resets.

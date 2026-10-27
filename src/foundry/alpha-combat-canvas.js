@@ -2,6 +2,7 @@ import { createAlphaSession } from "../alpha/combat.js";
 import { deriveAlphaProfile } from "../alpha/hulls.js";
 import { occupiedHexes } from "../alpha/maneuvers.js";
 import { gridGeometry } from "./card-combat-canvas.js";
+import { prepareStoredShip } from "./alpha-ship-library.js";
 
 const MODULE="arkflight-game", FLAG="alphaCombatFixture", ART="modules/arkflight-game/assets/art/ships/tokens/sirocco.webp";
 const angle=x=>(x%360+360)%360;
@@ -114,7 +115,8 @@ export async function prepareAlphaFleet(command){
     const art=i%2?"modules/arkflight-game/assets/art/ships/tokens/rime-serpent.webp":ART;
     if(!actor)actor=await Actor.create({name:spec.name,type:"vehicle",img:art,ownership:{default:0},prototypeToken:{texture:{src:art},width:1,height:1,lockRotation:false,flags:{pf2e:{linkToActorSize:false,autoscale:false}}},flags:{[MODULE]:{alphaCombatShip:spec.id,alphaShip:spec}}},{renderSheet:false});
     const pose={q:origin.q+(i%2?0:-3),r:origin.r+(i%2?-4:2)+Math.floor(i/2)*7,heading:i%2?3:0};
-    entries.push({...spec,actorId:actor.id,pose,stationActors:actor.flags?.[MODULE]?.alphaStationActors??{}});
+    const persisted=await prepareStoredShip(actor,spec,{useSavedShips:command.useSavedShips===true});
+    entries.push({...persisted,actorId:actor.id,pose,stationActors:actor.flags?.[MODULE]?.alphaStationActors??{}});
   }
   const state=createAlphaSession(entries,{id:foundry.utils.randomID(),seed:Math.floor(Math.random()*0xffffffff)+1,...geometry});
   state.canvas={sceneId:scene.id,gridType:c.grid.type,gridSize:c.grid.size};

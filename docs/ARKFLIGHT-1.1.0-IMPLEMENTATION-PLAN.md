@@ -24,14 +24,17 @@ Twenty-one cards demonstrate basic support, coordinated attacks, maneuver adjust
 
 ## 6. Persistent progression across pillars — partial foundation
 
-Six upgrades and six talents validate level/fitting limits and affect the alpha profile. Bulk capacity and travel/trade/event capability records establish a data seam; legacy pillar consumers are not connected. Remaining work: major play-changing talents, complete weapon/equipment catalog, cargo packing/overload, permanent library acquisition, campaign resource persistence and versioned migration preserving crew/assets/libraries. Ask focused questions when those contracts are reached, without reopening accepted combat decisions unnecessarily.
+Six upgrades and six talents validate level/fitting limits and affect the alpha profile. Bulk capacity and travel/trade/event capability records establish a data seam; legacy pillar consumers are not connected. Actor-held learned libraries, three named loadouts, GM grant/remove tools, out-of-combat locks and profile/refit revalidation are now implemented for alpha ships. Remaining work: major play-changing talents, complete weapon/equipment catalog, cargo packing/overload, automatic loot/training/trade acquisition, campaign resource persistence and versioned migration preserving crew/assets/libraries. Ask focused questions when those contracts are reached, without reopening accepted combat decisions unnecessarily.
 
 ## 7. Builder, sheet, HUD and introduction — temporary alpha UI implemented
 
-The compact movable/resizable/minimizable native window provides Builder, Maneuver, Cards, Ship/Crew and Log views. It includes raised card selection, readable outcomes, canvas route/arcs, assigned crew skills, diagnostics and one actual suggested command per click. Prepared deck scenes can pause/resume the ship battle. It is not the final ship sheet or a complete new-player introduction. Remaining work: refit/level-up wizard, persistent library UI, visual mockup choices after mechanics settle, searchable guide and skippable/resumable introduction.
+The compact movable/resizable/minimizable native window provides Builder, Maneuver, Cards, Ship/Crew and Log views. It includes raised card selection, readable outcomes, canvas route/arcs, assigned crew skills, diagnostics and one actual suggested command per click. Prepared deck scenes can pause/resume the ship battle. It is not the final ship sheet or a complete new-player introduction. The separate Ship Library window now provides permanent learned-card/deck management with player filtering and stale-draft protection. Remaining work: full refit/level-up wizard, production visual mockup choices after mechanics settle and skippable/resumable introduction. See `ARKFLIGHT-1.1.0-SHIP-LIBRARIES.md`.
 
 ## Next gate: native alpha acceptance
 
 Follow `ARKFLIGHT-1.1.0-ALPHA-TESTING.md`. Test a GM and assigned player, ordinary/poor hands, two/four ships, actual collision/footprint movement, reconnect/reopen, Instants, delayed effects, ammunition/reload, deck exhaustion and recovery. Capture diagnostics on failure. Measure the 4–6-round goal without forcing outcomes; large critical bursts already produce outliers in scripted pacing.
 
 Only after those checks should campaign migration, catalog expansion and cross-pillar integration proceed toward replacing the old combat prototype. Distinguish Node/browser mock verification from live-world results in every acceptance report.
+
+
+The user has passed the initial live combat/permission test, including the current internal-roll presentation. That acceptance does not automatically pass the new library increment; its live persistence/multi-client checklist remains pending. Visible chat/dice roll presentation remains a requested UI improvement.

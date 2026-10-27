@@ -12,6 +12,7 @@ let instance;
 const words=value=>String(value??"").replace(/([a-z])([A-Z])/g,"$1 $2").replaceAll("-"," ").replace(/\b\w/g,c=>c.toUpperCase());
 const names={planning:"Maneuver Planning",cards:"Card Phase",targeting:"Declare Targets",response:"Incoming Attack",retarget:"Replacement Target",cleanup:"Round Complete",complete:"Encounter Complete",boarding:"Deck Encounter / Ship Battle Paused"};
 const artIds={acquire:"acquire-target",patch:"work-the-guns",brace:"brace-impact",prepare:"issue-order",shield:"emergency-ward",helm:"evasive-maneuver",volley:"ready-broadside",harmonic:"reinforce-lifeveil","all-hands":"drive-the-crew",evasive:"attack-vector",read:"charted-course",chainshot:"ready-broadside",breakaway:"breakaway-vector",ahead:"charted-course",overcharge:"feed-the-guns",mend:"mend-lifeveil",rally:"rally-crew",boarding:"rally-crew",ram:"brace-impact",vent:"vent-strain","work-guns":"work-the-guns"};
+export const alphaCardArt=card=>cardArt({id:artIds[card.id],stations:card.stations});
 function glyph(m){
   const preview=previewManeuver({q:0,r:0,heading:0},m), points=preview.trace.map(p=>({x:p.q*1.5,y:p.q*.866+p.r*1.732}));
   const xs=points.map(p=>p.x),ys=points.map(p=>p.y),minX=Math.min(...xs)-1,maxX=Math.max(...xs)+1,minY=Math.min(...ys)-1,maxY=Math.max(...ys)+1;
@@ -42,8 +43,8 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     const isInstant=card?.timing==="instant", playable=canControl&&card&&api.canOperate(ship.id,station)&&ship.ap>=card.ap&&(isInstant?attacked&&!pending.responses[ship.id]:phase==="cards"&&active===ship.id)&&!s.pendingDiscard&&!choices.length;
     const targets=ship?Object.values(s.ships).filter(x=>x.team!==ship.team).map(x=>({id:x.id,name:x.name,selected:x.id===this.targetId})):[];
     return {...base,s,ship,buildId:api.build,report:this.report,guideOpen:this.guideOpen,suggestion:s?alphaSuggestedStep(s):null,gm:game.user.isGM,busy:this.busy,error:this.error,buildError,profile,recovery:api.recovery(),hasRecovery:Boolean(api.recovery()?.next??api.recovery()?.pending),phaseName:names[phase]??"Create a Test Fleet",paused:game.paused,tab:this.tab,
-      tabs:[{id:"plan",name:"Maneuver"},{id:"hand",name:"Cards"},{id:"ship",name:"Ship / Crew"},{id:"log",name:"Log"},{id:"build",name:"Builder"}].map(t=>({...t,selected:t.id===this.tab})),
-      showBuild:!s||this.tab==="build"||(s.complete&&this.tab==="plan"),showPlan:s&&this.tab==="plan"&&!s.complete,showHand:s&&this.tab==="hand",showShip:s&&this.tab==="ship",showLog:s&&this.tab==="log",
+      tabs:[{id:"plan",name:"Maneuver"},{id:"hand",name:"Cards"},{id:"ship",name:"Ship / Crew"},{id:"log",name:"Log"},...(game.user.isGM?[{id:"build",name:"Builder"}]:[])].map(t=>({...t,selected:t.id===this.tab})),
+      showBuild:game.user.isGM&&(!s||this.tab==="build"||(s.complete&&this.tab==="plan")),showPlan:s&&this.tab==="plan"&&!s.complete,showHand:s&&this.tab==="hand",showShip:s&&this.tab==="ship",showLog:s&&this.tab==="log",
       hulls:Object.values(ALPHA_HULLS).map(h=>({...h,selected:h.id===this.build.hullId,enemySelected:h.id===this.build.enemyHullId})),
       upgrades:Object.entries(ALPHA_UPGRADES).map(([id,item])=>({id,...item,checked:this.build.upgrades.includes(id)})),talents:Object.entries(ALPHA_TALENTS).map(([id,item])=>({id,...item,checked:this.build.talents.includes(id)})),
       deckOptions:Object.values(ALPHA_CARDS).map(c=>({...c,count:this.build.deck.filter(id=>id===c.id).length,max:c.unique?1:2})),deckCount:this.build.deck.length,build:this.build,canStart:game.user.isGM&&(!s||s.complete)&&!buildError,
@@ -97,6 +98,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
   async act(type,data={}){
     if(this.busy)return;
     const api=game.arkflight.alphaCombat,s=api.state(),ship=s?.ships[this.shipId];
+    if(type==="library"){await api.library.open(ship?.actorId);return;}
     if(type==="preview"){if(!ship||!api.canOperate(ship.id,"navigator"))return;const m=legalHullManeuvers(ship,alphaComplications(s,ship.id)).find(m=>m.id===(this.maneuvers[ship.id]??s.plans[ship.id]??"hold"));showAlphaManeuver(s,ship.id,m);return;}
     if(type==="arcs"){showAlphaBattery(s,ship.id,data.batteryId??this.batteryId);return;}
     if(type==="hide-overlay"){clearAlphaOverlay();return;}
@@ -115,6 +117,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
       let result;
       if(type==="next-step"){const step=alphaSuggestedStep(api.state());if(!step)throw new Error("No suggested action remains.");result=await send(step.command);}
       else if(type==="start")result=await send({type,...this.build});
+      else if(type==="start-saved")result=await send({type:"start",count:Object.keys(s?.ships??{}).length,useSavedShips:true});
       else if(type==="open-boarding"){if(!this.boardingSceneId)throw new Error("Choose a prepared deck scene first.");result=await send({type:"pause-boarding"});await game.scenes.get(this.boardingSceneId)?.view();this.tab="ship";}
       else if(type==="return-boarding"){await game.scenes.get(s.canvas.sceneId)?.view();result=await send({type:"resume-boarding"});}
       else if(type==="plan")result=await send({type:"plan",maneuverId:this.maneuvers[ship.id]??s.plans[ship.id]??"hold"});
@@ -153,6 +156,6 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
 }
 Hooks.once("init",()=>game.settings.registerMenu("arkflight-game","alphaCombatWindow",{name:"Arkflight 1.1 Alpha Combat",label:"Open 1.1 Alpha",hint:"Dedicated test ships, hull maneuvers and phased deck combat.",icon:"fa-solid fa-compass",type:AlphaCombatWindow,restricted:false}));
 Hooks.once("ready",()=>{
-  game.arkflight.alphaCombat=Object.freeze({...game.arkflight.alphaCombat,async open(){instance??=new AlphaCombatWindow();await instance.render({force:true});if(instance.minimized)await instance.maximize();instance.bringToFront();return instance;}});
+  game.arkflight.alphaCombat=Object.freeze(Object.defineProperties({async open(){instance??=new AlphaCombatWindow();await instance.render({force:true});if(instance.minimized)await instance.maximize();instance.bringToFront();return instance;}},Object.getOwnPropertyDescriptors(game.arkflight.alphaCombat)));
 });
 Hooks.on("arkflightAlphaChanged",()=>{if(instance?.rendered&&!instance.busy)void instance.render({force:true});});
