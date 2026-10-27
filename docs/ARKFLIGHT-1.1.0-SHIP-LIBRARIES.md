@@ -1,6 +1,6 @@
 # Ship libraries and three saved loadouts
 
-Build: `alpha-ship-libraries-20261026`. These are the five approved library decisions, implemented on opt-in alpha ship Actors. The user has passed the preceding combat/permissions alpha check. This library increment still needs its own live GM/player acceptance.
+Current build: `alpha-command-deck-20261027`. These are the five approved library decisions, implemented on opt-in alpha ship Actors. The user has passed the preceding combat/permissions alpha check. This library increment still needs its own live GM/player acceptance.
 
 ## Open the library
 
@@ -24,8 +24,8 @@ The catalog currently contains 21 playable combat cards. This increment does not
 
 ## Build a loadout
 
-1. Choose a saved loadout in the dropdown and enter its name.
-2. Search the catalog and adjust each learned card's **Copies in draft**. Ordinary maximum is two; Unique maximum is one.
+1. Choose one of the three visual loadout tabs. Open **Loadout name & settings** to rename it or use the alternate dropdown.
+2. Search the framed catalog and adjust **Copies in draft** using plus/minus or its number field. Ordinary maximum is two; Unique maximum is one.
 3. Click **Save loadout draft**. Saving does not automatically select another slot.
 4. Correct any displayed issues, then click **Select for next combat**.
 

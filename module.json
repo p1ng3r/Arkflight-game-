@@ -78,7 +78,8 @@
     "styles/guided-combat-demo.css",
     "styles/ship-complication-lab.css",
     "styles/alpha-combat.css",
-    "styles/alpha-ship-library.css"
+    "styles/alpha-ship-library.css",
+    "styles/alpha-command-deck.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",

@@ -7,7 +7,7 @@ import { createComplicationEncounter, resolveShipComplication, chooseShipComplic
 const copy=v=>structuredClone(v), clamp=(v,max)=>Math.max(0,Math.min(max,v));
 const isId=v=>typeof v==="string"&&!Object.hasOwn(Object.prototype,v)&&/^[A-Za-z0-9_-]{1,80}$/.test(v);
 const living=s=>s.resources.hull.value>0;
-const log=(s,text)=>{s.log.push({round:s.round,text});if(s.log.length>100)s.log.shift();};
+const log=(s,text,detail=null)=>{s.logSerial=(s.logSerial??s.log.length)+1;s.log.push({id:`log-${s.logSerial}`,round:s.round,text,...(detail?{detail}: {})});if(s.log.length>100)s.log.shift();};
 function random(s){let x=s.randomState;x^=x<<13;x^=x>>>17;x^=x<<5;s.randomState=x>>>0;return s.randomState/4294967296;}
 function shuffle(s,values){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(random(s)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function dice(s,formula){if(!/^\d+d\d+(?:\+\d+d\d+|\+\d+)*$/.test(formula))throw new Error("Unsupported alpha dice formula.");return formula.split("+").reduce((n,term)=>{if(!term.includes("d"))return n+Number(term);const [count,sides]=term.split("d").map(Number);for(let i=0;i<count;i++)n+=1+Math.floor(random(s)*sides);return n;},0);}
@@ -46,7 +46,7 @@ async function check(s,ship,station,skill,services,{dc=ship.profile.dc,batteryId
   const total=die+base+penalty+bonus;
   consume(s,ship.id,modifier.effectIds);
   const result={die,modifier:base+penalty+bonus,total,dc,degree:degreeOfSuccess(total,die,dc)};
-  log(s,`${ship.name} · ${station}: d20 ${die} ${result.modifier>=0?"+":""}${result.modifier} = ${total} vs ${dc} (${["critical failure","failure","success","critical success"][result.degree+1]}).`);
+  log(s,`${ship.name} · ${station}: d20 ${die} ${result.modifier>=0?"+":""}${result.modifier} = ${total} vs ${dc} (${["critical failure","failure","success","critical success"][result.degree+1]}).`,{kind:"check",shipId:ship.id,targetId:station==="battlewatch"&&batteryId?s.attacks[s.attackIndex]?.targetId??null:null,station,batteryId,...result});
   return result;
 }
 function draw(s,ship,n){for(let i=0;i<n;i++){if(!ship.drawPile.length){ship.drawPile=shuffle(s,ship.discard);ship.discard=[];}if(ship.drawPile.length)ship.hand.push(ship.drawPile.pop());}if(ship.hand.length>ship.profile.hand)s.pendingDiscard={shipId:ship.id,count:ship.hand.length-ship.profile.hand};}
@@ -233,7 +233,7 @@ async function play(s,ship,cmd,services){
   else s.actions.push({seq:++s.actionSerial,shipId:ship.id,station,eventId});
   const used=alphaComplications(s,ship.id).filter(e=>e.rule?.endsWith("after-other-station")&&e.rule.startsWith(station)||e.rule===`no-coordinated-${station==="veilwarden"?"veil":station}`);
   consume(s,ship.id,used);
-  log(s,`${ship.name}: ${card.name} (${card.ap} AP).`);
+  log(s,`${ship.name}: ${card.name} (${card.ap} AP).`,{kind:"card",shipId:ship.id,cardId:card.id,degree,cost:card.ap});
 }
 function finishExchange(s){
   for(const hit of s.damage){track(s.ships[hit.targetId],"hull",-hit.damage);if(hit.slow)s.ships[hit.targetId].slow=Math.max(s.ships[hit.targetId].slow??0,hit.slow);}
@@ -278,7 +278,7 @@ async function resolveAttack(s,services){
   s.damage.push({shipId:attacker.id,targetId:target.id,batteryId:b.id,degree:result.degree,raw,damage,slow:order.cardId==="chainshot"&&result.degree>=1?(result.degree===2?2:1):0});
   const different=alphaComplications(s,attacker.id).find(e=>e.rule==="different-battery-targets");if(different){const record=s.complications.effects.find(e=>e.id===different.id);if(record.firstTarget)consume(s,attacker.id,[different]);else record.firstTarget=target.id;}
   source(s,attacker,"battlewatch",result.degree,order.eventId,{source:"attack",batteryId:b.id});
-  order.resolved=true;log(s,`${attacker.name} → ${target.name}: ${raw} raw, ${damage} Hull damage pending exchange.`);nextAttack(s);
+  order.resolved=true;log(s,`${attacker.name} → ${target.name}: ${raw} raw, ${damage} Hull damage pending exchange.`,{kind:"damage",shipId:attacker.id,targetId:target.id,batteryId:b.id,formula,rolled,degree:result.degree,raw,damage,mitigated:raw-damage});nextAttack(s);
 }
 function refresh(s){
   compIn(s);s.complications=advanceComplicationRound(s.complications);s.round++;

@@ -1,6 +1,6 @@
 # Arkflight phased combat alpha — testing guide
 
-Build: `alpha-ship-libraries-20261026`. Updated 26 October 2026.
+Build: `alpha-command-deck-20261027`. Updated 26 October 2026.
 
 This is an opt-in vertical slice of the new combat rules. It creates marked test Actors, tokens, a hex scene and a native Combat. It preserves campaign ships and the older prototype. The feature branch is not a versioned release or a migration.
 
@@ -31,20 +31,24 @@ await game.arkflight.alphaCombat.open();
 
 1. Leave the Builder at level 5, Brigantine versus Cutter, two ships. Choose four ships for a second test.
 2. Click **Build test fleet and start**. The GM views the dedicated `[Alpha] Arkflight — Ship Combat` scene. Use **View scene** if needed.
-3. Read the open **Guided alpha test** box, then click **Next suggested step**. Every click performs one real command and waits. There is no automatic advance.
+3. Read the **Guided test** summary or hover the footer’s **Next Step** button for its next action. Each click performs one real command and waits. There is no automatic advance.
 4. Continue through planning, movement, cards, targeting, responses, damage and the next round. The guide can choose enemy actions as well as the party's actions. It uses the same rule controller as manual play.
 5. Watch the actual ship tokens move, the AP/resource meters and the Log. A battle can finish before three rounds; use another test rather than forcing it to continue.
 
-The window uses native movable/resizable chrome. **Minimize** folds it; the same macro restores it without advancing the encounter. Movement temporarily folds the window, then restores it. **End alpha test** ends the encounter; Builder can then create another. Rebuilding resets only marked test fixtures. It refuses to reset a test scene containing unrelated tokens.
+The window uses native movable/resizable chrome. **Minimize** folds it; the same macro restores it without advancing the encounter. Movement temporarily folds the window, then restores it. **Tools → End alpha test** ends the encounter; Builder can then create another. Rebuilding resets only marked test fixtures. It refuses to reset a test scene containing unrelated tokens.
 
 ## Run a manual round
 
 - **Planning:** select each ship, choose a complete maneuver and inspect its written sequence. **Preview on canvas** draws the route, numbered positions and final heading. The Navigator stages it; the Captain locks it. All ships remain still until the GM clicks **Reveal and move together**. Hold is always available. Initiative is rolled afresh for each round.
 - **Movement:** one translation hex is one shared step. Forward 1 → Starboard 60° → Forward 2 takes three translation steps; turning occurs at its printed waypoint. All resolved ships move in the same native batch per step. Capital ships use extra occupied-hex markers, up to three total.
-- **Cards:** ships act in initiative order. Click a card to read its outcomes; the raised selection is also used for mulligan/discard. Select crew skills, weapon and any printed movement adjustment, then play it. Basic **Fire Battery** costs 1 AP and queues a shot without needing an attack card. **Finish Card phase** preserves unused AP for Instants.
-- **Targeting:** declare every queued battery's target before any attack roll. **Show weapon arc / range** previews its legal firing area. A broadside is a 90° sector; the fore swivel has a 180° targeting arc. These are single-target batteries, not automatic damage to every token inside an overlay. Hold an unworkable shot rather than spending ammunition.
+- **Cards:** ships act in initiative order. Click a card to read its outcomes; the raised selection is also used for mulligan/discard. Select crew skills, weapon and any printed movement adjustment, then play it. Click **Weapons**, then a battery’s **Commit shot · 1 AP** button to queue a shot without needing an attack card. **Finish Card phase** preserves unused AP for Instants.
+- **Targeting:** declare every queued battery's target before any attack roll. the battery’s **Arc / range** button previews its legal firing area. A broadside is a 90° sector; the fore swivel has a 180° targeting arc. These are single-target batteries, not automatic damage to every token inside an overlay. Hold an unworkable shot rather than spending ammunition.
 - **Damage:** the defender may play one eligible Instant or pass for each incoming attack. The attacking crew then rolls. A movement response can invalidate the target; the attacker gets at most one replacement target or holds the shot. Hull damage from all committed attacks is applied together after those rolls, so a ship can fire in the exchange that disables it.
 - **Next round:** resolve any complication choice or excess-hand discard, then refresh AP, apply delayed effects and draw one card. Reload N fired in round R is ready at the beginning of R + N; each battery still fires at most once per round unless a future explicit effect says otherwise.
+
+## Polished Command Deck
+
+The framed hand, type bands, interactive deck piles, full card inspector, visible result receipts, paper/card foley, motion/volume controls and compact mode are described in `ARKFLIGHT-1.1.0-COMMAND-DECK-UI.md`. The launch macro is unchanged.
 
 ## Permanent libraries and saved decks
 
@@ -56,7 +60,7 @@ In **Ship / Crew**, the GM can assign PF2e character Actors to stations during p
 
 The Navigator controls staging; the Captain controls locking/finishing; Battle Watch controls basic battery fire/attack rolls. A card's primary station initiates its contribution. Coordinated cards resolve their printed station checks in order as one activation. This alpha does not provide a separate asynchronous confirmation popup for every contributing player. The GM can operate all test ships and use NPC crew baselines if no PC is assigned.
 
-Crew checks offer three station skills. The modifier uses ship level once, plus the selected character's training and attribute; it does not add character level again. Rolls and four degrees appear in the alpha Log. Dice So Nice/chat roll presentation is not part of this slice.
+Crew checks offer three station skills. The modifier uses ship level once, plus the selected character's training and attribute; it does not add character level again. Actual rolls and four degrees appear in the latest-result HUD strip and alpha Log. Dice So Nice/native chat roll cards are not part of this slice.
 
 ## Current tuning values
 

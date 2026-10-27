@@ -38,3 +38,8 @@ Only after those checks should campaign migration, catalog expansion and cross-p
 
 
 The user has passed the initial live combat/permission test, including the current internal-roll presentation. That acceptance does not automatically pass the new library increment; its live persistence/multi-client checklist remains pending. Visible chat/dice roll presentation remains a requested UI improvement.
+
+
+## Command Deck presentation increment — 27 October 2026
+
+The test interface now has a card-focused framed hand, four type bands, draw/discard/prepared/burn/Complication piles, a full four-outcome inspector, phase/AP indicators, explicit per-battery commitment tiles, authoritative HUD roll/damage receipts, a matching library gallery, compact/minimize controls and client-local paper/card SFX with reduced-motion support. The Battle Watch weapon button now follows its existing controller permission independently of Captain phase controls. Rules changes are limited to additive presentation metadata; no extra rolls or card draws are introduced. Native chat/Dice So Nice and the complete production ship sheet remain separate work. Follow `ARKFLIGHT-1.1.0-COMMAND-DECK-UI.md` for live presentation acceptance.

@@ -1,17 +1,20 @@
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS } from "../alpha/hulls.js";
 import { validateLibraryDeck } from "../alpha/ship-library.js";
 import { alphaCardArt } from "./alpha-combat-ui.js";
+import { cardBand, cardTheme, cardOutcomes } from "./alpha-combat-presentation.js";
+import { AlphaCombatEffects, alphaPreferences, alphaSound, bindAlphaPreferences, alphaWindowPosition } from "./alpha-combat-effects.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 let instance;
 export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(ApplicationV2) {
-  static DEFAULT_OPTIONS = { id: "arkflight-alpha-library", classes: ["arkflight-alpha-combat", "arkflight-alpha-library"], window: { title: "Arkflight — Ship Library & Decks", icon: "fa-solid fa-book-open", resizable: true }, position: { width: 620, height: 660 } };
+  static DEFAULT_OPTIONS = { id: "arkflight-alpha-library", classes: ["arkflight-alpha-combat", "arkflight-alpha-library"], window: { title: "Arkflight — Ship Library & Decks", icon: "fa-solid fa-book-open", resizable: true }, position: { width: 820, height: 680 } };
   static PARTS = { main: { template: "modules/arkflight-game/templates/alpha-ship-library.hbs" } };
   actorId = null; loadoutId = null; draft = null; baseRevision = null; configDraft = null; dirty = false; configDirty = false; busy = false; error = ""; search = "";
-  constructor(options = {}) { super({ ...options, position: { width: Math.min(620, innerWidth - 32), height: Math.min(660, innerHeight - 70), ...options.position } }); }
+  effectsEngine = new AlphaCombatEffects();
+  constructor(options = {}) { super({ ...options, position: alphaWindowPosition(820,680,options.position) }); }
   resetDraft() { this.draft = null; this.configDraft = null; this.baseRevision = null; this.dirty = false; this.configDirty = false; }
   async _prepareContext(options) {
-    const base = await super._prepareContext(options), api = game.arkflight.alphaCombat.library, ships = api.ships();
+    const base = {...await super._prepareContext(options),preferences:alphaPreferences()}, api = game.arkflight.alphaCombat.library, ships = api.ships();
     if (!ships.some(s => s.id === this.actorId)) { this.actorId = ships[0]?.id ?? null; this.loadoutId = null; this.resetDraft(); }
     if (!this.actorId) return { ...base, ships: [], error: this.error, gm: game.user.isGM };
     let view;
@@ -27,7 +30,7 @@ export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(Applicati
     const issues = validateLibraryDeck(view, this.draft), counts = new Map();
     for (const id of this.draft.cards) counts.set(id, (counts.get(id) ?? 0) + 1);
     const unavailable = [...counts].filter(([id]) => !view.learned.includes(id) || !view.catalog.some(c => c.id === id)).map(([id, count]) => ({ id, count }));
-    const catalog = view.catalog.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase())).map(c => ({ ...c, learned: view.learned.includes(c.id), count: counts.get(c.id) ?? 0, max: c.unique ? 1 : 2, art: alphaCardArt(c), editable: editable && view.learned.includes(c.id) }));
+    const catalog = view.catalog.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase())).map(c => {const count=counts.get(c.id)??0,max=c.unique?1:2,canEdit=editable&&view.learned.includes(c.id);return{ ...c, learned: view.learned.includes(c.id),count,max, art: alphaCardArt(c), editable:canEdit,canDecrease:canEdit&&count>0,canIncrease:canEdit&&count<max,band:cardBand(c),theme:cardTheme(c),outcomes:cardOutcomes(c) };});
     return { ...base, view, ships: ships.map(s => ({ ...s, selected: s.id === this.actorId })), gm: game.user.isGM, error: this.error, busy: this.busy, stale, editable, dirty: this.dirty || this.configDirty, locked, draft: this.draft, count: this.draft.cards.length, issues, unavailable, search: this.search, catalog,
       canInitialize: game.user.isGM && !view.initialized && !locked && !this.busy,
       canSaveDeck: editable && !this.configDirty, canRefit: editable && !this.dirty,
@@ -41,6 +44,9 @@ export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(Applicati
   async _onRender(context, options) {
     await super._onRender(context, options);
     const root = this.element;
+    bindAlphaPreferences(root,()=>this.render({force:true}));
+    for(const button of root.querySelectorAll("[data-library-slot]"))button.addEventListener("click",()=>{this.loadoutId=button.dataset.librarySlot;this.resetDraft();this.error="";alphaSound("open");void this.render({force:true});});
+    for(const button of root.querySelectorAll("[data-library-adjust]"))button.addEventListener("click",()=>{const id=button.dataset.cardId,view=game.arkflight.alphaCombat.library.view(this.actorId),card=view.catalog.find(c=>c.id===id);if(view.locked||!view.learned.includes(id)||!card)return;const count=Math.max(0,Math.min(card.unique?1:2,this.draft.cards.filter(c=>c===id).length+Number(button.dataset.libraryAdjust)));this.draft.cards=[...this.draft.cards.filter(c=>c!==id),...Array(count).fill(id)];this.dirty=true;alphaSound("select");void this.render({force:true});});
     root.querySelector("[data-library-ship]")?.addEventListener("change", e => { this.actorId = e.target.value; this.loadoutId = null; this.resetDraft(); this.error = ""; void this.render({ force: true }); });
     root.querySelector("[data-library-loadout]")?.addEventListener("change", e => { this.loadoutId = e.target.value; this.resetDraft(); this.error = ""; void this.render({ force: true }); });
     root.querySelector("[data-library-name]")?.addEventListener("input", e => { this.draft.name = e.target.value; this.dirty = true; });
@@ -71,10 +77,13 @@ export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(Applicati
       else if (action === "refit") Object.assign(command, { type: "library-refit", config: structuredClone(this.configDraft) });
       else throw new Error("Unknown library action.");
       await game.arkflight.alphaCombat.request(command);
+      alphaSound(["grant","initialize"].includes(action)?"ready":"lock");
       this.resetDraft();
-    } catch (error) { this.error = error.message; }
+    } catch (error) { this.error = error.message; alphaSound("failure"); }
     finally { this.busy = false; if (this.rendered) await this.render({ force: true }); }
   }
+  async minimize(...args){this.effectsEngine.clear(false);return super.minimize(...args);}
+  async close(options={}){this.effectsEngine.clear();return super.close(options);}
 }
 Hooks.once("init", () => game.settings.registerMenu("arkflight-game", "alphaLibraryWindow", { name: "Arkflight Ship Library", label: "Open Ship Library", hint: "Learned cards and three saved combat loadouts.", icon: "fa-solid fa-book-open", type: AlphaShipLibraryWindow, restricted: false }));
 Hooks.once("ready", () => {
@@ -87,3 +96,4 @@ Hooks.once("ready", () => {
   game.arkflight.alphaCombat = Object.freeze(Object.defineProperties({}, descriptors));
 });
 Hooks.on("arkflightAlphaChanged", () => { if (instance?.rendered && !instance.busy) void instance.render({ force: true }); });
+Hooks.on("arkflightAlphaPresentationChanged",()=>{if(instance?.rendered){instance.effectsEngine.clear(false);void instance.render({force:true});}});
