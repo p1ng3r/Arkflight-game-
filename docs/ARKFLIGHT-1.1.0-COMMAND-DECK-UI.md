@@ -51,7 +51,7 @@ The latest-result strip exposes the real authoritative skill/save/attack result 
 
 ## Motion and sound
 
-Click **Sound on** in the header to enable this browser's audio. Sound defaults off. Card selection, fan/deal, placement and closing use the repository's bundled licensed paper/card recordings; cannon, impact, ward and critical-result accents use its existing audio engine. No remote audio service is required.
+Click the header’s **Sound off** button to enable this browser’s audio; its label becomes **Sound on**. Sound defaults off. Card selection, fan/deal, placement and closing use the repository's bundled licensed paper/card recordings; cannon, impact, ward and critical-result accents use its existing audio engine. No remote audio service is required.
 
 **Settings** provides Full/Subtle/Off motion and a volume slider. Preferences are client-local. OS reduced motion overrides Full/Subtle. Results stay readable with motion disabled. Sound can remain enabled independently. Muting, minimizing, closing and hiding the browser stop pending audio; closing/minimizing clears the app's temporary effects. Failed audio loading or a browser autoplay restriction never blocks a command.
 
