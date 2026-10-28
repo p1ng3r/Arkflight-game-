@@ -2,12 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { alphaWorld, installAlphaHooks } from "./helpers/alpha-world.js";
 import { alphaSuggestedStep } from "../src/alpha/combat.js";
-import { ventCardModel } from "../src/ui/alpha-master-card.js";
+import { ventCardModel, masterCardPosition } from "../src/ui/alpha-master-card.js";
 import { showAlphaCardRolls } from "../src/foundry/alpha-card-dice.js";
 installAlphaHooks();
 const {authorizeAlphaCommand}=await import("../src/foundry/alpha-combat-api.js");
 class Base{constructor(options){this.options=options;}async _prepareContext(){return{};}}
-const {AlphaCombatWindow}=await import("../src/ui/alpha-combat-ui.js").catch(async()=>{
+const {AlphaCombatWindow,AlphaMasterCardWindow}=await import("../src/ui/alpha-combat-ui.js").catch(async()=>{
   globalThis.foundry={applications:{api:{ApplicationV2:Base,HandlebarsApplicationMixin:x=>x}}};return import("../src/ui/alpha-combat-ui.js?master");
 });
 const command=(api,type,extra={})=>{const s=api.state();return api.request({type,encounterId:s?.id,revision:s?.revision,...extra});};
@@ -57,4 +57,23 @@ test("Optional 3D display falls back without changing evaluated totals or throwi
   const warn=console.warn;console.warn=()=>{};
   try{game.dice3d={animateRoll:async()=>{throw Error("Renderer unavailable");}};await showAlphaCardRolls([roll],{user:game.user});}finally{console.warn=warn;}
   assert.equal(roll.total,17);delete game.dice3d;await showAlphaCardRolls([roll]);
+});
+
+test("Portrait dimensions and native window stay inside laptop and narrow viewports",()=>{
+  for(const [width,height]of [[1366,768],[900,600],[390,740],[320,640],[320,500]]){
+    const p=masterCardPosition({width,height,left:9999,top:9999});
+    assert.ok(p.left>=0&&p.top>=0);assert.ok(p.left+p.width<=width);assert.ok(p.top+p.height<=height);
+    assert.equal(p.width,p.cardWidth+20);assert.ok(p.height>=p.cardWidth*1.5+100);
+  }
+});
+test("Separate portrait preview cannot spend AP, and a recycled card does not borrow its old receipt",async()=>{
+  const w=alphaWorld({applicationAPI:{ApplicationV2:Base,HandlebarsApplicationMixin:x=>x}}),api=w.initialize();
+  globalThis.innerWidth=1366;globalThis.innerHeight=768;
+  const s=await command(api,"start"),saved=structuredClone(s),rolls=w.counts.rolls;
+  const popup=new AlphaMasterCardWindow(),context=await popup._prepareContext({});
+  assert.equal(context.masterOnly,true);assert.equal(context.masterPreview,true);assert.equal(context.playable,false);
+  assert.deepEqual(api.state(),saved);assert.equal(w.counts.rolls,rolls);
+  const ship={id:"ship",hand:["vent-1"]};
+  const detail={kind:"check",shipId:ship.id,instanceId:"vent-1",die:12,modifier:11,total:23,dc:20,degree:1};
+  assert.equal(ventCardModel({s:{log:[{detail}]},ship,instanceId:"vent-1"}).receipt,false);
 });

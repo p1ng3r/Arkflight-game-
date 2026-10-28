@@ -1,4 +1,4 @@
-import { ventCardModel } from "./alpha-master-card.js";
+import { ventCardModel, masterCardPosition } from "./alpha-master-card.js";
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS, deriveAlphaProfile } from "../alpha/hulls.js";
 import { ALPHA_CARDS, ALPHA_SKILLS, ALPHA_STARTER_DECK } from "../alpha/cards.js";
 import { activeAlphaShip, alphaCardFor, alphaComplications, alphaTargetLegal, alphaReplacementTargetLegal, alphaSuggestedStep } from "../alpha/combat.js";
@@ -11,7 +11,7 @@ import { stationName, cardBand, cardTheme, cardOutcomes, phasePresentation, comb
 import { AlphaCombatEffects, alphaPreferences, alphaSound, bindAlphaPreferences, alphaWindowPosition } from "./alpha-combat-effects.js";
 
 const {ApplicationV2,HandlebarsApplicationMixin}=foundry.applications.api;
-let instance;
+let instance,masterInstance;
 const words=value=>String(value??"").replace(/([a-z])([A-Z])/g,"$1 $2").replaceAll("-"," ").replace(/\b\w/g,c=>c.toUpperCase());
 const names={planning:"Maneuver Planning",cards:"Card Phase",targeting:"Declare Targets",response:"Incoming Attack",retarget:"Replacement Target",cleanup:"Round Complete",complete:"Encounter Complete",boarding:"Deck Encounter / Ship Battle Paused"};
 const artIds={acquire:"acquire-target",patch:"work-the-guns",brace:"brace-impact",prepare:"issue-order",shield:"emergency-ward",helm:"evasive-maneuver",volley:"ready-broadside",harmonic:"reinforce-lifeveil","all-hands":"drive-the-crew",evasive:"attack-vector",read:"charted-course",chainshot:"ready-broadside",breakaway:"breakaway-vector",ahead:"charted-course",overcharge:"feed-the-guns",mend:"mend-lifeveil",rally:"rally-crew",boarding:"rally-crew",ram:"brace-impact",vent:"vent-strain","work-guns":"work-the-guns"};
@@ -65,7 +65,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     const canFire=turn&&ship&&api.canOperate(ship.id,"battlewatch")&&!hasPending&&ship.ap>=1;
     const fireHint=!turn?"Wait for this ship's Card phase.":!ship||!api.canOperate(ship.id,"battlewatch")?"The assigned Battle Watch crew commits weapons.":hasPending?"Resolve the pending choice first.":ship.ap<1?"No AP remains.":"Commit a shot now; choose its target after all ships finish their Card phase.";
     return {...base,s,ship,buildId:api.build,report:this.report,guideOpen:this.guideOpen,suggestion:s?alphaSuggestedStep(s):null,gm:game.user.isGM,busy:this.busy,error:this.error,buildError,profile,recovery:api.recovery(),hasRecovery:Boolean(api.recovery()?.next??api.recovery()?.pending),phaseName:names[phase]??"Take Command",paused:game.paused,tab:this.tab,
-      masterPreview:this.tab==="forge",masterCard:card?.id==="vent",ventMaster:ventCardModel({s,ship,instanceId:selected,preview:this.tab==="forge"}),resultsOpen:this.resultsOpen,presentation:phasePresentation(s,ship?.id),preferences:alphaPreferences(),handFolded:this.handFolded,compact:this.compact,piles:combatPiles(s,ship),pile:inspectCombatPile(s,ship,this.pileId),results:latestCombatResults(s,ship?.id),canFire,fireHint,
+      masterPreview:this.tab==="forge",masterCard:card?.id==="vent",ventMaster:ventCardModel({s,ship,instanceId:selected,preview:this.tab==="forge"}),masterDetails:this.masterDetails??false,resultsOpen:this.resultsOpen,presentation:phasePresentation(s,ship?.id),preferences:alphaPreferences(),handFolded:this.handFolded,compact:this.compact,piles:combatPiles(s,ship),pile:inspectCombatPile(s,ship,this.pileId),results:latestCombatResults(s,ship?.id),canFire,fireHint,
       selectedBattery:selectedBattery?.name,selectionCount:this.selections.size,canConfirmMulligan:this.selections.size<=2,canDiscard:this.selections.size===s?.pendingDiscard?.count,cardHint,canRegroup:turn&&card&&!hasPending&&ship.ap>=1&&ship.regroupRound!==s.round,
       apPips:ship?Array.from({length:Math.max(ship.profile.ap,ship.ap)},(_,i)=>({spent:i>=ship.ap})):[],
       tabs:[{id:"plan",name:"Maneuver"},{id:"hand",name:"Cards"},{id:"ship",name:"Ship / Crew"},{id:"log",name:"Log"},{id:"forge",name:"Card Forge"},...(game.user.isGM?[{id:"build",name:"Builder"}]:[])].map(t=>({...t,selected:t.id===this.tab})),
@@ -110,11 +110,13 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     root.querySelector("[data-alpha-battery]")?.addEventListener("change",e=>{this.batteryId=e.target.value;void this.render({force:true});});
     root.querySelector("[data-alpha-target]")?.addEventListener("change",e=>{this.targetId=e.target.value;void this.render({force:true});});
     root.querySelector("[data-alpha-adjustment]")?.addEventListener("change",e=>{this.adjustment=e.target.value;});
-    for(const el of root.querySelectorAll("[data-alpha-tab]"))el.addEventListener("click",()=>{this.tab=el.dataset.alphaTab;if(this.compact)this.toggleCompact();clearAlphaOverlay();alphaSound("open");void this.render({force:true});});
+    for(const el of root.querySelectorAll("[data-alpha-tab]"))el.addEventListener("click",()=>{if(el.dataset.alphaTab==="forge"){void openMasterCard({preview:true});return;}this.tab=el.dataset.alphaTab;if(this.compact)this.toggleCompact();clearAlphaOverlay();alphaSound("open");void this.render({force:true});});
     for(const el of root.querySelectorAll("[data-alpha-pile]"))el.addEventListener("click",()=>{this.pileId=this.pileId===el.dataset.alphaPile?null:el.dataset.alphaPile;alphaSound("open");void this.render({force:true});});
     for(const el of root.querySelectorAll("[data-alpha-card]"))el.addEventListener("click",()=>{
       const id=el.dataset.alphaCard,s=game.arkflight.alphaCombat.state(),ship=s.ships[this.shipId],multi=Boolean(s.pendingDiscard?.shipId===ship.id||s.round===1&&!ship.mulliganDone&&s.phase==="planning");
-      const had=this.selections.has(id);if(!multi)this.selections.clear();if(had)this.selections.delete(id);else this.selections.add(id);this.inspectId=had&&this.inspectId===id?null:id;this.revealInspector=Boolean(this.inspectId);alphaSound(had?"deselect":"select");void this.render({force:true});
+      const had=this.selections.has(id);if(!multi)this.selections.clear();if(had)this.selections.delete(id);else this.selections.add(id);this.inspectId=had&&this.inspectId===id?null:id;this.revealInspector=Boolean(this.inspectId);alphaSound(had?"deselect":"select");
+      if(alphaCardFor(ship,id)?.id==="vent"&&!had){void openMasterCard({preview:false,shipId:ship.id,instanceId:id,skill:this.skills.engineer});this.inspectId=null;this.revealInspector=false;if(!multi)this.selections.clear();}
+      void this.render({force:true});
     });
     for(const el of root.querySelectorAll("[data-alpha-cmd]"))el.addEventListener("click",()=>this.act(el.dataset.alphaCmd,el.dataset));
     for(const el of root.querySelectorAll("[data-alpha-order-target]"))el.addEventListener("change",()=>this.act("target",{attackId:el.dataset.alphaOrderTarget,shipId:el.dataset.shipId,targetId:el.value}));
@@ -130,6 +132,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
   async act(type,data={}){
     if(this.busy)return;
     const api=game.arkflight.alphaCombat,s=api.state(),ship=s?.ships[this.shipId];
+    if(type==="master-details"){this.masterDetails=!this.masterDetails;await this.render({force:true});return;}
     if(type==="fire"&&data.batteryId)this.batteryId=data.batteryId;
     if(type==="show-weapons"){this.element.querySelector(".alpha-armory")?.scrollIntoView({block:"start",behavior:alphaPreferences().mode==="off"?"instant":"smooth"});return;}
     if(type==="fold-hand"){this.handFolded=!this.handFolded;alphaSound(this.handFolded?"close":"ready");await this.render({force:true});return;}
@@ -198,9 +201,37 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
   async minimize(...args){this.effectsEngine.clear(false);return super.minimize(...args);}
   async close(options={}){this.effectsEngine.clear();clearAlphaOverlay();return super.close(options);}
 }
+/** One portrait, separate from the combat dashboard; actions still use its controller. */
+export class AlphaMasterCardWindow extends AlphaCombatWindow {
+  static DEFAULT_OPTIONS={id:"arkflight-alpha-master-card",classes:["arkflight-alpha-combat","alpha-command-deck","alpha-master-window"],window:{title:"Arkflight — Vent Strain",icon:"fa-solid fa-dice-d20",resizable:false},position:{width:370,height:633}};
+  preview=true;masterDetails=false;receiptKey=null;
+  constructor(options={}){const {cardWidth,...position}=masterCardPosition();super({...options,position:{...position,...options.position}});}
+  async _prepareContext(options){
+    this.tab=this.preview?"forge":"hand";
+    const c=await super._prepareContext(options);
+    const receipt=c.ventMaster.receipt,key=receipt?`${c.s?.id}:${this.inspectId}:${receipt.die}:${receipt.total}`:null;
+    if(key&&key!==this.receiptKey)this.masterDetails=true;
+    this.receiptKey=key;
+    return {...c,masterOnly:true,masterPreview:this.preview,masterDetails:this.masterDetails,playable:!this.preview&&c.masterCard&&c.playable,cardHint:c.masterCard?c.cardHint:"This card is no longer available in this ship's hand."};
+  }
+  fitCard(){if(this.minimized)return;const {cardWidth,...position}=masterCardPosition({left:this.position?.left,top:this.position?.top});this.setPosition?.(position);this.element?.style.setProperty("--alpha-master-card-width",`${cardWidth}px`);}
+  async _onRender(context,options){
+    await super._onRender(context,options);this.fitCard();
+    if(!this.resizeListener){this.resizeListener=()=>this.fitCard();globalThis.addEventListener?.("resize",this.resizeListener);}
+  }
+  async maximize(...args){const result=await super.maximize(...args);this.fitCard();return result;}
+  async act(type,data={}){if(type==="close-inspector"){await this.close();return;}return super.act(type,data);}
+  async close(options={}){if(this.resizeListener){globalThis.removeEventListener?.("resize",this.resizeListener);this.resizeListener=null;}return super.close(options);}
+}
+export async function openMasterCard({preview=true,shipId=null,instanceId=null,skill}={}){
+  if(masterInstance?.busy){masterInstance.bringToFront();return masterInstance;}
+  masterInstance??=new AlphaMasterCardWindow();masterInstance.preview=preview;masterInstance.shipId=shipId;masterInstance.inspectId=instanceId;masterInstance.masterReceiptId=null;masterInstance.masterDetails=false;masterInstance.receiptKey=null;masterInstance.error="";
+  if(skill)masterInstance.skills.engineer=skill;
+  await masterInstance.render({force:true});if(masterInstance.minimized)await masterInstance.maximize();masterInstance.bringToFront();return masterInstance;
+}
 Hooks.once("init",()=>game.settings.registerMenu("arkflight-game","alphaCombatWindow",{name:"Arkflight 1.1 Alpha Combat",label:"Open 1.1 Alpha",hint:"Dedicated test ships, hull maneuvers and phased deck combat.",icon:"fa-solid fa-compass",type:AlphaCombatWindow,restricted:false}));
 Hooks.once("ready",()=>{
-  game.arkflight.alphaCombat=Object.freeze(Object.defineProperties({async open({tab}={}){instance??=new AlphaCombatWindow();if(tab==="forge")instance.tab="forge";await instance.render({force:true});if(instance.minimized)await instance.maximize();instance.bringToFront();return instance;}},Object.getOwnPropertyDescriptors(game.arkflight.alphaCombat)));
+  game.arkflight.alphaCombat=Object.freeze(Object.defineProperties({async open({tab}={}){if(tab==="forge")return openMasterCard({preview:true});instance??=new AlphaCombatWindow();await instance.render({force:true});if(instance.minimized)await instance.maximize();instance.bringToFront();return instance;}},Object.getOwnPropertyDescriptors(game.arkflight.alphaCombat)));
 });
-Hooks.on("arkflightAlphaChanged",()=>{if(instance?.rendered&&!instance.busy)void instance.render({force:true});});
+Hooks.on("arkflightAlphaChanged",()=>{if(instance?.rendered&&!instance.busy)void instance.render({force:true});if(masterInstance?.rendered&&!masterInstance.busy)void masterInstance.render({force:true});});
 Hooks.on("arkflightAlphaPresentationChanged",()=>{if(instance?.rendered){instance.effectsEngine.clear(false);void instance.render({force:true});}});
