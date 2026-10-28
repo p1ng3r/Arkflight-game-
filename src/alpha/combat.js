@@ -34,18 +34,19 @@ function settle(s){
   }
 }
 function assertSettled(s){if(s.complicationQueue.length||s.complications.choices.some(c=>c.status==="pending"))throw new Error("Resolve the pending complication choices first.");if(s.pendingDiscard)throw new Error("Discard the required cards first.");}
-async function check(s,ship,station,skill,services,{dc=ship.profile.dc,batteryId=null,coordinated=false,bonus=0,save=false}={}){
+async function check(s,ship,station,skill,services,{dc=ship.profile.dc,batteryId=null,coordinated=false,bonus=0,save=false,cardId=null,instanceId=null}={}){
   if(ALPHA_SKILLS[station]&&!ALPHA_SKILLS[station].includes(skill??ALPHA_SKILLS[station][0]))throw new Error("Choose one of this station's three skills.");
   const baseline=save&&station==="engineer"?ship.profile.engineer:save&&station==="veilwarden"?ship.profile.veil:station==="structure"?ship.profile.structure:station==="initiative"?ship.profile.level+2:station==="battlewatch"?ship.profile.attack:ship.profile.support;
   const base=!save&&ALPHA_SKILLS[station]&&services.operatorModifier?await services.operatorModifier(ship,station,skill??ALPHA_SKILLS[station][0]):baseline;
   if(!Number.isFinite(base))throw new Error("Invalid crew modifier.");
   const modifier=save&&station!=="structure"?{amount:0,effectIds:[]}:complicationCheckModifier(s.complications,ship.id,station==="battlewatch"&&batteryId?"battery-attack":station,{batteryId,coordinated});
+  const components=!save&&ALPHA_SKILLS[station]&&services.operatorBreakdown?await services.operatorBreakdown(ship,station,skill??ALPHA_SKILLS[station][0]):[{label:save?"Ship save":"Ship crew baseline",value:base}];
   const die=await roll(s,"1d20",services);if(!Number.isInteger(die)||die<1||die>20)throw new Error("A check requires a d20 result.");
   const morale=!save&&ALPHA_SKILLS[station]?(ship.resources.morale.value<=25?-2:ship.resources.morale.value<=50?-1:0):0;
   const penalty=Math.min(modifier.amount,morale);
   const total=die+base+penalty+bonus;
   consume(s,ship.id,modifier.effectIds);
-  const result={die,modifier:base+penalty+bonus,total,dc,degree:degreeOfSuccess(total,die,dc)};
+  const result={die,modifier:base+penalty+bonus,total,dc,degree:degreeOfSuccess(total,die,dc),skill:skill??ALPHA_SKILLS[station]?.[0]??null,cardId,instanceId,components:[...components,{label:"Morale / complication (strongest)",value:penalty},{label:"Action bonus",value:bonus}]};
   log(s,`${ship.name} · ${station}: d20 ${die} ${result.modifier>=0?"+":""}${result.modifier} = ${total} vs ${dc} (${["critical failure","failure","success","critical success"][result.degree+1]}).`,{kind:"check",shipId:ship.id,targetId:station==="battlewatch"&&batteryId?s.attacks[s.attackIndex]?.targetId??null:null,station,batteryId,...result});
   return result;
 }
@@ -195,7 +196,7 @@ async function play(s,ship,cmd,services){
     compIn(s);s.complications=claimComplicationOpportunity(s.complications,{effectId:e.id,opponentId:ship.id,alongside:true});compOut(s);boardingBonus+=e.value;boardingOpening=e;
   }
   const attackOnly=card.role==="Attack"&&card.stations.length===1;
-  const result=attackOnly?{degree:1}:await check(s,ship,station,cmd.skill,services,{bonus:card.id==="boarding"?boardingBonus:0,coordinated:card.stations.length>1,dc:card.id==="boarding"?s.ships[cmd.targetId]?.profile.dc??ship.profile.dc:ship.profile.dc});
+  const result=attackOnly?{degree:1}:await check(s,ship,station,cmd.skill,services,{cardId:card.id,instanceId:cmd.instanceId,bonus:card.id==="boarding"?boardingBonus:0,coordinated:card.stations.length>1,dc:card.id==="boarding"?s.ships[cmd.targetId]?.profile.dc??ship.profile.dc:ship.profile.dc});
   const degree=result.degree;
   if(!attackOnly&&degree===0&&card.id!=="boarding")normalFailure(ship,station);
   if(!attackOnly)source(s,ship,station,degree,eventId,{batteryId:cmd.batteryId??null});

@@ -1,0 +1,45 @@
+/* The engineer master uses separate painted art, transparent frame and live controls. */
+.alpha-command-deck .alpha-master-wrap{display:grid;justify-items:center;margin:14px 0 22px;gap:10px;min-width:0}
+.alpha-command-deck .alpha-master-toolbar{display:flex;justify-content:space-between;align-items:center;width:min(100%,390px);gap:12px;font-size:12px;color:#c9b288}
+.alpha-command-deck .alpha-master-toolbar button{font-size:12px}
+.alpha-command-deck .alpha-master-card{position:relative;width:min(100%,390px);isolation:isolate;overflow:hidden;border-radius:19px;background:#172327;box-shadow:0 15px 40px #0008;color:#34291f;padding:0;border:0}
+.alpha-command-deck .alpha-master-card.alpha-card-detail{display:block;grid-template-columns:none;padding:0;margin:0;border:0;background:#172327}
+.alpha-command-deck .alpha-master-hero{position:relative;height:330px;background:#132b30;overflow:hidden}
+.alpha-command-deck .alpha-master-painting{width:100%;height:100%;object-fit:cover;object-position:50% 56%;border:0;border-radius:0;transition:transform 450ms ease}
+.alpha-command-deck .alpha-master-card:hover .alpha-master-painting{transform:scale(1.025)}
+.alpha-command-deck .alpha-master-header{position:absolute;top:20px;left:23px;right:23px;display:flex;align-items:start;gap:6px;z-index:3}
+.alpha-command-deck .alpha-master-header>div{flex:1;min-width:0;filter:drop-shadow(0 3px 5px #0008)}
+.alpha-command-deck .alpha-master-header h3{background:linear-gradient(110deg,#f6e6bf,#d8bb85);color:#30271e;font:600 clamp(20px,4vw,27px)/1.1 Georgia,serif;margin:0!important;padding:9px 8px;text-align:center;border-radius:14px 5px 12px 4px;border:1px solid #a77d48}
+.alpha-command-deck .alpha-master-header small{display:block;text-align:center;background:#122d31;color:#efd8a8;padding:5px 8px;font-size:10px;letter-spacing:.13em;margin:0 8px}
+.alpha-command-deck .alpha-master-ap{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;width:49px;height:58px;background:radial-gradient(at 35% 25%,#397d7a,#112d32);color:#fff0c6;border:2px solid #bc8e4c;border-radius:50%;box-shadow:0 3px 7px #0009;font:600 23px Georgia,serif}
+.alpha-command-deck .alpha-master-ap small{font:11px Georgia,serif;color:#f4e2b8}
+.alpha-command-deck .alpha-master-parchment{position:relative;background:radial-gradient(ellipse at 70% 0,#fff2d3,#e9d4aa 70%,#c7a371);padding:18px 33px 12px;z-index:1;box-shadow:0 -8px 18px #0005}
+.alpha-command-deck .alpha-master-parchment>p{font:13px/1.5 Georgia,serif;color:#34291f;margin:0 0 10px}
+.alpha-command-deck .alpha-master-outcomes{display:grid;gap:7px}
+.alpha-command-deck .alpha-master-outcome-details{margin:6px 0;padding:0;background:transparent;border:0;color:#34291f}
+.alpha-command-deck .alpha-master-outcome-details>summary{font-size:13px;color:#37534b;padding:7px 0}
+.alpha-command-deck .alpha-master-parchment{padding-left:43px;padding-right:43px}
+.alpha-command-deck .alpha-master-parchment>*{position:relative;z-index:3}
+.alpha-command-deck .alpha-master-foot{background:linear-gradient(#19383c,#102b30);z-index:1;padding-bottom:55px;padding-left:43px;padding-right:43px}
+.alpha-command-deck .alpha-master-foot>*{position:relative;z-index:3}
+.alpha-command-deck .alpha-master-outcome{display:grid;gap:2px;border-top:1px solid #9c754b44;padding-top:6px;font-size:12px;line-height:1.4}
+.alpha-command-deck .alpha-master-outcome strong{font:600 12px Georgia,serif;letter-spacing:.02em;color:#29534e}
+.alpha-command-deck .alpha-master-outcome.is-fumble strong{color:#813f31}
+.alpha-command-deck .alpha-master-parchment label{margin:12px 0 0;color:#4b3825;font-size:12px;display:grid;gap:5px}
+.alpha-command-deck .alpha-master-parchment select{background:#f6e7c8;color:#382f24;border:1px solid #9c754b;font-size:13px;min-height:32px;width:100%}
+.alpha-command-deck .alpha-master-frame{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;border:0;border-radius:0;pointer-events:none;z-index:2}
+.alpha-command-deck .alpha-master-foot{position:relative;z-index:3;display:grid;justify-items:center;gap:8px;background:linear-gradient(#183438,#101f25);padding:15px 30px 25px;color:#efddb6}
+.alpha-command-deck .alpha-master-roll{display:flex;align-items:center;justify-content:center;gap:10px;min-height:55px!important;width:100%;background:linear-gradient(120deg,#325e61,#152f36)!important;border:1px solid #cfa468!important;border-radius:8px!important;color:#ffe8b8!important;font:600 14px Georgia,serif!important;box-shadow:0 4px 10px #0006}
+.alpha-command-deck .alpha-master-roll:disabled{opacity:.65;filter:saturate(.4)}
+.alpha-command-deck .alpha-master-roll i{font-size:24px;color:#e0bd80}
+.alpha-command-deck .alpha-master-foot>p{margin:0;font-size:12px;color:#dfc9a3;line-height:1.4;text-align:center}
+.alpha-command-deck .alpha-master-receipt{width:100%;font-size:12px;line-height:1.5;color:#f2dfb8}
+.alpha-command-deck .alpha-master-receipt h4{color:#a7e0cc;font:600 17px Georgia,serif;margin:0 0 8px}
+.alpha-command-deck .alpha-master-receipt dl{margin:8px 0;display:grid;grid-template-columns:1fr auto;gap:4px 12px}
+.alpha-command-deck .alpha-master-receipt dt{font-weight:400}.alpha-command-deck .alpha-master-receipt dd{margin:0;text-align:right}
+.alpha-command-deck .alpha-playing-card.is-master-card{background:#183437;border-color:#b79059}
+.alpha-command-deck .is-master-card .alpha-card-art{height:112px;margin:0 -1px;overflow:hidden}
+.alpha-command-deck .is-master-card .alpha-card-art img{width:100%;height:100%;object-fit:cover;object-position:50% 60%;filter:none}
+.alpha-command-deck .is-master-card>strong{font-family:Georgia,serif;color:#f7ddb0}
+@media(max-width:450px){.alpha-command-deck .alpha-master-header{left:18px;right:18px}.alpha-command-deck .alpha-master-parchment{padding-left:27px;padding-right:27px}.alpha-command-deck .alpha-master-hero{height:285px}}
+@media(prefers-reduced-motion:reduce){.alpha-command-deck .alpha-master-painting{transition:none;transform:none!important}}

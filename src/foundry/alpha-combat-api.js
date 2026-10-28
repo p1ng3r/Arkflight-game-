@@ -1,3 +1,4 @@
+import { showAlphaCardRolls } from "./alpha-card-dice.js";
 import { dispatchAlphaCommand } from "../alpha/combat.js";
 import { ALPHA_CARDS, ALPHA_SKILLS } from "../alpha/cards.js";
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS } from "../alpha/hulls.js";
@@ -5,7 +6,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-command-deck-20261027";
+export const ALPHA_BUILD="alpha-vent-master-20261028";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -49,6 +50,14 @@ async function operatorModifier(ship,station,skill){
   if(!Number.isFinite(rank)||!Number.isFinite(attribute))throw new Error("The crew skill data is invalid.");
   return ship.profile.level+rank*2+attribute+(station==="battlewatch"?0:ship.profile.support-(ship.profile.level+8));
 }
+export async function operatorBreakdown(ship,station,skill){
+  const modifier=await operatorModifier(ship,station,skill),actor=game.actors.get(ship.stationActors[station]);
+  if(!actor)return [{label:"Ship crew baseline",value:modifier}];
+  const name=skill==="warfare-lore"?(Object.keys(actor.skills??actor.system?.skills??{}).find(k=>["warfare-lore","warfare"].includes(k))??skill):skill;
+  const row=actor.skills?.[name]??actor.system?.skills?.[name],rank=Math.max(0,Math.min(4,Number(row?.rank??0)));
+  const level=ship.profile.level,training=rank*2,fit=station==="battlewatch"?0:ship.profile.support-(level+8);
+  return [{label:"Ship level",value:level},{label:"Crew proficiency",value:training},{label:"Crew attribute",value:modifier-level-training-fit},{label:"Ship support adjustment",value:fit}];
+}
 async function saved(value){
   await game.settings.set(MODULE,STATE,value);
   const actual=raw();if(actual?.id!==value.id||actual?.revision!==value.revision)throw new Error("Alpha encounter save was not confirmed.");
@@ -84,7 +93,8 @@ async function handle(cmd,user){
     await saved(before);Hooks.callAll("arkflightAlphaChanged");return before;
   }
   if(cmd.type!=="end")assertAlphaNativePositions(before);
-  const next=await dispatchAlphaCommand(before,cmd,{roll:async formula=>Number((await new Roll(formula).evaluate()).total),operatorModifier,isBlocked:cmd.type==="end"?()=>false:alphaObstacleTest(before)});
+  const evaluated=[];
+  const next=await dispatchAlphaCommand(before,cmd,{roll:async formula=>{const roll=await new Roll(formula).evaluate();evaluated.push(roll);return Number(roll.total);},operatorModifier,operatorBreakdown,isBlocked:cmd.type==="end"?()=>false:alphaObstacleTest(before)});
   if(JSON.stringify(raw())!==JSON.stringify(before))throw new Error("The encounter changed while resolving this action; retry from the saved state.");
   if(next.movement){
     const job={id:foundry.utils.randomID(),before,next,start:expectedAlphaTokens(before),step:0,error:null};
@@ -92,6 +102,7 @@ async function handle(cmd,user){
   }
   await saved(next);
   try{await syncAlphaTracker(next);}catch(error){console.error("Arkflight | Alpha tracker",error);ui.notifications.warn("Alpha action saved; native combat tracker synchronization will retry.");}
+  if(cmd.type==="play"&&before.ships[cmd.shipId]?.instances[cmd.instanceId]==="vent")await showAlphaCardRolls(evaluated,{user,actorId:before.ships[cmd.shipId].stationActors.engineer??before.ships[cmd.shipId].actorId,shipName:before.ships[cmd.shipId].name});
   Hooks.callAll("arkflightAlphaChanged");return next;
 }
 function enqueue(cmd,user){const task=queue.catch(()=>{}).then(()=>handle(copy(cmd),user));queue=task;return task;}

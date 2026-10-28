@@ -79,7 +79,8 @@
     "styles/ship-complication-lab.css",
     "styles/alpha-combat.css",
     "styles/alpha-ship-library.css",
-    "styles/alpha-command-deck.css"
+    "styles/alpha-command-deck.css",
+    "styles/alpha-master-card.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",

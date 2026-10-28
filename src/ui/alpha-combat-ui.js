@@ -1,3 +1,4 @@
+import { ventCardModel } from "./alpha-master-card.js";
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS, deriveAlphaProfile } from "../alpha/hulls.js";
 import { ALPHA_CARDS, ALPHA_SKILLS, ALPHA_STARTER_DECK } from "../alpha/cards.js";
 import { activeAlphaShip, alphaCardFor, alphaComplications, alphaTargetLegal, alphaReplacementTargetLegal, alphaSuggestedStep } from "../alpha/combat.js";
@@ -14,7 +15,7 @@ let instance;
 const words=value=>String(value??"").replace(/([a-z])([A-Z])/g,"$1 $2").replaceAll("-"," ").replace(/\b\w/g,c=>c.toUpperCase());
 const names={planning:"Maneuver Planning",cards:"Card Phase",targeting:"Declare Targets",response:"Incoming Attack",retarget:"Replacement Target",cleanup:"Round Complete",complete:"Encounter Complete",boarding:"Deck Encounter / Ship Battle Paused"};
 const artIds={acquire:"acquire-target",patch:"work-the-guns",brace:"brace-impact",prepare:"issue-order",shield:"emergency-ward",helm:"evasive-maneuver",volley:"ready-broadside",harmonic:"reinforce-lifeveil","all-hands":"drive-the-crew",evasive:"attack-vector",read:"charted-course",chainshot:"ready-broadside",breakaway:"breakaway-vector",ahead:"charted-course",overcharge:"feed-the-guns",mend:"mend-lifeveil",rally:"rally-crew",boarding:"rally-crew",ram:"brace-impact",vent:"vent-strain","work-guns":"work-the-guns"};
-export const alphaCardArt=card=>cardArt({id:artIds[card.id],stations:card.stations});
+export const alphaCardArt=card=>card.id==="vent"?"modules/arkflight-game/assets/ui/card-forge/vent-strain-art.webp":cardArt({id:artIds[card.id],stations:card.stations});
 function glyph(m){
   const preview=previewManeuver({q:0,r:0,heading:0},m), points=preview.trace.map(p=>({x:p.q*1.5,y:p.q*.866+p.r*1.732}));
   const xs=points.map(p=>p.x),ys=points.map(p=>p.y),minX=Math.min(...xs)-1,maxX=Math.max(...xs)+1,minY=Math.min(...ys)-1,maxY=Math.max(...ys)+1;
@@ -38,7 +39,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     let profile,buildError="";try{profile=deriveAlphaProfile(this.build);if(this.build.deck.length<15||this.build.deck.length>profile.deck)buildError=`Choose 15–${profile.deck} cards.`;}catch(e){buildError=e.message;profile=deriveAlphaProfile({hullId:this.build.hullId,level:this.build.level});}
     const routes=ship&&api.canOperate(ship.id,"navigator")?legalHullManeuvers(ship,alphaComplications(s,ship.id)):[];
     const selectedRoute=routes.find(m=>m.id===(this.maneuvers[ship?.id]??s?.plans[ship?.id]))??routes[0];
-    const selected=ship?.hand.find(id=>id===this.inspectId),card=selected?alphaCardFor(ship,selected):null;
+    const selected=ship?.hand.find(id=>id===this.inspectId)??(this.masterReceiptId===this.inspectId&&ship?.instances[this.inspectId]==="vent"&&ship?.discard.includes(this.inspectId)?this.inspectId:null),card=selected?alphaCardFor(ship,selected):null;
     const station=card?.stations[0]??"battlewatch";
     const choices=s?(s.complications.choices.filter(c=>c.status==="pending").map(c=>({id:c.id,shipId:c.shipId,name:s.ships[c.shipId].name,allowed:api.ownsShip(c.shipId),options:complicationChoiceOptions(s.complications,c.id)}))):[];
     const phase=s?.phase, active=activeAlphaShip(s??{turnOrder:[],turnIndex:0});
@@ -49,7 +50,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     const hasPending=Boolean(s?.pendingDiscard||choices.length), turn=phase==="cards"&&active===ship?.id;
     const selectedBattery=ship?.batteries.find(b=>b.id===this.batteryId);
     const batteryReady=selectedBattery&&selectedBattery.readyRound<=s.round&&selectedBattery.firedRound!==s.round&&!s.attacks.some(a=>a.shipId===ship.id&&a.batteryId===selectedBattery.id);
-    let cardHint=!card?"Select a card to inspect its effects.":!canControl?"Only this ship's owning crew can play its cards.":!api.canOperate(ship.id,station)?`The assigned ${stationName(station)} crew plays this card.`:ship.ap<card.ap?`This card needs ${card.ap} AP.`:hasPending?"Resolve the pending choice or discard first.":isInstant?(!attacked||pending.responses[ship.id]?"This Instant is available before an incoming attack, once per response.":""):!turn?"Wait for this ship's Card phase.":"";
+    let cardHint=card&&!ship.hand.includes(selected)?"This card has resolved and is in the Discard pile.":!card?"Select a card to inspect its effects.":!canControl?"Only this ship's owning crew can play its cards.":!api.canOperate(ship.id,station)?`The assigned ${stationName(station)} crew plays this card.`:ship.ap<card.ap?`This card needs ${card.ap} AP.`:hasPending?"Resolve the pending choice or discard first.":isInstant?(!attacked||pending.responses[ship.id]?"This Instant is available before an incoming attack, once per response.":""):!turn?"Wait for this ship's Card phase.":"";
     if(card&&!cardHint){
       if(card.role==="Attack"&&!batteryReady)cardHint="Choose a ready, uncommitted battery.";
       else if(card.id==="all-hands"&&selectedBattery?.id==="fore")cardHint="All Hands requires a port or starboard broadside.";
@@ -64,11 +65,11 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     const canFire=turn&&ship&&api.canOperate(ship.id,"battlewatch")&&!hasPending&&ship.ap>=1;
     const fireHint=!turn?"Wait for this ship's Card phase.":!ship||!api.canOperate(ship.id,"battlewatch")?"The assigned Battle Watch crew commits weapons.":hasPending?"Resolve the pending choice first.":ship.ap<1?"No AP remains.":"Commit a shot now; choose its target after all ships finish their Card phase.";
     return {...base,s,ship,buildId:api.build,report:this.report,guideOpen:this.guideOpen,suggestion:s?alphaSuggestedStep(s):null,gm:game.user.isGM,busy:this.busy,error:this.error,buildError,profile,recovery:api.recovery(),hasRecovery:Boolean(api.recovery()?.next??api.recovery()?.pending),phaseName:names[phase]??"Take Command",paused:game.paused,tab:this.tab,
-      resultsOpen:this.resultsOpen,presentation:phasePresentation(s,ship?.id),preferences:alphaPreferences(),handFolded:this.handFolded,compact:this.compact,piles:combatPiles(s,ship),pile:inspectCombatPile(s,ship,this.pileId),results:latestCombatResults(s,ship?.id),canFire,fireHint,
+      masterPreview:this.tab==="forge",masterCard:card?.id==="vent",ventMaster:ventCardModel({s,ship,instanceId:selected,preview:this.tab==="forge"}),resultsOpen:this.resultsOpen,presentation:phasePresentation(s,ship?.id),preferences:alphaPreferences(),handFolded:this.handFolded,compact:this.compact,piles:combatPiles(s,ship),pile:inspectCombatPile(s,ship,this.pileId),results:latestCombatResults(s,ship?.id),canFire,fireHint,
       selectedBattery:selectedBattery?.name,selectionCount:this.selections.size,canConfirmMulligan:this.selections.size<=2,canDiscard:this.selections.size===s?.pendingDiscard?.count,cardHint,canRegroup:turn&&card&&!hasPending&&ship.ap>=1&&ship.regroupRound!==s.round,
       apPips:ship?Array.from({length:Math.max(ship.profile.ap,ship.ap)},(_,i)=>({spent:i>=ship.ap})):[],
-      tabs:[{id:"plan",name:"Maneuver"},{id:"hand",name:"Cards"},{id:"ship",name:"Ship / Crew"},{id:"log",name:"Log"},...(game.user.isGM?[{id:"build",name:"Builder"}]:[])].map(t=>({...t,selected:t.id===this.tab})),
-      showBuild:game.user.isGM&&(!s||this.tab==="build"||(s.complete&&this.tab==="plan")),showPlan:s&&this.tab==="plan"&&!s.complete,showHand:s&&this.tab==="hand",showShip:s&&this.tab==="ship",showLog:s&&this.tab==="log",
+      tabs:[{id:"plan",name:"Maneuver"},{id:"hand",name:"Cards"},{id:"ship",name:"Ship / Crew"},{id:"log",name:"Log"},{id:"forge",name:"Card Forge"},...(game.user.isGM?[{id:"build",name:"Builder"}]:[])].map(t=>({...t,selected:t.id===this.tab})),
+      showBuild:this.tab!=="forge"&&game.user.isGM&&(!s||this.tab==="build"||(s.complete&&this.tab==="plan")),showPlan:s&&this.tab==="plan"&&!s.complete,showHand:s&&this.tab==="hand",showShip:s&&this.tab==="ship",showLog:s&&this.tab==="log",
       hulls:Object.values(ALPHA_HULLS).map(h=>({...h,selected:h.id===this.build.hullId,enemySelected:h.id===this.build.enemyHullId})),
       upgrades:Object.entries(ALPHA_UPGRADES).map(([id,item])=>({id,...item,checked:this.build.upgrades.includes(id)})),talents:Object.entries(ALPHA_TALENTS).map(([id,item])=>({id,...item,checked:this.build.talents.includes(id)})),
       deckOptions:Object.values(ALPHA_CARDS).map(c=>({...c,count:this.build.deck.filter(id=>id===c.id).length,max:c.unique?1:2})),deckCount:this.build.deck.length,build:this.build,canStart:game.user.isGM&&(!s||s.complete)&&!buildError,
@@ -78,7 +79,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
       activeName:s?.ships[active]?.name,pending:pending&&{...pending,attacker:s.ships[pending.shipId].name,defender:s.ships[pending.targetId]?.name,ready:Boolean(pending.responses[pending.targetId])},
       canControl,canPlan:ship&&api.canOperate(ship.id,"navigator"),canLock:ship&&api.canOperate(ship.id,"captain"),canFinish:canControl&&api.canOperate(ship.id,"captain")&&phase==="cards"&&active===ship.id,canRespond:canControl&&attacked&&!pending.responses[ship.id],
       routes:routes.map(m=>({...m,selected:m.id===selectedRoute?.id})),route:selectedRoute&&{...selectedRoute,svg:glyph(selectedRoute)},locked:s?.locked[ship?.id],
-      hand:(ship?.hand??[]).map(id=>{const c=alphaCardFor(ship,id);return{...c,instanceId:id,selected:this.selections.has(id),inspect:id===this.inspectId,art:alphaCardArt(c),band:cardBand(c),theme:cardTheme(c),stationLabel:c.stations.map(stationName).join(" + "),affordable:ship.ap>=c.ap};}),
+      hand:(ship?.hand??[]).map(id=>{const c=alphaCardFor(ship,id);return{...c,instanceId:id,selected:this.selections.has(id),inspect:id===this.inspectId,art:alphaCardArt(c),master:c.id==="vent",band:cardBand(c),theme:cardTheme(c),stationLabel:c.stations.map(stationName).join(" + "),affordable:ship.ap>=c.ap};}),
       card:card&&{...card,instanceId:selected,art:alphaCardArt(card),band:cardBand(card),theme:cardTheme(card),outcomes:cardOutcomes(card),coordinated:card.stations.length>1,stationLabel:card.stations.map(stationName).join(" + "),attackOnly:card.role==="Attack"&&card.stations.length===1,needsBattery:card.role==="Attack"||card.id==="work-guns",movementCard:["helm","breakaway","ahead"].includes(card.id)},playable,
       skillOptions:ALPHA_SKILLS[station].map(id=>({id,name:words(id),selected:id===(this.skills[station]??ALPHA_SKILLS[station][0])})),attackSkillOptions:ALPHA_SKILLS.battlewatch.map(id=>({id,name:words(id),selected:id===(this.skills.attack??ALPHA_SKILLS.battlewatch[0])})),
       batteries:(ship?.batteries??[]).map(b=>{const committed=s.attacks.some(a=>a.shipId===ship.id&&a.batteryId===b.id),ready=b.readyRound<=s.round&&b.firedRound!==s.round&&!committed;return{...b,selected:b.id===this.batteryId,committed,ready,canCommit:canFire&&ready,status:committed?"Committed":ready?"Ready":`Reload · R${b.readyRound}`};}),targets,
@@ -170,7 +171,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
           await send({type:"plan",shipId:enemy.id,maneuverId:route.id});result=await send({type:"lock",shipId:enemy.id});
         }
       }else if(type==="play"){
-        const c=alphaCardFor(ship,this.inspectId);result=await send({type,instanceId:this.inspectId,skill:this.skills[c.stations[0]]??ALPHA_SKILLS[c.stations[0]][0],attackSkill:this.skills.attack??ALPHA_SKILLS.battlewatch[0],batteryId:this.batteryId,targetId:this.targetId,adjustment:this.adjustment,exploitEffectId:data.effectId});this.selections.clear();this.inspectId=null;
+        const c=alphaCardFor(ship,this.inspectId),resolvedInstance=this.inspectId;result=await send({type,instanceId:this.inspectId,skill:this.skills[c.stations[0]]??ALPHA_SKILLS[c.stations[0]][0],attackSkill:this.skills.attack??ALPHA_SKILLS.battlewatch[0],batteryId:this.batteryId,targetId:this.targetId,adjustment:this.adjustment,exploitEffectId:data.effectId});this.selections.clear();if(c.id==="vent"){this.masterReceiptId=resolvedInstance;this.inspectId=resolvedInstance;}else{this.masterReceiptId=null;this.inspectId=null;}
       }else if(type==="mulligan"||type==="discard"){
         result=await send({type,instances:[...this.selections]});this.selections.clear();this.inspectId=null;
       }else if(type==="regroup"){
@@ -199,7 +200,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
 }
 Hooks.once("init",()=>game.settings.registerMenu("arkflight-game","alphaCombatWindow",{name:"Arkflight 1.1 Alpha Combat",label:"Open 1.1 Alpha",hint:"Dedicated test ships, hull maneuvers and phased deck combat.",icon:"fa-solid fa-compass",type:AlphaCombatWindow,restricted:false}));
 Hooks.once("ready",()=>{
-  game.arkflight.alphaCombat=Object.freeze(Object.defineProperties({async open(){instance??=new AlphaCombatWindow();await instance.render({force:true});if(instance.minimized)await instance.maximize();instance.bringToFront();return instance;}},Object.getOwnPropertyDescriptors(game.arkflight.alphaCombat)));
+  game.arkflight.alphaCombat=Object.freeze(Object.defineProperties({async open({tab}={}){instance??=new AlphaCombatWindow();if(tab==="forge")instance.tab="forge";await instance.render({force:true});if(instance.minimized)await instance.maximize();instance.bringToFront();return instance;}},Object.getOwnPropertyDescriptors(game.arkflight.alphaCombat)));
 });
 Hooks.on("arkflightAlphaChanged",()=>{if(instance?.rendered&&!instance.busy)void instance.render({force:true});});
 Hooks.on("arkflightAlphaPresentationChanged",()=>{if(instance?.rendered){instance.effectsEngine.clear(false);void instance.render({force:true});}});
