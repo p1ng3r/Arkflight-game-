@@ -50,7 +50,7 @@ async function check(s,ship,station,skill,services,{dc=ship.profile.dc,batteryId
   log(s,`${ship.name} · ${station}: d20 ${die} ${result.modifier>=0?"+":""}${result.modifier} = ${total} vs ${dc} (${["critical failure","failure","success","critical success"][result.degree+1]}).`,{kind:"check",shipId:ship.id,targetId:station==="battlewatch"&&batteryId?s.attacks[s.attackIndex]?.targetId??null:null,station,batteryId,...result});
   return result;
 }
-function draw(s,ship,n){for(let i=0;i<n;i++){if(!ship.drawPile.length){ship.drawPile=shuffle(s,ship.discard);ship.discard=[];}if(ship.drawPile.length)ship.hand.push(ship.drawPile.pop());}if(ship.hand.length>ship.profile.hand)s.pendingDiscard={shipId:ship.id,count:ship.hand.length-ship.profile.hand};}
+function draw(s,ship,n){for(let i=0;i<n;i++){if(!ship.drawPile.length){ship.drawPile=shuffle(s,ship.discard);ship.discard=[];}if(ship.drawPile.length)ship.hand.push(ship.drawPile.pop());}}
 export function alphaCardFor(ship,instance){return ALPHA_CARDS[ship.instances[instance]];}
 function starter(entries,profile){
   const deck=entries??ALPHA_STARTER_DECK;
@@ -218,7 +218,7 @@ async function play(s,ship,cmd,services){
   if(card.id==="rally")track(ship,"morale",await roll(s,degree===2?"2d10+5":"1d10+5",services));
   if(card.id==="vent")track(ship,"strain",-(await roll(s,degree===2?"2d4+1":"1d4+1",services)+Math.floor(ship.profile.level/4)));
   if(card.id==="work-guns"){const b=battery(s,ship,cmd.batteryId);b.readyRound=Math.max(s.round,b.readyRound-(degree===2?2:1));}
-  if(card.id==="read"){draw(s,ship,degree===2?2:1);if(degree===2&&ship.hand.length)s.pendingDiscard={shipId:ship.id,count:Math.max(1,ship.hand.length-ship.profile.hand)};}
+  if(card.id==="read"){draw(s,ship,degree===2?2:1);if(degree===2&&ship.hand.length)s.pendingDiscard={shipId:ship.id,count:1};}
   if(["helm","breakaway"].includes(card.id))await adjust(s,ship,cmd,services,degree);
   if(card.id==="ahead")await adjust(s,ship,cmd,services,degree,(degree===2?3:2)+ship.profile.bonusMove);
   if(card.role==="Attack")queueShot(s,ship,cmd,card,degree,eventId);
@@ -229,7 +229,7 @@ async function play(s,ship,cmd,services){
   if(boardingOpening)consume(s,boardingOpening.shipId,[boardingOpening]);
   ship.hand=ship.hand.filter(id=>id!==cmd.instanceId);
   if(!card.delayed)(card.burn?ship.burned:ship.discard).push(cmd.instanceId);
-  if(s.pendingDiscard?.shipId===ship.id){s.pendingDiscard.count=Math.min(ship.hand.length,Math.max(card.id==="read"&&degree===2?1:0,ship.hand.length-ship.profile.hand));if(!s.pendingDiscard.count)s.pendingDiscard=null;}
+  if(s.pendingDiscard?.shipId===ship.id){s.pendingDiscard.count=Math.min(ship.hand.length,card.id==="read"&&degree===2?1:0);if(!s.pendingDiscard.count)s.pendingDiscard=null;}
   if(card.timing==="instant")pending.responses[ship.id]=card.id;
   else s.actions.push({seq:++s.actionSerial,shipId:ship.id,station,eventId});
   const used=alphaComplications(s,ship.id).filter(e=>e.rule?.endsWith("after-other-station")&&e.rule.startsWith(station)||e.rule===`no-coordinated-${station==="veilwarden"?"veil":station}`);
@@ -380,7 +380,7 @@ export async function dispatchAlphaCommand(before,cmd,services={}){
     if(s.pendingDiscard?.shipId!==ship.id)throw new Error("This ship has no pending discard.");
     const ids=cmd.instances;if(!Array.isArray(ids)||ids.length!==s.pendingDiscard.count||new Set(ids).size!==ids.length||ids.some(id=>!ship.hand.includes(id)))throw new Error(`Choose exactly ${s.pendingDiscard.count} different cards to discard.`);
     ship.hand=ship.hand.filter(id=>!ids.includes(id));ship.discard.push(...ids);s.pendingDiscard=null;
-    const overflow=Object.values(s.ships).find(x=>x.hand.length>x.profile.hand);if(overflow)s.pendingDiscard={shipId:overflow.id,count:overflow.hand.length-overflow.profile.hand};
+
   }else if(cmd.type==="round"){
     if(s.phase!=="cleanup")throw new Error("Finish the simultaneous damage exchange first.");refresh(s);
   }else if(cmd.type==="pause-boarding"){
@@ -397,6 +397,11 @@ export async function dispatchAlphaCommand(before,cmd,services={}){
     while(s.turnIndex<s.turnOrder.length&&!living(s.ships[s.turnOrder[s.turnIndex]]))s.turnIndex++;
     if(s.turnIndex>=s.turnOrder.length)s.phase="targeting";
     if(new Set(Object.values(s.ships).filter(living).map(x=>x.team)).size<2){s.phase="complete";s.complete=true;log(s,"Encounter ended after a ship was disabled outside the damage exchange.");}
+  }
+  // Capacity is enforced at Cleanup; explicit card discards still resolve immediately.
+  if(s.phase==="cleanup"&&!s.pendingDiscard){
+    const overflow=Object.values(s.ships).find(x=>living(x)&&x.hand.length>x.profile.hand);
+    if(overflow)s.pendingDiscard={shipId:overflow.id,count:overflow.hand.length-overflow.profile.hand};
   }
   s.revision=before.revision+1;return s;
 }

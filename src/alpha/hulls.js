@@ -1,6 +1,6 @@
 /** Opt-in 1.1 alpha profiles. Legacy ship data is never rewritten by this catalog. */
 export const ALPHA_DIRECTIONS = Object.freeze([[0,-1],[1,-1],[1,0],[0,1],[-1,1],[-1,0]].map(Object.freeze));
-const profile = (id, name, role, hull, ac, speed, handling, bulk, fitting, footprint = 1, hand = 7) => ({
+const profile = (id, name, role, hull, ac, speed, handling, bulk, fitting, footprint = 1, hand = 5) => ({
   id, name, role, baseHull: hull, acAdjustment: ac, speed, handling, cargoBulk: bulk, fitting, footprint,
   hand, deck: 15, opening: 5, ap: 4,
   mounts: footprint === 3 ? { fore: 1, port: 3, starboard: 3, aft: 1 } : speed >= 6 ? { fore: 1, port: 1, starboard: 1, aft: 1 } : { fore: 1, port: 2, starboard: 2, aft: 1 }
@@ -14,8 +14,8 @@ export const ALPHA_HULLS = Object.freeze(Object.fromEntries([
   profile("galleon", "Galleon", "Merchant: large hold, longer approaches before turning", 140, -1, 3, "heavy", 150, 6),
   profile("hammerhead", "Hammerhead", "Assault: strong prow and deliberate ramming", 124, 0, 4, "assault", 65, 5),
   profile("arkcruiser", "Arkcruiser", "Expedition: two-hex hull, long-range capacity", 148, -1, 3, "heavy", 180, 6, 2),
-  profile("dread-caravel", "Dread Caravel", "Capital hunter: three-hex footprint, one broad turn", 164, -1, 3, "capital", 110, 6, 3, 8),
-  profile("cathedral-ship", "Cathedral Ship", "Sanctuary: three-hex ward vessel and cargo support", 156, -1, 2, "capital", 140, 7, 3, 8)
+  profile("dread-caravel", "Dread Caravel", "Capital hunter: three-hex footprint, one broad turn", 164, -1, 3, "capital", 110, 6, 3),
+  profile("cathedral-ship", "Cathedral Ship", "Sanctuary: three-hex ward vessel and cargo support", 156, -1, 2, "capital", 140, 7, 3)
 ].map(p => [p.id, Object.freeze({ ...p, mounts: Object.freeze(p.mounts) })])));
 
 export const ALPHA_UPGRADES = Object.freeze({

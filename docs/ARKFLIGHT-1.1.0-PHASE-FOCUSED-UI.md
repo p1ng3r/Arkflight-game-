@@ -16,8 +16,8 @@ Implemented 28 October 2026 on the existing alpha controller. The redesigned rou
 
 ## Scope
 
-This update does not implement the new opening gate, crew-clicked round draw, all-ship card planning queue, extra Instant timings, new weapon accuracy bands, or recap Journal. It does not change active encounter AP, card zones or hand limits. The displayed hand limit is the actual current profile value. The round-flow contract records the accepted future base-five limit, independent opening/capacity/draw modifiers, and Cleanup overflow policy.
+This update does not implement the new opening gate, crew-clicked round draw, all-ship card planning queue, extra Instant timings, new weapon accuracy bands, or recap Journal. It does not silently rewrite an active encounter’s saved profile. New and reset encounters now use a base maximum hand of five on every hull. Command Relay explicitly grants +1 capacity without adding opening cards or AP. Draws allow temporary overflow; Cleanup requires each surviving ship to discard down before the next round. Explicit card-text discard costs still apply immediately. The hand counter shows overflow. Reset an older test encounter to recalculate its profile while preserving library, loadout and crew.
 
 UI inspiration: Slay the Spire's compact hand and enlarged inspection; MTG Arena's selective response pauses; Hearthstone's progressive rules disclosure. Original Arkflight art and controllers are retained. No third-party game artwork is bundled.
 
-Validation: 897 Node tests pass; a Chromium harness using the actual Handlebars template/UI/controller with public-document doubles. The harness checks mulligan selection, phase following, inspection dismissal, weapon expansion and narrow-window overflow. These checks do not replace live Foundry v14 testing with connected players.
+Validation: 900 Node tests pass; a Chromium harness using the actual Handlebars template/UI/controller with public-document doubles. The harness checks mulligan selection, phase following, inspection dismissal, weapon expansion and narrow-window overflow. These checks do not replace live Foundry v14 testing with connected players.
