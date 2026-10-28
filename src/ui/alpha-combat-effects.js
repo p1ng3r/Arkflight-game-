@@ -11,7 +11,7 @@ export function alphaWindowPosition(width,height,overrides={}){
 }
 export function alphaPreferences() {
   const preference = setting("alphaMotion", "full"), reduced = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-  return { mode: reduced || !["full", "subtle"].includes(preference) ? "off" : preference, preference, reduced, sound: setting("alphaSound", false), volume: setting("alphaVolume", .15) };
+  return { mode: reduced || !["full", "subtle"].includes(preference) ? "off" : preference, preference, reduced, layout: setting("alphaLayout", "illustrated"), sound: setting("alphaSound", false), volume: setting("alphaVolume", .15) };
 }
 export function alphaSound(kind) {
   if (!alphaPreferences().sound || globalThis.document?.hidden) return;
@@ -20,8 +20,9 @@ export function alphaSound(kind) {
   void audio.unlock().then(() => { if (generation===audioGeneration&&alphaPreferences().sound && !document.hidden) audio.play(kind, alphaPreferences().volume); }).catch(() => {});
 }
 export function bindAlphaPreferences(root, render) {
-  const prefs = alphaPreferences(); root.dataset.alphaMotion = prefs.mode;
+  const prefs = alphaPreferences(); root.dataset.alphaMotion = prefs.mode; root.dataset.alphaLayout = prefs.layout;
   if(!root.alphaAudioBound){root.alphaAudioBound=true;root.addEventListener("pointerdown", () => { if (alphaPreferences().sound) void audio.unlock(); });}
+  root.querySelector("[data-alpha-layout]")?.addEventListener("change",async e=>{await game.settings.set(MODULE,"alphaLayout",e.target.value);await render();});
   root.querySelector("[data-alpha-sound]")?.addEventListener("click", async () => { const enabled = !alphaPreferences().sound; if (enabled) void audio.unlock(); await game.settings.set(MODULE, "alphaSound", enabled); if (!enabled) stopAudio(); else alphaSound("select"); await render(); });
   root.querySelector("[data-alpha-motion]")?.addEventListener("change", async e => { await game.settings.set(MODULE, "alphaMotion", e.target.value); Hooks.callAll("arkflightAlphaPresentationChanged"); await render(); });
   root.querySelector("[data-alpha-volume]")?.addEventListener("change", async e => { await game.settings.set(MODULE, "alphaVolume", Number(e.target.value)); alphaSound("select"); });
@@ -38,7 +39,11 @@ export class AlphaCombatEffects {
     if (!events.length || document.hidden) return;
     if (events.some(e => e.kind === "phase")) this.animate(root.querySelector(".alpha-phase-rail"), [{ opacity: .3 }, { opacity: 1 }]);
     if(events.some(e=>e.kind==="ap"))this.animate(root.querySelector(".alpha-ap"),[{filter:"brightness(1.8)"},{filter:"brightness(1)"}]);
-    for (const e of events.filter(e => e.kind === "draw")) for (const [i, id] of e.ids.entries()) this.animate([...root.querySelectorAll("[data-alpha-card]")].find(n => n.dataset.alphaCard === id), [{ opacity: 0, transform: "translateY(35px) rotate(6deg)" }, { opacity: 1, transform: "translateY(0) rotate(0deg)" }], 400 + i * 45);
+    for (const e of events.filter(e => e.kind === "draw")) for (const [i, id] of e.ids.entries()) {
+      const card=[...root.querySelectorAll("[data-alpha-card]")].find(n=>n.dataset.alphaCard===id),from=root.querySelector('[data-alpha-pile="draw"]')?.getBoundingClientRect?.(),to=card?.getBoundingClientRect?.();
+      const dx=from&&to?from.left-to.left:0,dy=from&&to?from.top-to.top:35;
+      this.animate(card,[{opacity:0,transform:`translate(${dx}px,${dy}px) scale(.35) rotate(-9deg)`},{opacity:1,transform:"translate(0,0) scale(1) rotate(0deg)"}],400+i*45);
+    }
     for (const e of events.filter(e => e.kind === "resource")) this.animate(root.querySelector(`[data-alpha-meter="${e.key}"]`), [{ filter: "brightness(2)", transform: "translateY(-2px)" }, { filter: "brightness(1)", transform: "translateY(0)" }]);
     if (events.some(e => ["check", "damage"].includes(e.kind))) this.animate(root.querySelector(".alpha-result-card"), [{ opacity: .2, transform: "translateY(12px) scale(.96)" }, { opacity: 1, transform: "translateY(0) scale(1)" }], 500);
     const check = events.findLast(e => e.kind === "check"&&e.station!=="initiative"), damage = events.find(e => e.kind === "damage");
@@ -64,6 +69,7 @@ export class AlphaCombatEffects {
   clear(reset = true) { for (const a of this.animations) a.cancel(); this.animations.clear(); for (const n of this.nodes) n.remove(); this.nodes.clear(); stopAudio(); if (reset) { this.previous = null; this.shipId = null; } }
 }
 Hooks.once("init", () => {
+  game.settings.register(MODULE,"alphaLayout",{name:"Arkflight Command Deck style",scope:"client",config:true,type:String,choices:{illustrated:"Illustrated",minimalist:"Minimalist"},default:"illustrated"});
   game.settings.register(MODULE, "alphaMotion", { name: "Arkflight alpha motion", scope: "client", config: true, type: String, choices: { full: "Full", subtle: "Subtle", off: "Off" }, default: "full" });
   game.settings.register(MODULE, "alphaSound", { name: "Arkflight alpha sound", scope: "client", config: true, type: Boolean, default: false });
   game.settings.register(MODULE, "alphaVolume", { name: "Arkflight alpha volume", scope: "client", config: true, type: Number, range: { min: 0, max: .4, step: .01 }, default: .15 });

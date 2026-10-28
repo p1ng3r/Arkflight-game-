@@ -1,3 +1,4 @@
+import { commandFocus } from "./alpha-command-focus.js";
 import { fleetReadiness } from "./alpha-fleet-status.js";
 import { ventCardModel, masterCardPosition } from "./alpha-master-card.js";
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS, deriveAlphaProfile } from "../alpha/hulls.js";
@@ -24,15 +25,15 @@ function glyph(m){
   return `<svg viewBox="0 0 175 125" aria-hidden="true"><polyline points="${points.map(xy).join(" ")}" fill="none" stroke="#79cfd5" stroke-width="3"/>${points.map((p,i)=>{const[x,y]=xy(p).split(",");return `<circle cx="${x}" cy="${y}" r="7" fill="${i===points.length-1?"#dcb76f":"#183b47"}" stroke="#79cfd5"/><text x="${x}" y="${Number(y)+3}" fill="#fff" text-anchor="middle" font-size="9">${i}</text>`;}).join("")}</svg>`;
 }
 export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2){
-  static DEFAULT_OPTIONS={id:"arkflight-alpha-combat",classes:["arkflight-alpha-combat","alpha-command-deck"],window:{title:"Arkflight — Command Deck",icon:"fa-solid fa-compass",resizable:true},position:{width:760,height:650}};
+  static DEFAULT_OPTIONS={id:"arkflight-alpha-combat",classes:["arkflight-alpha-combat","alpha-command-deck"],window:{title:"Arkflight — Command Deck",icon:"fa-solid fa-compass",resizable:true},position:{width:900,height:610}};
   static PARTS={main:{template:"modules/arkflight-game/templates/alpha-combat.hbs"}};
   shipId=null;tab="plan";busy=false;guideOpen=false;report="";error="";inspectId=null;selections=new Set();maneuvers={};skills={};pendingSkills={};batteryId="starboard";targetId="";adjustment="forward";
   boardingSceneId="";
+  followPhase=true; focusKey=null; fleetOpen=false; weaponsOpen=false;
   effectsEngine=new AlphaCombatEffects(); resultsOpen=false; handFolded=false; pileId=null; compact=false; expandedHeight=null;
   build={hullId:"brigantine",enemyHullId:"cutter",level:5,count:2,upgrades:[],talents:[],deck:[...ALPHA_STARTER_DECK]};
-  constructor(options={}){super({...options,position:alphaWindowPosition(760,650,options.position)});}
+  constructor(options={}){super({...options,position:alphaWindowPosition(900,610,options.position)});}
   async _prepareContext(options){
-    const scrollKey=`${this.shipId}:${this.tab}`;this.restoreScroll=this.scrollKey===scrollKey?{body:this.element?.querySelector?.(".alpha-body")?.scrollTop??0,hand:this.element?.querySelector?.(".alpha-hand")?.scrollLeft??0}:{body:0,hand:0};this.scrollKey=scrollKey;
     const base=await super._prepareContext(options),api=game.arkflight.alphaCombat,s=api.state();
     const accessibleShips=Object.values(s?.ships??{}).filter(x=>api.ownsShip(x.id));
     this.shipId=accessibleShips.some(x=>x.id===this.shipId)?this.shipId:accessibleShips[0]?.id;
@@ -45,7 +46,13 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     let crewCheck=null;
     if(card&&ship&&api.crewCheck){try{crewCheck=await api.crewCheck(ship.id,station,(card.role==="Attack"&&card.stations.length===1?this.skills.attack:this.skills[station])??ALPHA_SKILLS[station][0]);}catch(e){crewCheck={error:e.message};}}
     const choices=s?(s.complications.choices.filter(c=>c.status==="pending").map(c=>({id:c.id,shipId:c.shipId,name:s.ships[c.shipId].name,allowed:api.ownsShip(c.shipId),options:complicationChoiceOptions(s.complications,c.id)}))):[];
-    const phase=s?.phase, active=activeAlphaShip(s??{turnOrder:[],turnIndex:0});
+    const phase=s?.phase;
+    const focus=commandFocus(s,ship,{canOperate:(id,station)=>api.canOperate(id,station)});
+    const focusKey=s?`${s.id}:${s.round}:${phase}:${s.pendingCrewAction?.id??""}:${s.pendingDiscard?.shipId??""}`:"none";
+    if(this.followPhase&&this.focusKey!==focusKey&&!this.preview&&this.tab!=="forge")this.tab=focus.tab;
+    this.focusKey=focusKey;
+    const scrollKey=`${this.shipId}:${this.tab}`;this.restoreScroll=this.scrollKey===scrollKey?{body:this.element?.querySelector?.(".alpha-body")?.scrollTop??0,hand:this.element?.querySelector?.(".alpha-hand")?.scrollLeft??0}:{body:0,hand:0};this.scrollKey=scrollKey;
+    const active=activeAlphaShip(s??{turnOrder:[],turnIndex:0});
     const playerActors=game.actors.contents.filter(a=>["character","npc"].includes(a.type));
     const attacked=phase==="response"&&pending?.targetId===ship?.id;
     const isInstant=card?.timing==="instant";
@@ -77,6 +84,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
       else if(phase==="cards"&&row.active)row.operator=`Captain: ${game.actors.get(crew.stationActors.captain)?.name??"ship crew"}`;
     }
     return {...base,s,ship,buildId:api.build,report:this.report,guideOpen:this.guideOpen,suggestion:s&&!s.pendingCrewAction?alphaSuggestedStep(s):null,gm:game.user.isGM,busy:this.busy,error:this.error,buildError,profile,recovery:api.recovery(),hasRecovery:Boolean(api.recovery()?.next??api.recovery()?.pending),phaseName:names[phase]??"Take Command",paused:game.paused,tab:this.tab,
+      focus,followPhase:this.followPhase,fleetOpen:this.fleetOpen,weaponsOpen:this.weaponsOpen,
       masterPreview:this.tab==="forge",masterCard:card?.id==="vent",ventMaster:ventCardModel({s,ship,instanceId:selected,preview:this.tab==="forge"}),masterDetails:this.masterDetails??false,dice3dReady:Boolean(game.dice3d?.animateRoll||game.dice3d?.showForRoll),crewRequest,crewRequestMatches,crewCheck,fleet,confirmReset:this.confirmReset??false,canAssignCrew:game.user.isGM&&["planning","cards","cleanup"].includes(phase),resultsOpen:this.resultsOpen,presentation:phasePresentation(s,ship?.id),preferences:alphaPreferences(),handFolded:this.handFolded,compact:this.compact,piles:combatPiles(s,ship),pile:inspectCombatPile(s,ship,this.pileId),results:latestCombatResults(s,ship?.id),canFire,fireHint,
       selectedBattery:selectedBattery?.name,selectionCount:this.selections.size,canConfirmMulligan:this.selections.size<=2,canDiscard:this.selections.size===s?.pendingDiscard?.count,cardHint:crewCheck?.error??cardHint,canRegroup:turn&&card&&!hasPending&&ship.ap>=1&&ship.regroupRound!==s.round,
       apPips:ship?Array.from({length:Math.max(ship.profile.ap,ship.ap)},(_,i)=>({spent:i>=ship.ap})):[],
@@ -91,7 +99,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
       activeName:s?.ships[active]?.name,pending:pending&&{...pending,attacker:s.ships[pending.shipId].name,defender:s.ships[pending.targetId]?.name,ready:Boolean(pending.responses[pending.targetId])},
       canControl,canPlan:ship&&api.canOperate(ship.id,"navigator"),canLock:ship&&api.canOperate(ship.id,"captain"),canFinish:!hasPending&&canControl&&api.canOperate(ship.id,"captain")&&phase==="cards"&&active===ship.id,canRespond:!hasPending&&canControl&&attacked&&!pending.responses[ship.id],
       routes:routes.map(m=>({...m,svg:glyph(m),selected:m.id===selectedRoute?.id})),route:selectedRoute&&{...selectedRoute,svg:glyph(selectedRoute)},locked:s?.locked[ship?.id],
-      hand:(ship?.hand??[]).map(id=>{const c=alphaCardFor(ship,id);return{...c,instanceId:id,selected:this.selections.has(id),inspect:id===this.inspectId,art:alphaCardArt(c),master:c.id==="vent",band:cardBand(c),theme:cardTheme(c),stationLabel:c.stations.map(stationName).join(" + "),affordable:ship.ap>=c.ap};}),
+      hand:(ship?.hand??[]).map(id=>{const c=alphaCardFor(ship,id);return{...c,instanceId:id,selected:this.selections.has(id),inspect:id===this.inspectId,art:alphaCardArt(c),master:c.id==="vent",band:cardBand(c),theme:cardTheme(c),stationLabel:c.stations.map(stationName).join(" + "),respondable:focus.instantIds.includes(id),affordable:ship.ap>=c.ap};}),
       card:card&&{...card,instanceId:selected,art:alphaCardArt(card),band:cardBand(card),theme:cardTheme(card),outcomes:cardOutcomes(card),coordinated:card.stations.length>1,stationLabel:card.stations.map(stationName).join(" + "),attackOnly:card.role==="Attack"&&card.stations.length===1,needsBattery:card.role==="Attack"||card.id==="work-guns",movementCard:["helm","breakaway","ahead"].includes(card.id)},playable,
       skillOptions:ALPHA_SKILLS[station].map(id=>({id,name:words(id),selected:id===(this.skills[station]??ALPHA_SKILLS[station][0])})),attackSkillOptions:ALPHA_SKILLS.battlewatch.map(id=>({id,name:words(id),selected:id===(this.skills.attack??ALPHA_SKILLS.battlewatch[0])})),
       batteries:(ship?.batteries??[]).map(b=>{const committed=s.attacks.some(a=>a.shipId===ship.id&&a.batteryId===b.id),ready=b.readyRound<=s.round&&b.firedRound!==s.round&&!committed;return{...b,selected:b.id===this.batteryId,committed,ready,canCommit:canFire&&ready,status:committed?"Committed":ready?"Ready":`Reload · R${b.readyRound}`};}),targets,
@@ -112,6 +120,9 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     await super._onRender(context,options);
     const root=this.element;
     bindAlphaPreferences(root,()=>this.render({force:true}));
+    root.querySelector(".alpha-fleet-disclosure")?.addEventListener("toggle",e=>{this.fleetOpen=e.target.open;});
+    root.querySelector(".alpha-weapons-drawer")?.addEventListener("toggle",e=>{this.weaponsOpen=e.target.open;});
+    root.querySelector("[data-alpha-follow]")?.addEventListener("click",()=>{this.followPhase=!this.followPhase;this.focusKey=null;void this.render({force:true});});
     root.querySelector(".alpha-recent-results")?.addEventListener("toggle",e=>{this.resultsOpen=e.target.open;});
     root.querySelector(".alpha-guide")?.addEventListener("toggle",e=>{this.guideOpen=e.target.open;});
     root.querySelector("[data-alpha-boarding-scene]")?.addEventListener("change",e=>{this.boardingSceneId=e.target.value;});
@@ -127,8 +138,8 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     for(const el of root.querySelectorAll("[data-alpha-pile]"))el.addEventListener("click",()=>{this.pileId=this.pileId===el.dataset.alphaPile?null:el.dataset.alphaPile;alphaSound("open");void this.render({force:true});});
     for(const el of root.querySelectorAll("[data-alpha-card]"))el.addEventListener("click",()=>{
       const id=el.dataset.alphaCard,s=game.arkflight.alphaCombat.state(),ship=s.ships[this.shipId],multi=Boolean(s.pendingDiscard?.shipId===ship.id||s.round===1&&!ship.mulliganDone&&s.phase==="planning");
-      const had=this.selections.has(id);if(!multi)this.selections.clear();if(had)this.selections.delete(id);else this.selections.add(id);this.inspectId=had&&this.inspectId===id?null:id;this.revealInspector=Boolean(this.inspectId);alphaSound(had?"deselect":"select");
-      if(alphaCardFor(ship,id)?.id==="vent"&&!had){void openMasterCard({preview:false,shipId:ship.id,instanceId:id,skill:this.skills.engineer});this.inspectId=null;this.revealInspector=false;if(!multi)this.selections.clear();}
+      const had=this.selections.has(id);if(!multi)this.selections.clear();if(had)this.selections.delete(id);else this.selections.add(id);this.inspectId=multi?null:had&&this.inspectId===id?null:id;this.revealInspector=Boolean(this.inspectId);alphaSound(had?"deselect":"select");
+      if(alphaCardFor(ship,id)?.id==="vent"&&!had&&!multi){void openMasterCard({preview:false,shipId:ship.id,instanceId:id,skill:this.skills.engineer});this.inspectId=null;this.revealInspector=false;if(!multi)this.selections.clear();}
       void this.render({force:true});
     });
     for(const el of root.querySelectorAll("[data-alpha-route]"))el.addEventListener("click",()=>{if(context.locked||!context.canPlan)return;this.maneuvers[this.shipId]=el.dataset.alphaRoute;const route=legalHullManeuvers(context.ship,alphaComplications(context.s,this.shipId)).find(r=>r.id===el.dataset.alphaRoute);if(route)showAlphaManeuver(context.s,this.shipId,route);alphaSound("select");void this.render({force:true});});
@@ -151,7 +162,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
     if(type==="reset-panel"){this.confirmReset=!this.confirmReset;await this.render({force:true});return;}
     if(type==="master-details"){this.masterDetails=!this.masterDetails;await this.render({force:true});return;}
     if(type==="fire"&&data.batteryId)this.batteryId=data.batteryId;
-    if(type==="show-weapons"){this.element.querySelector(".alpha-armory")?.scrollIntoView({block:"start",behavior:alphaPreferences().mode==="off"?"instant":"smooth"});return;}
+    if(type==="show-weapons"){this.weaponsOpen=true;const drawer=this.element.querySelector(".alpha-weapons-drawer");if(drawer)drawer.open=true;this.element.querySelector(".alpha-armory")?.scrollIntoView({block:"start",behavior:alphaPreferences().mode==="off"?"instant":"smooth"});return;}
     if(type==="fold-hand"){this.handFolded=!this.handFolded;alphaSound(this.handFolded?"close":"ready");await this.render({force:true});return;}
     if(type==="compact"){this.toggleCompact();await this.render({force:true});return;}
     if(type==="close-inspector"){this.dismissInspection();alphaSound("close");await this.render({force:true});return;}
@@ -227,7 +238,7 @@ export class AlphaCombatWindow extends HandlebarsApplicationMixin(ApplicationV2)
 /** One portrait, separate from the combat dashboard; actions still use its controller. */
 export class AlphaMasterCardWindow extends AlphaCombatWindow {
   static DEFAULT_OPTIONS={id:"arkflight-alpha-master-card",classes:["arkflight-alpha-combat","alpha-command-deck","alpha-master-window"],window:{title:"Arkflight — Vent Strain",icon:"fa-solid fa-dice-d20",resizable:false},position:{width:370,height:633}};
-  preview=true;masterDetails=false;receiptKey=null;
+  followPhase=false;preview=true;masterDetails=false;receiptKey=null;
   constructor(options={}){const {cardWidth,...position}=masterCardPosition();super({...options,position:{...position,...options.position}});}
   async _prepareContext(options){
     this.tab=this.preview?"forge":"hand";
@@ -254,6 +265,7 @@ export async function openMasterCard({preview=true,shipId=null,instanceId=null,s
 }
 export class AlphaPhaseTrackerWindow extends AlphaCombatWindow {
   static DEFAULT_OPTIONS={id:"arkflight-alpha-phase-tracker",classes:["arkflight-alpha-combat","alpha-command-deck","alpha-phase-window"],window:{title:"Arkflight — Fleet status",icon:"fa-solid fa-flag",resizable:true},position:{width:440,height:235}};
+  followPhase=false;
   constructor(options={}){super({...options,position:{width:Math.min(440,innerWidth-32),height:235,left:Math.min(80,Math.max(8,innerWidth-Math.min(440,innerWidth-32)-16)),top:18,...options.position}});}
   async _prepareContext(options){return {...await super._prepareContext(options),trackerOnly:true};}
   async _onRender(c,o){await super._onRender(c,o);if(!this.minimized){const rows=Math.ceil((c.fleet.rows.length||1)/((this.position?.width??440)<340?1:2));this.setPosition?.({height:Math.min(innerHeight-60,Math.max(235,160+rows*60))});}}

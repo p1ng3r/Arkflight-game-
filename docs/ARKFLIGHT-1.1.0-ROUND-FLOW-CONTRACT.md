@@ -5,8 +5,8 @@ Status: user-defined round structure, 28 October 2026. This is the implementatio
 ## Confirmed decisions
 
 - Each ship has one shared crew hand. Individual players do not receive separate five-card hands.
-- Round 1 begins with five cards per ship and a dedicated opening/mulligan phase.
-- A crew may return zero, one or two cards; draw exactly the number returned. Its opening hand remains five.
+- Round 1 begins with a base five cards per ship and a dedicated opening/mulligan phase. Base maximum hand is five, and base later-round draw is one. These are independent ship stats modified by hull, talents, upgrades and authored cards. Opening-hand bonuses must grant enough capacity to retain those cards.
+- A crew may return zero, one or two cards; draw exactly the number returned. Its opening hand retains its effective opening size.
 - Opening/mulligan completes before maneuver planning begins. It never repeats in later rounds.
 - From round 2 onward, the owning crew explicitly clicks its ship’s deck icon to draw one card into the shared hand. This replaces automatic round-start drawing.
 - Every involved living ship chooses a legal hull maneuver and locks it. The GM controls NPC ships.
@@ -60,6 +60,10 @@ Show the appropriate Instant window, then the assigned Battle Watch/NPC explicit
 
 After all firing is resolved, apply the completed damage exchange, relevant ship system saves and conditions. Offer any authored post-damage/condition Instant window before advancing. Do not invent post-roll uses for a card whose text only permits a pre-attack use.
 
+### Cleanup hand limit
+
+After firing and its pending effects resolve, each ship discards down to its effective maximum hand (base five). Temporary overflow from the scheduled draw or card effects is allowed during play. Track temporary capacity bonuses and their expiry explicitly. The opening mulligan remains at most two regardless of opening-hand bonuses. Progression should primarily improve card choices, combinations and ship identity; additional AP is a rare major benefit.
+
 ### Round recap and journal
 
 Show movement, abilities, shots, misses, critical outcomes, raw damage, reductions, actual Hull damage, resources and conditions. Show a short atmospheric narrative built from those recorded facts, alongside an exact numeric audit.
@@ -72,7 +76,7 @@ Use the actual weapon formula and rolled values; do not substitute the example's
 
 Record one page per encounter round in a campaign journal. Include journal/page IDs, an open link and a deduplication key so reopening, refreshing or recovering does not append the same round twice. Journal failure must not replay combat; provide a retry using the saved summary.
 
-The GM explicitly starts the next round after the recap. Refresh AP and activate scheduled effects, then enter a short Draw step. Highlight the deck icon for each ship that still needs its draw. An owning player clicks it to deal one card into that ship’s shared hand; the GM clicks for NPC ships. Persist one draw entitlement per ship per round, so another crew member, repeated clicks, refresh or reconnect cannot draw an extra card. Animate the card moving from deck to hand and update both counts. Show Waiting to draw / Draw complete in the readiness tracker. Resolve any hand-limit discard before continuing. If the draw pile is empty, reshuffle eligible discards under the existing deck rules; if no cards remain anywhere eligible, complete that ship’s draw with an explicit Deck empty result. Once all ships finish, enter Maneuver; do not repeat the opening mulligan. This scheduled draw costs no AP. Other card effects may still grant their separately tracked draws. If the encounter ended, offer the completed recap rather than starting another round.
+The GM explicitly starts the next round after the recap. Refresh AP and activate scheduled effects, then enter a short Draw step. Highlight the deck icon for each ship that still needs its draw. An owning player clicks it to deal one card into that ship’s shared hand; the GM clicks for NPC ships. Persist one draw entitlement per ship per round, so another crew member, repeated clicks, refresh or reconnect cannot draw an extra card. Animate the card moving from deck to hand and update both counts. Show Waiting to draw / Draw complete in the readiness tracker. Allow temporary overflow for the round; choose and discard down to the effective hand limit during Cleanup, not immediately after the scheduled draw. If the draw pile is empty, reshuffle eligible discards under the existing deck rules; if no cards remain anywhere eligible, complete that ship’s draw with an explicit Deck empty result. Once all ships finish, enter Maneuver; do not repeat the opening mulligan. This scheduled draw costs no AP. Other card effects may still grant their separately tracked draws. If the encounter ended, offer the completed recap rather than starting another round.
 
 ## Range-band starting recommendation
 
