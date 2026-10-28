@@ -6,7 +6,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-vent-fitted-20261028";
+export const ALPHA_BUILD="alpha-command-controls-20261028";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -19,7 +19,7 @@ export function canOperateAlphaShip(s,shipId,station,user=game.user){
 export function authorizeAlphaCommand(s,cmd,user){
   if(!user?.active)throw new Error("An active authenticated user is required.");
   if(user.isGM)return;
-  if(["start","move","begin-damage","round","end","assign-station","resume-movement","restore-movement","pause-boarding","resume-boarding"].includes(cmd.type))throw new Error("The GM controls this alpha phase.");
+  if(["start","move","begin-damage","round","end","reset","assign-station","resume-movement","restore-movement","pause-boarding","resume-boarding"].includes(cmd.type))throw new Error("The GM controls this alpha phase.");
   const ship=s?.ships?.[cmd.shipId];if(!ship||!owns(user,ship.actorId))throw new Error("You do not own this alpha ship.");
   let station;
   if(cmd.type==="play")station=ALPHA_CARDS[ship.instances[cmd.instanceId]]?.stations[0];
@@ -45,6 +45,11 @@ async function operatorModifier(ship,station,skill){
   const actor=game.actors.get(ref);if(!actor)throw new Error("The assigned crew Actor is missing; reassign that station during planning.");
   const name=skill==="warfare-lore"?(Object.keys(actor.skills??actor.system?.skills??{}).find(k=>["warfare-lore","warfare"].includes(k))??skill):skill;
   const row=actor.skills?.[name]??actor.system?.skills?.[name];
+  if(actor.type==="npc"){
+    const total=Number(row?.mod??row?.totalModifier??row?.value),level=Number(actor.level??actor.system?.details?.level?.value);
+    if(!Number.isFinite(total)||!Number.isFinite(level))throw new Error("This NPC needs a modifier for the chosen skill and a level.");
+    return total-level+ship.profile.level+(station==="battlewatch"?0:ship.profile.support-(ship.profile.level+8));
+  }
   const attributes={diplomacy:"cha",intimidation:"cha",society:"int",crafting:"int",arcana:"int",thievery:"dex",survival:"wis",nature:"wis",occultism:"int",medicine:"wis",athletics:"str","warfare-lore":"int"};
   const rank=Math.max(0,Math.min(4,Number(row?.rank??0))), attribute=Number(actor.system?.abilities?.[row?.attribute??attributes[skill]]?.mod??0);
   if(!Number.isFinite(rank)||!Number.isFinite(attribute))throw new Error("The crew skill data is invalid.");
@@ -54,6 +59,10 @@ export async function operatorBreakdown(ship,station,skill){
   const modifier=await operatorModifier(ship,station,skill),actor=game.actors.get(ship.stationActors[station]);
   if(!actor)return [{label:"Ship crew baseline",value:modifier}];
   const name=skill==="warfare-lore"?(Object.keys(actor.skills??actor.system?.skills??{}).find(k=>["warfare-lore","warfare"].includes(k))??skill):skill;
+  if(actor.type==="npc"){
+    const row=actor.skills?.[name]??actor.system?.skills?.[name],level=Number(actor.level??actor.system?.details?.level?.value),total=Number(row?.mod??row?.totalModifier??row?.value);
+    return [{label:"NPC skill modifier",value:total},{label:"Replace NPC level",value:-level},{label:"Ship level",value:ship.profile.level},{label:"Ship support adjustment",value:modifier-total+level-ship.profile.level}];
+  }
   const row=actor.skills?.[name]??actor.system?.skills?.[name],rank=Math.max(0,Math.min(4,Number(row?.rank??0)));
   const level=ship.profile.level,training=rank*2,fit=station==="battlewatch"?0:ship.profile.support-(level+8);
   return [{label:"Ship level",value:level},{label:"Crew proficiency",value:training},{label:"Crew attribute",value:modifier-level-training-fit},{label:"Ship support adjustment",value:fit}];
@@ -80,29 +89,32 @@ async function handle(cmd,user){
     const job=copy(journal());if(!job?.before)throw new Error("There is no saved movement to restore.");await restoreAlphaMovementJournal(job);await saved(job.before);await game.settings.set(MODULE,JOURNAL,{});Hooks.callAll("arkflightAlphaChanged");return job.before;
   }
   if(journal()?.next)throw new Error("Resume or restore the saved movement before another action.");
-  if(game.paused&&!["plan","lock","mulligan","assign-station","end"].includes(cmd.type))throw new Error("Unpause Foundry before executing alpha actions.");
-  if(cmd.type==="start"){
-    if(before?.id&&!before.complete)throw new Error("End the current alpha encounter before resetting the test fleet.");
+  if(game.paused&&!["plan","lock","mulligan","assign-station","end","reset"].includes(cmd.type))throw new Error("Unpause Foundry before executing alpha actions.");
+  if(cmd.type==="start"||cmd.type==="reset"){
+    if(cmd.type==="start"&&before?.id&&!before.complete)throw new Error("End the current alpha encounter before resetting the test fleet.");
+    if(cmd.type==="reset"){if(cmd.encounterId!==before?.id||cmd.revision!==before?.revision)throw new Error("The encounter changed; refresh before resetting.");if(!before?.id)throw new Error("Start an alpha encounter first.");cmd={type:"start",count:Object.keys(before.ships).length,useSavedShips:true};}
     const next=await prepareAlphaFleet(cmd);await saved(next);Hooks.callAll("arkflightAlphaChanged");return next;
   }
   if(!before?.id||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw new Error("The alpha encounter changed; refresh before acting.");
   if(cmd.type==="assign-station"){
-    if(before.phase!=="planning"||!before.ships[cmd.shipId]||!Object.hasOwn(ALPHA_SKILLS,cmd.station))throw new Error("Assign crew during planning.");
+    if(!["planning","cards","cleanup"].includes(before.phase)||!before.ships[cmd.shipId]||!Object.hasOwn(ALPHA_SKILLS,cmd.station))throw new Error("Assign crew during planning, Card phase or cleanup; finish the current attack first.");
     if(cmd.actorId&&!game.actors.get(cmd.actorId))throw new Error("Choose a valid crew Actor.");
     before.ships[cmd.shipId].stationActors[cmd.station]=cmd.actorId||null;before.revision++;
-    await saved(before);Hooks.callAll("arkflightAlphaChanged");return before;
+    await saved(before);
+    try{await game.actors.get(before.ships[cmd.shipId].actorId)?.update({[`flags.${MODULE}.alphaStationActors`]:before.ships[cmd.shipId].stationActors});}catch(error){console.warn("Arkflight | Crew saved for this encounter only",error);ui.notifications.warn("Crew assigned for this encounter, but could not be saved for the next test.");}
+    Hooks.callAll("arkflightAlphaChanged");return before;
   }
   if(cmd.type!=="end")assertAlphaNativePositions(before);
   const evaluated=[];
-  const next=await dispatchAlphaCommand(before,cmd,{roll:async formula=>{const roll=await new Roll(formula).evaluate();evaluated.push(roll);return Number(roll.total);},operatorModifier,operatorBreakdown,isBlocked:cmd.type==="end"?()=>false:alphaObstacleTest(before)});
+  const next=await dispatchAlphaCommand(before,cmd,{roll:async (formula,context={})=>{const roll=await new Roll(formula).evaluate(),ship=before.ships[context.shipId??cmd.shipId];evaluated.push({roll,actorId:ship?.stationActors[context.station]??ship?.actorId,shipName:ship?.name});return Number(roll.total);},operatorModifier,operatorBreakdown,isBlocked:cmd.type==="end"?()=>false:alphaObstacleTest(before)});
   if(JSON.stringify(raw())!==JSON.stringify(before))throw new Error("The encounter changed while resolving this action; retry from the saved state.");
   if(next.movement){
     const job={id:foundry.utils.randomID(),before,next,start:expectedAlphaTokens(before),step:0,error:null};
-    await game.settings.set(MODULE,JOURNAL,job);return completeJournal(job);
+    await game.settings.set(MODULE,JOURNAL,job);const result=await completeJournal(job);await showAlphaCardRolls(evaluated,{user});return result;
   }
   await saved(next);
   try{await syncAlphaTracker(next);}catch(error){console.error("Arkflight | Alpha tracker",error);ui.notifications.warn("Alpha action saved; native combat tracker synchronization will retry.");}
-  if(cmd.type==="play"&&before.ships[cmd.shipId]?.instances[cmd.instanceId]==="vent")await showAlphaCardRolls(evaluated,{user,actorId:before.ships[cmd.shipId].stationActors.engineer??before.ships[cmd.shipId].actorId,shipName:before.ships[cmd.shipId].name});
+  await showAlphaCardRolls(evaluated,{user});
   Hooks.callAll("arkflightAlphaChanged");return next;
 }
 function enqueue(cmd,user){const task=queue.catch(()=>{}).then(()=>handle(copy(cmd),user));queue=task;return task;}
@@ -125,7 +137,7 @@ Hooks.once("init",()=>{
   for(const key of [STATE,JOURNAL])game.settings.register(MODULE,key,{name:key,scope:"world",config:false,type:Object,default:{}});
 });
 Hooks.once("ready",()=>{
-  game.arkflight??={};game.arkflight.alphaCombat=Object.freeze({build:ALPHA_BUILD,state:alphaPlayerState,request,diagnostics:alphaDiagnostics,get cards(){if(game.user.isGM)return ALPHA_CARDS;const known=new Set(libraryShips().flatMap(s=>viewShipLibrary(s.id).learned));return Object.fromEntries(Object.entries(ALPHA_CARDS).filter(([id])=>known.has(id)));},library:Object.freeze({ships:libraryShips,view:viewShipLibrary}),hulls:ALPHA_HULLS,upgrades:ALPHA_UPGRADES,talents:ALPHA_TALENTS,recovery:()=>game.user.isGM?copy(journal()):{pending:Boolean(journal()?.next)},ownsShip:shipId=>canOperateAlphaShip(raw(),shipId,null),canOperate:(shipId,station)=>canOperateAlphaShip(raw(),shipId,station)});
+  game.arkflight??={};game.arkflight.alphaCombat=Object.freeze({build:ALPHA_BUILD,state:alphaPlayerState,request,diagnostics:alphaDiagnostics,get cards(){if(game.user.isGM)return ALPHA_CARDS;const known=new Set(libraryShips().flatMap(s=>viewShipLibrary(s.id).learned));return Object.fromEntries(Object.entries(ALPHA_CARDS).filter(([id])=>known.has(id)));},library:Object.freeze({ships:libraryShips,view:viewShipLibrary}),async crewCheck(shipId,station,skill){const s=raw();if(!canOperateAlphaShip(s,shipId,null))throw new Error("You do not own this ship.");if(!ALPHA_SKILLS[station]?.includes(skill))throw new Error("Choose a valid station skill.");const ship=s.ships[shipId],actor=game.actors.get(ship.stationActors[station]),modifier=await operatorModifier(ship,station,skill);return{name:actor?.name??"NPC ship crew",kind:actor?.type??"ship baseline",skill,modifier,modifierText:`${modifier>=0?"+":""}${modifier}`};},hulls:ALPHA_HULLS,upgrades:ALPHA_UPGRADES,talents:ALPHA_TALENTS,recovery:()=>game.user.isGM?copy(journal()):{pending:Boolean(journal()?.next)},ownsShip:shipId=>canOperateAlphaShip(raw(),shipId,null),canOperate:(shipId,station)=>canOperateAlphaShip(raw(),shipId,station)});
 });
 Hooks.on("createChatMessage",(message,_options,userId)=>{
   const input=message.flags?.[MODULE]?.alphaCommand;if(!input||primary()?.id!==game.user.id)return;

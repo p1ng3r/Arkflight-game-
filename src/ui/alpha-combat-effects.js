@@ -45,10 +45,11 @@ export class AlphaCombatEffects {
     if (damage) alphaSound(damage.degree >= 1 ? "fire" : "failure");
     else if (events.some(e => e.kind === "complication")) alphaSound("criticalFailure");
     else if (events.some(e => e.kind === "play" && e.burn)) alphaSound("signature");
+    else if (events.some(e => e.kind === "play")) alphaSound("commit");
     else if (events.some(e => e.kind === "draw")) alphaSound("ready");
     else if(events.some(e=>e.kind==="move"))alphaSound("move");
     else if (check) alphaSound({ "-1": "criticalFailure", 0: "failure", 1: "success", 2: "criticalSuccess" }[check.degree]);
-    else if (events.some(e => e.kind === "play")) alphaSound("lock");
+
   }
   async flyCard(card, destination) {
     if (!card || alphaPreferences().mode !== "full" || document.hidden) return;

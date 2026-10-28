@@ -17,3 +17,24 @@
 [data-alpha-motion=off] *,[data-alpha-motion=off]{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 
 .alpha-command-deck .alpha-shell.is-compact .alpha-footer{margin-top:auto}.arkflight-alpha-library .alpha-library-summary{padding:9px;gap:3px;font-size:11px}.arkflight-alpha-library .alpha-loadout-tabs{margin:8px 0}.arkflight-alpha-library .alpha-library-deck{padding:9px;margin:8px 0}.arkflight-alpha-library .alpha-library-deck>p{font-size:10px;margin:6px 0}.arkflight-alpha-library .alpha-library-settings{margin:6px 0 0;padding:5px 8px;border-color:#406674;background:#102a35}.alpha-library-settings summary{font-size:10px;color:#b5cdd2}.alpha-library-settings label{margin-top:6px}
+/* Fleet readiness is public status, never another ship's private maneuver. */
+.alpha-command-deck .alpha-fleet-readiness{padding:7px 10px;background:#102831;border-bottom:1px solid #526a62;color:#d7dcca;flex:none}
+.alpha-command-deck .alpha-fleet-summary{font:12px/1.3 sans-serif;color:#e2c58f;margin-bottom:6px}
+.alpha-command-deck .alpha-fleet-ships{display:flex;flex-wrap:wrap;gap:6px}
+.alpha-command-deck .alpha-fleet-ship{display:flex;gap:7px;align-items:center;padding:5px 8px;border:1px solid #50656a;border-radius:6px;background:#172e38;flex:1;min-width:120px}
+.alpha-command-deck .alpha-fleet-ship>span{color:#d8af6e;font-size:14px}.alpha-command-deck .alpha-fleet-ship.is-ready>span{color:#8bd0b5}.alpha-command-deck .alpha-fleet-ship.is-active{border-color:#d6b173;background:#26454a}
+.alpha-command-deck .alpha-fleet-ship>div{display:grid;gap:3px}.alpha-command-deck .alpha-fleet-ship strong{font-size:11px;color:#e5deca}.alpha-command-deck .alpha-fleet-ship small{font-size:10px;color:#b6cbd0}
+.alpha-phase-window .window-content{padding:0!important;overflow:auto;background:#102831}
+.alpha-command-deck .alpha-tracker-shell{display:flex;flex-direction:column;gap:6px;padding:9px;background:#102831;min-height:100%;box-sizing:border-box}
+.alpha-command-deck .alpha-tracker-shell>header{display:flex;align-items:center;gap:8px;color:#d9c28f;font-size:12px}.alpha-command-deck .alpha-tracker-shell>header>span{flex:1}
+.alpha-command-deck .alpha-tracker-shell button{background:#23464b;border:1px solid #779b97;border-radius:5px;color:#e6d4ae;padding:5px 8px;font-size:11px;min-height:27px}
+.alpha-command-deck .alpha-tracker-shell .alpha-phase-rail{margin:0;padding:6px 0;gap:5px;flex-wrap:wrap}.alpha-command-deck .alpha-tracker-shell .alpha-fleet-readiness{border:0;padding:0}.alpha-command-deck .alpha-tracker-shell .alpha-fleet-ship{min-width:140px}
+.alpha-command-deck .alpha-maneuver-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:9px;margin:12px 0}
+.alpha-command-deck .alpha-maneuver-tile{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;background:radial-gradient(at 50% 20%,#38626666,transparent 70%),#122b34;border:1px solid #728581;border-radius:10px;padding:9px;transition:transform .15s,border-color .15s}
+.alpha-command-deck .alpha-maneuver-tile:hover:enabled{transform:translateY(-3px);border-color:#cfad73}.alpha-command-deck .alpha-maneuver-tile.is-selected{background:radial-gradient(at 50% 20%,#6b9b8444,transparent 80%),#24464b;border-color:#e1c18a;box-shadow:inset 0 0 0 1px #e1c18a44}
+.alpha-command-deck .alpha-maneuver-glyph{display:block;width:100%;background:#0d202777;border-radius:6px}.alpha-command-deck .alpha-maneuver-glyph svg{width:100%;height:100px}.alpha-command-deck .alpha-maneuver-tile strong{font:600 14px Georgia,serif;color:#eed4a2}.alpha-command-deck .alpha-maneuver-tile small{font:11px/1.4 sans-serif;color:#bed1d2}
+.alpha-command-deck .alpha-reset-confirm{padding:12px;border:1px solid #c79860;background:#362f26;color:#e9d6b5;flex:none}.alpha-command-deck .alpha-reset-confirm p{font-size:12px}.alpha-command-deck .alpha-reset-confirm button{padding:6px 10px;margin-right:8px;background:#28494c;color:#ead9b4;border:1px solid #c79860;border-radius:4px}
+.alpha-command-deck .alpha-crew-source{padding:7px;background:#203e47;border-left:2px solid #d5b276;color:#e2cc9f;font-size:12px}
+.alpha-command-deck .alpha-maneuver-tile{height:auto!important;min-height:180px!important;align-self:stretch}
+.alpha-command-deck .alpha-maneuver-glyph{flex:none}
+.alpha-command-deck .alpha-tracker-shell .alpha-phase-rail li{font-size:10px}

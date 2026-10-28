@@ -45,3 +45,10 @@
 .alpha-command-deck .alpha-playing-card.is-master-card{background:#183437;border-color:#b79059}.alpha-command-deck .is-master-card .alpha-card-art{height:112px;margin:0 -1px;overflow:hidden}.alpha-command-deck .is-master-card .alpha-card-art img{width:100%;height:100%;object-fit:cover;object-position:50% 60%;filter:none}.alpha-command-deck .is-master-card>strong{font-family:Georgia,serif;color:#f7ddb0}
 @media(max-height:650px),(max-width:430px){.alpha-command-deck .alpha-master-header h3{font-size:19px;padding:7px 4px}.alpha-command-deck .alpha-master-parchment{top:55%;padding-top:9px}.alpha-command-deck .alpha-master-parchment p{font-size:13px}.alpha-command-deck .alpha-master-parchment>small{font-size:11px}.alpha-command-deck .alpha-master-controls{margin-top:5px}.alpha-command-deck .alpha-master-header small{font-size:8px}.alpha-command-deck .alpha-master-ap{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.alpha-command-deck .alpha-master-painting{transition:none;transform:none!important}.alpha-command-deck .alpha-master-roll{transition:none}}
+/* Clip the painting to the actual outer contour of the transparent copper frame. */
+.alpha-command-deck .alpha-master-card.alpha-card-detail{background:transparent}
+.alpha-command-deck .alpha-master-hero{clip-path:inset(1.8% 2.3% 3.2% 2.3% round 10px)}
+.alpha-command-deck .alpha-master-parchment{left:2.3%;right:2.3%}
+/* Foundry button themes may otherwise impose a fixed height and flatten the die. */
+.alpha-command-deck .alpha-master-roll{height:calc(var(--alpha-master-card-width,350px) * .175)!important;max-height:none;min-width:0}
+.alpha-command-deck .alpha-master-toolbar button{height:24px;min-height:24px;padding:3px 8px;background:#17363e;color:#e8cf9f;border:1px solid #987648;border-radius:4px}

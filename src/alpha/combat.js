@@ -11,7 +11,7 @@ const log=(s,text,detail=null)=>{s.logSerial=(s.logSerial??s.log.length)+1;s.log
 function random(s){let x=s.randomState;x^=x<<13;x^=x>>>17;x^=x<<5;s.randomState=x>>>0;return s.randomState/4294967296;}
 function shuffle(s,values){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(random(s)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function dice(s,formula){if(!/^\d+d\d+(?:\+\d+d\d+|\+\d+)*$/.test(formula))throw new Error("Unsupported alpha dice formula.");return formula.split("+").reduce((n,term)=>{if(!term.includes("d"))return n+Number(term);const [count,sides]=term.split("d").map(Number);for(let i=0;i<count;i++)n+=1+Math.floor(random(s)*sides);return n;},0);}
-async function roll(s,formula,services){const result=services.roll?await services.roll(formula):dice(s,formula);if(!Number.isFinite(result))throw new Error("The dice result was invalid.");return result;}
+async function roll(s,formula,services,context={}){const result=services.roll?await services.roll(formula,context):dice(s,formula);if(!Number.isFinite(result))throw new Error("The dice result was invalid.");return result;}
 function track(ship,key,delta){const t=ship.resources[key];t.value=clamp(t.value+delta,t.max);}
 function compIn(s){for(const ship of Object.values(s.ships)){const row=s.complications.ships.find(r=>r.id===ship.id);row.resources=copy(ship.resources);row.ap=ship.ap;}}
 function compOut(s){for(const row of s.complications.ships){s.ships[row.id].resources=copy(row.resources);s.ships[row.id].ap=row.ap;}}
@@ -41,7 +41,7 @@ async function check(s,ship,station,skill,services,{dc=ship.profile.dc,batteryId
   if(!Number.isFinite(base))throw new Error("Invalid crew modifier.");
   const modifier=save&&station!=="structure"?{amount:0,effectIds:[]}:complicationCheckModifier(s.complications,ship.id,station==="battlewatch"&&batteryId?"battery-attack":station,{batteryId,coordinated});
   const components=!save&&ALPHA_SKILLS[station]&&services.operatorBreakdown?await services.operatorBreakdown(ship,station,skill??ALPHA_SKILLS[station][0]):[{label:save?"Ship save":"Ship crew baseline",value:base}];
-  const die=await roll(s,"1d20",services);if(!Number.isInteger(die)||die<1||die>20)throw new Error("A check requires a d20 result.");
+  const die=await roll(s,"1d20",services,{shipId:ship.id,station});if(!Number.isInteger(die)||die<1||die>20)throw new Error("A check requires a d20 result.");
   const morale=!save&&ALPHA_SKILLS[station]?(ship.resources.morale.value<=25?-2:ship.resources.morale.value<=50?-1:0):0;
   const penalty=Math.min(modifier.amount,morale);
   const total=die+base+penalty+bonus;
