@@ -1,3 +1,4 @@
+import {recordAlphaRound} from "./alpha-round-journal.js";
 import {postCrewRequest,finishCrewRequest,postActionReceipt,bindCrewChat,crewActionName} from "./alpha-crew-chat.js";
 import { showAlphaCardRolls } from "./alpha-card-dice.js";
 import { dispatchAlphaCommand } from "../alpha/combat.js";
@@ -7,7 +8,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-hand-five-20261028";
+export const ALPHA_BUILD="alpha-round-deck-20261028";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -20,17 +21,17 @@ export function canOperateAlphaShip(s,shipId,station,user=game.user){
 export function authorizeAlphaCommand(s,cmd,user){
   if(!user?.active)throw new Error("An active authenticated user is required.");
   if(user.isGM)return;
-  if(["start","move","begin-damage","round","end","reset","assign-station","resume-movement","restore-movement","pause-boarding","resume-boarding"].includes(cmd.type))throw new Error("The GM controls this alpha phase.");
+  if(["start","move","begin-damage","round","retry-recap","end","reset","assign-station","resume-movement","restore-movement","pause-boarding","resume-boarding"].includes(cmd.type))throw new Error("The GM controls this alpha phase.");
   const ship=s?.ships?.[cmd.shipId];if(!ship||!owns(user,ship.actorId))throw new Error("You do not own this alpha ship.");
   let station;
   if(cmd.type==="roll-crew"){if(s.pendingCrewAction?.shipId!==ship.id)throw new Error("This crew request belongs to another ship.");station=s.pendingCrewAction.station;}
   else if(cmd.type==="cancel-crew")station="captain";
-  else if(cmd.type==="play")station=ALPHA_CARDS[ship.instances[cmd.instanceId]]?.stations[0];
-  else if(["fire","attack"].includes(cmd.type))station="battlewatch";
+  else if(["play","resolve-card"].includes(cmd.type))station=ALPHA_CARDS[ship.instances[cmd.instanceId]]?.stations[0];
+  else if(["fire","attack","damage"].includes(cmd.type))station="battlewatch";
   else if(cmd.type==="plan")station="navigator";
-  else if(["lock","finish-card"].includes(cmd.type))station="captain";
+  else if(["lock","finish-card","lock-cards","finish-firing","skip-card"].includes(cmd.type))station="captain";
   if(station&&ship.stationActors[station]&&!owns(user,ship.stationActors[station]))throw new Error(`The assigned ${station} player executes this contribution.`);
-  if(cmd.type==="attack"&&s.attacks[s.attackIndex]?.shipId!==ship.id)throw new Error("Only the attacking crew may resolve its attack.");
+  if(["attack","damage"].includes(cmd.type)&&s.attacks[s.attackIndex]?.shipId!==ship.id)throw new Error("Only the attacking crew may resolve its attack.");
 }
 export function alphaPlayerState(user=game.user){
   const value=raw();if(!value?.id)return null;
@@ -39,7 +40,7 @@ export function alphaPlayerState(user=game.user){
   if(s.pendingCrewAction&&!owns(user,s.ships[s.pendingCrewAction.shipId]?.actorId))delete s.pendingCrewAction.command;
   for(const ship of Object.values(s.ships)){
     ship.drawCount=ship.drawPile.length;
-    if(!owns(user,ship.actorId)){ship.hand=[];ship.drawPile=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
+    if(!owns(user,ship.actorId)){if(s.phase==="card-planning"&&s.cardPlans)delete s.cardPlans[ship.id];ship.hand=[];ship.drawPile=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
   }
   delete s.complications.randomState;return s;
 }
@@ -75,10 +76,14 @@ async function saved(value){
   await game.settings.set(MODULE,STATE,value);
   const actual=raw();if(actual?.id!==value.id||actual?.revision!==value.revision)throw new Error("Alpha encounter save was not confirmed.");
 }
+async function persistRoundRecap(next){
+ if(next.roundFlow!==2)return;
+ try{if(await recordAlphaRound(next))await saved(next);}catch(error){next.roundJournalError=error.message;await saved(next);console.warn("Arkflight | Round journal retained for retry",error);}
+}
 async function completeJournal(job){
   try{
     await runAlphaMovementJournal(job,value=>game.settings.set(MODULE,JOURNAL,value));
-    await saved(job.next);await game.settings.set(MODULE,JOURNAL,{});
+    await saved(job.next);await persistRoundRecap(job.next);await game.settings.set(MODULE,JOURNAL,{});
     await syncAlphaTracker(job.next);Hooks.callAll("arkflightAlphaChanged");return job.next;
   }catch(error){job.error=error.message;await game.settings.set(MODULE,JOURNAL,job);Hooks.callAll("arkflightAlphaChanged");throw error;}
 }
@@ -96,10 +101,11 @@ async function handle(cmd,user){
   if(game.paused&&!["plan","lock","mulligan","assign-station","end","reset"].includes(cmd.type))throw new Error("Unpause Foundry before executing alpha actions.");
   if(cmd.type==="start"||cmd.type==="reset"){
     if(cmd.type==="start"&&before?.id&&!before.complete)throw new Error("End the current alpha encounter before resetting the test fleet.");
-    if(cmd.type==="reset"){if(cmd.encounterId!==before?.id||cmd.revision!==before?.revision)throw new Error("The encounter changed; refresh before resetting.");if(!before?.id)throw new Error("Start an alpha encounter first.");cmd={type:"start",count:Object.keys(before.ships).length,useSavedShips:true};}
+    if(cmd.type==="reset"){if(cmd.encounterId!==before?.id||cmd.revision!==before?.revision)throw new Error("The encounter changed; refresh before resetting.");if(!before?.id)throw new Error("Start an alpha encounter first.");cmd={type:"start",count:Object.keys(before.ships).length,useSavedShips:true,roundFlow:cmd.roundFlow??before.roundFlow??1};}
     const next=await prepareAlphaFleet(cmd);await saved(next);if(before?.pendingCrewAction){try{await finishCrewRequest(before.pendingCrewAction.id,true);}catch(error){console.warn("Arkflight | Cancelled crew chat",error);}}Hooks.callAll("arkflightAlphaChanged");return next;
   }
   if(!before?.id||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw new Error("The alpha encounter changed; refresh before acting.");
+  if(cmd.type==="retry-recap"){if(!["cleanup","complete"].includes(before.phase))throw Error("No completed round is ready.");await persistRoundRecap(before);Hooks.callAll("arkflightAlphaChanged");return before;}
   if(before.pendingCrewAction&&!['roll-crew','cancel-crew','end','reset'].includes(cmd.type))throw new Error("Waiting for the assigned station to choose a skill and roll.");
   if(cmd.type==="cancel-crew"){
     if(!before.pendingCrewAction||cmd.requestId!==before.pendingCrewAction.id)throw new Error("That crew request is no longer active.");
@@ -115,22 +121,23 @@ async function handle(cmd,user){
     if(cmd.type==="attack")effectiveBefore.attacks[effectiveBefore.attackIndex].skill=cmd.skill;
   }
   if(cmd.type==="assign-station"){
-    if(!["planning","cards","cleanup"].includes(before.phase)||!before.ships[cmd.shipId]||!Object.hasOwn(ALPHA_SKILLS,cmd.station))throw new Error("Assign crew during planning, Card phase or cleanup; finish the current attack first.");
+    if(!["opening","planning","card-planning","cards","cleanup"].includes(before.phase)||!before.ships[cmd.shipId]||!Object.hasOwn(ALPHA_SKILLS,cmd.station))throw new Error("Assign crew during planning, Card phase or cleanup; finish the current attack first.");
     if(cmd.actorId&&!game.actors.get(cmd.actorId))throw new Error("Choose a valid crew Actor.");
     before.ships[cmd.shipId].stationActors[cmd.station]=cmd.actorId||null;before.revision++;
     await saved(before);
     try{await game.actors.get(before.ships[cmd.shipId].actorId)?.update({[`flags.${MODULE}.alphaStationActors`]:before.ships[cmd.shipId].stationActors});}catch(error){console.warn("Arkflight | Crew saved for this encounter only",error);ui.notifications.warn("Crew assigned for this encounter, but could not be saved for the next test.");}
     Hooks.callAll("arkflightAlphaChanged");return before;
   }
-  if(!resolvingRequest&&user.isGM&&["play","attack"].includes(cmd.type)){
-    const ship=before.ships[cmd.shipId],card=cmd.type==="play"?ALPHA_CARDS[ship?.instances[cmd.instanceId]]:null;
+  if(!resolvingRequest&&user.isGM&&["play","resolve-card","attack"].includes(cmd.type)){
+    const ship=before.ships[cmd.shipId],card=["play","resolve-card"].includes(cmd.type)?ALPHA_CARDS[ship?.instances[cmd.instanceId]]:null;
     const station=cmd.type==="attack"?"battlewatch":card?.stations[0],actor=game.actors.get(ship?.stationActors[station]);
     const needsCheck=cmd.type==="attack"||card&&!(card.role==="Attack"&&card.stations.length===1);
     if(needsCheck&&actor?.type==="character"){
-      if(cmd.type==="play"&&(!ship.hand.includes(cmd.instanceId)||ship.ap<card.ap))throw new Error("Choose an affordable card in the ship's hand.");
+      if(["play","resolve-card"].includes(cmd.type)&&(!ship.hand.includes(cmd.instanceId)||(cmd.type==="play"&&ship.ap<card.ap)))throw new Error("Choose an affordable card in the ship's hand.");
       if(cmd.type==="play"&&card.timing!=="instant"&&(before.phase!=="cards"||before.turnOrder[before.turnIndex]!==ship.id))throw new Error("Wait for this ship's Card phase.");
       if(cmd.type==="play"&&card.timing==="instant"&&(before.phase!=="response"||before.attacks[before.attackIndex]?.targetId!==ship.id||before.attacks[before.attackIndex].responses[ship.id]))throw new Error("Wait for this ship's incoming response window.");
       if(cmd.type==="attack"&&(before.phase!=="response"||before.attacks[before.attackIndex]?.shipId!==ship.id||!before.attacks[before.attackIndex]?.responses[before.attacks[before.attackIndex]?.targetId]))throw new Error("Finish the defender's response before requesting the attack roll.");
+      if(cmd.type==="resolve-card"&&(before.phase!=="resolving"||before.turnOrder[before.turnIndex]!==ship.id||before.cardPlans?.[ship.id]?.find(c=>!c.resolved)?.instanceId!==cmd.instanceId))throw Error("Wait for this card’s resolution.");
       assertAlphaNativePositions(before);
       const next=copy(before),command={type:cmd.type,shipId:ship.id};
       for(const key of ['instanceId','batteryId','targetId','adjustment','exploitEffectId','attackSkill'])if(cmd[key]!=null)command[key]=cmd[key];
@@ -147,7 +154,7 @@ async function handle(cmd,user){
     const job={id:foundry.utils.randomID(),before,next,start:expectedAlphaTokens(before),step:0,error:null};
     await game.settings.set(MODULE,JOURNAL,job);const result=await completeJournal(job);await showAlphaCardRolls(evaluated,{user});await publishReceipts(before,result,cmd,user,resolvingRequest,evaluated);return result;
   }
-  await saved(next);
+  await saved(next);await persistRoundRecap(next);
   try{await syncAlphaTracker(next);}catch(error){console.error("Arkflight | Alpha tracker",error);ui.notifications.warn("Alpha action saved; native combat tracker synchronization will retry.");}
   await showAlphaCardRolls(evaluated,{user});
   await publishReceipts(before,next,cmd,user,resolvingRequest,evaluated);
