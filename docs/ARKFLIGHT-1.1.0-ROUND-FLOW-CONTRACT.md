@@ -8,6 +8,7 @@ Status: user-defined round structure, 28 October 2026. This is the implementatio
 - Round 1 begins with five cards per ship and a dedicated opening/mulligan phase.
 - A crew may return zero, one or two cards; draw exactly the number returned. Its opening hand remains five.
 - Opening/mulligan completes before maneuver planning begins. It never repeats in later rounds.
+- From round 2 onward, the owning crew explicitly clicks its ship’s deck icon to draw one card into the shared hand. This replaces automatic round-start drawing.
 - Every involved living ship chooses a legal hull maneuver and locks it. The GM controls NPC ships.
 - Only after all ships lock does the primary GM receive a Yes/No movement confirmation. Crew connection/readiness is visible. No means wait; it does not execute movement.
 - Yes executes the locked maneuvers together on the Foundry canvas through the confirmed-movement journal.
@@ -71,7 +72,7 @@ Use the actual weapon formula and rolled values; do not substitute the example's
 
 Record one page per encounter round in a campaign journal. Include journal/page IDs, an open link and a deduplication key so reopening, refreshing or recovering does not append the same round twice. Journal failure must not replay combat; provide a retry using the saved summary.
 
-The GM explicitly starts the next round after the recap. Refresh AP, activate scheduled effects and draw the normal later-round card. Proceed directly to Maneuver; do not repeat the opening mulligan. If the encounter ended, offer the completed recap rather than starting another round.
+The GM explicitly starts the next round after the recap. Refresh AP and activate scheduled effects, then enter a short Draw step. Highlight the deck icon for each ship that still needs its draw. An owning player clicks it to deal one card into that ship’s shared hand; the GM clicks for NPC ships. Persist one draw entitlement per ship per round, so another crew member, repeated clicks, refresh or reconnect cannot draw an extra card. Animate the card moving from deck to hand and update both counts. Show Waiting to draw / Draw complete in the readiness tracker. Resolve any hand-limit discard before continuing. If the draw pile is empty, reshuffle eligible discards under the existing deck rules; if no cards remain anywhere eligible, complete that ship’s draw with an explicit Deck empty result. Once all ships finish, enter Maneuver; do not repeat the opening mulligan. This scheduled draw costs no AP. Other card effects may still grant their separately tracked draws. If the encounter ended, offer the completed recap rather than starting another round.
 
 ## Range-band starting recommendation
 
@@ -81,7 +82,7 @@ These numbers are a proposed balance baseline, not a statement that current weap
 
 ## Implementation sequence and acceptance gates
 
-1. Introduce the authoritative phase state machine, separate opening gate, per-ship readiness and reconnect-safe GM movement confirmation.
+1. Introduce the authoritative phase state machine, separate opening gate, explicit once-per-round deck-click draws, per-ship readiness and reconnect-safe GM movement confirmation.
 2. Add committed-card queues with AP spent once, resource reservation/validation and explicit lock/resolve separation. Keep NPC and assigned-PC roll ownership.
 3. Implement firing costs/targeting separately, split hit checks from damage finalization, and add authored Instant priority windows without duplicate dice or recursive unintended reactions.
 4. Add true canvas weapon-band overlays and inspectable attack modifiers.
