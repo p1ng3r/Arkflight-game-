@@ -80,7 +80,8 @@
     "styles/alpha-combat.css",
     "styles/alpha-ship-library.css",
     "styles/alpha-command-deck.css",
-    "styles/alpha-master-card.css"
+    "styles/alpha-master-card.css",
+    "styles/alpha-round-deck.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
@@ -177,7 +178,8 @@
     "src/ui/ship-complication-lab-ui.js",
     "src/foundry/alpha-combat-api.js",
     "src/ui/alpha-combat-ui.js",
-    "src/ui/alpha-ship-library-ui.js"
+    "src/ui/alpha-ship-library-ui.js",
+    "src/ui/alpha-round-deck-ui.js"
   ],
   "manifest": "https://raw.githubusercontent.com/p1ng3r/Arkflight-game-/main/module.json",
   "download": "https://github.com/p1ng3r/Arkflight-game-/releases/download/v0.1.0/arkflight-game-v0.1.0.zip"

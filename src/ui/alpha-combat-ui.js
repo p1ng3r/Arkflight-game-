@@ -282,7 +282,7 @@ Hooks.on("arkflightAlphaPresentationChanged",()=>{if(instance?.rendered){instanc
 let lastCrewPrompt=null;
 Hooks.on("arkflightAlphaChanged",()=>{
   const api=game.arkflight?.alphaCombat,s=api?.state(),r=s?.pendingCrewAction;
-  if(!r||game.user.isGM||r.id===lastCrewPrompt||!api.canOperate(r.shipId,r.station))return;
+  if(s?.roundFlow===2||!r||game.user.isGM||r.id===lastCrewPrompt||!api.canOperate(r.shipId,r.station))return;
   lastCrewPrompt=r.id;instance??=new AlphaCombatWindow();instance.shipId=r.shipId;instance.tab="hand";instance.inspectId=null;
   void instance.render({force:true}).then(()=>{if(instance.minimized)return instance.maximize();}).then(()=>instance.bringToFront());
 });
