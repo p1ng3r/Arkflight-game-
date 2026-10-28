@@ -1,3 +1,4 @@
+import {complicationCheckModifier} from "../combat/ship-complications.js";
 import {AlphaCombatWindow,alphaCardArt,openMasterCard} from './alpha-combat-ui.js';
 import {ALPHA_CARDS,ALPHA_SKILLS} from '../alpha/cards.js';
 import {alphaCardFor,alphaTargetLegal,alphaRangeBand} from '../alpha/combat.js';
@@ -11,18 +12,24 @@ let dock,tracker,portrait,legacyOpen;
 const labels={opening:'Opening hand',draw:'Draw',planning:'Maneuver','card-planning':'Plan cards',resolving:'Station rolls',firing:'Firing',response:'Instant response',retarget:'Retarget',damage:'Damage',cleanup:'Round recap',complete:'Encounter ended',boarding:'Boarding'};
 export function roundPhaseSteps(s){const phases=[s?.round===1?'opening':'draw','planning','card-planning','resolving','firing','cleanup'],current=phases.indexOf(['response','retarget','damage'].includes(s?.phase)?'firing':s?.phase);return phases.map((id,i)=>({id,label:labels[id],active:i===current,done:i<current,number:i+1}));}
 export class AlphaRoundDeckWindow extends AlphaCombatWindow{
- static DEFAULT_OPTIONS={id:'arkflight-round-deck',classes:['arkflight-alpha-combat','alpha-command-deck','arkflight-round-deck'],window:{title:'Arkflight · Crew hand',icon:'fa-solid fa-layer-group',resizable:true},position:{width:960,height:390}};
+ static DEFAULT_OPTIONS={id:'arkflight-round-deck',classes:['arkflight-alpha-combat','alpha-command-deck','arkflight-round-deck'],window:{title:'Arkflight · Crew hand',icon:'fa-solid fa-layer-group',resizable:true},position:{width:960,height:450}};
  static PARTS={main:{template:'modules/arkflight-game/templates/alpha-round-deck.hbs'}};
  followPhase=false;resolutionOnly=false;movePromptKey=null;recapKey=null;
- constructor(o={}){super({...o,position:alphaWindowPosition(960,390,o.position)});}
+ constructor(o={}){super({...o,position:alphaWindowPosition(960,450,o.position)});}
  async _prepareContext(options){
   const api=game.arkflight.alphaCombat,s=api.state(),request=s?.pendingCrewAction,row=currentPlannedCard(s??{ships:{},turnOrder:[],turnIndex:0});
-  if(this.resolutionOnly&&s?.roundFlow===2){if(request){this.shipId=request.shipId;this.inspectId=request.command.instanceId??null;}else if(s.phase==='resolving'&&row){this.shipId=s.turnOrder[s.turnIndex];this.inspectId=row.instanceId;}}
+  if(this.resolutionOnly&&s?.roundFlow===2){if(request&&api.ownsShip(request.shipId)){this.shipId=request.shipId;this.inspectId=request.command.instanceId??null;}else if(s.phase==='resolving'&&row&&api.ownsShip(s.turnOrder[s.turnIndex])){this.shipId=s.turnOrder[s.turnIndex];this.inspectId=row.instanceId;}}
   const c=await super._prepareContext(options),ship=c.ship,phase=s?.phase,plan=s?.cardPlans?.[ship?.id]??[],planned=new Set(plan.filter(r=>!r.resolved).map(r=>r.instanceId));
-  let card=c.card;if(this.resolutionOnly&&this.inspectId&&ship){const raw=alphaCardFor(ship,this.inspectId);if(raw)card={...raw,instanceId:this.inspectId,art:alphaCardArt(raw),band:cardBand(raw),theme:cardTheme(raw),outcomes:cardOutcomes(raw),stationLabel:raw.stations.map(stationName).join(' + '),needsBattery:raw.role==='Attack'||raw.id==='work-guns',movementCard:['helm','ahead','breakaway'].includes(raw.id)};}
+  let card=c.card;if(this.resolutionOnly&&this.inspectId&&ship){const raw=alphaCardFor(ship,this.inspectId);if(raw)card={...raw,instanceId:this.inspectId,art:alphaCardArt(raw),band:cardBand(raw),theme:cardTheme(raw),outcomes:cardOutcomes(raw),stationLabel:raw.stations.map(stationName).join(' + '),needsBattery:raw.role==='Attack'||raw.id==='work-guns',attackOnly:raw.role==='Attack'&&raw.stations.length===1,movementCard:['helm','ahead','breakaway'].includes(raw.id)};}
   const station=request?.station??card?.stations[0]??'captain',chosen=request?this.pendingSkills[request.id]??'':this.skills[station]??'',actor=ship&&game.actors.get(ship.stationActors[station]);
   let breakdown;if((card||request)&&chosen&&ship){try{breakdown=await api.crewCheck(ship.id,station,chosen);}catch(e){breakdown={error:e.message};}}
   const pending=s?.attacks?.[s.attackIndex],firingShip=s?.turnOrder?.[s.firingIndex],responding=phase==='response'&&pending?.targetId===ship?.id&&!pending.responses[ship.id],allowed=ship&&api.canOperate(ship.id,station);
+  if(breakdown&&!breakdown.error){
+   const attack=request?.kind==='attack'?pending:null,mods=complicationCheckModifier(s.complications,ship.id,attack?'battery-attack':station,{batteryId:attack?.batteryId,coordinated:!!attack&&['volley','all-hands','breakaway'].includes(attack.cardId)}),morale=ship.resources.morale.value<=25?-2:ship.resources.morale.value<=50?-1:0;
+   const penalty=Math.min(mods.amount,morale);let bonus=0,range=0,dc=ship.profile.dc;
+   if(attack){const target=s.ships[attack.targetId],effects=s.complications.effects.filter(e=>e.forAttack===attack.id&&e.claimedBy);bonus=Math.max(attack.accuracy??0,...ship.effects.filter(e=>e.kind==='accuracy').map(e=>e.amount))+Math.max(0,...effects.filter(e=>e.rule==='attack-opening').map(e=>e.value));range=alphaRangeBand(s,ship.id,attack.batteryId,target.id).penalty;dc=target.profile.ac+Math.max(0,...target.effects.filter(e=>e.kind==='ac').map(e=>e.amount))+Math.max(0,...effects.filter(e=>e.rule==='defensive-opening').map(e=>e.value));}
+   const total=breakdown.modifier+penalty+bonus+range;breakdown={...breakdown,modifier:total,modifierText:`${total>=0?'+':''}${total}`,dc,dcLabel:attack?'Target AC':'Support DC',components:[...breakdown.components,{label:'Morale / complication (strongest)',value:penalty},...(attack?[{label:'Action accuracy',value:bonus},{label:'Range band',value:range}]:[])]};
+  }
   const resolving=phase==='resolving'&&s.turnOrder[s.turnIndex]===ship?.id&&row?.instanceId===this.inspectId;
   const receipt=card?[...(s?.log??[])].reverse().find(e=>e.detail?.instanceId===card.instanceId&&e.detail.shipId===ship?.id)?.detail:null;
   const primary=[...game.users].filter(u=>u.active&&u.isGM).sort((a,b)=>a.id.localeCompare(b.id))[0]?.id===game.user.id;
@@ -34,9 +41,10 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
    canLockCards:ship&&api.canOperate(ship.id,'captain')&&!s?.cardLocks?.[ship.id],canQueue:card&&phase==='card-planning'&&!s.cardLocks[ship?.id]&&!planned.has(card.instanceId)&&card.timing!=='instant'&&ship.ap>=card.ap,
    isOwnResolve:resolving,canResolve:resolving&&allowed&&!!chosen,canSkip:resolving&&api.canOperate(ship.id,'captain'),canInstant:card&&responding&&card.timing==='instant'&&allowed&&ship.ap>=card.ap&&!!chosen,
    canSubmitRoll:request?api.canOperate(request.shipId,request.station)&&!!chosen:allowed&&!!chosen,requestId:request?.id,skills:ALPHA_SKILLS[station].map(id=>({id,name:id,selected:id===chosen})),breakdown,crewActor:actor?.name??'Ship crew',crewPortrait:actor?.img,receipt,
-   canFireNow:phase==='firing'&&firingShip===ship?.id&&api.canOperate(ship.id,'battlewatch')&&ship.ap>=1,canFinishFiring:phase==='firing'&&firingShip===ship?.id&&api.canOperate(ship.id,'captain'),canAttack:phase==='response'&&pending?.responses[pending.targetId]&&api.canOperate(pending.shipId,'battlewatch'),canDamage:phase==='damage'&&api.canOperate(pending?.shipId,'battlewatch'),hit:pending?.hit,
+   canFireNow:phase==='firing'&&firingShip===ship?.id&&api.canOperate(ship.id,'battlewatch')&&ship.ap>=1,canFinishFiring:phase==='firing'&&firingShip===ship?.id&&api.canOperate(ship.id,'captain'),canAttack:phase==='response'&&!request&&pending?.responses[pending.targetId]&&api.canOperate(pending.shipId,'battlewatch'),canDamage:phase==='damage'&&api.canOperate(pending?.shipId,'battlewatch'),hit:pending?.hit,
+   discardCards:(ship?.discard??[]).map(id=>({id,name:ALPHA_CARDS[ship.instances[id]].name})),
    orders:(s?.attacks??[]).filter(a=>a.shipId===ship?.id&&!a.resolved).map(a=>({...a,name:ship.batteries.find(b=>b.id===a.batteryId)?.name??a.batteryId,targets:Object.values(s.ships).filter(t=>alphaTargetLegal(s,ship.id,a.batteryId,t.id)).map(t=>{const r=alphaRangeBand(s,ship.id,a.batteryId,t.id);return{id:t.id,name:`${t.name} · ${r.distance} hex · ${r.penalty} range`,selected:a.targetId===t.id};})})),
-   primary,allLocked:phase==='planning'&&roundReadiness(s).every(r=>r.ready),currentCardName:row&&s?ALPHA_CARDS[s.ships[s.turnOrder[s.turnIndex]].instances[row.instanceId]].name:'',
+   canInspectCurrent:s&&api.ownsShip(s.turnOrder[s.turnIndex]),primary,allLocked:phase==='planning'&&roundReadiness(s).every(r=>r.ready),currentCardName:row&&s?ALPHA_CARDS[s.ships[s.turnOrder[s.turnIndex]].instances[row.instanceId]]?.name??'Enemy station action':'',
    phaseInstruction:request?`Waiting for ${c.crewRequest.actorName} to roll.`:({opening:'Keep your hand or replace up to two cards.',draw:'Click the deck to draw this round’s card.',planning:'Choose a course. Movement waits until every ship locks.','card-planning':'Commit cards in order. Keep AP for firing and Instants.',resolving:`${s?.ships[s?.turnOrder?.[s?.turnIndex]]?.name??''} · resolve the next queued card.`,firing:`${s?.ships[firingShip]?.name??''} · choose weapons and targets.`,response:'Respond to incoming fire or pass.',damage:'The attack die is saved. Resolve damage without rerolling.',cleanup:'Discard overflow, review the round and start the next.'}[phase]??'Choose your ship.'),
    unsettled:!!s?.pendingDiscard||!!s?.pendingCrewAction||s?.complications?.choices.some(x=>x.status==='pending'),recapNarrative:s?.roundFlow===2?roundRecap(s).narrative:[],recapLines:(s?.roundEvents??s?.log??[]).filter(e=>e.round===s?.round),journal:s?.roundJournal,
    showHand:!!ship&&(!!c.pendingDiscard||['opening','draw','card-planning','response'].includes(phase)),drawCount:ship?.drawCount??ship?.drawPile.length??0};
@@ -45,7 +53,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   const root=this.element;bindAlphaPreferences(root,()=>this.render({force:true}));
   root.querySelector('[data-alpha-ship]')?.addEventListener('change',e=>{this.shipId=e.target.value;this.inspectId=null;this.selections.clear();void this.render({force:true});});
   for(const el of root.querySelectorAll('[data-round-action]'))el.addEventListener('click',()=>void this.roundAction(el.dataset.roundAction,el.dataset));
-  for(const el of root.querySelectorAll('[data-alpha-card]'))el.addEventListener('click',()=>{const id=el.dataset.alphaCard;if(c.opening&&c.canMulligan||c.pendingDiscard){if(this.selections.has(id))this.selections.delete(id);else this.selections.add(id);alphaSound('select');void this.render({force:true});}else void openRoundCard(this.shipId,id);});
+  for(const el of root.querySelectorAll('[data-alpha-card]'))el.addEventListener('click',()=>{const id=el.dataset.alphaCard;if(c.opening&&c.canMulligan||c.pendingDiscard){if(c.pendingDiscard&&c.hand.find(h=>h.instanceId===id)?.queued)return;if(this.selections.has(id))this.selections.delete(id);else this.selections.add(id);alphaSound('select');void this.render({force:true});}else void openRoundCard(this.shipId,id);});
   root.querySelector('[data-round-skill]')?.addEventListener('change',e=>{if(c.requestId)this.pendingSkills[c.requestId]=e.target.value;else this.skills[c.card.stations[0]]=e.target.value;void this.render({force:true});});
   for(const el of root.querySelectorAll('[data-round-order]'))el.addEventListener('change',()=>void this.roundAction('target',{attackId:el.dataset.roundOrder,targetId:el.value}));
   for(const el of root.querySelectorAll('[data-round-build]'))el.addEventListener('change',()=>{this.build[el.dataset.roundBuild]=['count','level'].includes(el.dataset.roundBuild)?Number(el.value):el.value;void this.render({force:true});});
@@ -56,7 +64,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
  }
  async roundAction(type,data={}){
   if(this.busy)return;const api=game.arkflight.alphaCombat,s=api.state(),ship=s?.ships[this.shipId];
-  if(type==='inspect-current'){const row=currentPlannedCard(s);if(row)await openRoundCard(s.turnOrder[s.turnIndex],row.instanceId);return;}
+  if(type==='inspect-current'){const row=currentPlannedCard(s);if(row&&api.ownsShip(s.turnOrder[s.turnIndex]))await openRoundCard(s.turnOrder[s.turnIndex],row.instanceId);return;}
   if(type==='close-card'){await this.close();return;}if(type==='minimize'){await this.minimize();return;}if(type==='tracker'){await openRoundTracker();return;}
   if(type==='library'){await api.library.open(ship?.actorId);return;}if(type==='crew'){await legacyOpen({tab:'ship'});return;}if(type==='open-journal'){await game.journal.get(s.roundJournal.journalId)?.sheet.render(true);return;}
   if(type==='arcs'){showAlphaBattery(s,ship.id,data.batteryId);return;}if(type==='clear-arcs'){clearAlphaOverlay();return;}
@@ -75,7 +83,8 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
    if(['roll-crew','cancel-crew'].includes(type)){const r=api.state().pendingCrewAction;command={type,requestId:r.id,shipId:r.shipId,skill:this.pendingSkills[r.id]??''};}
    if(type==='choose-complication')Object.assign(command,{shipId:data.shipId,choiceId:data.choiceId,optionId:data.optionId});if(type==='retarget')Object.assign(command,{shipId:data.shipId,targetId:data.targetId});
    if(type==='fire')command.batteryId=data.batteryId;if(['attack','damage'].includes(type))command.shipId=s.attacks[s.attackIndex].shipId;
-   const fresh=api.state(),result=await api.request({encounterId:fresh?.id,revision:fresh?.revision,...command});this.selections.clear();alphaSound(['lock','lock-cards'].includes(type)?'commit':type==='draw-round'?'ready':'select');
+   const visual=this.resolutionOnly&&['resolve-card','play','roll-crew'].includes(type)?this.element.querySelector('.round-art-card'):null,rect=visual?.getBoundingClientRect(),snapshot=visual?.cloneNode(true);
+   const fresh=api.state(),result=await api.request({encounterId:fresh?.id,revision:fresh?.revision,...command});this.selections.clear();if(snapshot&&fresh.ships[this.shipId]?.hand.includes(this.inspectId)&&!result.ships[this.shipId]?.hand.includes(this.inspectId))void this.effectsEngine.flyCard({getBoundingClientRect:()=>rect,cloneNode:()=>snapshot.cloneNode(true)},dock?.element?.querySelector('.round-discard-pile'));alphaSound(['lock','lock-cards'].includes(type)?'commit':type==='draw-round'?'ready':'select');
    if(type==='queue-card'&&this.resolutionOnly)await this.close();if(['start','reset'].includes(type))await openRoundTracker();if(result?.phase==='planning')clearAlphaOverlay();
   }catch(e){this.error=e.message;ui.notifications.warn(e.message);}finally{this.busy=false;if(this.rendered)await this.render({force:true});}
  }

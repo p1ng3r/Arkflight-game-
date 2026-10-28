@@ -1,6 +1,6 @@
 # Crew round-flow contract
 
-Status: user-defined round structure, 28 October 2026. This is the implementation contract, not a claim that the existing alpha controller already follows these phases.
+Status: implemented for new `roundFlow: 2` test encounters, 28 October 2026. Earlier saved alpha encounters retain their old protocol until reset. See [Crew card table](ARKFLIGHT-1.1.0-CREW-CARD-TABLE.md) for exact controls, tests and remaining live Foundry validation. Current authored Instants use pre-attack windows; post-hit uses are not invented for those cards.
 
 ## Confirmed decisions
 

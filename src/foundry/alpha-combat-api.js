@@ -1,3 +1,4 @@
+import {currentPlannedCard} from "../alpha/round-flow.js";
 import {recordAlphaRound} from "./alpha-round-journal.js";
 import {postCrewRequest,finishCrewRequest,postActionReceipt,bindCrewChat,crewActionName} from "./alpha-crew-chat.js";
 import { showAlphaCardRolls } from "./alpha-card-dice.js";
@@ -40,8 +41,9 @@ export function alphaPlayerState(user=game.user){
   if(s.pendingCrewAction&&!owns(user,s.ships[s.pendingCrewAction.shipId]?.actorId))delete s.pendingCrewAction.command;
   for(const ship of Object.values(s.ships)){
     ship.drawCount=ship.drawPile.length;
-    if(!owns(user,ship.actorId)){if(s.phase==="card-planning"&&s.cardPlans)delete s.cardPlans[ship.id];ship.hand=[];ship.drawPile=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
+    if(!owns(user,ship.actorId)){if(s.cardPlans)delete s.cardPlans[ship.id];ship.hand=[];ship.drawPile=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
   }
+  if(!['cleanup','complete'].includes(s.phase))for(const key of ['log','roundEvents'])if(s[key])s[key]=s[key].filter(e=>e.detail?.kind!=="plan"||owns(user,s.ships[e.detail.shipId]?.actorId));
   delete s.complications.randomState;return s;
 }
 async function operatorModifier(ship,station,skill){
@@ -76,6 +78,20 @@ async function saved(value){
   await game.settings.set(MODULE,STATE,value);
   const actual=raw();if(actual?.id!==value.id||actual?.revision!==value.revision)throw new Error("Alpha encounter save was not confirmed.");
 }
+function stageNextCrewRequest(next){
+ if(next.roundFlow!==2||next.pendingCrewAction||next.pendingDiscard||next.complications.choices.some(c=>c.status==='pending'))return false;
+ let ship,station,command,name;
+ if(next.phase==='resolving'){
+  const row=currentPlannedCard(next);ship=next.ships[next.turnOrder[next.turnIndex]];const card=row&&ALPHA_CARDS[ship.instances[row.instanceId]];
+  if(!card||card.role==='Attack'&&card.stations.length===1)return false;
+  station=card.stations[0];name=card.name;command={type:'resolve-card',shipId:ship.id,instanceId:row.instanceId};for(const key of ['batteryId','targetId','adjustment','attackSkill'])if(row[key]!=null)command[key]=row[key];
+ }else if(next.phase==='response'){
+  const attack=next.attacks[next.attackIndex];if(!attack?.responses[attack.targetId])return false;ship=next.ships[attack.shipId];station='battlewatch';command={type:'attack',shipId:ship.id};name=crewActionName(next,command);
+ }else return false;
+ if(game.actors.get(ship.stationActors[station])?.type!=='character')return false;
+ next.pendingCrewAction={id:foundry.utils.randomID(),shipId:ship.id,station,kind:command.type,name,command};return true;
+}
+async function announceNextCrew(next,staged){if(staged)try{await postCrewRequest(next,next.pendingCrewAction,primary());}catch(error){console.warn("Arkflight | Station prompt retained in HUD",error);}}
 async function persistRoundRecap(next){
  if(next.roundFlow!==2)return;
  try{if(await recordAlphaRound(next))await saved(next);}catch(error){next.roundJournalError=error.message;await saved(next);console.warn("Arkflight | Round journal retained for retry",error);}
@@ -83,7 +99,7 @@ async function persistRoundRecap(next){
 async function completeJournal(job){
   try{
     await runAlphaMovementJournal(job,value=>game.settings.set(MODULE,JOURNAL,value));
-    await saved(job.next);await persistRoundRecap(job.next);await game.settings.set(MODULE,JOURNAL,{});
+    const autoPrompt=stageNextCrewRequest(job.next);await saved(job.next);await announceNextCrew(job.next,autoPrompt);await persistRoundRecap(job.next);await game.settings.set(MODULE,JOURNAL,{});
     await syncAlphaTracker(job.next);Hooks.callAll("arkflightAlphaChanged");return job.next;
   }catch(error){job.error=error.message;await game.settings.set(MODULE,JOURNAL,job);Hooks.callAll("arkflightAlphaChanged");throw error;}
 }
@@ -154,7 +170,7 @@ async function handle(cmd,user){
     const job={id:foundry.utils.randomID(),before,next,start:expectedAlphaTokens(before),step:0,error:null};
     await game.settings.set(MODULE,JOURNAL,job);const result=await completeJournal(job);await showAlphaCardRolls(evaluated,{user});await publishReceipts(before,result,cmd,user,resolvingRequest,evaluated);return result;
   }
-  await saved(next);await persistRoundRecap(next);
+  const autoPrompt=stageNextCrewRequest(next);await saved(next);await announceNextCrew(next,autoPrompt);await persistRoundRecap(next);
   try{await syncAlphaTracker(next);}catch(error){console.error("Arkflight | Alpha tracker",error);ui.notifications.warn("Alpha action saved; native combat tracker synchronization will retry.");}
   await showAlphaCardRolls(evaluated,{user});
   await publishReceipts(before,next,cmd,user,resolvingRequest,evaluated);

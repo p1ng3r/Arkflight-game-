@@ -1,5 +1,7 @@
 # Phase-focused Command Deck
 
+Historical earlier dashboard pass. The new dock and round flow supersede this layout; see [Crew card table](ARKFLIGHT-1.1.0-CREW-CARD-TABLE.md).
+
 Implemented 28 October 2026 on the existing alpha controller. The redesigned round-flow contract remains a separate pending rules change.
 
 ## What to try

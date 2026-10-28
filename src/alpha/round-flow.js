@@ -43,7 +43,7 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
    if(ship.ap<card.ap)throw Error('Insufficient AP. Keep AP for firing and Instants.');
    if(card.role==='Attack'){const b=ship.batteries.find(b=>b.id===cmd.batteryId);if(!b||b.readyRound>s.round||b.firedRound===s.round||plan.some(c=>c.batteryId===b.id&&ALPHA_CARDS[ship.instances[c.instanceId]].role==='Attack'))throw Error('Choose a ready, uncommitted battery.');if(card.id==='all-hands'&&b.id==='fore')throw Error('All Hands requires a broadside.');}
    if(card.dr&&plan.some(c=>ALPHA_CARDS[ship.instances[c.instanceId]].dr))throw Error('Only one DR card per round.');
-   const row={instanceId:cmd.instanceId,cost:card.ap,resolved:false};for(const key of ['batteryId','adjustment','targetId','attackSkill'])if(cmd[key]!=null)row[key]=cmd[key];ship.ap-=card.ap;plan.push(row);log(s,`${ship.name} committed ${card.name} for ${card.ap} AP.`);
+   const row={instanceId:cmd.instanceId,cost:card.ap,resolved:false};for(const key of ['batteryId','adjustment','targetId','attackSkill'])if(cmd[key]!=null)row[key]=cmd[key];ship.ap-=card.ap;plan.push(row);log(s,`${ship.name} committed ${card.name} for ${card.ap} AP.`,{kind:"plan",shipId:ship.id});
   }else if(cmd.type==='unqueue-card'){const i=plan.findIndex(c=>c.instanceId===cmd.instanceId);if(i<0)throw Error('Card is not queued.');ship.ap+=plan[i].cost;plan.splice(i,1);
   }else if(cmd.type==='move-card'){const i=plan.findIndex(c=>c.instanceId===cmd.instanceId),to=i+(cmd.direction===-1?-1:1);if(i<0||to<0||to>=plan.length)throw Error('Card cannot move there.');[plan[i],plan[to]]=[plan[to],plan[i]];
   }else{s.cardLocks[ship.id]=true;if(roundShips(s).every(x=>s.cardLocks[x.id])){s.phase='resolving';s.turnIndex=0;advanceCardResolution(s);}}
@@ -56,7 +56,8 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   advanceCardResolution(s);return revise();
  }
  if(cmd.type==='fire'){if(s.phase!=='firing'||s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Wait for this ship’s Firing phase.');s.turnIndex=s.firingIndex;s=await stage('fire','cards');s.phase='firing';return revise();}
- if(cmd.type==='target'){if(s.phase!=='firing'||s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Choose targets during this ship’s Firing phase.');s=await stage('target','targeting');s.phase='firing';return revise();}
+ if(cmd.type==='discard'&&(cmd.instances??[]).some(id=>(s.cardPlans?.[ship?.id]??[]).some(c=>!c.resolved&&c.instanceId===id)))throw Error('Committed cards cannot be discarded before resolution.');
+ if(cmd.type==='target'){if(!s.attacks.some(a=>a.id===cmd.attackId&&a.shipId===ship?.id&&!a.resolved))throw Error('Choose an unresolved shot.');if(s.phase!=='firing'||s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Choose targets during this ship’s Firing phase.');s=await stage('target','targeting');s.phase='firing';return revise();}
  if(cmd.type==='finish-firing'){if(s.phase!=='firing'||s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Wait for this ship’s firing.');if(s.attacks.some(a=>a.shipId===ship.id&&!a.resolved&&!a.targetId))throw Error('Choose legal targets or hold the shots.');nextAttack(s);return revise();}
  if(cmd.type==='damage'){if(s.phase!=='damage'||s.attacks[s.attackIndex]?.shipId!==ship?.id)throw Error('No saved hit is waiting for damage.');s=await stage('attack','response');return revise();}
  if(cmd.type==='round'){if(s.phase!=='cleanup')throw Error('Complete this round first.');s.roundEvents=[];delete s.roundJournal;delete s.roundJournalError;refresh(s);s.phase='draw';s.cardPlans={};s.cardLocks={};s.firingIndex=0;return revise();}

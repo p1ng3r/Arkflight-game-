@@ -11,7 +11,7 @@ export const ALPHA_CARDS=Object.freeze(Object.fromEntries([
   card("harmonic","Harmonic Volley","veilwarden",2,"Attack","Spend 5% Lifeveil and prepare a battery shot with +2d8 damage at level 5, bypassing 2 DR (3 on critical Veil success). Battle Watch rolls the attack later.",{stations:["veilwarden","battlewatch"]}),
   card("all-hands","All Hands Broadside","captain",3,"Attack","Prepare one broadside shot with +4d10 damage at level 5 and +1 accuracy; critical Captain success gives +2 accuracy. Burn for this encounter.",{stations:["captain","battlewatch"],burn:true,unique:true}),
   card("evasive","Evasive Course","navigator",1,"Defense","Gain +1 AC through this round; critical success +2. Same-type AC bonuses use the strongest."),
-  card("read","Read the Battle","captain",1,"Utility","Draw 1 card. Critical success: draw 2, then discard 1. Enforce hand capacity after drawing."),
+  card("read","Read the Battle","captain",1,"Utility","Draw 1 card. Critical success: draw 2, then discard 1. Discard any excess during Cleanup."),
   card("chainshot","Chainshot Volley","battlewatch",2,"Attack","Fire one compatible battery with 2d10+8 damage at level 5; a hit reduces the target's next maneuver by 1 hex, or 2 on critical hit. Consume one real chainshot charge when fired.",{ammo:"chainshot"}),
   card("breakaway","Breakaway Volley","navigator",3,"Attack","Move 1 hex or rotate 60°, then prepare one ready battery attack with +2d8 damage at level 5. Critical Navigator success permits both adjustments. Burn for this encounter.",{stations:["navigator","battlewatch"],burn:true,unique:true}),
   card("ahead","Full Ahead","navigator",1,"Maneuver","Move 2 additional hexes forward; critical success 3. Total bonus travel per round cannot exceed normal hull speed."),

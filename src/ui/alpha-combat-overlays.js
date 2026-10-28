@@ -1,4 +1,4 @@
-import { previewManeuver, occupiedHexes } from "../alpha/maneuvers.js";
+import { previewManeuver, occupiedHexes, hexDistance } from "../alpha/maneuvers.js";
 import { alphaCellInBattery } from "../alpha/combat.js";
 let overlay=null;
 export function clearAlphaOverlay(){if(overlay){overlay.parent?.removeChild(overlay);overlay.destroy({children:true});overlay=null;}}
@@ -19,8 +19,9 @@ export function showAlphaBattery(s,shipId,batteryId){
   const g=begin(s);if(!g)return;
   const ship=s.ships[shipId],b=ship.batteries.find(b=>b.id===batteryId);if(!b)return;
   for(let q=-b.range;q<=b.range;q++)for(let r=-b.range;r<=b.range;r++){
-    const cell={q:ship.pose.q+q,r:ship.pose.r+r};if(alphaCellInBattery(s,shipId,batteryId,cell))hex(g,cell,b.mount==="port"?0xbda3e9:b.mount==="starboard"?0xe7c080:0x7dd2da,.18);
+    const cell={q:ship.pose.q+q,r:ship.pose.r+r};if(alphaCellInBattery(s,shipId,batteryId,cell))hex(g,cell,s.roundFlow===2?[0x6dd5aa,0xe7c080,0xe8877c][Math.min(2,Math.floor((hexDistance(ship.pose,cell)-1)/(b.rangeIncrement??2)))]:b.mount==="port"?0xbda3e9:b.mount==="starboard"?0xe7c080:0x7dd2da,.18);
   }
+ if(s.roundFlow===2&&globalThis.PIXI.Text){const center=canvas.grid.getCenterPoint({q:ship.pose.q,r:ship.pose.r,s:-ship.pose.q-ship.pose.r}),t=new PIXI.Text({text:`${b.name} · 1–2: 0 | 3–4: −2${b.range>4?' | 5+: −4':''}`,style:{fontSize:15,fill:0xffffff,stroke:{color:0x0a202a,width:4}}});t.anchor.set(.5);t.position.set(center.x,center.y+80);overlay.addChild(t);}
 }
 Hooks.on("canvasTearDown",clearAlphaOverlay);
 Hooks.on("arkflightAlphaChanged",clearAlphaOverlay);
