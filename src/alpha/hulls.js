@@ -2,7 +2,7 @@
 export const ALPHA_DIRECTIONS = Object.freeze([[0,-1],[1,-1],[1,0],[0,1],[-1,1],[-1,0]].map(Object.freeze));
 const profile = (id, name, role, hull, ac, speed, handling, bulk, fitting, footprint = 1, hand = 5) => ({
   id, name, role, baseHull: hull, acAdjustment: ac, speed, handling, cargoBulk: bulk, fitting, footprint,
-  hand, deck: 15, opening: 5, ap: 4,
+  hand, deck: 15, opening: 5, roundDraw: 1, ap: 4,
   mounts: footprint === 3 ? { fore: 1, port: 3, starboard: 3, aft: 1 } : speed >= 6 ? { fore: 1, port: 1, starboard: 1, aft: 1 } : { fore: 1, port: 2, starboard: 2, aft: 1 }
 });
 export const ALPHA_HULLS = Object.freeze(Object.fromEntries([
@@ -48,8 +48,8 @@ export function deriveAlphaProfile({ hullId, level = 5, upgrades = [], talents =
     maxHull: hull.baseHull + (level - 1) * 8 + sum("hull"), ac: 17 + level + hull.acAdjustment,
     structure: level + 6 + (hull.footprint > 1 ? 1 : 0), engineer: level + 6 + (hull.handling === "nimble" ? 1 : 0), veil: level + 6 + (hullId === "cathedral-ship" ? 2 : 0),
     attack: level + 8, support: level + 8 + sum("support"), dc: level + 15,
-    cargoBulk: hull.cargoBulk + sum("cargoBulk"), strain: 10 + sum("strain"), hand: Math.min(10, hull.hand + sum("hand")),
-    deck: 15 + Math.floor((level - 1) / 4), opening: hull.opening,
+    cargoBulk: hull.cargoBulk + sum("cargoBulk"), strain: 10 + sum("strain"), hand: Math.max(hull.opening + sum("opening"),Math.min(10, hull.hand + sum("hand"))),
+    deck: 15 + Math.floor((level - 1) / 4), opening: hull.opening + sum("opening"), roundDraw: hull.roundDraw + sum("roundDraw"),
     damageBonus: sum("damage") + (hullId === "dread-caravel" ? 2 : 0), resistanceBonus: sum("resistanceBonus") + (hullId === "cathedral-ship" ? 1 : 0),
     ramBonus: sum("ram") + (hullId === "hammerhead" ? 2 : 0), boardingBonus: sum("boarding"),
     unlockPivot: items.some(i => i.unlockPivot), maxBonusMove: hull.speed, bonusMove: sum("bonusMove"),

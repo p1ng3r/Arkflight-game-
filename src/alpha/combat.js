@@ -1,3 +1,4 @@
+import {dispatchRoundCommand} from "./round-flow.js";
 import { ALPHA_DIRECTIONS, deriveAlphaProfile } from "./hulls.js";
 import { ALPHA_CARDS, ALPHA_SKILLS, ALPHA_STARTER_DECK } from "./cards.js";
 import { hullManeuvers, legalHullManeuvers, previewManeuver, resolveManeuvers, occupiedHexes, hexDistance } from "./maneuvers.js";
@@ -7,7 +8,7 @@ import { createComplicationEncounter, resolveShipComplication, chooseShipComplic
 const copy=v=>structuredClone(v), clamp=(v,max)=>Math.max(0,Math.min(max,v));
 const isId=v=>typeof v==="string"&&!Object.hasOwn(Object.prototype,v)&&/^[A-Za-z0-9_-]{1,80}$/.test(v);
 const living=s=>s.resources.hull.value>0;
-const log=(s,text,detail=null)=>{s.logSerial=(s.logSerial??s.log.length)+1;s.log.push({id:`log-${s.logSerial}`,round:s.round,text,...(detail?{detail}: {})});if(s.log.length>100)s.log.shift();};
+const log=(s,text,detail=null)=>{s.logSerial=(s.logSerial??s.log.length)+1;const entry={id:`log-${s.logSerial}`,round:s.round,text,...(detail?{detail}: {})};s.log.push(entry);if(s.roundFlow===2)(s.roundEvents??=[]).push(copy(entry));if(s.log.length>100)s.log.shift();};
 function random(s){let x=s.randomState;x^=x<<13;x^=x>>>17;x^=x<<5;s.randomState=x>>>0;return s.randomState/4294967296;}
 function shuffle(s,values){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(random(s)*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function dice(s,formula){if(!/^\d+d\d+(?:\+\d+d\d+|\+\d+)*$/.test(formula))throw new Error("Unsupported alpha dice formula.");return formula.split("+").reduce((n,term)=>{if(!term.includes("d"))return n+Number(term);const [count,sides]=term.split("d").map(Number);for(let i=0;i<count;i++)n+=1+Math.floor(random(s)*sides);return n;},0);}
@@ -67,7 +68,7 @@ function batteries(profile){
     {id:"fore",name:"Fore Swivel",mount:"fore",arc:180,range:4,formula:`${Math.max(2,power-1)}d6+6`,reload:1,readyRound:1,firedRound:0}
   ];
 }
-export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTIONS,headings=[0,60,120,180,240,300],basis={q:{x:1.5,y:Math.sqrt(3)/2},r:{x:0,y:Math.sqrt(3)}}}={}){
+export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTIONS,headings=[0,60,120,180,240,300],basis={q:{x:1.5,y:Math.sqrt(3)/2},r:{x:0,y:Math.sqrt(3)}},roundFlow=1}={}){
   if(!isId(id)||!Number.isSafeInteger(seed)||seed<1||seed>0xffffffff)throw new Error("Provide an encounter ID and nonzero 32-bit seed.");
   if(!Array.isArray(entries)||entries.length<2||entries.length>8||new Set(entries.map(e=>e.id)).size!==entries.length||new Set(entries.map(e=>e.team)).size<2)throw new Error("Choose two to eight distinct ships on opposing teams.");
   const s={schemaVersion:1,id,revision:0,round:1,phase:"planning",ships:{},plans:{},locked:{},turnOrder:[],turnIndex:0,attacks:[],attackIndex:0,damage:[],serial:0,actionSerial:0,actions:[],complicationQueue:[],pendingDiscard:null,log:[],movement:null,boarding:[],directions:copy(directions),headings:[...headings],basis:copy(basis),randomState:seed,complete:false};
@@ -80,6 +81,7 @@ export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTION
     s.ships[e.id]=ship;draw(s,ship,profile.opening);
   }
   s.complications=createComplicationEncounter({id,ships:Object.values(s.ships).map(ship=>({id:ship.id,name:ship.name,team:ship.team,resources:ship.resources,ap:ship.ap,batteries:ship.batteries})),seed:seed===0xffffffff?1:seed+1});
+  if(roundFlow===2){s.roundFlow=2;s.roundEvents=[];s.phase="opening";s.cardPlans={};s.cardLocks={};s.firingIndex=0;}
   log(s,"Alpha encounter ready. Choose opening mulligans and hull maneuvers.");return s;
 }
 export function activeAlphaShip(s){return s.turnOrder[s.turnIndex]??null;}
@@ -100,6 +102,11 @@ export function alphaCellInBattery(s,shipId,batteryId,cell){
   const dq=cell.q-origin.q, dr=cell.r-origin.r, dx=dq*s.basis.q.x+dr*s.basis.r.x, dy=dq*s.basis.q.y+dr*s.basis.r.y;
   const bearing=(Math.atan2(dx,-dy)*180/Math.PI+360)%360, offset={fore:0,port:-90,starboard:90}[b.mount], facing=s.headings[origin.heading];
   return Math.abs((bearing-facing-offset+540)%360-180)<=b.arc/2+1e-6;
+}
+export function alphaRangeBand(s,shipId,batteryId,targetId){
+ const ship=s.ships[shipId],target=s.ships[targetId],b=ship.batteries.find(b=>b.id===batteryId),cells=occupiedHexes(target.pose,target.profile.footprint,s.directions).filter(c=>alphaCellInBattery(s,shipId,batteryId,c));
+ const distance=cells.length?Math.min(...cells.map(c=>hexDistance(ship.pose,c))):hexDistance(ship.pose,target.pose),band=Math.max(0,Math.floor((distance-1)/(b.rangeIncrement??2)));
+ return {distance,band,penalty:-2*band};
 }
 function validateShot(s,ship,cmd,card){
   if(cmd.attackSkill&&!ALPHA_SKILLS.battlewatch.includes(cmd.attackSkill))throw new Error("Choose a valid Battle Watch attack skill.");
@@ -244,6 +251,13 @@ function finishExchange(s){
   else s.phase="cleanup";
 }
 function nextAttack(s){
+ if(s.roundFlow===2){
+  const id=s.turnOrder[s.firingIndex],index=s.attacks.findIndex(a=>a.shipId===id&&!a.resolved);
+  if(index<0){s.firingIndex++;s.turnIndex=s.firingIndex;if(s.firingIndex<s.turnOrder.length){s.phase="firing";return;}finishExchange(s);return;}
+  s.attackIndex=index;const a=s.attacks[index],target=s.ships[a.targetId];s.phase=alphaTargetLegal(s,a.shipId,a.batteryId,a.targetId)?"response":"retarget";
+  if(s.phase==="response"&&!target.hand.some(id=>{const c=ALPHA_CARDS[target.instances[id]];return c.timing==="instant"&&target.ap>=c.ap&&(c.id!=="shield"||target.resources.lifeveil.value>=5);}))a.responses[target.id]="pass";
+  return;
+ }
   while(s.attackIndex<s.attacks.length&&s.attacks[s.attackIndex].resolved)s.attackIndex++;
   if(s.attackIndex>=s.attacks.length){finishExchange(s);return;}
   const order=s.attacks[s.attackIndex];s.phase="response";
@@ -254,12 +268,13 @@ async function resolveAttack(s,services){
   if(!order.responses[target.id])throw new Error("The defending crew must play an Instant or pass first.");
   if(!alphaTargetLegal(s,attacker.id,b.id,target.id)||alphaComplications(s,attacker.id).some(e=>e.rule==="different-battery-targets"&&e.firstTarget===target.id)){s.phase="retarget";return;}
   if(order.ammo&&attacker.ammo[order.ammo]<1||!order.ammo&&attacker.resources.supplies.value<1){order.resolved=true;log(s,"Shot held because ammunition ran out: no reload incurred.");nextAttack(s);return;}
-  let ac=target.profile.ac+best(target,"ac"), attackBonus=Math.max(order.accuracy,useBuff(attacker,"accuracy"));
+  let ac=target.profile.ac+best(target,"ac"), attackBonus=order.hit?0:Math.max(order.accuracy,useBuff(attacker,"accuracy"));
   const opportunities=s.complications.effects.filter(e=>e.forAttack===order.id&&e.claimedBy);
   attackBonus+=Math.max(0,...opportunities.filter(e=>e.rule==="attack-opening").map(e=>e.value));
   ac+=Math.max(0,...opportunities.filter(e=>e.rule==="defensive-opening").map(e=>e.value));
   s.actionEvent=order.eventId;
-  const result=await check(s,attacker,"battlewatch",order.skill,services,{dc:ac,bonus:attackBonus,batteryId:b.id,coordinated:["volley","all-hands","breakaway"].includes(order.cardId)});
+  const result=order.hit??await check(s,attacker,"battlewatch",order.skill,services,{dc:ac,bonus:attackBonus+(s.roundFlow===2?alphaRangeBand(s,attacker.id,b.id,target.id).penalty:0),batteryId:b.id,coordinated:["volley","all-hands","breakaway"].includes(order.cardId)});
+  if(s.roundFlow===2&&!order.hit){order.hit=result;s.phase="damage";return;}
   // Keep the actual target AC and the complete attack modifier visible.
   log(s,`${b.name}: attack bonus +${attackBonus}, target AC ${ac}.`);
   let bonus=order.bonusDice, overcharge=useBuff(attacker,"damage-die");
@@ -279,7 +294,7 @@ async function resolveAttack(s,services){
   s.damage.push({shipId:attacker.id,targetId:target.id,batteryId:b.id,degree:result.degree,raw,damage,slow:order.cardId==="chainshot"&&result.degree>=1?(result.degree===2?2:1):0});
   const different=alphaComplications(s,attacker.id).find(e=>e.rule==="different-battery-targets");if(different){const record=s.complications.effects.find(e=>e.id===different.id);if(record.firstTarget)consume(s,attacker.id,[different]);else record.firstTarget=target.id;}
   source(s,attacker,"battlewatch",result.degree,order.eventId,{source:"attack",batteryId:b.id});
-  order.resolved=true;log(s,`${attacker.name} → ${target.name}: ${raw} raw, ${damage} Hull damage pending exchange.`,{kind:"damage",shipId:attacker.id,targetId:target.id,batteryId:b.id,formula,rolled,degree:result.degree,raw,damage,mitigated:raw-damage});nextAttack(s);
+  order.resolved=true;log(s,`${attacker.name} → ${target.name}: ${raw} raw, ${damage} Hull damage pending exchange.`,{kind:"damage",shipId:attacker.id,targetId:target.id,batteryId:b.id,formula,rolled,degree:result.degree,raw,damage,mitigated:raw-damage,resistance:Math.max(0,(order.resistance??0)-resistanceGap),dr:Math.max(0,dr-drGap-(order.penetration??0))});nextAttack(s);
 }
 function refresh(s){
   compIn(s);s.complications=advanceComplicationRound(s.complications);s.round++;
@@ -289,9 +304,9 @@ function refresh(s){
     ship.ap=ship.profile.ap+Math.min(2,ship.prepared.filter(p=>p.kind==="ap"&&p.start===s.round).reduce((n,p)=>n+p.amount,0));
     const ended=ship.prepared.filter(p=>p.kind==="ap"&&p.start===s.round||p.end<s.round||p.used);
     for(const p of ended)ship.discard.push(p.instance);ship.prepared=ship.prepared.filter(p=>!ended.includes(p));
-    if(living(ship))draw(s,ship,1);
+    if(living(ship)&&s.roundFlow!==2)draw(s,ship,ship.profile.roundDraw??1);
   }
-  compIn(s);log(s,`Round ${s.round}: AP refreshed, delayed effects activated, one card drawn per surviving ship.`);
+  compIn(s);log(s,`Round ${s.round}: AP refreshed, delayed effects activated, ${s.roundFlow===2?"crew draw step ready":"one card drawn per surviving ship"}.`);
 }
 
 function dangerBand(track,key){
@@ -317,6 +332,10 @@ async function resolveSystemRisks(s,before,services){
 
 /** All rules mutations happen on a copy. The Foundry adapter authenticates the command author. */
 export async function dispatchAlphaCommand(before,cmd,services={}){
+ if(before?.roundFlow===2)return dispatchRoundCommand(before,cmd,services,{legacy:dispatchLegacyAlphaCommand,draw,shuffle,assertSettled,log,nextAttack,refresh});
+ return dispatchLegacyAlphaCommand(before,cmd,services);
+}
+export async function dispatchLegacyAlphaCommand(before,cmd,services={}){
   if(!before?.id||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw new Error("Encounter changed; refresh before acting.");
   const s=copy(before), ship=cmd.shipId?s.ships[cmd.shipId]:null;s.movement=null;s.actionEvent=null;
   if(cmd.shipId&&!Object.hasOwn(s.ships,cmd.shipId))throw new Error("Unknown alpha ship.");
@@ -337,6 +356,7 @@ export async function dispatchAlphaCommand(before,cmd,services={}){
     for(const x of Object.values(s.ships))if(!living(x))s.plans[x.id]="hold";
     const initiatives=[];for(const x of Object.values(s.ships))if(living(x)){const r=await check(s,x,"initiative",null,services);x.initiative=r.total;initiatives.push({id:x.id,total:r.total});}
     await move(s,services);
+    if(s.roundFlow===2)for(const x of Object.values(s.ships))log(s,`${x.name} completed ${s.plans[x.id]} at hex ${x.pose.q},${x.pose.r}, heading ${s.headings[x.pose.heading]}°.`);
     s.turnOrder=initiatives.sort((a,b)=>b.total-a.total||a.id.localeCompare(b.id)).map(x=>x.id).filter(id=>living(s.ships[id]));s.turnIndex=0;s.phase="cards";
     if(new Set(Object.values(s.ships).filter(living).map(x=>x.team)).size<2){s.phase="complete";s.complete=true;}
   }else if(cmd.type==="play")await play(s,ship,cmd,services);

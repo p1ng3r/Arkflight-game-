@@ -118,7 +118,7 @@ export async function prepareAlphaFleet(command){
     const persisted=await prepareStoredShip(actor,spec,{useSavedShips:command.useSavedShips===true});
     entries.push({...persisted,actorId:actor.id,pose,stationActors:actor.flags?.[MODULE]?.alphaStationActors??{}});
   }
-  const state=createAlphaSession(entries,{id:foundry.utils.randomID(),seed:Math.floor(Math.random()*0xffffffff)+1,...geometry});
+  const state=createAlphaSession(entries,{id:foundry.utils.randomID(),seed:Math.floor(Math.random()*0xffffffff)+1,roundFlow:command.roundFlow??1,...geometry});
   state.canvas={sceneId:scene.id,gridType:c.grid.type,gridSize:c.grid.size};
   const retained=new Set();
   for(const entry of entries){
