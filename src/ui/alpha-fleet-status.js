@@ -19,6 +19,7 @@ export function fleetReadiness(s){
     else if(s.phase==="boarding")label="Boarding pause";
     return {id:ship.id,name:ship.name,label,ready,active:ship.id===active&&s.phase==="cards"};
   });
+  if(s.pendingCrewAction){const r=s.pendingCrewAction;for(const row of rows){row.ready=row.id!==r.shipId;row.active=row.id===r.shipId;row.label=row.id===r.shipId?`${r.station} roll needed`:"Waiting for station check";}return {rows,waiting:1,summary:`Waiting for ${s.ships[r.shipId].name} · ${r.name}`};}
   const waiting=rows.filter(r=>!r.ready).length;
   return {rows,waiting,summary:s.phase==="planning"?(waiting?`Waiting for ${waiting} ship${waiting===1?"":"s"} to lock` :"All courses locked · GM may reveal"):s.phase==="cards"?`${s.ships[active]?.name??"Ship"} · Card phase`:s.phase==="cleanup"?"Round complete · GM starts the next round":s.complete?"Encounter complete":`${waiting} ship${waiting===1?"":"s"} awaiting action`};
 }
