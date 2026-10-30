@@ -170,6 +170,7 @@
     "src/foundry/alpha-combat-api.js",
     "src/ui/alpha-combat-ui.js",
     "src/ui/alpha-ship-library-ui.js",
+    "src/foundry/alpha-guided-api.js",
     "src/ui/alpha-round-deck-ui.js",
     "src/ui/alpha-round-canvas-feedback.js"
   ],

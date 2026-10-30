@@ -132,6 +132,7 @@ function cardRestrictions(s,ship,card){
     }
   }
 }
+export function alphaActionBlockReason(s,shipId,card,cmd={}){try{cardRestrictions(s,s.ships[shipId],card);return null;}catch(error){return error.message;}}
 async function move(s,services,{shipId=null,steps=null}={}){
   const movementId=`movement-${++s.serial}`, routes=shipId?{[shipId]:{id:"card-adjustment",steps,ap:0}}:{};
   const plans=shipId?Object.fromEntries(Object.keys(s.ships).map(id=>[id,"hold"])):s.plans;

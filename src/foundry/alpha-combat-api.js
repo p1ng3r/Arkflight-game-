@@ -1,3 +1,5 @@
+import {initializeGuidedTest,nextGuidedStep} from "../alpha/guided-test.js";
+import {prepareGuidedCrews} from "./alpha-guided-fixtures.js";
 import {currentPlannedCard} from "../alpha/round-flow.js";
 import {recordAlphaRound} from "./alpha-round-journal.js";
 import {postCrewRequest,finishCrewRequest,postActionReceipt,bindCrewChat,crewActionName} from "./alpha-crew-chat.js";
@@ -9,7 +11,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-round-deck-20261028";
+export const ALPHA_BUILD="alpha-guided-cleanup-20261030";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -22,7 +24,7 @@ export function canOperateAlphaShip(s,shipId,station,user=game.user){
 export function authorizeAlphaCommand(s,cmd,user){
   if(!user?.active)throw new Error("An active authenticated user is required.");
   if(user.isGM)return;
-  if(["start","move","begin-damage","round","retry-recap","end","reset","assign-station","resume-movement","restore-movement","pause-boarding","resume-boarding"].includes(cmd.type))throw new Error("The GM controls this alpha phase.");
+  if(["guided-start","guided-next","guided-stop","start","move","begin-damage","round","retry-recap","end","reset","assign-station","resume-movement","restore-movement","pause-boarding","resume-boarding"].includes(cmd.type))throw new Error("The GM controls this alpha phase.");
   const ship=s?.ships?.[cmd.shipId];if(!ship||!owns(user,ship.actorId))throw new Error("You do not own this alpha ship.");
   let station;
   if(cmd.type==="roll-crew"){if(s.pendingCrewAction?.shipId!==ship.id)throw new Error("This crew request belongs to another ship.");station=s.pendingCrewAction.station;}
@@ -46,6 +48,11 @@ export function alphaPlayerState(user=game.user){
   if(!['cleanup','complete'].includes(s.phase))for(const key of ['log','roundEvents'])if(s[key])s[key]=s[key].filter(e=>e.detail?.kind!=="plan"||owns(user,s.ships[e.detail.shipId]?.actorId));
   delete s.complications.randomState;return s;
 }
+function npcSkillTotal(actor,name){
+ const row=actor.skills?.[name]??actor.system?.skills?.[name];let total=row?.mod??row?.totalModifier??row?.value??row?.base;
+ if(total==null&&name==='warfare-lore'){const items=actor.items?.contents??actor.items??[],lore=[...items].find(i=>i.type==='lore'&&(i.system?.slug==='warfare-lore'||String(i.name).toLowerCase()==='warfare lore'));total=lore?.system?.mod?.value;}
+ return Number(total);
+}
 async function operatorModifier(ship,station,skill){
   const ref=ship.stationActors[station];
   if(!ref)return station==="battlewatch"?ship.profile.attack:ship.profile.support;
@@ -53,7 +60,7 @@ async function operatorModifier(ship,station,skill){
   const name=skill==="warfare-lore"?(Object.keys(actor.skills??actor.system?.skills??{}).find(k=>["warfare-lore","warfare"].includes(k))??skill):skill;
   const row=actor.skills?.[name]??actor.system?.skills?.[name];
   if(actor.type==="npc"){
-    const total=Number(row?.mod??row?.totalModifier??row?.value),level=Number(actor.level??actor.system?.details?.level?.value);
+    const total=npcSkillTotal(actor,name),level=Number(actor.level??actor.system?.details?.level?.value);
     if(!Number.isFinite(total)||!Number.isFinite(level))throw new Error("This NPC needs a modifier for the chosen skill and a level.");
     return total-level+ship.profile.level+(station==="battlewatch"?0:ship.profile.support-(ship.profile.level+8));
   }
@@ -67,7 +74,7 @@ export async function operatorBreakdown(ship,station,skill){
   if(!actor)return [{label:"Ship crew baseline",value:modifier}];
   const name=skill==="warfare-lore"?(Object.keys(actor.skills??actor.system?.skills??{}).find(k=>["warfare-lore","warfare"].includes(k))??skill):skill;
   if(actor.type==="npc"){
-    const row=actor.skills?.[name]??actor.system?.skills?.[name],level=Number(actor.level??actor.system?.details?.level?.value),total=Number(row?.mod??row?.totalModifier??row?.value);
+    const row=actor.skills?.[name]??actor.system?.skills?.[name],level=Number(actor.level??actor.system?.details?.level?.value),total=npcSkillTotal(actor,name);
     return [{label:"NPC skill modifier",value:total},{label:"Replace NPC level",value:-level},{label:"Ship level",value:ship.profile.level},{label:"Ship support adjustment",value:modifier-total+level-ship.profile.level}];
   }
   const row=actor.skills?.[name]??actor.system?.skills?.[name],rank=Math.max(0,Math.min(4,Number(row?.rank??0)));
@@ -107,6 +114,15 @@ async function handle(cmd,user){
   if(!cmd||JSON.stringify(cmd).length>50000)throw new Error("Invalid alpha request.");
   if(LIBRARY_COMMANDS.has(cmd.type))return handleLibraryCommand(cmd,user);
   const before=copy(raw());authorizeAlphaCommand(before,cmd,user);
+  const guideStart=cmd.type==='guided-start',guideAdvance=cmd.type==='guided-next',guideStop=cmd.type==='guided-stop';let guideLabel=null;
+  if(before?.guidedTest?.status==='running'&&!guideAdvance&&!guideStop&&!['resume-movement','restore-movement','retry-recap'].includes(cmd.type))throw Error('Use Next Step or Stop in the guided test. Manual combat controls are paused.');
+  if(guideAdvance||guideStop){
+   if(!before?.guidedTest||before.guidedTest.status!=='running'||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw Error('The guided test changed; refresh before the next step.');
+   const step=guideStop?{label:'Test stopped by GM',command:{type:'end'}}:nextGuidedStep(before);guideLabel=step.label;
+   cmd={...step.command,encounterId:before.id,revision:before.revision};
+   if(cmd.type==='guided-finish'){const next=copy(before);next.guidedTest.status=next.round===3?'complete':'failed';next.guidedTest.lastLabel=guideLabel;next.revision++;await saved(next);Hooks.callAll('arkflightAlphaChanged');return next;}
+  }
+  if(guideStart)cmd={type:'start',count:2,level:5,roundFlow:2,guidedFixture:true};
   if(cmd.type==="resume-movement"){
     const job=copy(journal());if(!job?.next)throw new Error("There is no saved movement to resume.");return completeJournal(job);
   }
@@ -116,9 +132,10 @@ async function handle(cmd,user){
   if(journal()?.next)throw new Error("Resume or restore the saved movement before another action.");
   if(game.paused&&!["plan","lock","mulligan","assign-station","end","reset"].includes(cmd.type))throw new Error("Unpause Foundry before executing alpha actions.");
   if(cmd.type==="start"||cmd.type==="reset"){
-    if(cmd.type==="start"&&before?.id&&!before.complete)throw new Error("End the current alpha encounter before resetting the test fleet.");
+    if(cmd.type==="start"&&!guideStart&&before?.id&&!before.complete)throw new Error("End the current alpha encounter before resetting the test fleet.");
     if(cmd.type==="reset"){if(cmd.encounterId!==before?.id||cmd.revision!==before?.revision)throw new Error("The encounter changed; refresh before resetting.");if(!before?.id)throw new Error("Start an alpha encounter first.");cmd={type:"start",count:Object.keys(before.ships).length,useSavedShips:true,roundFlow:cmd.roundFlow??before.roundFlow??1};}
-    const next=await prepareAlphaFleet(cmd);await saved(next);if(before?.pendingCrewAction){try{await finishCrewRequest(before.pendingCrewAction.id,true);}catch(error){console.warn("Arkflight | Cancelled crew chat",error);}}Hooks.callAll("arkflightAlphaChanged");return next;
+    if(guideStart&&before?.canvas?.combatId)await game.combats.get(before.canvas.combatId)?.update({active:false},{arkflightAlpha:true});
+    const next=await prepareAlphaFleet(cmd);if(guideStart)initializeGuidedTest(next,await prepareGuidedCrews(next));await saved(next);if(before?.pendingCrewAction){try{await finishCrewRequest(before.pendingCrewAction.id,true);}catch(error){console.warn("Arkflight | Cancelled crew chat",error);}}Hooks.callAll("arkflightAlphaChanged");return next;
   }
   if(!before?.id||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw new Error("The alpha encounter changed; refresh before acting.");
   if(cmd.type==="retry-recap"){if(!["cleanup","complete"].includes(before.phase))throw Error("No completed round is ready.");await persistRoundRecap(before);Hooks.callAll("arkflightAlphaChanged");return before;}
@@ -163,8 +180,10 @@ async function handle(cmd,user){
   }
   if(cmd.type==="end"&&before.pendingCrewAction){effectiveBefore=copy(before);delete effectiveBefore.pendingCrewAction;}
   if(cmd.type!=="end")assertAlphaNativePositions(before);
+  Hooks.callAll("arkflightAlphaDebug",{kind:"command",command:copy(cmd),guideLabel});
   const evaluated=[];
   const next=await dispatchAlphaCommand(effectiveBefore,cmd,{roll:async (formula,context={})=>{const roll=await new Roll(formula).evaluate(),ship=before.ships[context.shipId??cmd.shipId];evaluated.push({roll,actorId:ship?.stationActors[context.station]??ship?.actorId,shipName:ship?.name});return Number(roll.total);},operatorModifier,operatorBreakdown,isBlocked:cmd.type==="end"?()=>false:alphaObstacleTest(before)});
+  if(guideAdvance||guideStop){next.guidedTest.step++;next.guidedTest.lastLabel=guideLabel;next.guidedTest.lastCommand=copy(cmd);if(guideStop)next.guidedTest.status='stopped';else if(next.complete)next.guidedTest.status=next.round===3?'complete':'failed';}
   if(JSON.stringify(raw())!==JSON.stringify(before))throw new Error("The encounter changed while resolving this action; retry from the saved state.");
   if(next.movement){
     const job={id:foundry.utils.randomID(),before,next,start:expectedAlphaTokens(before),step:0,error:null};
@@ -179,7 +198,13 @@ async function handle(cmd,user){
 async function publishReceipts(before,next,cmd,user,request,evaluated){
   try{if(request)await finishCrewRequest(request.id);else if(cmd.type==="end"&&before.pendingCrewAction)await finishCrewRequest(before.pendingCrewAction.id,true);await postActionReceipt(before,next,cmd,user,evaluated);}catch(error){console.warn("Arkflight | Saved roll chat",error);ui.notifications.warn("Roll saved, but its chat receipt could not be posted. The HUD Log retains the result.");}
 }
-function enqueue(cmd,user){const task=queue.catch(()=>{}).then(()=>handle(copy(cmd),user));queue=task;return task;}
+function enqueue(cmd,user){
+ const task=queue.catch(()=>{}).then(async()=>{
+  Hooks.callAll('arkflightAlphaDebug',{kind:'request',command:copy(cmd),userId:user?.id});
+  try{const result=await handle(copy(cmd),user);Hooks.callAll('arkflightAlphaDebug',{kind:'saved',command:copy(cmd),state:copy(result),diagnostics:alphaDiagnostics()});return result;}
+  catch(error){Hooks.callAll('arkflightAlphaDebug',{kind:'error',command:copy(cmd),error:{message:error.message,stack:error.stack},diagnostics:alphaDiagnostics()});throw error;}
+ });queue=task;return task;
+}
 export function alphaDiagnostics(){
   const s=raw(),j=journal(),report={build:ALPHA_BUILD,encounterId:s?.id??null,phase:s?.phase??null,round:s?.round??null,revision:s?.revision??null,recovery:j?.next?{id:j.id,step:j.step,totalSteps:j.next.movement.frames.length,error:j.error}:null,ships:[]};
   if(!s?.id)return report;

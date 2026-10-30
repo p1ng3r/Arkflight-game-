@@ -26,7 +26,7 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
  if(cmd.type==='mulligan'){
   if(s.phase!=='opening'||!alive(ship)||ship.mulliganDone)throw Error('Opening choice is closed.');
   const ids=cmd.instances??[];if(!Array.isArray(ids)||ids.length>2||new Set(ids).size!==ids.length||ids.some(id=>!ship.hand.includes(id)))throw Error('Return up to two different cards.');
-  ship.hand=ship.hand.filter(id=>!ids.includes(id));draw(s,ship,ids.length);ship.drawPile=shuffle(s,[...ship.drawPile,...ids]);ship.mulliganDone=true;log(s,`${ship.name} kept its opening hand after replacing ${ids.length} cards.`);
+  ship.hand=ship.hand.filter(id=>!ids.includes(id));draw(s,ship,ids.length);if(ids.length)ship.drawPile=shuffle(s,[...ship.drawPile,...ids]);ship.mulliganDone=true;log(s,`${ship.name} kept its opening hand after replacing ${ids.length} cards.`);
   if(roundShips(s).every(x=>x.mulliganDone))s.phase='planning';return revise();
  }
  if(cmd.type==='draw-round'){
