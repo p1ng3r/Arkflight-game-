@@ -17,3 +17,8 @@ test('guided fixtures reuse only marked test actors; stale Next and Stop preserv
  const w=alphaWorld(),api=w.initialize();journals();const campaign=await Actor.create({name:'Campaign hero',type:'character',flags:{},system:{details:{level:{value:12}}}});const before=structuredClone(campaign.system);let s=await send(api,'guided-start'),old=s;
  s=await send(api,'guided-next');await assert.rejects(api.request({type:'guided-next',encounterId:old.id,revision:old.revision}),/changed/);s=await send(api,'guided-stop');assert.equal(s.guidedTest.status,'stopped');assert.equal(s.complete,true);const actors=game.actors.contents.length;s=await send(api,'guided-start');assert.equal(game.actors.contents.length,actors);assert.deepEqual(campaign.system,before);assert.equal(s.guidedTest.step,0);delete globalThis.JournalEntry;
 });
+for(const die of [1,20])test(`guided test remains three rounds when every d20 is ${die}`,async()=>{
+ const w=alphaWorld(),api=w.initialize();journals();w.faults.d20=Array(600).fill(die);let s=await send(api,'guided-start');
+ for(let steps=0;steps<240&&s.guidedTest.status==='running';steps++){const step=nextGuidedStep(s);try{s=await send(api,'guided-next');}catch(error){throw Error(`R${s.round} ${s.phase}: ${step.label}: ${error.message}`);}}
+ assert.equal(s.guidedTest.status,'complete');assert.equal(s.round,3);assert.ok(Object.values(s.ships).every(ship=>ship.resources.hull.value>0));delete globalThis.JournalEntry;
+});

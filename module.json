@@ -172,7 +172,8 @@
     "src/ui/alpha-ship-library-ui.js",
     "src/foundry/alpha-guided-api.js",
     "src/ui/alpha-round-deck-ui.js",
-    "src/ui/alpha-round-canvas-feedback.js"
+    "src/ui/alpha-round-canvas-feedback.js",
+    "src/ui/alpha-guided-test-ui.js"
   ],
   "manifest": "https://raw.githubusercontent.com/p1ng3r/Arkflight-game-/main/module.json",
   "download": "https://github.com/p1ng3r/Arkflight-game-/releases/download/v0.1.0/arkflight-game-v0.1.0.zip"

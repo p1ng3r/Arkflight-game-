@@ -10,8 +10,8 @@ export function debugValue(value,depth=0,seen=new WeakSet()){
 }
 export function guidedSnapshot(s){
  if(!s)return null;return{id:s.id,revision:s.revision,phase:s.phase,round:s.round,guidedTest:s.guidedTest,pendingCrewAction:s.pendingCrewAction,pendingDiscard:s.pendingDiscard,
- ships:Object.values(s.ships??{}).map(ship=>({id:ship.id,name:ship.name,level:ship.profile.level,ap:ship.ap,pose:ship.pose,resources:ship.resources,hand:ship.hand.map(id=>({instance:id,card:ship.instances[id]})),drawCount:ship.drawPile.length,discardCount:ship.discard.length,stations:ship.stationActors,batteries:ship.batteries})),
- attacks:s.attacks,damage:s.damage,cardPlans:s.cardPlans,recentLog:(s.log??[]).slice(-12),pendingChoices:s.complications?.choices?.filter(c=>c.status==='pending'),journal:s.roundJournal};
+ ships:Object.values(s.ships??{}).map(ship=>({id:ship.id,name:ship.name,level:ship.profile.level,ap:ship.ap,pose:ship.pose,resources:ship.resources,hand:ship.hand.map(id=>({instance:id,card:ship.instances[id]})),drawCount:ship.drawPile.length,discardCount:ship.discard.length,stations:ship.stationActors,prepared:ship.prepared,effects:ship.effects,batteries:ship.batteries})),
+ attacks:s.attacks,damage:s.damage,cardPlans:s.cardPlans,conditions:s.complications?.effects,systemSaves:s.systemSaves,recentLog:(s.log??[]).slice(-12),pendingChoices:s.complications?.choices?.filter(c=>c.status==='pending'),journal:s.roundJournal};
 }
 export class GuidedDebugRecorder{
  constructor({storage=null,key=KEY}={}){this.storage=storage;this.key=key;this.data={version:1,status:'not started',entries:[],dropped:0};try{const old=JSON.parse(storage?.getItem(key)??'null');if(old?.version===1&&Array.isArray(old.entries))this.data=old;}catch{}}

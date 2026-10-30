@@ -115,7 +115,7 @@ async function handle(cmd,user){
   if(LIBRARY_COMMANDS.has(cmd.type))return handleLibraryCommand(cmd,user);
   const before=copy(raw());authorizeAlphaCommand(before,cmd,user);
   const guideStart=cmd.type==='guided-start',guideAdvance=cmd.type==='guided-next',guideStop=cmd.type==='guided-stop';let guideLabel=null;
-  if(before?.guidedTest?.status==='running'&&!guideAdvance&&!guideStop&&!['resume-movement','restore-movement','retry-recap'].includes(cmd.type))throw Error('Use Next Step or Stop in the guided test. Manual combat controls are paused.');
+  if(before?.guidedTest?.status==='running'&&!guideStart&&!guideAdvance&&!guideStop&&!['resume-movement','restore-movement','retry-recap'].includes(cmd.type))throw Error('Use Next Step or Stop in the guided test. Manual combat controls are paused.');
   if(guideAdvance||guideStop){
    if(!before?.guidedTest||before.guidedTest.status!=='running'||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw Error('The guided test changed; refresh before the next step.');
    const step=guideStop?{label:'Test stopped by GM',command:{type:'end'}}:nextGuidedStep(before);guideLabel=step.label;
@@ -206,7 +206,7 @@ function enqueue(cmd,user){
  });queue=task;return task;
 }
 export function alphaDiagnostics(){
-  const s=raw(),j=journal(),report={build:ALPHA_BUILD,encounterId:s?.id??null,phase:s?.phase??null,round:s?.round??null,revision:s?.revision??null,recovery:j?.next?{id:j.id,step:j.step,totalSteps:j.next.movement.frames.length,error:j.error}:null,ships:[]};
+  const s=raw(),j=journal(),report={build:ALPHA_BUILD,encounterId:s?.id??null,phase:s?.phase??null,round:s?.round??null,revision:s?.revision??null,recovery:j?.next?{id:j.id,step:j.step,totalSteps:j.next?.movement?.frames?.length??0,error:j.error}:null,ships:[]};
   if(!s?.id)return report;
   try{const c=alphaCanvas(s);report.ships=expectedAlphaTokens(s).map(e=>{const token=c.scene.tokens.get(e.tokenId);return{tokenId:e.tokenId,expected:{q:e.q,r:e.r,rotation:e.rotation},actual:token?alphaNativePose(token,c.grid):null};});}catch(error){report.canvasError=error.message;}
   return report;

@@ -1,5 +1,7 @@
 # Crew card table — playable alpha
 
+For the current three-round test and debug export, see [Guided crew test](ARKFLIGHT-1.1.0-GUIDED-CREW-TEST.md). Older combat launchers have been retired; Ship/Crew now opens inside the current dock.
+
 Implemented 28 October 2026. This is the new encounter protocol (`roundFlow: 2`), separate from earlier saved alpha battles.
 
 ## Update and launch

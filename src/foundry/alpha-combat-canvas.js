@@ -100,7 +100,7 @@ export async function restoreAlphaMovementJournal(journal){
 export async function prepareAlphaFleet(command){
   if(!game.user.isGM)throw new Error("Only a GM may create the alpha test fleet.");
   const guided=command.guidedFixture===true,count=guided?2:command.count===4?4:2, level=guided?5:Number(command.level??5);
-  const specs=Array.from({length:count},(_,i)=>({id:`${guided?"guided":"alpha"}-${i}`,name:["[Alpha] Rum Runner","[Alpha] Needlewake","[Alpha] Swiftwake","[Alpha] IronSpear"][i],team:i%2?"enemy":"crew",hullId:guided?"brigantine":i===0?(command.hullId??"brigantine"):i===1?(command.enemyHullId??"cutter"):i===2?"cutter":"frigate",level,upgrades:i===0?command.upgrades??[]:[],talents:i===0?command.talents??[]:[],deck:i===0?command.deck:undefined}));
+  const specs=Array.from({length:count},(_,i)=>({id:`${guided?"guided":"alpha"}-${i}`,name:guided?["[Crew Test] Dawn Runner","[Crew Test] Night Heron"][i]:["[Alpha] Rum Runner","[Alpha] Needlewake","[Alpha] Swiftwake","[Alpha] IronSpear"][i],team:i%2?"enemy":"crew",hullId:guided?"brigantine":i===0?(command.hullId??"brigantine"):i===1?(command.enemyHullId??"cutter"):i===2?"cutter":"frigate",level,upgrades:i===0?command.upgrades??[]:[],talents:i===0?command.talents??[]:[],deck:i===0?command.deck:undefined}));
   for(const spec of specs)deriveAlphaProfile(spec);
   if(game.combats.contents.some(c=>c.active&&c.started&&!c.flags?.[MODULE]?.alphaCombat))throw new Error("End the other active Foundry encounter before creating the alpha test.");
   let scene=game.scenes.contents.find(s=>s.flags?.[MODULE]?.alphaCombatScene===true&&Boolean(s.flags?.[MODULE]?.alphaGuidedFixture)===guided);
@@ -114,6 +114,7 @@ export async function prepareAlphaFleet(command){
     let actor=game.actors.contents.find(a=>a.flags?.[MODULE]?.alphaCombatShip===spec.id);
     const art=i%2?"modules/arkflight-game/assets/art/ships/tokens/rime-serpent.webp":ART;
     if(!actor)actor=await Actor.create({name:spec.name,type:"vehicle",img:art,ownership:{default:0},prototypeToken:{texture:{src:art},width:1,height:1,lockRotation:false,flags:{pf2e:{linkToActorSize:false,autoscale:false}}},flags:{[MODULE]:{alphaCombatShip:spec.id,alphaShip:spec}}},{renderSheet:false});
+    if(guided&&actor.name!==spec.name)await actor.update({name:spec.name});
     const pose=guided?{q:origin.q-2+(i%2?2:0),r:origin.r-(i%2?1:0),heading:0}:{q:origin.q+(i%2?0:-3),r:origin.r+(i%2?-4:2)+Math.floor(i/2)*7,heading:i%2?3:0};
     const persisted=await prepareStoredShip(actor,spec,{useSavedShips:command.useSavedShips===true});
     entries.push({...persisted,actorId:actor.id,pose,stationActors:actor.flags?.[MODULE]?.alphaStationActors??{}});
