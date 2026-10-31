@@ -1,6 +1,6 @@
 # Three-round crew test and debug export
 
-Build: `alpha-guided-cleanup-20261030`.
+Build: `alpha-ui-walkthrough-20261031`.
 
 ## Update and open
 
@@ -25,10 +25,14 @@ Alternatively open the current crew table, then **⚙ → 3-round crew test**, o
 ## Run it
 
 1. Click **Create ships & start test** and confirm. It replaces the active alpha test, creates/reuses its own marked fixtures, opens the current hand dock and tracker, and begins debug capture. Unpause Foundry before advancing.
-2. Click **Next Step** for each action. Read the next-action label before clicking; one click sends one real backend command. No timer advances combat. The same button operates both GM-controlled crews.
-3. At fleet movement, confirm Yes/No. No leaves the step pending. Yes moves the real scene tokens through the existing confirmed movement journal.
-4. Watch the hand, AP/resources, portrait card, Dice So Nice (when installed), chat results and canvas. The guide selects each test station's primary skill; each selected skill and resulting modifier is recorded. The normal manual combat buttons are paused for the duration of this demonstration.
-5. After the third round and any overflow/Complication choices, the guide ends the test. A debug `.txt` download is requested automatically. If the browser blocks it, click **Download debug.txt**. Send that file back with a short description of what looked wrong.
+2. The guide now displays a phase checklist. **Show combat controls** opens the actual hand and focuses the ship needing attention. It does not perform the action.
+3. Opening: select zero to two replacement cards and click **Keep hand** (or the replace confirmation) for each ship. Use the ship dropdown to switch.
+4. Maneuvers: preview different legal routes for the two ships, then lock each. Confirm the fleet movement popup. Routes are your choice; the guide no longer forces matching routes.
+5. Card planning: click cards, inspect, commit, and lock each ship’s plan. Keep at least 1 AP for a battery if you want to fire. During resolution select the station skill and click Roll yourself.
+6. Firing: show weapon arcs, ready a battery, select its legal target, and finish declarations for each ship. Play eligible Instants or pass, roll to hit, then roll damage using the actual buttons.
+7. Review each recap and start the next round; click each ship’s deck to draw. After round-three cleanup, resolve pending discards/choices and click **Finish test & export** in the guide. A fourth round is blocked. Send the resulting debug.txt.
+
+The test window never executes the checklist action. Normal UI permissions, legal targets, AP, station checks, chat receipts and dice still apply. Both fixture crews are NPCs controlled by the GM; this is not a connected-player permission test. Capture includes ordinary UI commands, warnings and saved positions. The scripted backend test remains available through the API for regression tests but is not the new window workflow.
 
 **Stop & export** ends the demonstration and requests a partial report. **Restart test** starts a fresh run. Download the prior report first if you want to keep it. Movement failures expose **Resume saved movement** and **Restore initial positions**, preserving the existing recovery semantics rather than blindly repeating an unconfirmed move.
 

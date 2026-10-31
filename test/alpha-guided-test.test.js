@@ -22,3 +22,16 @@ for(const die of [1,20])test(`guided test remains three rounds when every d20 is
  for(let steps=0;steps<240&&s.guidedTest.status==='running';steps++){const step=nextGuidedStep(s);try{s=await send(api,'guided-next');}catch(error){throw Error(`R${s.round} ${s.phase}: ${step.label}: ${error.message}`);}}
  assert.equal(s.guidedTest.status,'complete');assert.equal(s.round,3);assert.ok(Object.values(s.ships).every(ship=>ship.resources.hull.value>0));delete globalThis.JournalEntry;
 });
+test('manual walkthrough accepts ordinary UI commands and preserves three-round reporting',async()=>{
+ const w=alphaWorld(),api=w.initialize();journals();let s=await send(api,'guided-start',{manual:true});assert.equal(s.guidedTest.manual,true);
+ for(let i=0;i<240&&!s.complete;i++){
+  const step=nextGuidedStep(s);assert.ok(step);s=await send(api,step.command.type,step.command);
+ }
+ assert.equal(s.round,3);assert.equal(s.guidedTest.status,'complete');assert.ok(s.guidedTest.step>60);assert.equal(game.journal.contents[0].pages.contents.length,3);delete globalThis.JournalEntry;
+});
+test('native tracker receives an explicit render payload and ordinary UI cannot start round four',async()=>{
+ const w=alphaWorld(),api=w.initialize();journals();const rendered=[];ui.combat={render(options){rendered.push(options);}};let s=await send(api,'guided-start',{manual:true});
+ for(let i=0;i<240&&!(s.phase==='cleanup'&&s.round===3);i++){const step=nextGuidedStep(s);s=await send(api,step.command.type,step.command);}
+ assert.ok(rendered.length);assert.ok(rendered.every(o=>o.force===true&&o.renderData&&o.renderContext==='arkflightAlpha'));
+ await assert.rejects(send(api,'round'),/Three rounds finished/);assert.equal(api.state().round,3);await send(api,'end');delete ui.combat;delete globalThis.JournalEntry;
+});

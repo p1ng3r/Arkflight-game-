@@ -33,7 +33,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   const resolving=phase==='resolving'&&s.turnOrder[s.turnIndex]===ship?.id&&row?.instanceId===this.inspectId;
   const receipt=card?[...(s?.log??[])].reverse().find(e=>e.detail?.instanceId===card.instanceId&&e.detail.shipId===ship?.id)?.detail:null;
   const primary=[...game.users].filter(u=>u.active&&u.isGM).sort((a,b)=>a.id.localeCompare(b.id))[0]?.id===game.user.id;
-  const guidedRunning=s?.guidedTest?.status==='running';
+  const guidedRunning=s?.guidedTest?.status==='running'&&!s.guidedTest.manual;
   const context={...c,guidedRunning,guidedTest:s?.guidedTest,crewPanel:this.crewPanel??false,canAssignCrew:game.user.isGM&&['opening','planning','card-planning','cleanup'].includes(phase),card,panelOnly:this.resolutionOnly,roundFlow:s?.roundFlow===2,phaseLabel:labels[phase]??'Take command',
    hand:c.hand.map(h=>({...h,queued:planned.has(h.instanceId),respondable:responding&&h.timing==='instant'&&ship.ap>=h.ap&&api.canOperate(ship.id,h.stations[0])&&(h.id!=='shield'||ship.resources.lifeveil.value>=5)})),
    opening:phase==='opening',drawStep:phase==='draw',canDraw:phase==='draw'&&ship&&ship.drawnRound!==s.round,maneuverStep:phase==='planning',planningCards:phase==='card-planning',resolvingCards:phase==='resolving',firing:phase==='firing',damageStep:phase==='damage',recap:phase==='cleanup'||s?.complete,

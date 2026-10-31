@@ -141,16 +141,18 @@ export async function prepareAlphaFleet(command){
   if(obsolete.length)await scene.deleteEmbeddedDocuments("Token",obsolete.map(t=>t.id));
   let combat=game.combats.contents.find(c=>c.flags?.[MODULE]?.alphaCombat===true&&c.scene?.id===scene.id);
   if(combat)await combat.delete({arkflightAlpha:true});
-  combat=await Combat.create({scene:scene.id,active:true,round:0,turn:null,combatants:entries.map(e=>({actorId:e.actorId,tokenId:state.ships[e.id].tokenIds[0],name:e.name})),flags:{[MODULE]:{alphaCombat:true,alphaSessionId:state.id}}});
+  combat=await Combat.create({scene:scene.id,active:true,round:0,turn:null,combatants:entries.map(e=>({actorId:e.actorId,tokenId:state.ships[e.id].tokenIds[0],name:e.name})),flags:{[MODULE]:{alphaCombat:true,alphaSessionId:state.id}}},{render:false});
   state.canvas.combatId=combat.id;assertAlphaNativePositions(state);return state;
 }
 export async function syncAlphaTracker(state){
   const combat=game.combats.get(state.canvas?.combatId);if(!combat)return;
   {
     const updates=Object.values(state.ships).map(ship=>{const row=combat.combatants.find(c=>c.tokenId===ship.tokenIds[0]);return row?{_id:row.id,initiative:ship.initiative??null,defeated:!livingHull(ship)}:null;}).filter(Boolean);
-    if(updates.length)await combat.updateEmbeddedDocuments("Combatant",updates,{arkflightAlpha:true});
+    if(updates.length)await combat.updateEmbeddedDocuments("Combatant",updates,{arkflightAlpha:true,render:false});
   }
   const actorId=state.ships[state.turnOrder[state.turnIndex]]?.actorId, turn=actorId?combat.turns.findIndex(c=>c.actorId===actorId):0;
-  await combat.update({active:!state.complete&&state.phase!=="boarding",round:state.round,turn:Math.max(0,turn),[`flags.${MODULE}.alphaPhase`]:state.phase},{arkflightAlpha:true});
+  await combat.update({active:!state.complete&&state.phase!=="boarding",round:state.round,turn:Math.max(0,turn),[`flags.${MODULE}.alphaPhase`]:state.phase},{arkflightAlpha:true,render:false});
+  // ApplicationV2 tracker expects a renderData object, including on full renders.
+  await ui.combat?.render({force:true,renderContext:"arkflightAlpha",renderData:{}});
 }
 const livingHull=ship=>ship.resources.hull.value>0;

@@ -11,7 +11,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-guided-cleanup-20261030";
+export const ALPHA_BUILD="alpha-ui-walkthrough-20261031";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -115,13 +115,14 @@ async function handle(cmd,user){
   if(LIBRARY_COMMANDS.has(cmd.type))return handleLibraryCommand(cmd,user);
   const before=copy(raw());authorizeAlphaCommand(before,cmd,user);
   const guideStart=cmd.type==='guided-start',guideAdvance=cmd.type==='guided-next',guideStop=cmd.type==='guided-stop';let guideLabel=null;
-  if(before?.guidedTest?.status==='running'&&!guideStart&&!guideAdvance&&!guideStop&&!['resume-movement','restore-movement','retry-recap'].includes(cmd.type))throw Error('Use Next Step or Stop in the guided test. Manual combat controls are paused.');
+  if(before?.guidedTest?.status==='running'&&!before.guidedTest.manual&&!guideStart&&!guideAdvance&&!guideStop&&!['resume-movement','restore-movement','retry-recap'].includes(cmd.type))throw Error('Use Next Step or Stop in the guided test. Manual combat controls are paused.');
   if(guideAdvance||guideStop){
    if(!before?.guidedTest||before.guidedTest.status!=='running'||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw Error('The guided test changed; refresh before the next step.');
    const step=guideStop?{label:'Test stopped by GM',command:{type:'end'}}:nextGuidedStep(before);guideLabel=step.label;
    cmd={...step.command,encounterId:before.id,revision:before.revision};
    if(cmd.type==='guided-finish'){const next=copy(before);next.guidedTest.status=next.round===3?'complete':'failed';next.guidedTest.lastLabel=guideLabel;next.revision++;await saved(next);Hooks.callAll('arkflightAlphaChanged');return next;}
   }
+  const manualGuide=guideStart&&cmd.manual===true;
   if(guideStart)cmd={type:'start',count:2,level:5,roundFlow:2,guidedFixture:true};
   if(cmd.type==="resume-movement"){
     const job=copy(journal());if(!job?.next)throw new Error("There is no saved movement to resume.");return completeJournal(job);
@@ -135,7 +136,7 @@ async function handle(cmd,user){
     if(cmd.type==="start"&&!guideStart&&before?.id&&!before.complete)throw new Error("End the current alpha encounter before resetting the test fleet.");
     if(cmd.type==="reset"){if(cmd.encounterId!==before?.id||cmd.revision!==before?.revision)throw new Error("The encounter changed; refresh before resetting.");if(!before?.id)throw new Error("Start an alpha encounter first.");cmd={type:"start",count:Object.keys(before.ships).length,useSavedShips:true,roundFlow:cmd.roundFlow??before.roundFlow??1};}
     if(guideStart&&before?.canvas?.combatId)await game.combats.get(before.canvas.combatId)?.update({active:false},{arkflightAlpha:true});
-    const next=await prepareAlphaFleet(cmd);if(guideStart)initializeGuidedTest(next,await prepareGuidedCrews(next));await saved(next);if(before?.pendingCrewAction){try{await finishCrewRequest(before.pendingCrewAction.id,true);}catch(error){console.warn("Arkflight | Cancelled crew chat",error);}}Hooks.callAll("arkflightAlphaChanged");return next;
+    const next=await prepareAlphaFleet(cmd);if(guideStart){initializeGuidedTest(next,await prepareGuidedCrews(next));next.guidedTest.manual=manualGuide;}await saved(next);if(before?.pendingCrewAction){try{await finishCrewRequest(before.pendingCrewAction.id,true);}catch(error){console.warn("Arkflight | Cancelled crew chat",error);}}Hooks.callAll("arkflightAlphaChanged");return next;
   }
   if(!before?.id||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw new Error("The alpha encounter changed; refresh before acting.");
   if(cmd.type==="retry-recap"){if(!["cleanup","complete"].includes(before.phase))throw Error("No completed round is ready.");await persistRoundRecap(before);Hooks.callAll("arkflightAlphaChanged");return before;}
@@ -178,12 +179,13 @@ async function handle(cmd,user){
       await saved(next);try{await postCrewRequest(next,next.pendingCrewAction,user);}catch(error){console.warn("Arkflight | Crew request chat",error);ui.notifications.warn("Crew request saved. Use the HUD; its chat prompt could not be posted.");}Hooks.callAll("arkflightAlphaChanged");return next;
     }
   }
+  if(before.guidedTest?.manual&&cmd.type==="round"&&before.round>=3)throw Error("Three rounds finished. Use Finish test & export in the test checklist.");
   if(cmd.type==="end"&&before.pendingCrewAction){effectiveBefore=copy(before);delete effectiveBefore.pendingCrewAction;}
   if(cmd.type!=="end")assertAlphaNativePositions(before);
   Hooks.callAll("arkflightAlphaDebug",{kind:"command",command:copy(cmd),guideLabel});
   const evaluated=[];
   const next=await dispatchAlphaCommand(effectiveBefore,cmd,{roll:async (formula,context={})=>{const roll=await new Roll(formula).evaluate(),ship=before.ships[context.shipId??cmd.shipId];evaluated.push({roll,actorId:ship?.stationActors[context.station]??ship?.actorId,shipName:ship?.name});return Number(roll.total);},operatorModifier,operatorBreakdown,isBlocked:cmd.type==="end"?()=>false:alphaObstacleTest(before)});
-  if(guideAdvance||guideStop){next.guidedTest.step++;next.guidedTest.lastLabel=guideLabel;next.guidedTest.lastCommand=copy(cmd);if(guideStop)next.guidedTest.status='stopped';else if(next.complete)next.guidedTest.status=next.round===3?'complete':'failed';}
+  if(guideAdvance||guideStop||before.guidedTest?.manual){next.guidedTest.step++;next.guidedTest.lastLabel=guideLabel??`UI: ${cmd.type}`;next.guidedTest.lastCommand=copy(cmd);if(guideStop)next.guidedTest.status='stopped';else if(next.complete)next.guidedTest.status=next.round===3?'complete':'failed';}
   if(JSON.stringify(raw())!==JSON.stringify(before))throw new Error("The encounter changed while resolving this action; retry from the saved state.");
   if(next.movement){
     const job={id:foundry.utils.randomID(),before,next,start:expectedAlphaTokens(before),step:0,error:null};
