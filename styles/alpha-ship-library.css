@@ -1,0 +1,6 @@
+.alpha-library-shell .alpha-library-summary{display:flex;flex-direction:column;gap:5px;padding:12px;border:1px solid var(--alpha-border);border-radius:7px;background:#173540}
+.alpha-library-shell .alpha-library-deck{margin:14px 0;padding:12px;border:1px solid var(--alpha-gold);border-radius:9px;background:#142c36}
+.alpha-library-shell input:not([type=checkbox]){background:#102833;color:var(--alpha-ink);border:1px solid var(--alpha-border);min-height:30px;padding:5px;width:100%;margin:4px 0 8px}
+.alpha-library-shell .alpha-library-issue{color:#ffcf91;font-size:12px;padding-left:8px;border-left:2px solid #d8a461}
+.alpha-library-catalog{display:grid;gap:12px;margin:14px 0}.alpha-library-card{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:12px;border:1px solid #6b989e;border-top:4px solid #83b9b2;border-radius:9px;background:linear-gradient(125deg,#1a3944,#122733)}
+.alpha-library-card>img{width:72px;height:72px;object-fit:contain;border:0}.alpha-library-card h3{margin:0 0 5px}.alpha-library-card p{font-size:12px}.alpha-library-card small{color:#bad0d5}.alpha-library-card input{max-width:72px}.alpha-library-card.is-unlearned{border-color:#4c6171;border-top-color:#5c637d}.alpha-library-card.is-unlearned h3{color:#bec7d0}

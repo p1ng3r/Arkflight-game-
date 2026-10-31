@@ -1,0 +1,34 @@
+.arkflight-complication-lab { --comp-ink: #e8eceb; --comp-gold: #dab46d; --comp-panel: #122932; --comp-line: #53717b; color: var(--comp-ink); min-width: 280px; }
+.arkflight-complication-lab .window-content { padding: 0; background: #0b1c25; color: var(--comp-ink); overflow: hidden; }
+.complication-lab-shell { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.complication-lab-shell > header { padding: 14px 18px 8px; border-bottom: 1px solid var(--comp-line); background: linear-gradient(120deg, #173a45, #12232e); }
+.complication-lab-shell h2, .complication-lab-shell h3, .complication-lab-shell h4 { color: var(--comp-gold); border: 0; margin: 5px 0; }
+.complication-lab-shell p { margin: 8px 0; line-height: 1.45; }
+.complication-lab-shell small { font-size: 11px; }
+.complication-lab-body { padding: 12px 18px; overflow: auto; min-height: 0; flex: 1; }
+.complication-lab-note, .complication-lab-counts { font-size: 12px; color: #bfccd0; }
+.complication-lab-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.complication-lab-shell label { display: block; font-size: 12px; }
+.complication-lab-shell select { display: block; width: 100%; margin: 4px 0 10px; background: #10232b; color: var(--comp-ink); border: 1px solid var(--comp-line); }
+.complication-lab-shell option { background: #10232b; color: var(--comp-ink); }
+.complication-lab-shell button { background: #203d47; color: var(--comp-ink); border: 1px solid var(--comp-line); border-radius: 5px; min-height: 32px; white-space: normal; }
+.complication-lab-shell button:disabled { opacity: .45; cursor: default; }
+.complication-lab-shell button:focus-visible, .complication-lab-shell select:focus-visible, .complication-lab-shell summary:focus-visible { outline: 2px solid var(--comp-gold); outline-offset: 2px; }
+.complication-lab-shell .complication-lab-primary { background: #345b63; width: 100%; border-color: #80a4aa; }
+.complication-card { margin: 14px auto; padding: 0 16px 16px; border: 2px solid var(--comp-gold); outline: 1px solid #695538; outline-offset: -7px; border-radius: 12px; background: linear-gradient(145deg, #243a40, #101b24); box-shadow: 0 5px 18px #0007; max-width: 400px; overflow: hidden; }
+.complication-card-band { margin: 0 -16px 12px; padding: 8px 14px; background: #704e2a; color: #fff1d2; font-size: 11px; font-weight: bold; letter-spacing: .08em; }
+.complication-card h3 { font-size: 23px; margin: 8px 0 14px; }
+.complication-lab-shell details { margin: 12px 0; padding: 8px; background: #152d35; border: 1px solid #48616a; border-radius: 6px; }
+.complication-lab-shell summary { cursor: pointer; }
+.complication-card details > section { padding: 8px 4px; border-bottom: 1px solid #48616a; font-size: 12px; }
+.complication-card details .is-selected { border-left: 3px solid var(--comp-gold); padding-left: 9px; }
+.complication-lab-choice { padding: 10px; border: 1px solid var(--comp-gold); background: #2a342e; border-radius: 7px; }
+.complication-lab-choice button { width: 100%; margin-top: 8px; }
+.complication-lab-resources { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 12px; }
+.complication-lab-effect { padding: 9px 0; border-top: 1px solid #48616a; }
+.complication-lab-effect small { display: block; margin: 4px 0; }
+.complication-lab-effect button { font-size: 11px; margin: 4px 0; }
+.complication-lab-error { color: #ffd0c7; padding: 8px; background: #653129; border-radius: 5px; }
+.complication-lab-message { padding: 8px; background: #274d45; border-radius: 5px; }
+.complication-lab-shell > footer { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--comp-line); }
+.complication-lab-shell > footer button { flex: 1; min-width: 90px; }
