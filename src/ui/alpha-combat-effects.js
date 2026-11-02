@@ -37,23 +37,24 @@ export class AlphaCombatEffects {
     const events = this.shipId === shipId ? combatPresentationEvents(this.previous, state, shipId) : [];
     this.previous = state; this.shipId = shipId;
     if (!events.length || document.hidden) return;
-    if (events.some(e => e.kind === "phase")) this.animate(root.querySelector(".alpha-phase-rail"), [{ opacity: .3 }, { opacity: 1 }]);
-    if(events.some(e=>e.kind==="ap"))this.animate(root.querySelector(".alpha-ap"),[{filter:"brightness(1.8)"},{filter:"brightness(1)"}]);
+    if (events.some(e => e.kind === "phase")) this.animate(root.querySelector(".hud-phase-bar, .alpha-phase-rail"), [{ opacity: .3 }, { opacity: 1 }]);
+    if(events.some(e=>e.kind==="ap"))this.animate(root.querySelector(".round-ap-counter, .alpha-ap"),[{filter:"brightness(1.8)"},{filter:"brightness(1)"}]);
     for (const e of events.filter(e => e.kind === "draw")) for (const [i, id] of e.ids.entries()) {
       const card=[...root.querySelectorAll("[data-alpha-card]")].find(n=>n.dataset.alphaCard===id),from=root.querySelector('[data-alpha-pile="draw"]')?.getBoundingClientRect?.(),to=card?.getBoundingClientRect?.();
       const dx=from&&to?from.left-to.left:0,dy=from&&to?from.top-to.top:35;
       this.animate(card,[{opacity:0,transform:`translate(${dx}px,${dy}px) scale(.35) rotate(-9deg)`},{opacity:1,transform:"translate(0,0) scale(1) rotate(0deg)"}],400+i*45);
     }
     for (const e of events.filter(e => e.kind === "resource")) this.animate(root.querySelector(`[data-alpha-meter="${e.key}"]`), [{ filter: "brightness(2)", transform: "translateY(-2px)" }, { filter: "brightness(1)", transform: "translateY(0)" }]);
-    if (events.some(e => ["check", "damage"].includes(e.kind))) this.animate(root.querySelector(".alpha-result-card"), [{ opacity: .2, transform: "translateY(12px) scale(.96)" }, { opacity: 1, transform: "translateY(0) scale(1)" }], 500);
+    if (events.some(e => ["check", "damage"].includes(e.kind))) this.animate(root.querySelector(".round-art-card, .round-resolution-wait, .alpha-result-card"), [{ opacity: .2, transform: "translateY(12px) scale(.96)" }, { opacity: 1, transform: "translateY(0) scale(1)" }], 500);
     const check = events.findLast(e => e.kind === "check"&&e.station!=="initiative"), damage = events.find(e => e.kind === "damage");
-    if (damage) alphaSound(damage.degree >= 1 ? "fire" : "failure");
-    else if (events.some(e => e.kind === "complication")) alphaSound("criticalFailure");
+    if(events.some(e=>e.kind==="resource"&&e.key==="hull"&&e.delta<0))alphaSound("impact");
+    else if (damage) {if(damage.degree>=1)alphaSound("fire");}
+    else if (events.some(e => e.kind === "complication")) alphaSound("impact");
     else if (events.some(e => e.kind === "play" && e.burn)) alphaSound("signature");
     else if (events.some(e => e.kind === "play")) alphaSound("commit");
     else if (events.some(e => e.kind === "draw")) alphaSound("ready");
     else if(events.some(e=>e.kind==="move"))alphaSound("move");
-    else if (check) alphaSound({ "-1": "criticalFailure", 0: "failure", 1: "success", 2: "criticalSuccess" }[check.degree]);
+    else if (check) alphaSound({ "-1": "impact", 0: "deselect", 1: "lock", 2: "signature" }[check.degree]);
 
   }
   async flyCard(card, destination) {

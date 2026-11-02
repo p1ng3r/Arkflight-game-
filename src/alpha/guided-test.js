@@ -3,13 +3,14 @@ import {alphaCardFor,alphaComplications,alphaTargetLegal,alphaActionBlockReason}
 import {currentPlannedCard} from './round-flow.js';
 import {complicationChoiceOptions} from '../combat/ship-complications.js';
 export const GUIDED_ROUNDS=3;
-export const GUIDED_DECK=Object.freeze(['vent','vent','brace','brace','acquire','acquire','evasive','evasive','mend','mend','rally','rally','shield','shield','read']);
+export const GUIDED_DECK=Object.freeze(['vent','recover','brace','brace','acquire','acquire','evasive','evasive','mend','mend','rally','rally','shield','shield','read','dispatch','dispatch','survey','tune','exploit']);
 const schedules=[['vent','brace'],['acquire','evasive'],['mend','rally']];
-export function initializeGuidedTest(s,crew){
+export function initializeGuidedTest(s,crew,{manual=false}={}){
  for(const [index,ship] of Object.values(s.ships).entries()){
   ship.stationActors=crew[ship.id];ship.instances=Object.fromEntries(GUIDED_DECK.map((id,i)=>[`${id}-${i}`,id]));ship.library=[...new Set(GUIDED_DECK)];
-  const used=new Set();ship.hand=['vent','brace','acquire','evasive','shield'].map(card=>{const id=Object.keys(ship.instances).find(id=>ship.instances[id]===card&&!used.has(id));used.add(id);return id;});
-  const rest=Object.keys(ship.instances).filter(id=>!used.has(id)),mend=rest.find(id=>ship.instances[id]==='mend'),rally=rest.find(id=>ship.instances[id]==='rally');
+  const opening=manual?(index===0?['dispatch','survey','tune','exploit','shield']:['brace','acquire','evasive','vent','shield']):['vent','brace','acquire','evasive','shield'];
+  const used=new Set();ship.hand=opening.map(card=>{const id=Object.keys(ship.instances).find(id=>ship.instances[id]===card&&!used.has(id));used.add(id);return id;});
+  const rest=Object.keys(ship.instances).filter(id=>!used.has(id)),mend=rest.find(id=>ship.instances[id]===(manual&&index===1?'recover':'mend')),rally=rest.find(id=>ship.instances[id]===(manual?(index===0?'recover':'dispatch'):'rally'));
   ship.drawPile=[...rest.filter(id=>id!==mend&&id!==rally),rally,mend];ship.discard=[];ship.burned=[];ship.prepared=[];ship.resources.strain.value=3;
   for(const b of ship.batteries){b.productionFormula=b.formula;b.formula='2d6+4';b.training=true;}
   ship.guidedSchedule=index===0?schedules:[schedules[1],schedules[0],schedules[2]];

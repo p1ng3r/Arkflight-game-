@@ -10,6 +10,8 @@ export function roundReadiness(s){return roundShips(s).map(ship=>{
  if(s.phase==='firing'){ready=s.turnOrder.indexOf(ship.id)<s.firingIndex;label=ship.id===s.turnOrder[s.firingIndex]?'Choose weapons':ready?'Firing complete':'Waiting turn';}
  if(['response','damage','retarget'].includes(s.phase)){ready=![attack?.shipId,attack?.targetId].includes(ship.id);label=ship.id===attack?.targetId?(attack.responses[ship.id]?'Response complete':'Response needed'):ship.id===attack?.shipId?(s.phase==='damage'?'Damage roll':'Attack roll'):'Standing by';}
  if(s.phase==='cleanup'||s.complete){ready=s.pendingDiscard?.shipId!==ship.id;label=ready?'Round complete':'Discard overflow';}
+ if(s.cardFollowup===ship.id){ready=false;label='Drawn cards · planning';}
+ if(s.pendingCardChoice?.shipId===ship.id){ready=false;label='Choose a card';}
  if(s.pendingCrewAction){ready=ship.id!==s.pendingCrewAction.shipId;label=ready?'Waiting for crew':`${s.pendingCrewAction.station} roll`;}
  return {id:ship.id,name:ship.name,ready,label};
 });}
@@ -20,9 +22,19 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
  const {legacy,draw,shuffle,assertSettled,log,nextAttack,refresh}=deps;
  if(cmd.shipId&&!ship)throw Error('Unknown ship.');
  if(s.complete&&!['end','choose-complication','discard'].includes(cmd.type))throw Error('Encounter ended.');
+ if(cmd.type==='choose-card'){
+  const choice=s.pendingCardChoice;if(!choice||choice.shipId!==ship?.id||!choice.options.includes(cmd.instanceId))throw Error('Choose one of this ship’s offered cards.');
+  const oldHand=new Set(ship.hand);
+  if(choice.kind==='survey'){ship.hand.push(cmd.instanceId);ship.drawPile.unshift(...choice.options.filter(id=>id!==cmd.instanceId));}
+  else {if(!ship.discard.includes(cmd.instanceId))throw Error('That card is no longer discarded.');ship.discard=ship.discard.filter(id=>id!==cmd.instanceId);ship.hand.push(cmd.instanceId);}
+  if(choice.drawAfter)draw(s,ship,choice.drawAfter);const fresh=ship.hand.filter(id=>!oldHand.has(id)&&ALPHA_CARDS[ship.instances[id]].timing!=='instant'&&!(s.cardPlans?.[ship.id]??[]).some(r=>r.instanceId===id));
+  if(s.phase==='resolving'&&ship.ap>0&&fresh.length){s.turnIndex=s.turnOrder.indexOf(ship.id);const previous=s.cardFollowup===ship.id?s.followupCards??[]:[];s.cardFollowup=ship.id;s.followupCards=[...new Set([...previous,...fresh])];}
+  delete s.pendingCardChoice;if(!s.cardFollowup&&s.phase==='resolving')advanceCardResolution(s);log(s,`${ship.name} selected ${ALPHA_CARDS[ship.instances[cmd.instanceId]].name}.`);s.revision=before.revision+1;return s;
+ }
  if(!['end','choose-complication','discard'].includes(cmd.type))assertSettled(s);
  const revise=()=>{if(s.phase==='cleanup'&&!s.pendingDiscard){const x=roundShips(s).find(x=>x.hand.length>x.profile.hand);if(x)s.pendingDiscard={shipId:x.id,count:x.hand.length-x.profile.hand};}s.revision=before.revision+1;return s;};
  const stage=async(type,phase,data={})=>{const shadow=copy(s);shadow.phase=phase;return legacy(shadow,{...cmd,...data,type,revision:shadow.revision},services);};
+ if(cmd.type==='end'&&s.pendingCardChoice){const c=s.pendingCardChoice;if(c.kind==='survey')s.ships[c.shipId].drawPile.unshift(...c.options);delete s.pendingCardChoice;}
  if(cmd.type==='mulligan'){
   if(s.phase!=='opening'||!alive(ship)||ship.mulliganDone)throw Error('Opening choice is closed.');
   const ids=cmd.instances??[];if(!Array.isArray(ids)||ids.length>2||new Set(ids).size!==ids.length||ids.some(id=>!ship.hand.includes(id)))throw Error('Return up to two different cards.');
@@ -34,10 +46,13 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   const count=ship.hand.length;draw(s,ship,ship.profile.roundDraw??1);ship.drawnRound=s.round;log(s,`${ship.name}: ${ship.hand.length-count} card(s) drawn${ship.hand.length===count?' — deck empty':''}.`);
   if(roundShips(s).every(x=>x.drawnRound===s.round))s.phase='planning';return revise();
  }
+ const followup=s.phase==='resolving'&&s.cardFollowup===ship?.id;
  if(['queue-card','unqueue-card','move-card','lock-cards'].includes(cmd.type)){
-  if(s.phase!=='card-planning'||!alive(ship)||s.cardLocks[ship.id])throw Error('This card plan is closed.');
+  if(followup){if(!['queue-card','lock-cards'].includes(cmd.type))throw Error('Only newly drawn cards can be added here.');if(cmd.type==='lock-cards'){delete s.cardFollowup;advanceCardResolution(s);return revise();}}
+  if((!followup&&(s.phase!=='card-planning'||s.cardLocks[ship.id]))||!alive(ship))throw Error('This card plan is closed.');
   const plan=s.cardPlans[ship.id]??=[];
   if(cmd.type==='queue-card'){
+   if(followup&&!s.followupCards.includes(cmd.instanceId))throw Error('Only cards drawn by this action can join the locked plan.');
    const card=ALPHA_CARDS[ship.instances[cmd.instanceId]];
    if(!card||!ship.hand.includes(cmd.instanceId)||plan.some(c=>c.instanceId===cmd.instanceId)||card.timing==='instant')throw Error('Choose an uncommitted Standard card.');
    if(ship.ap<card.ap)throw Error('Insufficient AP. Keep AP for firing and Instants.');
@@ -50,10 +65,11 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   return revise();
  }
  if(['resolve-card','skip-card'].includes(cmd.type)){
+  if(s.cardFollowup)throw Error('Finish the draw-card planning window first.');
   const row=currentPlannedCard(s);if(s.phase!=='resolving'||s.turnOrder[s.turnIndex]!==ship?.id||!row||row.instanceId!==cmd.instanceId)throw Error('Only the current queued card can resolve.');
   if(cmd.type==='skip-card'){ship.hand=ship.hand.filter(id=>id!==row.instanceId);(ALPHA_CARDS[ship.instances[row.instanceId]].burn?ship.burned:ship.discard).push(row.instanceId);row.resolved=true;log(s,`${ship.name}: ${ALPHA_CARDS[ship.instances[row.instanceId]].name} skipped; committed AP remains spent.`);
-  }else{ship.ap+=row.cost;s=await stage('play','cards',{...row,skill:cmd.skill});s.phase='resolving';s.cardPlans[ship.id].find(c=>c.instanceId===row.instanceId).resolved=true;}
-  advanceCardResolution(s);return revise();
+  }else{const oldHand=new Set(ship.hand);ship.ap+=row.cost;s=await stage('play','cards',{...row,skill:cmd.skill});s.phase='resolving';s.cardPlans[ship.id].find(c=>c.instanceId===row.instanceId).resolved=true;const fresh=s.ships[ship.id].hand.filter(id=>!oldHand.has(id)&&ALPHA_CARDS[s.ships[ship.id].instances[id]].timing!=='instant');if(fresh.length&&s.ships[ship.id].ap>0){s.cardFollowup=ship.id;s.followupCards=fresh;}}
+  if(!s.cardFollowup&&!s.pendingCardChoice)advanceCardResolution(s);return revise();
  }
  if(cmd.type==='fire'){if(s.phase!=='firing'||s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Wait for this ship’s Firing phase.');s.turnIndex=s.firingIndex;s=await stage('fire','cards');s.phase='firing';return revise();}
  if(cmd.type==='discard'&&(cmd.instances??[]).some(id=>(s.cardPlans?.[ship?.id]??[]).some(c=>!c.resolved&&c.instanceId===id)))throw Error('Committed cards cannot be discarded before resolution.');

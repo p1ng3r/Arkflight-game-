@@ -1,3 +1,5 @@
+> Current HUD: see [Canvas command HUD and 20-card starter](ARKFLIGHT-CANVAS-HUD-ALPHA.md). Build `alpha-canvas-hud-20261102` replaces the separate hand/tracker windows; existing libraries are preserved.
+
 # Three-round crew test and debug export
 
 Build: `alpha-ui-walkthrough-20261031`.

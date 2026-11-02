@@ -2,7 +2,7 @@
 export const ALPHA_DIRECTIONS = Object.freeze([[0,-1],[1,-1],[1,0],[0,1],[-1,1],[-1,0]].map(Object.freeze));
 const profile = (id, name, role, hull, ac, speed, handling, bulk, fitting, footprint = 1, hand = 5) => ({
   id, name, role, baseHull: hull, acAdjustment: ac, speed, handling, cargoBulk: bulk, fitting, footprint,
-  hand, deck: 15, opening: 5, roundDraw: 1, ap: 4,
+  hand, deck: 20, opening: 5, roundDraw: 1, ap: 4,
   mounts: footprint === 3 ? { fore: 1, port: 3, starboard: 3, aft: 1 } : speed >= 6 ? { fore: 1, port: 1, starboard: 1, aft: 1 } : { fore: 1, port: 2, starboard: 2, aft: 1 }
 });
 export const ALPHA_HULLS = Object.freeze(Object.fromEntries([
@@ -29,7 +29,7 @@ export const ALPHA_UPGRADES = Object.freeze({
 export const ALPHA_TALENTS = Object.freeze({
   "broadside-doctrine": { name: "Broadside Doctrine", minLevel: 4, damage: 2, eventTags: ["armed-deterrence"], pillars: ["combat", "events"] },
   "seasoned-crew": { name: "Seasoned Crew", minLevel: 1, support: 1, eventTags: ["crew-coordination"], pillars: ["combat", "events"] },
-  "void-runner": { name: "Void Runner", minLevel: 4, bonusMove: 1, travelSpeedBonus: 1, eventTags: ["fast-passage"], pillars: ["combat", "travel", "events"] },
+  "void-runner": { name: "Void Runner", minLevel: 4, maneuvers: ["port-pivot","starboard-pivot"], bonusMove: 1, travelSpeedBonus: 1, eventTags: ["fast-passage"], pillars: ["combat", "travel", "events"] },
   "merchant-network": { name: "Merchant Network", minLevel: 1, cargoBulk: 20, tradeBonus: 1, eventTags: ["merchant-contacts"], pillars: ["trade", "travel", "events"] },
   "ward-sanctuary": { name: "Ward Sanctuary", minLevel: 4, resistanceBonus: 1, eventTags: ["shelter"], pillars: ["combat", "events"] },
   "boarding-specialist": { name: "Boarding Specialist", minLevel: 1, boarding: 2, eventTags: ["boarding-lines"], pillars: ["combat", "events"] }
@@ -49,9 +49,10 @@ export function deriveAlphaProfile({ hullId, level = 5, upgrades = [], talents =
     structure: level + 6 + (hull.footprint > 1 ? 1 : 0), engineer: level + 6 + (hull.handling === "nimble" ? 1 : 0), veil: level + 6 + (hullId === "cathedral-ship" ? 2 : 0),
     attack: level + 8, support: level + 8 + sum("support"), dc: level + 15,
     cargoBulk: hull.cargoBulk + sum("cargoBulk"), strain: 10 + sum("strain"), hand: Math.max(hull.opening + sum("opening"),Math.min(10, hull.hand + sum("hand"))),
-    deck: 15 + Math.floor((level - 1) / 4), opening: hull.opening + sum("opening"), roundDraw: hull.roundDraw + sum("roundDraw"),
+    deck: 20 + Math.floor((level - 1) / 4), opening: hull.opening + sum("opening"), roundDraw: hull.roundDraw + sum("roundDraw"),
     damageBonus: sum("damage") + (hullId === "dread-caravel" ? 2 : 0), resistanceBonus: sum("resistanceBonus") + (hullId === "cathedral-ship" ? 1 : 0),
     ramBonus: sum("ram") + (hullId === "hammerhead" ? 2 : 0), boardingBonus: sum("boarding"),
+    maneuverUnlocks: [...new Set(items.flatMap(i=>i.maneuvers??[]))],
     unlockPivot: items.some(i => i.unlockPivot), maxBonusMove: hull.speed, bonusMove: sum("bonusMove"),
     capabilities: { travelSupplyReduction: sum("travelSupplyReduction"), travelSpeedBonus: sum("travelSpeedBonus"), tradeBonus: sum("tradeBonus"), eventTags: [...new Set(items.flatMap(i => i.eventTags ?? []))] }
   };

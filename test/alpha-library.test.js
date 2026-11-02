@@ -23,14 +23,14 @@ test("removing knowledge preserves all deck entries and flags them; granting res
   data = apply(data, "library-grant", { cardId: "patch" }); data = apply(data, "library-grant", { cardId: "patch" });
   assert.equal(data.learned.filter(id => id === "patch").length, 1); assert.deepEqual(selectedLibraryDeck(data), decks[0].cards);
 });
-test("refits retain all 19 cards when capacity falls, with launch blocked until the crew corrects its saved draft", () => {
+test("refits retain all 24 cards when capacity falls, with launch blocked until the crew corrects its saved draft", () => {
   const cards = [...ALPHA_STARTER_DECK, "ram", "ahead", "chainshot", "harmonic"];
   let data = createShipLibrary({ ...config, level: 20 }, cards);
   data = apply(data, "library-refit", { config: { ...config, level: 1 } });
-  assert.equal(data.loadouts[0].cards.length, 19); assert.ok(validateLibraryDeck(data, data.loadouts[0]).some(i => i.code === "capacity"));
-  assert.throws(() => selectedLibraryDeck(data), /at most 15/);
-  data = apply(data, "library-save", { loadoutId: "deck-1", name: "Reduced complement", cards: cards.slice(0, 15) });
-  assert.equal(selectedLibraryDeck(data).length, 15); assert.equal(data.loadouts[1].cards.length, 19);
+  assert.equal(data.loadouts[0].cards.length, 24); assert.ok(validateLibraryDeck(data, data.loadouts[0]).some(i => i.code === "capacity"));
+  assert.throws(() => selectedLibraryDeck(data), /at most 20/);
+  data = apply(data, "library-save", { loadoutId: "deck-1", name: "Reduced complement", cards: cards.slice(0, 20) });
+  assert.equal(selectedLibraryDeck(data).length, 20); assert.equal(data.loadouts[1].cards.length, 24);
 });
 test("invalid drafts can be saved, but cannot be selected or launched; unique and ordinary copy limits remain distinct", () => {
   let data = createShipLibrary(config);
@@ -38,7 +38,7 @@ test("invalid drafts can be saved, but cannot be selected or launched; unique an
   const errors = validateLibraryDeck(data, data.loadouts[1]);
   assert.ok(errors.some(i => i.code === "minimum")); assert.equal(errors.filter(i => i.code === "copies").length, 2); assert.ok(errors.some(i => i.code === "unlearned"));
   assert.throws(() => apply(data, "library-select", { loadoutId: "deck-2" }), /at least 15/); assert.equal(data.loadouts[1].cards.length, 6);
-  assert.equal(data.activeLoadoutId, "deck-1"); assert.equal(selectedLibraryDeck(data).length, 15);
+  assert.equal(data.activeLoadoutId, "deck-1"); assert.equal(selectedLibraryDeck(data).length, 20);
 });
 test("authored card requirements revalidate after a profile change without modifying any deck", () => {
   let data = createShipLibrary(config);

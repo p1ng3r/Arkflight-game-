@@ -1,6 +1,11 @@
 const card=(id,name,station,ap,role,text,extra={})=>({id,name,stations:[station],ap,role,timing:"standard",text,...extra});
 /** A complete small alpha set; mandatory General/Flux/Signature cooldown classes are retired here. */
 export const ALPHA_CARDS=Object.freeze(Object.fromEntries([
+  card("dispatch","Fresh Orders","captain",1,"Utility","Draw 2 cards; critical success draw 3. Discard overflow during Cleanup."),
+  card("survey","Chart the Possibilities","navigator",1,"Utility","Look at the top 3 cards. Choose 1 for your hand; put the rest on the bottom. Critical success looks at 4."),
+  card("recover","Recover the Plan","captain",1,"Utility","Choose 1 non-Burn card from your discard and return it to hand. Critical success also draws 1."),
+  card("tune","Tune the Capacitors","engineer",1,"Command","Gain 1 Strain. Draw 1 and charge the next battery hit this round for +1d6; critical success +1d8. A miss does not consume the charge."),
+  card("exploit","Exploit the Opening","battlewatch",1,"Command","Your next battery attack gains +1 accuracy. If Engineering charged the capacitors, its next hit gains another +1d6 (+1d8 on critical success). Draw 1."),
   card("acquire","Acquire Target","battlewatch",1,"Command","One battery attack this round gains +1 accuracy; critical success +2."),
   card("patch","Patch Hull","engineer",1,"Repair","Spend 1 Supply; restore 1d10+4 Hull, or 2d10+4 on critical success."),
   card("brace","Brace for Combat","captain",1,"Defense","Prepare DR 3 for the whole next round; critical success DR 4. Only one DR card may be played per ship per round.",{delayed:true,dr:true}),
@@ -23,5 +28,5 @@ export const ALPHA_CARDS=Object.freeze(Object.fromEntries([
   card("boarding","Secure Boarding Lines","battlewatch",1,"Utility","Attempt to secure a boarding link to an adjacent enemy ship. Success secures lines; failure does not. Critical failure draws a Battle Watch complication."),
   card("ram","Ramming Stations","battlewatch",1,"Command","Prepare +2 impact damage against the other ship in next round's first collision; critical success +4. Your own impact save still matters.",{delayed:true})
 ].map(c=>[c.id,Object.freeze(c)])));
-export const ALPHA_STARTER_DECK=Object.freeze(["acquire","vent","patch","patch","brace","brace","prepare","shield","shield","helm","volley","volley","evasive","read","all-hands"]);
+export const ALPHA_STARTER_DECK=Object.freeze(["acquire","vent","patch","patch","brace","brace","prepare","shield","shield","helm","volley","recover","evasive","read","all-hands","dispatch","dispatch","survey","tune","exploit"]);
 export const ALPHA_SKILLS=Object.freeze({captain:["diplomacy","intimidation","society"],engineer:["crafting","arcana","thievery"],navigator:["survival","nature","arcana"],veilwarden:["arcana","occultism","medicine"],battlewatch:["crafting","athletics","warfare-lore"]});

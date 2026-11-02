@@ -8,6 +8,8 @@ import {recapEscape} from '../foundry/alpha-round-journal.js';
 const {ApplicationV2,HandlebarsApplicationMixin}=foundry.applications.api;
 let instance;
 export function manualInstruction(s){
+ if(s.pendingCardChoice)return 'Choose one of the offered cards in the HUD to finish the draw or recovery effect.';
+ if(s.cardFollowup)return 'A card drew new options. Inspect and commit any offered cards you want to use now, then lock the additional orders or keep them.';
  const common='Switch ships using the ship-name dropdown.';
  return ({opening:`In the hand, select up to two cards to replace, or select none and click Keep hand. Do this for both ships. ${common}`,
  draw:`Click each ship’s deck to draw its new card. ${common}`,
@@ -34,7 +36,7 @@ export class AlphaGuidedTestWindow extends HandlebarsApplicationMixin(Applicatio
  }
  async _prepareContext(){
   const api=game.arkflight.alphaCombat,s=api.state(),guide=s?.guidedTest,running=guide?.status==='running';let step=null;
-  try{step=running?nextGuidedStep(s):null;}catch(error){this.error=error.message;}
+  try{step=running&&!guide.manual?nextGuidedStep(s):null;}catch(error){this.error=error.message;}
   const manual=guide?.manual===true;
   if(manual&&running)step={label:manualInstruction(s)};
   const last=[...(s?.log??[])].reverse().find(e=>e.detail?.kind==='check'&&e.detail.skill)?.detail;

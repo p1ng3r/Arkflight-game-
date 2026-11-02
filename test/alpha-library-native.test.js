@@ -89,8 +89,8 @@ test("refit capacity losses persist as visible errors and saved-ship launch pres
   const cards = [...api.library.view(actorId).loadouts[0].cards, "ram", "ahead", "chainshot", "harmonic"];
   await edit(api, actorId, "library-save", { loadoutId: "deck-1", name: "Full complement", cards });
   await edit(api, actorId, "library-refit", { config: { hullId: "cutter", level: 1 } });
-  let view = api.library.view(actorId); assert.equal(view.loadouts[0].cards.length, 19); assert.ok(view.loadouts[0].issues.some(i => i.code === "capacity"));
-  await assert.rejects(() => command(api, "start", { useSavedShips: true }), /at most 15/);
+  let view = api.library.view(actorId); assert.equal(view.loadouts[0].cards.length, 24); assert.ok(view.loadouts[0].issues.some(i => i.code === "capacity"));
+  await assert.rejects(() => command(api, "start", { useSavedShips: true }), /at most 20/);
   await edit(api, actorId, "library-save", { loadoutId: "deck-1", name: "Light complement", cards: cards.slice(0, 15) });
   const s = await command(api, "start", { useSavedShips: true }); assert.equal(s.ships["alpha-0"].profile.id, "cutter"); assert.equal(s.ships["alpha-0"].profile.level, 1);
 });
@@ -104,7 +104,7 @@ test("library UI preserves a stale draft, hides unlearned cards from players, an
   const api = world.initialize(); let s = await command(api, "start"); const actorId = s.ships["alpha-0"].actorId, actor = game.actors.get(actorId);
   actor.ownership.player = 3; await command(api, "end");
   const window = new AlphaShipLibraryWindow(); window.actorId = actorId;
-  let context = await window._prepareContext({}); assert.equal(context.catalog.length, 21); assert.equal(context.loadouts.length, 3);
+  let context = await window._prepareContext({}); assert.equal(context.catalog.length, 26); assert.equal(context.loadouts.length, 3);
   window.draft.name = "Unsent crew draft"; window.dirty = true;
   await edit(api, actorId, "library-grant", { cardId: "chainshot" });
   context = await window._prepareContext({}); assert.equal(context.stale, true); assert.equal(context.draft.name, "Unsent crew draft"); assert.equal(context.editable, false);

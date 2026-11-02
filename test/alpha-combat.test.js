@@ -102,8 +102,8 @@ test("shared AP pays for paid maneuvers and cards; no RP field or extra weapon-a
   assert.equal(s.ships.a.ap,2);assert.equal(count,1);
   s=await command(s,"fire","a",{batteryId:"starboard"});assert.equal(s.ships.a.ap,1);assert.equal(count,1);
 });
-test("all twenty-one cards execute all four authored degrees with correct timing and legal supply",async()=>{
-  assert.equal(Object.keys(ALPHA_CARDS).length,21);
+test("all twenty-six cards execute all four authored degrees with correct timing and legal supply",async()=>{
+  assert.equal(Object.keys(ALPHA_CARDS).length,26);
   for(const c of Object.values(ALPHA_CARDS))for(const die of [1,2,10,20]){
     let s=await moveToCards(alphaFixture(),{roll:constantRoll});s.turnOrder=["a","b"];s.turnIndex=0;
     s.ships.a.resources.hull.value=110;s.ships.a.resources.lifeveil.value=80;s.ships.a.resources.morale.value=80;s.ships.a.resources.strain.value=3;

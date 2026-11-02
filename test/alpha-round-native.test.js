@@ -14,3 +14,10 @@ test('player snapshots hide opposing card plans, commitment logs and hand instan
  const s=api.state(),enemy=s.ships['alpha-1'],instance=Object.keys(enemy.instances).find(i=>enemy.instances[i]==='vent');if(!enemy.hand.includes(instance)){const old=enemy.hand.pop();enemy.drawPile=enemy.drawPile.filter(i=>i!==instance);enemy.drawPile.push(old);enemy.hand.push(instance);}w.values.set('alphaCombat',s);await send(api,'queue-card',{shipId:enemy.id,instanceId:instance});game.actors.get(s.ships['alpha-0'].actorId).ownership.player=3;game.user=game.users.get('player');
  const view=api.state();assert.equal(view.cardPlans['alpha-1'],undefined);assert.deepEqual(view.ships['alpha-1'].instances,{});assert.equal(view.log.some(e=>e.detail?.kind==='plan'&&e.detail.shipId==='alpha-1'),false);assert.equal(view.roundEvents.some(e=>e.detail?.kind==='plan'&&e.detail.shipId==='alpha-1'),false);
 });
+
+test('private card offers and fresh-card windows are hidden from other crews and restricted to the assigned station owner',async()=>{
+ const w=alphaWorld(),api=w.initialize();let s=await send(api,'start',{roundFlow:2});const a=s.ships['alpha-0'],b=s.ships['alpha-1'];game.actors.get(a.actorId).ownership.player=3;
+ s.pendingCardChoice={shipId:b.id,station:'navigator',kind:'survey',options:['secret-offer']};s.cardFollowup=b.id;s.followupCards=['secret-fresh'];w.values.set('alphaCombat',s);game.user=game.users.get('player');assert.equal(api.state().pendingCardChoice,undefined);assert.equal(api.state().followupCards,undefined);
+ const {authorizeAlphaCommand}=await import('../src/foundry/alpha-combat-api.js');assert.throws(()=>authorizeAlphaCommand(s,{type:'choose-card',shipId:b.id},game.user),/do not own/);
+ a.stationActors.navigator=b.actorId;s.pendingCardChoice={shipId:a.id,station:'navigator',kind:'survey',options:['own-offer']};assert.throws(()=>authorizeAlphaCommand(s,{type:'choose-card',shipId:a.id},game.user),/assigned navigator/);a.stationActors.navigator=a.actorId;assert.doesNotThrow(()=>authorizeAlphaCommand(s,{type:'choose-card',shipId:a.id},game.user));
+});

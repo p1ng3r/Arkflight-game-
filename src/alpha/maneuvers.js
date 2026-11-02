@@ -3,7 +3,7 @@ export const hexDistance = (a,b) => Math.max(Math.abs(a.q-b.q), Math.abs(a.r-b.r
 const key = p => `${p.q},${p.r}`;
 const forward = count => ({ kind: "forward", count });
 const turn = direction => ({ kind: "turn", direction });
-const route = (id, name, steps, ap = 0) => ({ id, name, steps, ap, description: steps.length ? steps.map(s => s.kind === "forward" ? `Move ${s.count}` : `${s.direction === 1 ? "Starboard" : "Port"} 60°`).join(" → ") : "Hold position and facing" });
+const route = (id, name, steps, ap = 0) => ({ id, name, steps, ap, description: steps.length ? steps.map(s => s.kind === "reverse" ? `Reverse ${s.count}` : s.kind === "forward" ? `Move ${s.count}` : `${s.direction === 1 ? "Starboard" : "Port"} 60°`).join(" → ") : "Hold position and facing" });
 
 export function hullManeuvers(profile) {
   const result = [route("hold", "Hold", [])];
@@ -18,11 +18,26 @@ export function hullManeuvers(profile) {
     if(profile.id==="void-skiff")for(let n=1;n<=profile.speed;n++)result.push(route(`${side}-quick-${n}`,`${side==="port"?"Port":"Starboard"} Quick ${n}`,[turn(direction),forward(n)]));
     if (light && profile.speed>=3 && !["assault","fighting"].includes(profile.handling)) result.push(route(`${side}-s-3`, `${side === "port" ? "Port" : "Starboard"} S-Curve`, [forward(1),turn(direction),forward(1),turn(-direction),forward(1)]));
     if (["nimble","agile","versatile","fighting"].includes(profile.handling)) result.push(route(`${side}-hard`, `${side === "port" ? "Port" : "Starboard"} Hard Turn`, [forward(1),turn(direction),forward(1),turn(direction),forward(1)], 1));
-    if (["nimble","agile"].includes(profile.handling) || profile.unlockPivot) result.push(route(`${side}-pivot`, `${side === "port" ? "Port" : "Starboard"} Pivot`, [turn(direction)], profile.id==="void-skiff"?0:1));
+    if (["nimble","agile"].includes(profile.handling) || profile.unlockPivot || (profile.maneuverUnlocks??[]).includes(`${side}-pivot`)) result.push(route(`${side}-pivot`, `${side === "port" ? "Port" : "Starboard"} Pivot`, [turn(direction)], profile.id==="void-skiff"?0:1));
     // Capital hulls get one slow turn even at speed 2, after a full straight approach.
     if (!light && profile.speed===2) result.push(route(`${side}-wide-2`, `${side === "port" ? "Port" : "Starboard"} Wide Turn`, [forward(2),turn(direction)]));
   }
-  return result;
+  if(profile.maneuverSetVersion!==2)return result;
+  // Ten authored starting routes. Slow hulls gain cautious one-hex turns and a paid reverse.
+  if(profile.speed<=3){
+    for(const [side,direction] of [["port",-1],["starboard",1]])for(let n=1;n<=profile.speed;n++){
+      const id=`${side}-wide-${n}`;if(!result.some(m=>m.id===id))result.push(route(id,`${side==='port'?'Port':'Starboard'} Wide ${n}`,[forward(n),turn(direction)]));
+    }
+    result.push(route('astern-1','Back the Sails',[{kind:'reverse',count:1}],1));
+    for(const [side,direction] of [["port",-1],["starboard",1]])if(!result.some(m=>m.id===`${side}-late-2`))result.push(route(`${side}-late-2`,`${side==='port'?'Port':'Starboard'} Slow Bank`,[forward(1),turn(direction),forward(1)]));
+  }
+  if(profile.handling==='assault')result.push(route('astern-1','Back the Sails',[{kind:'reverse',count:1}],1));
+  const priority=profile.speed<=3?['hold','straight-1',`straight-${profile.speed}`,'port-wide-1','starboard-wide-1','port-wide-2','starboard-wide-2','port-late-2','starboard-late-2','astern-1']:
+    ['hold','straight-1','straight-2',`straight-${profile.speed}`,...(profile.handling==='assault'?['straight-3','port-late-2','starboard-late-2',`port-late-${profile.speed}`,`starboard-late-${profile.speed}`,'astern-1']:[]),...(profile.id==='sloop'?['port-pivot','starboard-pivot']:[]),...(profile.id==='cutter'?['port-early-3','starboard-early-3']:[]),...(profile.id==='void-skiff'?['port-quick-2','starboard-quick-2']:[]),'port-s-3','starboard-s-3','port-hard','starboard-hard',`port-late-${profile.speed}`,`starboard-late-${profile.speed}`,'port-late-2','starboard-late-2','port-pivot','starboard-pivot'];
+  const ordered=[...new Set(priority)].map(id=>result.find(m=>m.id===id)).filter(Boolean);for(const m of result)if(!ordered.includes(m))ordered.push(m);
+  const base=ordered.slice(0,10),unlocks=new Set(profile.maneuverUnlocks??[]);
+  if(profile.unlockPivot)for(const side of ['port','starboard'])unlocks.add(`${side}-pivot`);
+  return [...base,...result.filter(m=>unlocks.has(m.id)&&!base.some(b=>b.id===m.id))];
 }
 export function occupiedHexes(pose, size=1, directions=ALPHA_DIRECTIONS) {
   const [dq,dr]=directions[pose.heading];
@@ -32,8 +47,8 @@ export function previewManeuver(pose, maneuver, directions=ALPHA_DIRECTIONS) {
   const trace=[{...pose}];
   for(const step of maneuver.steps){
     if(step.kind==="turn") trace.at(-1).heading=(trace.at(-1).heading+step.direction+6)%6;
-    else if(step.kind==="forward") for(let i=0;i<step.count;i++){
-      const p=trace.at(-1), [dq,dr]=directions[p.heading]; trace.push({q:p.q+dq,r:p.r+dr,heading:p.heading});
+    else if(["forward","reverse"].includes(step.kind)) for(let i=0;i<step.count;i++){
+      const p=trace.at(-1), [dq,dr]=directions[p.heading]; const sign=step.kind==="reverse"?-1:1; trace.push({q:p.q+dq*sign,r:p.r+dr*sign,heading:p.heading});
     } else throw new Error("Unknown maneuver instruction.");
   }
   return { trace, end:{...trace.at(-1)}, distance:trace.length-1, turns:maneuver.steps.filter(s=>s.kind==="turn").length };

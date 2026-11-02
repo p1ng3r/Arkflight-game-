@@ -34,7 +34,7 @@ function settle(s){
     const b=ship.batteries.find(b=>b.id===e.batteryId);if(b&&b.readyRound>s.round){b.readyRound+=e.value;consume(s,ship.id,[e]);}
   }
 }
-function assertSettled(s){if(s.complicationQueue.length||s.complications.choices.some(c=>c.status==="pending"))throw new Error("Resolve the pending complication choices first.");if(s.pendingDiscard)throw new Error("Discard the required cards first.");}
+function assertSettled(s){if(s.pendingCardChoice)throw new Error("Choose a card from the pending selection first.");if(s.complicationQueue.length||s.complications.choices.some(c=>c.status==="pending"))throw new Error("Resolve the pending complication choices first.");if(s.pendingDiscard)throw new Error("Discard the required cards first.");}
 async function check(s,ship,station,skill,services,{dc=ship.profile.dc,batteryId=null,coordinated=false,bonus=0,save=false,cardId=null,instanceId=null}={}){
   if(ALPHA_SKILLS[station]&&!ALPHA_SKILLS[station].includes(skill??ALPHA_SKILLS[station][0]))throw new Error("Choose one of this station's three skills.");
   const baseline=save&&station==="engineer"?ship.profile.engineer:save&&station==="veilwarden"?ship.profile.veil:station==="structure"?ship.profile.structure:station==="initiative"?ship.profile.level+2:station==="battlewatch"?ship.profile.attack:ship.profile.support;
@@ -74,7 +74,7 @@ export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTION
   const s={schemaVersion:1,id,revision:0,round:1,phase:"planning",ships:{},plans:{},locked:{},turnOrder:[],turnIndex:0,attacks:[],attackIndex:0,damage:[],serial:0,actionSerial:0,actions:[],complicationQueue:[],pendingDiscard:null,log:[],movement:null,boarding:[],directions:copy(directions),headings:[...headings],basis:copy(basis),randomState:seed,complete:false};
   for(const [i,e] of entries.entries()){
     if(!isId(e.id)||typeof e.name!=="string"||!e.name.trim()||!isId(e.team))throw new Error("Provide valid ship IDs, names and teams.");
-    const profile=deriveAlphaProfile(e), pose=e.pose??{q:i%2?4:0,r:Math.floor(i/2)*4,heading:i%2?5:2};
+    const profile=deriveAlphaProfile(e);if(roundFlow===2)profile.maneuverSetVersion=2;const pose=e.pose??{q:i%2?4:0,r:Math.floor(i/2)*4,heading:i%2?5:2};
     if(![pose.q,pose.r,pose.heading].every(Number.isSafeInteger)||pose.heading<0||pose.heading>5)throw new Error("Invalid starting hex/facing.");
     const deck=starter(e.deck,profile), instances=Object.fromEntries(deck.map((c,n)=>[`${c}-${n}`,c]));
     const ship={id:e.id,name:e.name,team:e.team,actorId:e.actorId??null,stationActors:copy(e.stationActors??{}),profile,pose:{...pose},resources:{hull:{value:profile.maxHull,max:profile.maxHull},lifeveil:{value:100,max:100},morale:{value:100,max:100},strain:{value:0,max:profile.strain},supplies:{value:20,max:20}},ap:profile.ap,instances,library:[...new Set(e.learned??deck)],loadoutId:e.loadoutId??null,libraryRevision:e.libraryRevision??null,drawPile:shuffle(s,Object.keys(instances)),hand:[],discard:[],burned:[],prepared:[],effects:[],batteries:batteries(profile),ammo:{chainshot:2},mulliganDone:false,drPlayedRound:0,regroupRound:0,bonusTravel:0,bonusTurns:0};
@@ -192,7 +192,7 @@ async function play(s,ship,cmd,services){
   spend(ship,card.ap);
   if(card.id==="patch")track(ship,"supplies",-1);
   if(["shield","harmonic"].includes(card.id))track(ship,"lifeveil",-5);
-  if(card.id==="overcharge"){
+  if(["overcharge","tune"].includes(card.id)){
     if(ship.resources.strain.value>=ship.resources.strain.max)throw new Error("Vent Strain before overcharging at full capacity.");
     const extra=alphaComplications(s,ship.id).filter(e=>e.rule==="extra-card-strain");track(ship,"strain",1+Math.max(0,...extra.map(e=>e.value)));consume(s,ship.id,extra);
   }
@@ -226,6 +226,12 @@ async function play(s,ship,cmd,services){
   if(card.id==="rally")track(ship,"morale",await roll(s,degree===2?"2d10+5":"1d10+5",services));
   if(card.id==="vent")track(ship,"strain",-(await roll(s,degree===2?"2d4+1":"1d4+1",services)+Math.floor(ship.profile.level/4)));
   if(card.id==="work-guns"){const b=battery(s,ship,cmd.batteryId);b.readyRound=Math.max(s.round,b.readyRound-(degree===2?2:1));}
+  if(["tune","exploit"].includes(card.id))draw(s,ship,1);
+  if(card.id==="tune"){effect(s,ship,"capacitor",degree===2?8:6,1);}
+  if(card.id==="exploit"){effect(s,ship,"accuracy",degree===2?2:1);if(ship.effects.some(e=>e.kind==="capacitor"))effect(s,ship,"capacitor-link",degree===2?8:6,1);}
+  if(card.id==="dispatch")draw(s,ship,degree===2?3:2);
+  if(card.id==="survey"){const n=degree===2?4:3,old=ship.hand.length;draw(s,ship,n);const options=ship.hand.splice(old);if(options.length)s.pendingCardChoice={shipId:ship.id,station,kind:"survey",options};}
+  if(card.id==="recover"){const options=ship.discard.filter(id=>!ALPHA_CARDS[ship.instances[id]].burn);if(options.length)s.pendingCardChoice={shipId:ship.id,station,kind:"recover",options,drawAfter:degree===2?1:0};else if(degree===2)draw(s,ship,1);}
   if(card.id==="read"){draw(s,ship,degree===2?2:1);if(degree===2&&ship.hand.length)s.pendingDiscard={shipId:ship.id,count:1};}
   if(["helm","breakaway"].includes(card.id))await adjust(s,ship,cmd,services,degree);
   if(card.id==="ahead")await adjust(s,ship,cmd,services,degree,(degree===2?3:2)+ship.profile.bonusMove);
@@ -281,7 +287,8 @@ async function resolveAttack(s,services){
   let bonus=order.bonusDice, overcharge=useBuff(attacker,"damage-die");
   const restrictions=alphaComplications(s,attacker.id).filter(e=>e.batteryId===b.id);
   if(restrictions.some(e=>e.rule==="no-bonus-weapon-damage")){bonus=null;overcharge=0;}
-  let formula=order.formula+(bonus?`+${bonus}`:"")+(overcharge?`+1d${overcharge}`:"")+(attacker.profile.damageBonus?`+${attacker.profile.damageBonus}`:"");
+  const capacitor=result.degree>=1&&!restrictions.some(e=>e.rule==="no-bonus-weapon-damage")?useBuff(attacker,"capacitor"):0,link=capacitor?useBuff(attacker,"capacitor-link"):0;
+  let formula=order.formula+(capacitor?`+1d${capacitor}`:"")+(link?`+1d${link}`:"")+(bonus?`+${bonus}`:"")+(overcharge?`+1d${overcharge}`:"")+(attacker.profile.damageBonus?`+${attacker.profile.damageBonus}`:"");
   const rolled=result.degree>=1?await roll(s,formula,services):0;
   const raw=result.degree===2?rolled*2:rolled;
   const drGap=Math.max(0,...opportunities.filter(e=>e.rule==="dr-gap").map(e=>e.value)), resistanceGap=Math.max(0,...opportunities.filter(e=>e.rule==="resistance-gap").map(e=>e.value));

@@ -14,7 +14,7 @@ test("all alpha cards have clear type bands and four station-appropriate authore
 });
 test("pile inspection never reveals the draw order, draws a card or mutates the encounter",()=>{
   const s=fixture(),before=structuredClone(s),ship=s.ships.a;
-  assert.equal(combatPiles(s,ship).length,5);assert.equal(combatPiles(s,ship).find(p=>p.id==="draw").count,10);
+  assert.equal(combatPiles(s,ship).length,5);assert.equal(combatPiles(s,ship).find(p=>p.id==="draw").count,15);
   const draw=inspectCombatPile(s,ship,"draw");assert.deepEqual(draw.cards,[]);assert.ok(!("drawPile" in draw));
   assert.equal(inspectCombatPile(s,ship,"complications").count,24);assert.deepEqual(s,before);
 });

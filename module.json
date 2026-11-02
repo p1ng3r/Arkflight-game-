@@ -76,7 +76,8 @@
     "styles/alpha-ship-library.css",
     "styles/alpha-command-deck.css",
     "styles/alpha-master-card.css",
-    "styles/alpha-round-deck.css"
+    "styles/alpha-round-deck.css",
+    "styles/alpha-canvas-hud.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
