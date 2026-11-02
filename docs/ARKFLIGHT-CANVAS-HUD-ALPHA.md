@@ -1,3 +1,5 @@
+> Movement follow-up build: `alpha-independent-routes-20261102`. Choose a fresh template for each ship each round; prior-round local choices no longer carry over. The fleet confirmation lists each ship’s saved route and instructions. Debug exports include the authoritative plan/lock maps.
+
 # Canvas command HUD and 20-card starter
 
 Build: `alpha-canvas-hud-20261102`. Branch: `feat/1.1-complication-foundation`.

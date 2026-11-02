@@ -9,7 +9,7 @@ export function debugValue(value,depth=0,seen=new WeakSet()){
  const result={};for(const key of Object.keys(value).slice(0,100)){if(redactKey.test(key))result[key]='[redacted]';else try{result[key]=debugValue(value[key],depth+1,seen);}catch{result[key]='[unreadable]';}}return result;
 }
 export function guidedSnapshot(s){
- if(!s)return null;return{id:s.id,revision:s.revision,phase:s.phase,round:s.round,guidedTest:s.guidedTest,pendingCrewAction:s.pendingCrewAction,pendingCardChoice:s.pendingCardChoice,cardFollowup:s.cardFollowup,pendingDiscard:s.pendingDiscard,
+ if(!s)return null;return{id:s.id,revision:s.revision,phase:s.phase,round:s.round,plans:s.plans,locked:s.locked,guidedTest:s.guidedTest,pendingCrewAction:s.pendingCrewAction,pendingCardChoice:s.pendingCardChoice,cardFollowup:s.cardFollowup,pendingDiscard:s.pendingDiscard,
  ships:Object.values(s.ships??{}).map(ship=>({id:ship.id,name:ship.name,level:ship.profile.level,ap:ship.ap,pose:ship.pose,resources:ship.resources,hand:ship.hand.map(id=>({instance:id,card:ship.instances[id]})),drawCount:ship.drawPile.length,discardCount:ship.discard.length,stations:ship.stationActors,prepared:ship.prepared,effects:ship.effects,batteries:ship.batteries})),
  attacks:s.attacks,damage:s.damage,cardPlans:s.cardPlans,conditions:s.complications?.effects,systemSaves:s.systemSaves,recentLog:(s.log??[]).slice(-12),pendingChoices:s.complications?.choices?.filter(c=>c.status==='pending'),journal:s.roundJournal};
 }
