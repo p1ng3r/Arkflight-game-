@@ -105,7 +105,8 @@ export async function prepareAlphaFleet(command){
   if(game.combats.contents.some(c=>c.active&&c.started&&!c.flags?.[MODULE]?.alphaCombat))throw new Error("End the other active Foundry encounter before creating the alpha test.");
   let scene=game.scenes.contents.find(s=>s.flags?.[MODULE]?.alphaCombatScene===true&&Boolean(s.flags?.[MODULE]?.alphaGuidedFixture)===guided);
   if(scene&&scene.tokens.contents.some(t=>!t.flags?.[MODULE]?.[FLAG]))throw new Error("The alpha scene contains other tokens. Use a clean dedicated alpha scene before resetting fixtures.");
-  if(!scene)scene=await Scene.create({name:guided?"[Test] Arkflight — Three-Round Crew Test":"[Alpha] Arkflight — Ship Combat",width:3200,height:2600,padding:.1,active:false,navigation:true,backgroundColor:"#081925",grid:{type:4,size:100,distance:1,units:"hex",color:"#74949f",alpha:.3},flags:{[MODULE]:{alphaCombatScene:true,...(guided?{alphaGuidedFixture:true}:{})}}});
+  if(!scene)scene=await Scene.create({name:guided?"[Test] Arkflight — Three-Round Crew Test":"[Alpha] Arkflight — Ship Combat",width:3200,height:2600,padding:.1,active:false,navigation:true,backgroundColor:"#081925",background:{src:"modules/arkflight-game/assets/ui/canvas-hud/test-starfield.webp",scaleX:2,scaleY:2600/900},grid:{type:4,size:100,distance:1,units:"hex",color:"#74949f",alpha:.3},flags:{[MODULE]:{alphaCombatScene:true,...(guided?{alphaGuidedFixture:true}:{})}}});
+  await ensureAlphaTestBackdrop({canvas:{sceneId:scene.id}});
   await scene.view();
   const c=globalThis.canvas;if(c?.scene?.id!==scene.id||!c.grid?.isHexagonal)throw new Error("Wait for the alpha hex scene to load, then retry setup.");
   const geometry=gridGeometry(c.grid), rect=c.dimensions.sceneRect, origin=c.grid.getCube({x:rect.x+rect.width/2,y:rect.y+rect.height/2});
@@ -156,3 +157,9 @@ export async function syncAlphaTracker(state){
   await ui.combat?.render({force:true,renderContext:"arkflightAlpha",renderData:{}});
 }
 const livingHull=ship=>ship.resources.hull.value>0;
+
+/** Decorate only dedicated alpha fixtures with no custom background. Never change their grid or tokens. */
+export async function ensureAlphaTestBackdrop(state){
+ if(!game.user?.isGM)return false;const scene=game.scenes.get(state?.canvas?.sceneId);if(!scene||scene.flags?.[MODULE]?.alphaCombatScene!==true||scene.background?.src||typeof scene.update!=='function')return false;
+ await scene.update({'background.src':'modules/arkflight-game/assets/ui/canvas-hud/test-starfield.webp','background.scaleX':(scene.width??3200)/1600,'background.scaleY':(scene.height??2600)/900,backgroundColor:'#081925'});return true;
+}

@@ -1,0 +1,109 @@
+/* Illustrated Arkflight skin. Interactive controls remain DOM elements over the native canvas. */
+#arkflight-round-deck{--hud-brass:#d7b36c;--hud-deep:#061a23;--hud-cyan:#83ece4;--ornate-corner-tl:url('../assets/ui/panels/ui_panel_frame_corner_top_left.webp');--ornate-corner-tr:url('../assets/ui/panels/ui_panel_frame_corner_top_right.webp');--ornate-corner-bl:url('../assets/ui/panels/ui_panel_frame_corner_bottom_left.webp');--ornate-corner-br:url('../assets/ui/panels/ui_panel_frame_corner_bottom_right.webp')}
+#arkflight-round-deck .hud-phase-bar{top:8px;min-height:78px;padding:9px 20px 9px 14px;gap:9px;border:2px solid #c4a568;border-radius:0;background:linear-gradient(100deg,#061e29f5,#123541ef 45%,#061821f5);box-shadow:inset 0 0 0 3px #4e401c,inset 0 0 0 5px #d6b67455,0 8px 25px #0006;box-sizing:border-box}
+#arkflight-round-deck :is(.hud-phase-bar,.round-command-header,.round-ship-status,.hud-basic-actions,.round-maneuver-table,.round-firing-table,.round-planning-tray,.round-recap,.round-crew-panel):before{content:'';position:absolute;inset:-5px;pointer-events:none;z-index:2;background:var(--ornate-corner-tl) left top/86px 86px no-repeat,var(--ornate-corner-tr) right top/86px 86px no-repeat,var(--ornate-corner-bl) left bottom/86px 86px no-repeat,var(--ornate-corner-br) right bottom/86px 86px no-repeat}
+#arkflight-round-deck .hud-brand{display:flex;align-items:center;gap:7px;min-width:190px;margin-right:8px}
+#arkflight-round-deck .hud-brand img{width:61px;height:54px;object-fit:contain;filter:drop-shadow(0 2px 3px #000)}
+#arkflight-round-deck .hud-brand>span{color:#f3da9c;font:700 26px/1 Georgia,serif;text-shadow:0 2px 2px #000;letter-spacing:1px}
+#arkflight-round-deck .hud-brand small{display:block;font:9px/1.5 Arial,sans-serif;letter-spacing:1px;margin-top:5px;color:#ceb982}
+#arkflight-round-deck .hud-phase-badge{position:relative;flex:1;min-width:62px;padding:10px 9px;text-align:center;color:#c5c3ac;font:600 13px Georgia,serif;border:1px solid #8f7943;clip-path:polygon(8% 0,92% 0,100% 50%,92% 100%,8% 100%,0 50%);background:linear-gradient(#203844,#081e27);text-shadow:0 2px 1px #000}
+#arkflight-round-deck .hud-phase-badge.active{color:#fff1bb;background:linear-gradient(#305b5d,#0b333a);border-color:#ecd293;filter:drop-shadow(0 0 7px #61e0df);box-shadow:inset 0 0 12px #7bede66b}
+#arkflight-round-deck .hud-phase-badge.done{opacity:.65}
+#arkflight-round-deck .hud-readiness{padding-left:205px;gap:18px;font-size:10px;flex-basis:100%;margin-top:-8px}
+#arkflight-round-deck .hud-build-stamp{position:absolute;right:18px;bottom:5px;font:8px monospace;color:#b3bdae;opacity:.75}
+#arkflight-round-deck .hud-visibility{top:103px;min-width:110px;border:2px solid #c5a866;border-radius:0;background:linear-gradient(#183b42,#061e27);font:600 12px Georgia,serif;color:#eacb8c}
+#arkflight-round-deck .hud-ship-panel{top:145px;bottom:24px;max-height:calc(100dvh - 170px);width:270px;gap:12px;overflow-y:auto;padding:6px;box-sizing:border-box;scrollbar-width:thin}
+#arkflight-round-deck .round-command-header,#arkflight-round-deck .round-ship-status,#arkflight-round-deck .hud-basic-actions{position:relative!important;border:2px solid #baa064;border-radius:0;box-shadow:inset 0 0 0 3px #b9944c22,0 5px 12px #0006;background:radial-gradient(ellipse at 25% 0,#20434cdd,#061b25f5 80%);padding:19px 15px;flex:0 0 auto}
+#arkflight-round-deck .round-command-header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:15px}
+#arkflight-round-deck .hud-ship-portrait{width:100%;height:64px;background:transparent;border:0;padding:0;position:relative;z-index:3;cursor:pointer}
+#arkflight-round-deck .hud-ship-portrait img{max-width:150px;width:auto;height:62px;object-fit:contain;transform:rotate(90deg);filter:sepia(.3) drop-shadow(0 0 6px #dfbd6266)}
+#arkflight-round-deck .round-ship-name{flex:0 0 100%;text-align:center}
+#arkflight-round-deck .round-ship-name>small{display:none}
+#arkflight-round-deck .round-ship-name select{width:100%;max-width:none;font:600 15px Georgia,serif;color:#efdaaa;background:#0a242e;border:0;border-bottom:1px solid #9f874b;text-align:center}
+#arkflight-round-deck .round-command-header .hud-ship-sheet{flex:1;font:11px Georgia,serif;border:1px solid #a78a4b;background:#15343d;min-height:29px}
+#arkflight-round-deck .round-command-header .round-phase-caption{flex:0 0 100%;font-size:11px;margin-top:4px}
+#arkflight-round-deck .round-phase-caption>b{color:#e1c782}
+#arkflight-round-deck .round-phase-caption>small{font-size:10px!important;line-height:1.35;display:block!important;margin-top:4px;max-width:100%;white-space:normal}
+#arkflight-round-deck .round-command-header .round-ap-counter{display:none}
+#arkflight-round-deck .round-command-header .round-settings{right:13px;top:15px}
+#arkflight-round-deck .round-ship-status{display:flex;flex-direction:column;gap:13px;padding:22px 18px}
+#arkflight-round-deck .hud-resource{display:flex;gap:10px;align-items:center;min-width:0}
+#arkflight-round-deck .hud-resource>i{width:22px;flex:0 0 22px;font-size:22px;color:#dbbc75;filter:drop-shadow(0 1px 2px #000)}
+#arkflight-round-deck .hud-resource-content{flex:1;min-width:0}
+#arkflight-round-deck .hud-resource-label{display:flex;justify-content:space-between;gap:6px;align-items:baseline;margin-bottom:5px;font:600 13px Georgia,serif}
+#arkflight-round-deck .hud-resource-label b{font-size:13px;color:#f4dca6;white-space:nowrap}
+#arkflight-round-deck .hud-resource-label small{font-size:10px;color:#899e9d}
+#arkflight-round-deck .hud-resource-gauge{display:flex;gap:3px;filter:drop-shadow(0 0 3px #5ed9d536)}
+#arkflight-round-deck .hud-resource-gauge>span{flex:1;height:8px;border-radius:3px;border:1px solid #8c8c57;background:#07151e;box-shadow:inset 0 1px 2px #000}
+#arkflight-round-deck .hud-resource-gauge>.is-filled{background:linear-gradient(#d2fff0,#64e4d5 45%,#1e939e);border-color:#bcffe1;box-shadow:0 0 4px #63e3da66}
+#arkflight-round-deck .meter-strain .is-filled{background:linear-gradient(#ffe8a7,#d9983f);border-color:#ebc67e}
+#arkflight-round-deck .hud-resource.is-warning .hud-resource-label{color:#f4b99c}
+#arkflight-round-deck .hud-basic-actions{gap:9px;padding:22px 16px 18px}
+#arkflight-round-deck .hud-basic-actions>b{color:#efd194;font:700 14px Georgia,serif;letter-spacing:.5px;text-align:center;margin-bottom:7px}
+#arkflight-round-deck .hud-basic-actions>[data-round-action="weapons"],#arkflight-round-deck .round-primary{border:2px solid #d8bc79;border-radius:0;background:linear-gradient(125deg,#1a4148,#09242e);box-shadow:inset 0 0 0 2px #715a2e,inset 0 0 12px #76e9d31c,0 3px 5px #0005;color:#ffe3a0;text-shadow:0 2px 1px #000;font-family:Georgia,serif;letter-spacing:.3px;min-height:40px}
+#arkflight-round-deck .round-primary:hover,#arkflight-round-deck .hud-basic-actions>[data-round-action="weapons"]:hover{background:linear-gradient(#28585c,#0b2e38);box-shadow:0 0 12px #7ce2da44,inset 0 0 0 2px #a18340}
+#arkflight-round-deck .hud-crew-toggle{position:relative;pointer-events:auto;flex:0 0 auto;min-height:35px;width:100%;border:1px solid #c6a362;border-radius:0;background:#0b2b36;color:#f0d18b;font:600 12px Georgia,serif}
+#arkflight-round-deck .hud-ship-panel>.hud-crew-rail{position:static!important;inset:auto!important;width:100%;max-height:260px;overflow:auto;display:flex;flex-direction:column;padding:8px;box-sizing:border-box;gap:6px;border:1px solid #ad9257;background:#071e2ae6;flex:0 0 auto}
+#arkflight-round-deck .hud-crew-rail button{flex:none;width:100%;min-height:42px;gap:9px}
+#arkflight-round-deck .hud-crew-rail small{max-width:190px;font-size:10px}
+#arkflight-round-deck .hud-crew-rail span{font-size:12px}
+#arkflight-round-deck .round-hand-table{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;left:calc(var(--hud-left) + 3px);right:calc(var(--hud-right) + 280px);bottom:16px;gap:8px;height:290px;padding:20px 0 4px;align-items:flex-end;pointer-events:none;overflow:visible;max-width:100%;box-sizing:border-box}
+#arkflight-round-deck .round-hand{pointer-events:auto;background:transparent;align-items:flex-end;min-height:0!important;gap:0;padding:20px 5px 12px 6px;scroll-snap-type:x proximity;max-height:300px}
+#arkflight-round-deck .round-hand-card{flex:0 0 158px;width:158px;max-width:158px;height:254px!important;margin-left:-9px;overflow:visible;border:0;border-radius:0;background:#092632;box-shadow:0 4px 8px #0008;transform:rotate(var(--card-tilt,0deg));transform-origin:bottom center;isolation:isolate;padding:9px 11px 13px;box-sizing:border-box}
+#arkflight-round-deck .round-hand-card:first-child{margin-left:0}
+#arkflight-round-deck .round-hand-card:after{content:'';inset:-3px;position:absolute;pointer-events:none;z-index:5;border:0;border-radius:0;background:url('../assets/ui/card-combat/animation-art/ability-card-frame.webp') center/100% 100% no-repeat;opacity:1}
+#arkflight-round-deck .round-hand-card:hover,#arkflight-round-deck .round-hand-card:focus-visible,#arkflight-round-deck .round-hand-card:is(.is-selected,.is-queued){transform:translateY(-15px) rotate(0deg);z-index:7;box-shadow:0 0 22px #80e9db44,0 8px 10px #0008}
+#arkflight-round-deck .round-hand-card .round-hand-band{position:relative;z-index:6;margin:0 4px 0;padding:3px 0;font:700 8px Arial,sans-serif;letter-spacing:1px;flex:0 0 auto;background:#83c9bc;color:#082b31}
+#arkflight-round-deck .round-hand-card.theme-prepared .round-hand-band{background:#c2abd8}
+#arkflight-round-deck .round-hand-card.theme-instant .round-hand-band{background:#95cce6}
+#arkflight-round-deck .round-hand-card.theme-burn .round-hand-band{background:#e5bc6b}
+#arkflight-round-deck .hud-card-illustration{height:115px;flex:0 0 115px;position:relative;overflow:hidden;background:#0b2732;margin:0 0 2px}
+#arkflight-round-deck .hud-card-illustration .hud-card-scene{width:100%!important;height:100%!important;object-fit:cover!important;margin:0;filter:none}
+#arkflight-round-deck .hud-card-illustration .hud-card-emblem{position:absolute;right:3px;bottom:3px;width:31px!important;height:31px!important;object-fit:contain!important;filter:drop-shadow(0 1px 3px #000);background:#0b2535aa;border:1px solid #b79b63;border-radius:50%;margin:0}
+#arkflight-round-deck .round-hand-card>strong{background:linear-gradient(#ead9ad,#c3ae7d);color:#1d241f;text-shadow:none;margin:0 -1px;padding:4px 2px;min-height:29px;max-height:32px;font:700 12px/1.1 Georgia,serif;position:relative;z-index:6;box-sizing:border-box;overflow:hidden}
+#arkflight-round-deck .round-hand-card>small{font:9px/12px Georgia,serif;color:#d1bd84;margin:3px 0 0!important;position:relative;z-index:6}
+#arkflight-round-deck .round-hand-card .hud-card-rules{font:9px/11px Arial,sans-serif!important;color:#d6dfd5;-webkit-line-clamp:4!important;margin:3px 0 0!important;max-height:44px;position:relative;z-index:6}
+#arkflight-round-deck .round-hand-card .round-hand-state{font-size:8px;position:relative;z-index:6;border:0;color:#ccb983;margin-top:auto}
+#arkflight-round-deck .round-hand-card .round-hand-cost{position:absolute;z-index:9;top:17px;right:6px;width:27px;height:27px;border:2px solid #ead291;color:#ffdf8f;background:radial-gradient(#16454b,#091c26);border-radius:50%;font:700 18px Georgia,serif;line-height:23px;box-shadow:0 0 0 2px #57472c}
+#arkflight-round-deck .round-deck-stack{flex:0 0 88px;width:88px;max-height:none!important;transform:none!important;pointer-events:auto;align-self:flex-end;padding-bottom:4px}
+#arkflight-round-deck .round-draw-deck{width:78px!important;height:126px!important;min-height:126px!important;border-radius:5px!important;transform:rotate(-5deg);box-shadow:3px 3px 0 #917644,6px 6px 0 #3d3020!important}
+#arkflight-round-deck .round-hand-limit{font-size:9px;color:#d0bd85;margin-top:10px}
+#arkflight-round-deck .round-discard-pile{font-size:10px;color:#d0bd85}
+#arkflight-round-deck .hud-ap-medallion{pointer-events:auto;flex:0 0 65px;width:65px;height:93px;display:flex;flex-direction:column;align-items:center;justify-content:center;align-self:flex-end;margin:0 9px 35px 4px;background:linear-gradient(145deg,#99773e,#f2d396 15%,#4e3c21 17%,#0b343c 20%,#061d27 78%,#c9aa62 82%,#6e532f);clip-path:polygon(18% 0,82% 0,100% 17%,100% 78%,50% 100%,0 78%,0 17%);color:#9df7e9;filter:drop-shadow(0 3px 5px #000)}
+#arkflight-round-deck .hud-ap-medallion small{font:600 13px Georgia,serif;color:#f3d78e;letter-spacing:2px}
+#arkflight-round-deck .hud-ap-medallion b{font:500 38px/1.2 Georgia,serif;text-shadow:0 0 10px #73e1d8}
+#arkflight-round-deck :is(.round-maneuver-table,.round-planning-tray,.round-firing-table,.round-recap){top:114px;border:2px solid #b79b5c;border-radius:0;background:radial-gradient(ellipse at 0 0,#1a3c45,#061c26 85%);padding:18px 14px;box-shadow:inset 0 0 0 3px #baa15a22,0 6px 18px #0006}
+#arkflight-round-deck .round-maneuver-table{bottom:225px;width:290px;padding:22px 18px 12px}
+#arkflight-round-deck .round-maneuver-strip button{border:1px solid #947b44;border-radius:0;background:linear-gradient(90deg,#163b43,#09222b);box-shadow:inset 0 1px #d1b56c22;font-family:Georgia,serif;min-height:39px!important;height:39px!important;max-height:39px!important}
+#arkflight-round-deck .round-maneuver-strip button.is-selected{border-color:#f3d386;background:linear-gradient(90deg,#225457,#0e333b);box-shadow:inset 0 0 10px #7bead133}
+#arkflight-round-deck .round-firing-table{padding:18px 8px 0;width:350px;max-height:calc(100dvh - 300px)}
+#arkflight-round-deck .round-firing-heading{font:600 18px Georgia,serif;color:#f1d494;padding:0 10px 8px}
+#arkflight-round-deck .round-battery-row article{border:1px solid #9f8751;border-radius:0;background:linear-gradient(120deg,#193b45,#08222d)}
+#arkflight-round-deck .round-firing-table .round-decision-bar{margin:0 -8px;border-top:2px solid #c7a45a;background:#071f2b;padding:12px}
+#arkflight-round-deck.hud-is-hidden :is(.hud-brand,.hud-ap-medallion,.hud-crew-toggle){display:none}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .round-hand-table{height:177px!important;bottom:5px}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .round-hand-card{height:151px!important}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .hud-card-illustration{height:89px;flex-basis:89px}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .round-hand-card :is(.hud-card-rules,.round-hand-state,small){display:none!important}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .round-deck-stack{max-height:none;width:88px;flex-basis:88px}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .round-draw-deck{width:78px!important;height:126px!important;min-height:126px!important}
+#arkflight-round-deck [data-alpha-layout="minimalist"]:before{display:none}
+#arkflight-round-deck[data-alpha-layout="minimalist"] :is(.hud-phase-bar,.round-command-header,.round-ship-status,.hud-basic-actions,.round-maneuver-table,.round-firing-table,.round-planning-tray):before{display:none}
+#arkflight-round-deck[data-alpha-layout="minimalist"] .round-hand-card:after{display:none}
+#arkflight-round-deck[data-alpha-layout="minimalist"] .hud-card-emblem{display:none}
+#arkflight-round-deck[data-alpha-layout="minimalist"] .round-hand-card{border:1px solid #b69c62}
+@media(max-width:1450px){#arkflight-round-deck .hud-brand{min-width:152px}#arkflight-round-deck .hud-brand img{width:42px}#arkflight-round-deck .hud-brand>span{font-size:21px}#arkflight-round-deck .hud-phase-badge{font-size:11px;padding:9px 4px;min-width:48px}#arkflight-round-deck .hud-readiness{padding-left:158px}#arkflight-round-deck .hud-ship-panel{width:238px}#arkflight-round-deck .round-hand-table{right:calc(var(--hud-right) + 245px)}#arkflight-round-deck .round-hand-card{flex-basis:145px;width:145px;max-width:145px}#arkflight-round-deck .hud-ap-medallion{flex-basis:51px;width:51px;margin-right:4px}#arkflight-round-deck .round-deck-stack{flex-basis:75px;width:75px}}
+@media(max-width:1100px){#arkflight-round-deck .hud-phase-bar{gap:4px;padding:8px}#arkflight-round-deck .hud-brand{min-width:120px}#arkflight-round-deck .hud-brand img{display:none}#arkflight-round-deck .hud-phase-badge{font-size:10px;min-width:40px}#arkflight-round-deck .hud-ship-panel{width:210px}#arkflight-round-deck .round-hand-table{right:calc(var(--hud-right) + 215px)}#arkflight-round-deck .hud-readiness{padding-left:0;font-size:9px}}
+#arkflight-round-deck .hud-card-scene{object-position:50% 25%}
+#arkflight-round-deck .hud-resource{width:100%;text-align:left}
+#arkflight-round-deck .hud-resource-label{width:100%;text-align:left}
+#arkflight-round-deck[data-hud-phase="opening"] .round-hand-table,#arkflight-round-deck[data-hud-phase="card-planning"] .round-hand-table,#arkflight-round-deck[data-hud-phase="draw"] .round-hand-table{bottom:64px}
+#arkflight-round-deck .round-workspace>.round-decision-bar{right:calc(var(--hud-right) + 280px);box-sizing:border-box}
+@media(max-width:1350px){#arkflight-round-deck .round-hand-table{right:var(--hud-right)}#arkflight-round-deck .hud-ship-panel{max-height:calc(100dvh - 470px);bottom:auto}#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .hud-ship-panel{max-height:calc(100dvh - 340px)}#arkflight-round-deck .round-workspace>.round-decision-bar{right:var(--hud-right)}}
+#arkflight-round-deck .hud-crew-toggle{position:fixed!important;right:calc(var(--hud-right) + 118px);top:103px;width:120px;min-height:31px;margin:0;z-index:6}
+#arkflight-round-deck .hud-crew-rail{position:fixed!important;right:calc(var(--hud-right) + 6px)!important;left:auto!important;top:145px!important;bottom:auto!important;width:258px;max-height:calc(100dvh - 350px);overflow:auto;display:flex;flex-direction:column;gap:7px;background:#09232ff5;border:2px solid #c4a465;border-radius:0;box-shadow:inset 0 0 0 3px #5f4d27,0 5px 15px #0008;padding:17px;box-sizing:border-box;z-index:5}
+#arkflight-round-deck .hud-crew-rail>strong{font:600 13px Georgia,serif;color:#ecd498;text-align:center;margin:0 0 8px}
+#arkflight-round-deck[data-crew-open="true"] .hud-ship-panel{visibility:hidden;pointer-events:none}
+@media(max-width:1350px){#arkflight-round-deck .hud-ship-panel{max-height:calc(100dvh - 500px)}#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .hud-ship-panel{max-height:calc(100dvh - 365px)}#arkflight-round-deck .hud-crew-rail{width:226px}}
+.arkflight-round-deck.round-portrait-window .round-art-well>img{object-fit:cover!important;object-position:50% 25%;width:100%;height:100%;filter:none}
+.arkflight-round-deck.round-portrait-window .round-art-card{border:3px double #d7b56f;box-shadow:inset 0 0 0 2px #69552c,0 10px 35px #0008}

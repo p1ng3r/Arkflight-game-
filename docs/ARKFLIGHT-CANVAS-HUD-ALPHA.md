@@ -66,3 +66,11 @@ Fresh current-flow profiles receive ten curated starting routes. Handling/speed 
 Validation: **926 Node tests passed**. A Chromium walkthrough passed sheet access, canvas click-through, independent route selection, phase-specific menus, card commitment, station skill rolls, targeting, a chosen Battle Watch skill and saved-hit damage.
 
 Node regressions cover the starter, instance conservation, choice escrow, forged/foreign selections, overflow, follow-up AP spending, recovery, charge consumption and all hull menus. Browser tests use actual templates/controllers with public-document doubles: sheet buttons, transparent battlefield clicks, independent routes, ten templates, hide/show and phase transitions. These are not a substitute for live Foundry v14/PF2e multiplayer acceptance. Audio is opt-in through the visible switch; reduced-motion and volume preferences remain honored. All new raster artwork is WebP at quality 75.
+
+
+## Ornate HUD build: alpha-ornate-hud-20261103
+Brass panel frames, illustrated card faces, a fanned hand, AP medallion and segmented resource gauges replace the plain presentation. Show crew / Hide crew is beside Hide HUD at the top right. Crew opens in the right panel and each portrait opens its character sheet. Visibility is saved per client; the strip starts hidden.
+
+Six new illustrations use WebP quality 75 and a mix of men and women. Dedicated blank Arkflight test scenes receive a starfield; campaign scenes and existing background art are preserved. Restart Foundry to load the new manifest stylesheet, then hard refresh each client. No encounter reset is required. The visible build stamp identifies the loaded version.
+
+Validation: 930 automated tests pass. Browser harness checks cover crew visibility and sheet access, loaded art, resource gauges, canvas clicks, maneuver locking and a reachable firing footer at laptop size. The preview is a browser harness rendering of the actual HUD templates, not a live Foundry screenshot. Live Foundry visual acceptance remains to be checked.

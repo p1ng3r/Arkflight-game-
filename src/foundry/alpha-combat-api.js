@@ -9,9 +9,9 @@ import { ALPHA_CARDS, ALPHA_SKILLS } from "../alpha/cards.js";
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS } from "../alpha/hulls.js";
 import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
-import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker } from "./alpha-combat-canvas.js";
+import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker, ensureAlphaTestBackdrop } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-arc-toggle-20261103";
+export const ALPHA_BUILD="alpha-ornate-hud-20261103";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -254,3 +254,5 @@ Hooks.on("preUpdateCombat",(combat,changes,options)=>{if(combat.flags?.[MODULE]?
 Hooks.on("updateActor",(_actor,changes)=>{if(Object.keys(changes).some(key=>key==="name"||key==="ownership"||key.startsWith("ownership.")||key.startsWith(`flags.${MODULE}.`)||key==="flags"&&Object.hasOwn(changes.flags??{},MODULE)))Hooks.callAll("arkflightAlphaChanged");});
 
 Hooks.on("renderChatMessageHTML",bindCrewChat);
+
+Hooks.once('ready',()=>{const state=game.arkflight?.alphaCombat?.state();if(state?.canvas)void ensureAlphaTestBackdrop(state).catch(error=>console.warn('Arkflight | Test backdrop unavailable',error));});
