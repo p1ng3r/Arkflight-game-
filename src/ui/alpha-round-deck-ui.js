@@ -20,6 +20,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
  constructor(o={}){super({...o,position:alphaWindowPosition(960,450,o.position)});}
  async _prepareContext(options){
   const api=game.arkflight.alphaCombat,s=api.state(),request=s?.pendingCrewAction,row=currentPlannedCard(s??{ships:{},turnOrder:[],turnIndex:0});
+  if(!this.resolutionOnly&&s?.phase==='firing'){const key=`${s.id}:${s.round}:${s.firingIndex}`;if(this.firingFocusKey!==key){this.firingFocusKey=key;const active=s.turnOrder[s.firingIndex];if(api.ownsShip(active))this.shipId=active;}}
   if(this.resolutionOnly&&!this.guidedHold&&s?.roundFlow===2){if(request&&api.ownsShip(request.shipId)){this.shipId=request.shipId;this.inspectId=request.command.instanceId??null;}else if(s.phase==='resolving'&&!s.cardFollowup&&row&&api.ownsShip(s.turnOrder[s.turnIndex])){this.shipId=s.turnOrder[s.turnIndex];this.inspectId=row.instanceId;}}
   const draftKey=`${s?.id??'none'}:${s?.round??0}`;if(this.maneuverDraftKey!==draftKey){this.maneuverDraftKey=draftKey;this.maneuvers={};}
   const c=await super._prepareContext(options),ship=c.ship,phase=s?.phase,plan=s?.cardPlans?.[ship?.id]??[],planned=new Set(plan.filter(r=>!r.resolved).map(r=>r.instanceId));
@@ -56,7 +57,9 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
    phaseInstruction:followup?'Newly drawn cards may join your orders. Commit or keep them, then lock.':request?`Waiting for ${c.crewRequest.actorName} to roll.`:({opening:'Keep your hand or replace up to two cards.',draw:'Click the deck to draw this round’s card.',planning:'Choose a course. Movement waits until every ship locks.','card-planning':'Commit cards in order. Keep AP for firing and Instants.',resolving:`${s?.ships[s?.turnOrder?.[s?.turnIndex]]?.name??''} · resolve the next queued card.`,firing:`${s?.ships[firingShip]?.name??''} · choose weapons and targets.`,response:'Respond to incoming fire or pass.',damage:'The attack die is saved. Resolve damage without rerolling.',cleanup:'Discard overflow, review the round and start the next.'}[phase]??'Choose your ship.'),
    unsettled:!!s?.pendingCardChoice||!!s?.pendingDiscard||!!s?.pendingCrewAction||s?.complications?.choices.some(x=>x.status==='pending'),recapNarrative:s?.roundFlow===2?roundRecap(s).narrative:[],recapLines:(s?.roundEvents??s?.log??[]).filter(e=>e.round===s?.round),journal:s?.roundJournal,
    showHand:!!ship,drawCount:ship?.drawCount??ship?.drawPile.length??0};
+  if(c.choices.length)for(const key of ['canResolve','canQueue','canAttack','canDamage','canFireNow','canFinishFiring','canLockCards','canInstant','canSubmitRoll'])context[key]=false;
   if(guidedRunning)for(const key of ['canAssignCrew','canMulligan','canQueue','canLockCards','canPlan','canLock','canFireNow','canFinishFiring','canResolve','canSubmitRoll','canRespond','canAttack','canDamage','canSkip','canDraw'])context[key]=false;
+  context.batteries=c.batteries.map(b=>{const hasLegalTarget=Object.keys(s?.ships??{}).some(id=>alphaTargetLegal(s,ship.id,b.id,id));return {...b,hasLegalTarget,canCommit:!!context.canFireNow&&b.ready&&hasLegalTarget};});
   return context;
  }
  async _onRender(c){
@@ -76,6 +79,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
  }
  async roundAction(type,data={}){
   if(this.busy)return;const api=game.arkflight.alphaCombat,s=api.state(),ship=s?.ships[data.shipId??this.shipId];
+  if(type==='open-complications'){await syncComplicationWindow(true);return;}
   if(type==='guided-test'){await api.guided.open();return;}if(type==='download-debug'){api.guided.download();return;}
   if(type==='inspect-attack'){const a=s.attacks[s.attackIndex];await openRoundCard(a.shipId,null,{attackId:a.id});return;}
   if(type==='inspect-current'){const row=currentPlannedCard(s);if(row&&api.ownsShip(s.turnOrder[s.turnIndex]))await openRoundCard(s.turnOrder[s.turnIndex],row.instanceId);return;}
@@ -133,7 +137,7 @@ Hooks.once('ready',()=>{
  game.arkflight.openCombatConsole=openRoundDeck;game.arkflight.combatConsole=Object.freeze({open:openRoundDeck,get application(){return dock;}});
 });
 let lastPrompt;
-Hooks.on('arkflightAlphaChanged',()=>{const state=game.arkflight?.alphaCombat?.state();if(state?.roundFlow===2&&!state.complete&&(!dock?.rendered))void openRoundDeck(false);if(state?.complete&&dock){dock.hudHidden=true;if(portrait?.rendered)void portrait.close();}for(const w of [dock,tracker,portrait])if(w?.rendered&&!w.busy)void w.render({force:true});const api=game.arkflight?.alphaCombat,s=api?.state(),r=s?.pendingCrewAction;if(s?.roundFlow===2&&r&&r.id!==lastPrompt&&api.canOperate(r.shipId,r.station)){lastPrompt=r.id;void openRoundCard(r.shipId,r.command.instanceId??null);}});
+Hooks.on('arkflightAlphaChanged',()=>{void syncComplicationWindow();const state=game.arkflight?.alphaCombat?.state();if(state?.roundFlow===2&&!state.complete&&(!dock?.rendered))void openRoundDeck(false);if(state?.complete&&dock){dock.hudHidden=true;if(portrait?.rendered)void portrait.close();}for(const w of [dock,tracker,portrait])if(w?.rendered&&!w.busy)void w.render({force:true});const api=game.arkflight?.alphaCombat,s=api?.state(),r=s?.pendingCrewAction;if(s?.roundFlow===2&&r&&r.id!==lastPrompt&&api.canOperate(r.shipId,r.station)){lastPrompt=r.id;void openRoundCard(r.shipId,r.command.instanceId??null);}});
 
 Hooks.on('renderTokenHUD',(hud,html)=>{
  const actor=hud.object?.actor??hud.object?.document?.actor;if(!actor?.flags?.['arkflight-game']?.alphaCombatShip&&!actor?.flags?.['arkflight-game']?.ship)return;
@@ -143,3 +147,15 @@ Hooks.on('renderTokenHUD',(hud,html)=>{
 });
 
 Hooks.once('ready',()=>{const s=game.arkflight?.alphaCombat?.state();if(s?.roundFlow===2&&!s.complete)void openRoundDeck(false);});
+
+let complicationWindow;
+export class AlphaComplicationWindow extends HandlebarsApplicationMixin(ApplicationV2){
+ static DEFAULT_OPTIONS={id:'arkflight-complication-choice',classes:['arkflight-alpha-combat','arkflight-complication-choice'],window:{title:'Arkflight · Resolve Complication',icon:'fa-solid fa-triangle-exclamation',resizable:true},position:{width:470,height:360}};
+ static PARTS={main:{template:'modules/arkflight-game/templates/alpha-complication-choice.hbs'}};
+ busy=false;error='';
+ async _prepareContext(){const api=game.arkflight.alphaCombat,s=api.state(),choice=s?.complications.choices.find(c=>c.status==='pending'&&api.ownsShip(c.shipId));const row=choice&&(await import('../combat/ship-complications.js')).complicationChoiceOptions(s.complications,choice.id);const receipt=choice&&s.complications.history.find(r=>r.id===choice.receiptId);return{choice,receipt,ship:choice&&s.ships[choice.shipId].name,options:row,busy:this.busy,error:this.error};}
+ async _onRender(){for(const button of this.element.querySelectorAll('[data-complication-option]'))button.addEventListener('click',()=>void this.choose(button.dataset));}
+ async choose(data){if(this.busy)return;this.busy=true;this.error='';try{const api=game.arkflight.alphaCombat,s=api.state();await api.request({type:'choose-complication',shipId:data.shipId,choiceId:data.choiceId,optionId:data.complicationOption,encounterId:s.id,revision:s.revision});}catch(error){this.error=error.message;}finally{this.busy=false;await syncComplicationWindow(true);}}
+}
+export async function syncComplicationWindow(force=false){const api=game.arkflight?.alphaCombat,s=api?.state(),choice=s?.complications.choices.find(c=>c.status==='pending'&&api.ownsShip(c.shipId));if(complicationWindow?.busy)return;if(!choice){if(complicationWindow?.rendered)await complicationWindow.close();return;}complicationWindow??=new AlphaComplicationWindow();if(force||!complicationWindow.rendered||complicationWindow.choiceId!==choice.id){complicationWindow.choiceId=choice.id;await complicationWindow.render({force:true});complicationWindow.bringToFront();}}
+Hooks.once('ready',()=>void syncComplicationWindow());

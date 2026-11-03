@@ -1,3 +1,5 @@
+> Firing controls follow-up: `alpha-visible-firing-20261103`. Weapons scroll above a persistent **Hold fire / Finish firing** footer. The HUD focuses the active owned firing ship; unavailable firing solutions are labelled and cannot spend AP. Pending Complications open an owner/GM choice window with a HUD reopen reminder. This update resumes existing encounters; no reset is required.
+
 > Movement follow-up build: `alpha-independent-routes-20261102`. Choose a fresh template for each ship each round; prior-round local choices no longer carry over. The fleet confirmation lists each ship’s saved route and instructions. Debug exports include the authoritative plan/lock maps.
 
 # Canvas command HUD and 20-card starter
