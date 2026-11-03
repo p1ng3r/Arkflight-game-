@@ -90,3 +90,10 @@
 .arkflight-complication-choice .complication-choice-body{padding:18px;background:linear-gradient(135deg,#183640,#081c28);color:#eee0be;display:flex;flex-direction:column;gap:12px}
 .arkflight-complication-choice .complication-choice-body h2{font:600 22px Georgia,serif;color:#e6bf77;margin:0}
 .arkflight-complication-choice [data-complication-option]{white-space:normal;min-height:48px;padding:10px;border:1px solid #d7b56f;background:#193a44;color:#ffe5ac;font-size:15px}
+/* Keep preview/commit controls inside each weapon's grid at every viewport scale. */
+#arkflight-round-deck .round-battery-row article{min-width:0;box-sizing:border-box}
+#arkflight-round-deck .round-battery-row article>button{position:static!important;inset:auto!important;min-width:0;width:100%;height:auto;min-height:36px;white-space:normal;overflow-wrap:anywhere;box-sizing:border-box}
+#arkflight-round-deck [data-round-action="arcs"][aria-pressed="true"]{border-color:#91e5dd;background:#28515a;color:#d4fff7}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .round-deck-stack{transform:none;width:72px;flex-basis:72px;max-height:112px}
+#arkflight-round-deck:is([data-hud-phase="planning"],[data-hud-phase="resolving"],[data-hud-phase="firing"],[data-hud-phase="damage"]) .round-draw-deck{width:54px!important;height:76px!important;min-height:76px!important}
+#arkflight-round-deck .round-discard-pile[open]{max-height:150px;overflow:auto;background:#09242f;padding:4px;position:relative;z-index:4}

@@ -6,7 +6,7 @@ import {legalHullManeuvers} from '../alpha/maneuvers.js';
 import {currentPlannedCard,roundReadiness} from '../alpha/round-flow.js';
 import {cardBand,cardTheme,cardOutcomes,stationName} from './alpha-combat-presentation.js';
 import {alphaWindowPosition,bindAlphaPreferences,alphaSound} from './alpha-combat-effects.js';
-import {showAlphaBattery,showAlphaManeuver,clearAlphaOverlay} from './alpha-combat-overlays.js';
+import {showAlphaBattery,showAlphaManeuver,clearAlphaOverlay,alphaBatteryVisible} from './alpha-combat-overlays.js';
 import {roundRecap,roundRecapHTML,recapEscape} from '../foundry/alpha-round-journal.js';
 const {ApplicationV2,HandlebarsApplicationMixin}=foundry.applications.api;
 let dock,tracker,portrait;
@@ -59,7 +59,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
    showHand:!!ship,drawCount:ship?.drawCount??ship?.drawPile.length??0};
   if(c.choices.length)for(const key of ['canResolve','canQueue','canAttack','canDamage','canFireNow','canFinishFiring','canLockCards','canInstant','canSubmitRoll'])context[key]=false;
   if(guidedRunning)for(const key of ['canAssignCrew','canMulligan','canQueue','canLockCards','canPlan','canLock','canFireNow','canFinishFiring','canResolve','canSubmitRoll','canRespond','canAttack','canDamage','canSkip','canDraw'])context[key]=false;
-  context.batteries=c.batteries.map(b=>{const hasLegalTarget=Object.keys(s?.ships??{}).some(id=>alphaTargetLegal(s,ship.id,b.id,id));return {...b,hasLegalTarget,canCommit:!!context.canFireNow&&b.ready&&hasLegalTarget};});
+  context.batteries=c.batteries.map(b=>{const hasLegalTarget=Object.keys(s?.ships??{}).some(id=>alphaTargetLegal(s,ship.id,b.id,id));return {...b,arcVisible:alphaBatteryVisible(s,ship.id,b.id),hasLegalTarget,canCommit:!!context.canFireNow&&b.ready&&hasLegalTarget};});
   return context;
  }
  async _onRender(c){
@@ -88,7 +88,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   if(type==='weapons'){this.weaponsOpen=!this.weaponsOpen;await this.render({force:true});return;}
   if(type==='close-card'){await this.close();return;}if(type==='minimize'){if(!this.resolutionOnly){this.hudHidden=true;await this.render({force:true});}else await this.minimize();return;}if(type==='tracker'){await openRoundTracker();return;}
   if(type==='library'){await api.library.open(ship?.actorId);return;}if(type==='crew'){this.crewPanel=!this.crewPanel;await this.render({force:true});return;}if(type==='open-journal'){await game.journal.get(s.roundJournal.journalId)?.sheet.render(true);return;}
-  if(type==='arcs'){showAlphaBattery(s,ship.id,data.batteryId);return;}if(type==='clear-arcs'){clearAlphaOverlay();return;}
+  if(type==='arcs'){showAlphaBattery(s,ship.id,data.batteryId);await this.render({force:true});return;}if(type==='clear-arcs'){clearAlphaOverlay();await this.render({force:true});return;}
   if(type==='route'){const route=legalHullManeuvers(ship,alphaComplications(s,ship.id)).find(r=>r.id===data.route);if(!route){ui.notifications.warn('Choose a legal template for this ship.');return;}this.maneuvers[ship.id]=data.route;showAlphaManeuver(s,ship.id,route);alphaSound('select');await this.render({force:true});return;}
   if(type==='confirm-move'){const users=[...game.users].map(u=>`${recapEscape(u.name??u.id)} — ${u.active?'connected':'offline'}`).join('<br>');const yes=foundry.applications.api.DialogV2?.confirm?await foundry.applications.api.DialogV2.confirm({window:{title:'Reveal fleet maneuvers'},content:`<p>All ships locked. Check each saved route before moving:</p><ul>${fleetManeuverSummary(s).map(r=>`<li><b>${recapEscape(r.name)}</b>: ${recapEscape(r.routeName)}<br>${recapEscape(r.description)}</li>`).join('')}</ul><p>Ships move together in time, following their own templates. Collisions or conditions can shorten a route.</p><p>${users}</p>`,yes:{label:'Yes · move fleet'},no:{label:'No · wait'}}):globalThis.confirm('All ships locked. Move the fleet together?');api.guided?.record({kind:'fleet route confirmation',accepted:yes,routes:fleetManeuverSummary(s)});if(!yes)return;type='move';}
   if(type==='reset'){const yes=foundry.applications.api.DialogV2?.confirm?await foundry.applications.api.DialogV2.confirm({window:{title:'Restart test encounter'},content:'<p>Restart with fresh hands and resources? Keep libraries, loadouts and crew.</p>'}):globalThis.confirm('Restart test encounter?');if(!yes)return;}

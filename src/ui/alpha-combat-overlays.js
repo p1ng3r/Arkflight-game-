@@ -1,8 +1,8 @@
 import { previewManeuver, occupiedHexes, hexDistance } from "../alpha/maneuvers.js";
 import { alphaCellInBattery } from "../alpha/combat.js";
-let overlay=null;
+let overlay=null,activeBattery=null;
 function text(options){return Number.parseInt(PIXI.VERSION??"7",10)>=8?new PIXI.Text(options):new PIXI.Text(options.text,{...options.style,stroke:options.style.stroke?.color??options.style.stroke,strokeThickness:options.style.stroke?.width??0});}
-export function clearAlphaOverlay(){if(overlay){overlay.parent?.removeChild(overlay);overlay.destroy({children:true});overlay=null;}}
+export function clearAlphaOverlay(){activeBattery=null;if(overlay){overlay.parent?.removeChild(overlay);overlay.destroy({children:true});overlay=null;}}
 function begin(s){clearAlphaOverlay();if(!globalThis.PIXI?.Graphics||canvas?.scene?.id!==s.canvas?.sceneId)return null;overlay=new PIXI.Container();overlay.eventMode="none";canvas.interface.addChild(overlay);const g=new PIXI.Graphics();overlay.addChild(g);return g;}
 function hex(g,cell,color,alpha=.2){const points=canvas.grid.getVertices({q:cell.q,r:cell.r,s:-cell.q-cell.r}).flatMap(p=>[p.x,p.y]);if(typeof g.poly==="function"&&typeof g.fill==="function"&&typeof g.stroke==="function")g.poly(points).fill({color,alpha}).stroke({color,width:2,alpha:.8});else{g.lineStyle(2,color,.8);g.beginFill(color,alpha);g.drawPolygon(points);g.endFill();}}
 export function showAlphaManeuver(s,shipId,m){
@@ -17,12 +17,16 @@ export function showAlphaManeuver(s,shipId,m){
   if(typeof g.stroke==="function")g.moveTo(center.x,center.y).lineTo(tip.x,tip.y).stroke({color:0xf0c878,width:5});
   else {g.lineStyle(5,0xf0c878,1);g.moveTo(center.x,center.y);g.lineTo(tip.x,tip.y);}
 }
+const batteryKey=(s,shipId,batteryId)=>`${s?.id}:${s?.canvas?.sceneId}:${shipId}:${batteryId}`;
+export const alphaBatteryVisible=(s,shipId,batteryId)=>!!overlay&&activeBattery===batteryKey(s,shipId,batteryId);
 export function showAlphaBattery(s,shipId,batteryId){
+  if(alphaBatteryVisible(s,shipId,batteryId)){clearAlphaOverlay();return false;}
   const g=begin(s);if(!g)return;
   const ship=s.ships[shipId],b=ship.batteries.find(b=>b.id===batteryId);if(!b)return;
   for(let q=-b.range;q<=b.range;q++)for(let r=-b.range;r<=b.range;r++){
     const cell={q:ship.pose.q+q,r:ship.pose.r+r};if(alphaCellInBattery(s,shipId,batteryId,cell))hex(g,cell,s.roundFlow===2?[0x6dd5aa,0xe7c080,0xe8877c][Math.min(2,Math.floor((hexDistance(ship.pose,cell)-1)/(b.rangeIncrement??2)))]:b.mount==="port"?0xbda3e9:b.mount==="starboard"?0xe7c080:0x7dd2da,.18);
   }
+ activeBattery=batteryKey(s,shipId,batteryId);
  if(s.roundFlow===2&&globalThis.PIXI.Text){const center=canvas.grid.getCenterPoint({q:ship.pose.q,r:ship.pose.r,s:-ship.pose.q-ship.pose.r}),t=text({text:`${b.name} · 1–2: 0 | 3–4: −2${b.range>4?' | 5+: −4':''}`,style:{fontSize:15,fill:0xffffff,stroke:{color:0x0a202a,width:4}}});t.anchor.set(.5);t.position.set(center.x,center.y+80);overlay.addChild(t);}
 }
 Hooks.on("canvasTearDown",clearAlphaOverlay);
