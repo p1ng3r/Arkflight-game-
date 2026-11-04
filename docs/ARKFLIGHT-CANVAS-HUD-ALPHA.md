@@ -135,3 +135,11 @@ During Firing, click a battery's **Aim on canvas · dotted target lines**. Dotte
 Click the colored target label beside a ship to select it. The line becomes thicker and the selected label is checked. This costs no AP; **Commit shot · 1 AP** remains separate. A committed order also has **Choose / change target on canvas**, replacing its dropdown. Revalidation still happens in the authoritative command handler. Aim mode draws dotted lines without the full colored hex fill; **Show arc / bands** remains a separate toggle. Preview cleanup on ship/phase/scene changes removes the clickable markers too.
 
 Validation: 936 tests pass. Added PIXI 7 and 8 graphics/event doubles verify dotted segments, legal target filtering, mount colors, marker selection, absence of full hex fill in aim mode and unchanged game state. Live Foundry canvas pointer interaction still needs testing: Aim, click a label, verify target summary, Commit, then try changing the order target and clearing the preview.
+
+## Raised usable Instants — alpha-instant-hand-20261104
+
+Eligible Instant cards now rise 28px above the hand, gain a turquoise outline/glow and a RESPOND label. Click the card itself to open its existing skill-and-roll card; opening spends no AP. The duplicate response-card button list is removed. The incoming attack summary and Pass button remain.
+
+Eligibility checks the current defending ship's response window, assigned station permission, AP, required Lifeveil, card restrictions and blocking choices/roll requests. Automated demonstrations do not invite manual responses. A folded hand temporarily appears while this client has a usable Instant; the saved folded preference is untouched, so it folds again after the response. Reduced-motion settings retain the static raised/glowing cue without pulsing.
+
+Validation: 936 tests pass, including eligibility changes for AP, station permissions, pending crew rolls, phase and Lifeveil. Live visual acceptance: fold Cards, receive an attack with an affordable Instant, check the raised/glowing card, click it, select a skill and roll, then verify the hand returns to the saved folded layout. With no AP or the wrong station owner, it must not glow.
