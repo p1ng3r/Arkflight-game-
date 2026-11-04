@@ -9,7 +9,7 @@ let instance;
 export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = { id: "arkflight-alpha-library", classes: ["arkflight-alpha-combat", "arkflight-alpha-library"], window: { title: "Arkflight — Ship Library & Decks", icon: "fa-solid fa-book-open", resizable: true }, position: { width: 820, height: 680 } };
   static PARTS = { main: { template: "modules/arkflight-game/templates/alpha-ship-library.hbs" } };
-  actorId = null; loadoutId = null; draft = null; baseRevision = null; configDraft = null; dirty = false; configDirty = false; busy = false; error = ""; search = "";
+  setupStep = "deck"; actorId = null; loadoutId = null; draft = null; baseRevision = null; configDraft = null; dirty = false; configDirty = false; busy = false; error = ""; search = "";
   effectsEngine = new AlphaCombatEffects();
   constructor(options = {}) { super({ ...options, position: alphaWindowPosition(820,680,options.position) }); }
   resetDraft() { this.draft = null; this.configDraft = null; this.baseRevision = null; this.dirty = false; this.configDirty = false; }
@@ -31,7 +31,7 @@ export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(Applicati
     for (const id of this.draft.cards) counts.set(id, (counts.get(id) ?? 0) + 1);
     const unavailable = [...counts].filter(([id]) => !view.learned.includes(id) || !view.catalog.some(c => c.id === id)).map(([id, count]) => ({ id, count }));
     const catalog = view.catalog.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase())).map(c => {const count=counts.get(c.id)??0,max=c.unique?1:2,canEdit=editable&&view.learned.includes(c.id);return{ ...c, learned: view.learned.includes(c.id),count,max, art: alphaCardArt(c), editable:canEdit,canDecrease:canEdit&&count>0,canIncrease:canEdit&&count<max,band:cardBand(c),theme:cardTheme(c),outcomes:cardOutcomes(c) };});
-    return { ...base, view, ships: ships.map(s => ({ ...s, selected: s.id === this.actorId })), gm: game.user.isGM, error: this.error, busy: this.busy, stale, editable, dirty: this.dirty || this.configDirty, locked, draft: this.draft, count: this.draft.cards.length, issues, unavailable, search: this.search, catalog,
+    return { ...base, setupStep:this.setupStep,setupProfile:this.setupStep==="profile",setupDeck:this.setupStep==="deck",setupCrew:this.setupStep==="crew",setupReview:this.setupStep==="review",setupSteps:[{id:"profile",name:"1 · Hull & fittings"},{id:"deck",name:"2 · Combat deck"},{id:"crew",name:"3 · Crew & weapons"},{id:"review",name:"4 · Review"}].map(x=>({...x,selected:x.id===this.setupStep})),view, ships: ships.map(s => ({ ...s, selected: s.id === this.actorId })), gm: game.user.isGM, error: this.error, busy: this.busy, stale, editable, dirty: this.dirty || this.configDirty, locked, draft: this.draft, count: this.draft.cards.length, issues, unavailable, search: this.search, catalog,
       canInitialize: game.user.isGM && !view.initialized && !locked && !this.busy,
       canSaveDeck: editable && !this.configDirty, canRefit: editable && !this.dirty,
       canSelect: editable && !this.dirty && !this.configDirty && issues.length === 0 && saved.id !== view.activeLoadoutId,
@@ -63,6 +63,9 @@ export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(Applicati
   }
   async act(action, data = {}) {
     if (this.busy) return;
+    if(action==="setup-step"){if(["profile","deck","crew","review"].includes(data.step))this.setupStep=data.step;await this.render({force:true});return;}
+    if(action==="open-sheet"){await game.actors.get(this.actorId)?.sheet.render(true);return;}
+    if(action==="setup-crew"){const api=game.arkflight.alphaCombat,s=api.state(),ship=Object.values(s?.ships??{}).find(x=>x.actorId===this.actorId);if(!ship){this.error="Place this ship in an encounter to assign its combat stations.";await this.render({force:true});return;}const {openRoundDeck}=await import('./alpha-round-deck-ui.js');const hud=await openRoundDeck();hud.shipId=ship.id;hud.crewPanel=true;await hud.render({force:true});return;}
     if (action === "reload") { this.resetDraft(); this.error = ""; await this.render({ force: true }); return; }
     if (action === "remove-unavailable") { this.draft.cards = this.draft.cards.filter(id => id !== data.cardId); this.dirty = true; await this.render({ force: true }); return; }
     if (action === "minimize") { await this.minimize(); return; }

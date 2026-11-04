@@ -74,3 +74,30 @@ Brass panel frames, illustrated card faces, a fanned hand, AP medallion and segm
 Six new illustrations use WebP quality 75 and a mix of men and women. Dedicated blank Arkflight test scenes receive a starfield; campaign scenes and existing background art are preserved. Restart Foundry to load the new manifest stylesheet, then hard refresh each client. No encounter reset is required. The visible build stamp identifies the loaded version.
 
 Validation: 930 automated tests pass. Browser harness checks cover crew visibility and sheet access, loaded art, resource gauges, canvas clicks, maneuver locking and a reachable firing footer at laptop size. The preview is a browser harness rendering of the actual HUD templates, not a live Foundry screenshot. Live Foundry visual acceptance remains to be checked.
+
+## Decision controls — alpha-hud-decisions-20261104
+
+### What changed
+
+- Firing batteries show only legal opposing targets, distance and range modifier. Select a target before **Commit shot · 1 AP**. This commits the existing fire command and then assigns the target with the existing authoritative target command. If a concurrent change rejects target assignment after commitment, the shot remains in firing orders and the error directs the crew to choose a target or Hold shot. It does not spend AP twice or pretend to refund the committed shot.
+- The target summary shows base battery damage. Card modifiers and the selected Battle Watch skill still resolve through the enlarged action card; the preview does not present a guessed final modifier.
+- Incoming fire focuses the owned defending ship once per attack. Its response panel keeps attacker, defender, weapon and base damage visible, with affordable station-owned Instant choices and **Pass · keep cards and AP**. Clicking Respond opens the existing skill/roll card; it does not roll or spend automatically. Current alpha response timing rules remain unchanged.
+- Complications use one central framed choice card. The bottom duplicate choices were removed. A prominent reminder reopens the card if closed. Ownership and server validation still control resolution.
+- **Ship tools → Choose ship art** opens a searchable 20-image picker. It saves portrait/prototype art and the current selected ship's primary token texture. It preserves resources, rotation, footprint markers and combat revision. Existing custom art is not replaced until Apply is clicked.
+- **Ship tools → Browse combat deck**, or **Browse piles** beside the deck, opens Draw, Discard, Prepared and Burned piles. Draw contents and order remain hidden, including for the GM in this browser. The browser is read-only and rechecks ship ownership.
+- Active and prepared effects can be expanded beside ship resources; the recap includes recent evaluated exchanges and the existing full narrative/journal record. Maneuver thumbnails, facing arrows and legal hull restrictions remain in place.
+- **Ship tools → Ship setup / loadouts** groups the existing ship library into Hull & fittings, Combat deck, Crew & weapons, and Review. It edits existing alpha ships using existing saved-profile and loadout validation. It is not a replacement for the initial fleet generator. Refit/deck edits remain locked during combat. Native sheet equipment is not automatically translated into alpha batteries; the Crew & weapons step states this explicitly.
+- **Ship tools → How to play** opens dismissible phase instructions. Ship and crew sheets remain accessible.
+
+### Manual acceptance test
+
+1. Hard refresh. Confirm build `alpha-hud-decisions-20261104` on the phase bar.
+2. Open Ship tools, choose ship art, filter Grelkin, Apply a token. Verify the current primary token and future prototype image change while AP, facing and resources do not.
+3. Open Browse combat deck. Draw shows only its count; Discard/Prepared/Burned show their visible card rules. Close the browser and resume combat.
+4. During Firing, show an arc, select a listed legal target and commit one shot. Verify AP decreases by one, the target is already assigned, and Hold fire / Finish firing stays reachable.
+5. Finish firing. On the defending client, choose Respond or Pass. If responding, choose the assigned station's skill and click its roll button. Confirm Dice So Nice/chat through the existing roll pipeline. An unassigned player must not gain station control.
+6. Trigger a choice complication in the guided test. Choose one consequence in the central card. If closed, reopen from the reminder. Verify no duplicate bottom choice row is present.
+7. Open Ship setup / loadouts during combat. Profile/deck editing must be disabled. Review remains readable. Outside combat, use the existing Save profile/refit and Save loadout actions, then inspect Review for warnings.
+8. Complete three rounds and inspect the narrative recap, recent exchanges and journal. Download the guided test's debug.txt if anything fails.
+
+Validation: 931 Node tests pass. A browser harness using actual templates/controllers checked the 20-art picker, filtering/application, hidden draw pile, legal target selection and commitment, manual response, setup navigation and combat edit locks at 1280×800. This is not live Foundry acceptance; native canvas overlays, multiplayer permissions, Dice So Nice and actor sheets still need the in-world walkthrough above. The accompanying preview is browser-rendered with a placeholder canvas/sidebar.
