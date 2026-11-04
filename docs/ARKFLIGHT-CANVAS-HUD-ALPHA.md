@@ -127,3 +127,11 @@ Click **Run automated 3-round test**, confirm creation of the dedicated test enc
 Completion and failures request the existing debug.txt download. If the browser blocks it, use Download debug.txt. The report includes real evaluated rolls, AP/resources, expected/actual token poses, module versions and warnings/errors captured after test start. It does not retrieve past F12 messages or server logs. Existing campaign actors are untouched; starting the fixture replaces the current alpha test encounter after confirmation.
 
 Validation: 934 automated tests pass. The new runner tests execute three real controller rounds against public Foundry document doubles and verify evaluated rolls, moves, journals and report contents; pause/resume, manual-test/GM guards, recovery pause and single-attempt failure behavior are covered. This has not been executed in the user's live Foundry world.
+
+## Dotted canvas targeting — alpha-dotted-targets-20261104
+
+During Firing, click a battery's **Aim on canvas · dotted target lines**. Dotted lines connect the firing ship to legal opposing hull cells: port violet, starboard gold, fore cyan and aft rose. Friendly, destroyed, out-of-range and out-of-arc ships are excluded by the existing targeting rules. Multi-hex ships use a legal occupied cell rather than requiring their primary token center to be inside the arc.
+
+Click the colored target label beside a ship to select it. The line becomes thicker and the selected label is checked. This costs no AP; **Commit shot · 1 AP** remains separate. A committed order also has **Choose / change target on canvas**, replacing its dropdown. Revalidation still happens in the authoritative command handler. Aim mode draws dotted lines without the full colored hex fill; **Show arc / bands** remains a separate toggle. Preview cleanup on ship/phase/scene changes removes the clickable markers too.
+
+Validation: 936 tests pass. Added PIXI 7 and 8 graphics/event doubles verify dotted segments, legal target filtering, mount colors, marker selection, absence of full hex fill in aim mode and unchanged game state. Live Foundry canvas pointer interaction still needs testing: Aim, click a label, verify target summary, Commit, then try changing the order target and clearing the preview.
