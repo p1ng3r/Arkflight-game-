@@ -101,3 +101,16 @@ Validation: 930 automated tests pass. Browser harness checks cover crew visibili
 8. Complete three rounds and inspect the narrative recap, recent exchanges and journal. Download the guided test's debug.txt if anything fails.
 
 Validation: 931 Node tests pass. A browser harness using actual templates/controllers checked the 20-art picker, filtering/application, hidden draw pile, legal target selection and commitment, manual response, setup navigation and combat edit locks at 1280×800. This is not live Foundry acceptance; native canvas overlays, multiplayer permissions, Dice So Nice and actor sheets still need the in-world walkthrough above. The accompanying preview is browser-rendered with a placeholder canvas/sidebar.
+
+
+## Collapsible panels — alpha-collapsible-hud-20261104
+
+The small panel toolbar independently toggles **Phases**, **Ship**, **Cards**, and **Orders**. Minus means minimize; plus means restore. **Focus canvas** folds all four; **Restore all** opens them again. Preferences are stored per client and remain across phase changes, reopening and reloads. They do not spend AP or modify encounter state. The ship header's minus now minimizes only the ship panel. Hide HUD remains the separate whole-HUD control.
+
+Orders covers maneuver selection, card planning, firing, crew assignment and recap panels. Pending station-roll prompts, Instant response controls, required discards/card choices and the complication reminder are not part of this optional group. Separate enlarged roll/complication windows remain usable. Restore Cards before selecting cards for a mulligan or discard. Crew visibility remains controlled by Show crew / Hide crew.
+
+When Phases is folded, a small summary keeps round, phase and available AP visible. Hiding Cards frees more vertical space for firing and maneuver controls.
+
+Validation: 931 automated tests pass; focused integration checks cover remembered preferences, individual toggles, Focus/Restore, the header minus and unchanged combat revision. A 1280×800 browser harness exercised all four hide/restore controls, reload persistence, canvas clicks and visible pending responses in Focus mode. Native Foundry verification remains to be performed.
+
+To test: hard refresh, confirm the build stamp, click each minus and plus, try Focus canvas, reload, then Restore all. During an incoming attack, Focus canvas must retain Respond / Pass.

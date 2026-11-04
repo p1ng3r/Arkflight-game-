@@ -120,3 +120,19 @@
 .alpha-setup-steps{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.alpha-setup-steps button{min-height:40px;flex:1;color:#ecd698;background:#153743;border:1px solid #bba166}.alpha-setup-steps [aria-pressed="true"]{outline:2px solid #79d9d1}.alpha-setup-profile,.alpha-setup-crew,.alpha-setup-review{padding:16px;border:2px double #bba166;background:#0b2631;line-height:1.5}.alpha-setup-profile button,.alpha-setup-crew button,.alpha-setup-review button{min-height:40px;white-space:normal}
 
 #arkflight-round-deck .hud-quick-tools{width:100%;padding:5px 0;color:#e8d39c}#arkflight-round-deck .hud-quick-tools>summary{cursor:pointer;min-height:28px;padding:5px 8px;border:1px solid #bca164;background:#153743;box-sizing:border-box}#arkflight-round-deck .hud-quick-tools>div{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}#arkflight-round-deck .hud-quick-tools button{min-height:34px;font-size:11px;white-space:normal}#arkflight-round-deck .hud-ship-portrait{height:38px!important}#arkflight-round-deck .hud-ship-portrait img{height:36px!important}#arkflight-round-deck .round-phase-caption>b{font-size:13px}
+
+/* Persistent per-client panel controls. Pending decisions are never in the optional group. */
+#arkflight-round-deck{--hud-controls-top:103px;--hud-content-top:150px}
+#arkflight-round-deck .hud-panel-controls{position:fixed;top:var(--hud-controls-top);left:var(--hud-left);right:calc(var(--hud-right) + 280px);display:flex;align-items:center;gap:5px;flex-wrap:wrap;pointer-events:auto;z-index:8;background:#0b2630ed;border:1px solid #b99d62;border-radius:5px;padding:4px;box-sizing:border-box;width:max-content;max-width:calc(100vw - var(--hud-left) - var(--hud-right) - 280px)}
+#arkflight-round-deck .hud-panel-controls button{min-height:28px;padding:3px 8px;width:auto;flex:0 0 auto;font-size:11px;white-space:nowrap;background:#153b45;border:1px solid #b99d62;color:#f0deb1}#arkflight-round-deck .hud-panel-controls [aria-expanded="false"]{border-color:#75d9d0;color:#9cece1}#arkflight-round-deck .hud-folded-round{display:none;font-size:11px;color:#edcf8f;padding:4px}
+#arkflight-round-deck[data-fold-tracker="true"]{--hud-controls-top:12px;--hud-content-top:64px}#arkflight-round-deck[data-fold-tracker="true"] .hud-phase-bar{display:none!important}#arkflight-round-deck[data-fold-tracker="true"] .hud-folded-round{display:block}
+#arkflight-round-deck[data-fold-ship="true"] .hud-ship-panel{display:none!important}
+#arkflight-round-deck[data-fold-hand="true"] .round-hand-table{display:none!important}
+#arkflight-round-deck[data-fold-orders="true"] :is(.round-maneuver-table,.round-planning-tray,.round-weapon-preview,.round-firing-table,.round-recap,.round-crew-panel){display:none!important}
+#arkflight-round-deck :is(.round-maneuver-table,.round-firing-table,.round-resolution-wait,.round-response-bar,.round-recap,.round-crew-panel,.round-welcome,.hud-help){top:var(--hud-content-top)!important}
+#arkflight-round-deck .round-firing-table{max-height:calc(100dvh - var(--hud-content-top) - 190px)}
+#arkflight-round-deck.hud-is-hidden .hud-panel-controls{display:none!important}
+@media(max-width:1350px){#arkflight-round-deck .hud-panel-controls{max-width:calc(100vw - var(--hud-left) - var(--hud-right) - 250px);right:calc(var(--hud-right) + 250px)}}
+@media(max-width:1050px){#arkflight-round-deck .hud-panel-controls{max-width:calc(100vw - var(--hud-left) - var(--hud-right));right:var(--hud-right)}#arkflight-round-deck{--hud-content-top:180px}#arkflight-round-deck[data-fold-tracker="true"]{--hud-content-top:95px}}
+
+#arkflight-round-deck[data-fold-hand="true"] .round-firing-table{max-height:calc(100dvh - var(--hud-content-top) - 35px)}#arkflight-round-deck[data-fold-hand="true"] .round-maneuver-table{bottom:45px!important}#arkflight-round-deck[data-fold-hand="true"] .round-response-bar{max-height:calc(100dvh - var(--hud-content-top) - 40px);bottom:auto}
