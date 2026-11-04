@@ -114,3 +114,16 @@ When Phases is folded, a small summary keeps round, phase and available AP visib
 Validation: 931 automated tests pass; focused integration checks cover remembered preferences, individual toggles, Focus/Restore, the header minus and unchanged combat revision. A 1280×800 browser harness exercised all four hide/restore controls, reload persistence, canvas clicks and visible pending responses in Focus mode. Native Foundry verification remains to be performed.
 
 To test: hard refresh, confirm the build stamp, click each minus and plus, try Focus canvas, reload, then Restore all. During an incoming attack, Focus canvas must retain Respond / Pass.
+
+
+## Automated in-world test — alpha-auto-test-20261104
+
+GM macro: `await game.arkflight.alphaCombat.guided.open();`
+
+Click **Run automated 3-round test**, confirm creation of the dedicated test encounter, and unpause Foundry. The runner creates/reuses the marked two-ship/ten-crew training fixture and advances the authoritative guided commands about every 1.2 seconds. It exercises movement, AP, cards, PF2e crew checks, attacks, damage, conditions/choices and the three round journals. Recap popups are suppressed while auto-running; the recaps and journals remain saved. This is an in-world engine test, not a synthetic click test of every UI control. The manual walkthrough remains available through Create ships & start test.
+
+**Pause after this action** lets the current command settle, then pauses without changing the encounter or rerolling. **Resume automated test** continues from saved state. **Stop & export** stops scheduling, lets the current command finish, stops the guided encounter and downloads the report. Foundry pause or pending movement recovery pauses the runner. Resolve the cause before Resume. A command error, mismatched token pose or no-progress result stops automation rather than retrying. A 400-action limit catches a stuck planner. Reloading does not silently resume automation; reopen the test window and Resume explicitly.
+
+Completion and failures request the existing debug.txt download. If the browser blocks it, use Download debug.txt. The report includes real evaluated rolls, AP/resources, expected/actual token poses, module versions and warnings/errors captured after test start. It does not retrieve past F12 messages or server logs. Existing campaign actors are untouched; starting the fixture replaces the current alpha test encounter after confirmation.
+
+Validation: 934 automated tests pass. The new runner tests execute three real controller rounds against public Foundry document doubles and verify evaluated rolls, moves, journals and report contents; pause/resume, manual-test/GM guards, recovery pause and single-attempt failure behavior are covered. This has not been executed in the user's live Foundry world.

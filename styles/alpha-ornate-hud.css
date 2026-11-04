@@ -136,3 +136,5 @@
 @media(max-width:1050px){#arkflight-round-deck .hud-panel-controls{max-width:calc(100vw - var(--hud-left) - var(--hud-right));right:var(--hud-right)}#arkflight-round-deck{--hud-content-top:180px}#arkflight-round-deck[data-fold-tracker="true"]{--hud-content-top:95px}}
 
 #arkflight-round-deck[data-fold-hand="true"] .round-firing-table{max-height:calc(100dvh - var(--hud-content-top) - 35px)}#arkflight-round-deck[data-fold-hand="true"] .round-maneuver-table{bottom:45px!important}#arkflight-round-deck[data-fold-hand="true"] .round-response-bar{max-height:calc(100dvh - var(--hud-content-top) - 40px);bottom:auto}
+
+.arkflight-guided-crew-test .guided-auto-controls{padding:12px;border:2px double #c8ab69;background:#0d2a36;color:#efd9a4;display:flex;flex-direction:column;gap:8px}.arkflight-guided-crew-test .guided-auto-controls button{min-height:38px;white-space:normal}.arkflight-guided-crew-test .guided-test-footer{flex-wrap:wrap}.arkflight-guided-crew-test [data-guided-action="auto-start"]{min-height:42px;white-space:normal}

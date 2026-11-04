@@ -11,7 +11,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker, ensureAlphaTestBackdrop } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-collapsible-hud-20261104";
+export const ALPHA_BUILD="alpha-auto-test-20261104";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);

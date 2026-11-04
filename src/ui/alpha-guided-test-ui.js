@@ -37,22 +37,22 @@ export class AlphaGuidedTestWindow extends HandlebarsApplicationMixin(Applicatio
  async _prepareContext(){
   const api=game.arkflight.alphaCombat,s=api.state(),guide=s?.guidedTest,running=guide?.status==='running';let step=null;
   try{step=running&&!guide.manual?nextGuidedStep(s):null;}catch(error){this.error=error.message;}
-  const manual=guide?.manual===true;
+  const automation=api.guided.auto.status(),manual=guide?.manual===true;
   if(manual&&running)step={label:manualInstruction(s)};
   const last=[...(s?.log??[])].reverse().find(e=>e.detail?.kind==='check'&&e.detail.skill)?.detail;
-  return{s,guide,step,manual,build:api.build,busy:this.busy,error:this.error,gm:game.user.isGM,paused:game.paused,running,canNext:running&&!this.busy&&!game.paused&&!api.recovery()?.next,complete:guide?.status==='complete',status:guide?.status??'Ready to create',recovery:api.recovery()?.next,
+  return{s,guide,step,manual,automation,autoActive:automation.active,canResume:running&&!manual&&!automation.active&&!game.paused&&!api.recovery()?.next,build:api.build,busy:this.busy,error:this.error,gm:game.user.isGM,paused:game.paused,running,canNext:running&&!automation.active&&!this.busy&&!game.paused&&!api.recovery()?.next,complete:guide?.status==='complete',status:guide?.status??'Ready to create',recovery:api.recovery()?.next,
    crews:guide?Object.values(s.ships).map(ship=>({name:ship.name,level:ship.profile.level,crew:Object.entries(ship.stationActors).map(([station,id])=>({station,name:game.actors.get(id)?.name,level:game.actors.get(id)?.level??game.actors.get(id)?.system.details.level.value}))})):[],
    last:last&&{...last,outcome:['Critical failure','Failure','Success','Critical success'][last.degree+1]}};
  }
  async _onRender(){for(const button of this.element.querySelectorAll('[data-guided-action]'))button.addEventListener('click',()=>void this.act(button.dataset.guidedAction));}
  async act(type){
-  if(this.busy)return;const api=game.arkflight.alphaCombat;if(type==='download'){api.guided.download();return;}if(type==='hand'){await openRoundDeck();return;}
+  const api=game.arkflight.alphaCombat;if(type==='pause-auto'){api.guided.auto.pause();return;}if(type==='resume-auto'){try{api.guided.auto.run();}catch(e){this.error=e.message;await this.render({force:true});}return;}if(type==='stop'){await api.guided.auto.stop();}if(this.busy)return;if(type==='download'){api.guided.download();return;}if(type==='hand'){await openRoundDeck();return;}
   this.busy=true;this.error='';await this.render({force:true});
   try{
-   if(type==='start'){
+   if(type==='start'||type==='auto-start'){
     const content='<p>Create/restart the dedicated test encounter with two level-5 ships, ten level-5 PF2e crew NPCs, and training batteries?</p><p>Campaign actors are not changed. The current alpha test is replaced. Debug capture begins now.</p>';
     const yes=foundry.applications.api.DialogV2?.confirm?await foundry.applications.api.DialogV2.confirm({window:{title:'Start three-round crew test'},content}):globalThis.confirm('Create/restart the dedicated three-round crew test?');if(!yes)return;
-    const started=await api.guided.start({manual:true});this.exported=null;await openRoundDeck();await this.fitTracker();await this.focusCanvas(started);
+    await api.guided.auto.stop();const started=await api.guided.start({manual:type!=='auto-start'});this.exported=null;await openRoundDeck();await this.fitTracker();await this.focusCanvas(started);if(type==='auto-start')api.guided.auto.run();
    }else if(type==='controls'){
     const s=api.state();await openRoundDeck();
     const shipId=s.pendingCrewAction?.shipId??(['resolving'].includes(s.phase)?s.turnOrder[s.turnIndex]:s.phase==='response'?s.attacks[s.attackIndex]?.targetId:['damage'].includes(s.phase)?s.attacks[s.attackIndex]?.shipId:s.phase==='firing'?s.turnOrder[s.firingIndex]:Object.values(s.ships).find(x=>s.phase==='opening'?!x.mulliganDone:s.phase==='draw'?x.drawnRound!==s.round:s.phase==='planning'?!s.locked[x.id]:s.phase==='card-planning'?!s.cardLocks[x.id]:false)?.id);
@@ -87,4 +87,4 @@ export class AlphaGuidedTestWindow extends HandlebarsApplicationMixin(Applicatio
 export async function openGuidedCrewTest(){if(!game.user.isGM)throw Error('Only the GM runs the guided crew test.');instance??=new AlphaGuidedTestWindow();await instance.render({force:true});if(instance.minimized)await instance.maximize();instance.bringToFront();return instance;}
 Hooks.once('init',()=>game.settings.registerMenu('arkflight-game','guidedCombatDemo',{name:'Guided crew test · 3 rounds',label:'Open 3-round crew test',hint:'Three rounds using real UI controls, ten level-5 crew, and downloadable debug.txt.',icon:'fa-solid fa-flask',type:AlphaGuidedTestWindow,restricted:true}));
 Hooks.once('ready',()=>{const api=game.arkflight.alphaCombat,d=Object.getOwnPropertyDescriptors(api);delete d.guided;game.arkflight.alphaCombat=Object.freeze(Object.defineProperties({guided:Object.freeze({...api.guided,open:openGuidedCrewTest})},d));});
-for(const hook of ['arkflightAlphaChanged','pauseGame'])Hooks.on(hook,()=>{if(instance?.rendered&&!instance.busy)void instance.render({force:true});});
+for(const hook of ['arkflightAlphaChanged','arkflightAlphaAutoTestChanged','pauseGame'])Hooks.on(hook,()=>{if(instance?.rendered&&!instance.busy)void instance.render({force:true});});
