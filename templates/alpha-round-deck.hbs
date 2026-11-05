@@ -19,6 +19,7 @@
 {{#if error}}<p class="round-error" role="alert">{{error}}</p>{{/if}}
 </div>
 <footer class="round-card-controls">
+{{#if canCycle}}<button data-round-action="cycle-card" title="Once per round: discard this card and draw a replacement, without spending AP.">Cycle card · free once per round</button>{{/if}}
 {{#if planningCards}}<button class="round-primary" data-round-action="queue-card" {{#unless canQueue}}disabled{{/unless}} {{#if busy}}disabled{{/if}}>Commit · {{card.ap}} AP</button>{{else}}
 {{#if requestId}}<button class="round-roll" data-round-action="roll-crew" {{#unless canSubmitRoll}}disabled{{/unless}} {{#if busy}}disabled{{/if}} aria-label="Roll assigned station check"><i class="fa-solid fa-dice-d20"></i><b>d20</b></button>{{else}}
 {{#if isOwnResolve}}<button class="round-roll" data-round-action="resolve-card" {{#unless canResolve}}disabled{{/unless}} {{#if busy}}disabled{{/if}} aria-label="Resolve committed card">{{#if card.attackOnly}}Prepare shot{{else}}<i class="fa-solid fa-dice-d20"></i><b>d20</b>{{/if}}</button>{{else}}
