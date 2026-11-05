@@ -100,7 +100,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
    const key=`${c.s?.id}:${c.s?.round}:${c.ship?.id}`;
    if(this.lastRevealKey!==key){this.lastRevealKey=key;alphaSound('open');}
   }
-  if(!this.resolutionOnly&&!c.guidedRunning&&c.primary&&c.allLocked&&!this.busy&&this.movePromptKey!==`${c.s.id}:${c.s.round}`){this.movePromptKey=`${c.s.id}:${c.s.round}`;queueMicrotask(()=>void this.roundAction('confirm-move'));}
+  if(!this.resolutionOnly&&!c.guidedRunning&&c.primary&&c.allLocked&&c.s.combatFlow!==3&&!this.busy&&this.movePromptKey!==`${c.s.id}:${c.s.round}`){this.movePromptKey=`${c.s.id}:${c.s.round}`;queueMicrotask(()=>void this.roundAction('confirm-move'));}
   if(!this.resolutionOnly&&!c.autoTesting&&c.recap&&!c.unsettled&&c.s?.roundFlow===2&&this.recapKey!==`${c.s.id}:${c.s.round}`){this.recapKey=`${c.s.id}:${c.s.round}`;const journal=c.journal?`<p>Journal ${recapEscape(c.journal.journalId)} · Page ${recapEscape(c.journal.pageId)}</p>`:'<p>Journal pending; recap retained for retry.</p>';if(foundry.applications.api.DialogV2?.prompt)queueMicrotask(()=>void foundry.applications.api.DialogV2.prompt({window:{title:`Round ${c.s.round} · Ship’s log`},content:roundRecapHTML(c.s)+journal,ok:{label:'Return to battle'}}).catch(()=>{}));}
  }
  async roundAction(type,data={}){
@@ -128,7 +128,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   this.busy=true;this.error='';
   try{
    let command={type,shipId:ship?.id??this.shipId};
-   if(type==='start')command={type,roundFlow:2,...this.build};if(type==='reset')command={type,roundFlow:2};
+   if(type==='start')command={type,roundFlow:2,combatFlow:3,...this.build};if(type==='reset')command={type,roundFlow:2,combatFlow:s?.combatFlow??2};
    if(type==='lock'&&api.canOperate(ship.id,'navigator')){if(!(this.maneuvers[ship.id]??s.plans[ship.id]))throw Error('Choose a maneuver template for this ship this round before locking.');const a=api.state();await api.request({type:'plan',shipId:ship.id,encounterId:a.id,revision:a.revision,maneuverId:this.maneuvers[ship.id]??s.plans[ship.id]??'hold'});}
    if(type==='plan'){command.maneuverId=this.maneuvers[ship.id]??s.plans[ship.id];if(!command.maneuverId)throw Error('Choose a maneuver template for this ship this round.');}if(['mulligan','discard'].includes(type))command.instances=[...this.selections];
    if(type==='ready-draw')command.shipId=ship.id;
