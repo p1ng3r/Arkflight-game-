@@ -105,6 +105,18 @@ export function changeShipLibrary(before, command, {random = Math.random} = {}) 
     const candidates=Object.keys(ALPHA_CARDS).filter(id=>!next.learned.includes(id));
     if(candidates.length<3)throw new Error("Fewer than three playable unlearned cards remain. Add more authored cards before issuing another offer.");
     const pool=[...candidates],options=[];
+    const firstHelmCard=next.rewards.history.find(x=>x.kind==="commission")?.cardId;
+    const questRewards=next.rewards.history.filter(x=>x.kind==="quest").length;
+    if(command.kind==="quest"&&firstHelmCard&&questRewards<5){
+      const affinity=cardCategory(ALPHA_CARDS[firstHelmCard]).id;
+      const eligible=pool.filter(id=>cardCategory(ALPHA_CARDS[id]).id===affinity);
+      if(eligible.length){
+        const roll=random();
+        if(!Number.isFinite(roll)||roll<0||roll>=1)throw new Error("Invalid reward randomizer.");
+        const chosen=eligible[Math.floor(roll*eligible.length)];
+        options.push(chosen);pool.splice(pool.indexOf(chosen),1);
+      }
+    }
     while(options.length<3){
       const value=random();if(!Number.isFinite(value)||value<0||value>=1)throw new Error("Invalid reward randomizer.");
       options.push(pool.splice(Math.floor(value*pool.length),1)[0]);
