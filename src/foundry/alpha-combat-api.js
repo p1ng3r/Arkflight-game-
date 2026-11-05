@@ -14,7 +14,7 @@ import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePos
 
 export const ALPHA_BUILD="alpha-native-test-repair-20261105";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
-let queue=Promise.resolve(),drawTimer=null;
+let queue=Promise.resolve(),drawTimer=null,movementTimer=null;
 function scheduleDrawTimeout(value){
  if(drawTimer){clearTimeout(drawTimer);drawTimer=null;}
  if(value?.phase!=="draw-reveal"||!value.drawReveal||primary()?.id!==game.user?.id)return;
@@ -27,6 +27,17 @@ function scheduleDrawTimeout(value){
   if(!s?.id||s.phase!=="draw-reveal"||primary()?.id!==game.user?.id)return;
   void enqueue({type:"timeout-draw",encounterId:s.id,revision:s.revision,now:Date.now()},game.user).catch(error=>console.warn("Arkflight | Draw reveal timeout",error));
  },delay);
+}
+function scheduleFleetCountdown(value){
+ if(movementTimer){clearTimeout(movementTimer);movementTimer=null;}
+ if(value?.phase!=="planning"||!value.maneuverCountdown||primary()?.id!==game.user?.id)return;
+ movementTimer=setTimeout(()=>{
+  movementTimer=null;
+  const s=raw();
+  if(!s?.maneuverCountdown||s.phase!=="planning"||primary()?.id!==game.user?.id)return;
+  if(game.paused){movementTimer=setTimeout(()=>scheduleFleetCountdown(raw()),1000);return;}
+  void enqueue({type:"move",encounterId:s.id,revision:s.revision,now:Date.now()},game.user).catch(error=>console.warn("Arkflight | Automatic fleet movement",error));
+ },Math.max(50,value.maneuverCountdown.deadline-Date.now()+30));
 }
 function drawControllerMap(s){
  return Object.fromEntries(Object.keys(s.drawReveal?.ships??{}).map(id=>[id,activeShipCrewUsers(s.ships[id],game.users,(u,actorId)=>owns(u,actorId))]));
@@ -107,7 +118,7 @@ export async function operatorBreakdown(ship,station,skill){
 }
 async function saved(value){
   await game.settings.set(MODULE,STATE,value);
-  scheduleDrawTimeout(value);
+  scheduleDrawTimeout(value);scheduleFleetCountdown(value);
   const actual=raw();if(actual?.id!==value.id||actual?.revision!==value.revision)throw new Error("Alpha encounter save was not confirmed.");
 }
 function stageNextCrewRequest(next){
@@ -165,7 +176,7 @@ async function handle(cmd,user){
     const next=await prepareAlphaFleet(cmd);if(guideStart){initializeGuidedTest(next,await prepareGuidedCrews(next),{manual:manualGuide});next.guidedTest.manual=manualGuide;}await saved(next);if(before?.pendingCrewAction){try{await finishCrewRequest(before.pendingCrewAction.id,true);}catch(error){console.warn("Arkflight | Cancelled crew chat",error);}}Hooks.callAll("arkflightAlphaChanged");return next;
   }
   if(!before?.id||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw new Error("The alpha encounter changed; refresh before acting.");
-  if(["ready-draw","timeout-draw"].includes(cmd.type))cmd={...cmd,userId:user.id,now:Date.now()};
+  if(["ready-draw","timeout-draw","lock","move"].includes(cmd.type))cmd={...cmd,userId:user.id,now:Date.now()};
   if(cmd.type==="retry-recap"){if(!["cleanup","complete"].includes(before.phase))throw Error("No completed round is ready.");await persistRoundRecap(before);Hooks.callAll("arkflightAlphaChanged");return before;}
   if(before.pendingCrewAction&&!['roll-crew','cancel-crew','end','reset'].includes(cmd.type))throw new Error("Waiting for the assigned station to choose a skill and roll.");
   if(cmd.type==="cancel-crew"){
