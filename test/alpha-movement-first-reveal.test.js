@@ -51,6 +51,17 @@ test("movement-first flow starts with a five-second lock gate and no draw before
  assert.equal(s.ships.a.hand.length,7);
  assert.ok(!s.ships.a.pendingDraw);
  assert.ok(!s.drawReveal);
+ const discardId=s.ships.a.hand[0],ap=s.ships.a.ap;
+ s=await send(s,"cycle-card","a",{instanceId:discardId,now:20000});
+ assert.equal(s.ships.a.ap,ap);
+ assert.equal(s.ships.a.cycledRound,2);
+ assert.ok(s.ships.a.discard.includes(discardId));
+ assert.equal(s.phase,"draw-reveal");
+ await assert.rejects(send(s,"cycle-card","a",{instanceId:s.ships.a.hand[0],now:20001}),/unlocked Strategy/);
+ configureDrawControllers(s,{a:["user1"]},20001);
+ s=await send(s,"ready-draw","a",{userId:"user1",now:20002});
+ assert.equal(s.phase,"card-planning");
+ await assert.rejects(send(s,"cycle-card","a",{instanceId:s.ships.a.hand[0],now:20003}),/already cycled/);
 });
 test("AFK countdown unblocks a ship even if another controller never clicks Ready",async()=>{
  const s={phase:"draw-reveal",ships:{a:{hand:["existing"],pendingDraw:["new1","new2"]}},drawReveal:createDrawReveal({a:["new1","new2"]},1000)};
