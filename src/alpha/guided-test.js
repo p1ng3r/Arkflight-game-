@@ -1,6 +1,7 @@
 import {ALPHA_CARDS,ALPHA_SKILLS} from './cards.js';
 import {alphaCardFor,alphaComplications,alphaTargetLegal,alphaActionBlockReason} from './combat.js';
 import {currentPlannedCard} from './round-flow.js';
+import {legalHullManeuvers} from './maneuvers.js';
 import {complicationChoiceOptions} from '../combat/ship-complications.js';
 export const GUIDED_ROUNDS=3;
 export const GUIDED_DECK=Object.freeze(['vent','recover','brace','brace','acquire','acquire','evasive','evasive','mend','mend','rally','rally','shield','shield','read','dispatch','dispatch','survey','tune','exploit']);
@@ -30,9 +31,16 @@ export function nextGuidedStep(s){
  if(s.phase==='opening'){const ship=ships.find(x=>!x.mulliganDone);return result(`${ship.name}: keep the five-card opening hand`,'mulligan',{shipId:ship.id,instances:[]});}
  if(s.phase==='draw'){const ship=ships.find(x=>x.drawnRound!==s.round);return result(`${ship.name}: click the deck and draw this round’s card`,'draw-round',{shipId:ship.id});}
  if(s.phase==='planning'){
-  const route=s.round===2?'port-s-3':'straight-1',ship=ships.find(x=>!s.locked[x.id]);
+  const ship=ships.find(x=>!s.locked[x.id]);
   if(!ship)return result('Confirm and move both ships together on the canvas','move');
-  if(s.plans[ship.id]!==route)return result(`${ship.name}: preview/stage ${route}`,'plan',{shipId:ship.id,maneuverId:route});
+  // Complications can remove a printed route from one ship without affecting its wingmate.
+  // Pick from the same legal, affordable hull menu that authenticates the plan command.
+  const routes=legalHullManeuvers(ship,alphaComplications(s,ship.id))
+   .filter(m=>m.ap<=ship.ap&&(ship.resources.hull.value>0||m.id==='hold'));
+  const preferred=s.round===2?['port-s-3','port-late-3','port-late-2','straight-1','hold']:['straight-1','hold'];
+  const maneuver=preferred.map(id=>routes.find(m=>m.id===id)).find(Boolean)??routes[0];
+  if(!maneuver)throw Error(`Guided test has no legal affordable route for ${ship.name}.`);
+  if(s.plans[ship.id]!==maneuver.id)return result(`${ship.name}: preview/stage ${maneuver.id}`,'plan',{shipId:ship.id,maneuverId:maneuver.id});
   return result(`${ship.name}: lock its maneuver`,'lock',{shipId:ship.id});
  }
  if(s.phase==='card-planning'){
