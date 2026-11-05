@@ -18,10 +18,11 @@ Updated 4 November 2026. Legend: `[x]` done in code/docs with stated validation;
 
 ### 1. Establish the current-flow acceptance baseline (P0; A02/A14)
 
-- [ ] Run the in-world automated three-round test; collect build/version/module list and debug.txt.
+- [ ] Run the in-world automated three-round test; collect build/version/module list and debug.txt. A first native report was collected on 5 Nov 2026: Foundry 14.365 / PF2e 8.4.1, build `alpha-private-draw-projection-20261104`, 149 entries. **Failed** at round-2 planning after `max-turns:1` blocked the runner's hard-coded `port-s-3`. The test driver now selects per-ship legal affordable routes in `alpha-native-test-repair-20261105`; the full native 3-round rerun is still pending.
 - [ ] Run manual acceptance with separate GM, station owner and unrelated player clients. Exercise mulligan, independent routes, lock/reveal, card ownership/skill choice, draw follow-up, fire, target change, Instant/pass, choices, overflow and recap.
 - [ ] Test pointer interaction with dotted labels on Foundry v14, not just graphics doubles.
 - [ ] Test folded Cards temporarily revealing a raised Instant, reduced motion, zoom, sidebar/chat open and laptop viewport.
+- [ ] Recheck live HUD rendering: the 5 Nov debug report includes three `arkflight-round-deck` `e.fn is not a function` unhandled render rejections. Nine external `eq` subexpressions were removed in the repair build; this is a candidate fix, **not** yet native-verified.
 - [ ] Test pause, disconnect/reconnect, GM change, stale revisions, stopped auto run, movement failure and resumption with no duplicate AP, dice, damage or card use.
 
 Acceptance: native evidence and reproduction steps for each failure; a three-round report by itself is not proof of all manual controls. Fix discovered blockers before adding large content packs.
