@@ -42,7 +42,7 @@
   <div class="arkflight-mini-fleet-ships">
     {{#each fleetDial}}
       <div class="arkflight-mini-ship {{#if ready}}is-locked{{/if}}" title="{{name}} · {{label}}">
-        <i class="fa-solid fa-ship" aria-hidden="true"></i><span>{{name}}</span>
+        <img src="{{art}}" alt="" aria-hidden="true"><span>{{name}}</span>
         <i class="fa-solid {{#if ready}}fa-lock{{else}}fa-hourglass-half{{/if}}" aria-hidden="true"></i>
       </div>
     {{/each}}
