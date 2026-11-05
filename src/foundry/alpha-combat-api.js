@@ -11,7 +11,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker, ensureAlphaTestBackdrop } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-instant-hand-20261104";
+export const ALPHA_BUILD="alpha-private-draw-projection-20261104";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve();
 const copy=x=>structuredClone(x), raw=()=>game.settings.get(MODULE,STATE), journal=()=>game.settings.get(MODULE,JOURNAL);
@@ -45,8 +45,11 @@ export function alphaPlayerState(user=game.user){
   if(s.pendingCardChoice&&!owns(user,s.ships[s.pendingCardChoice.shipId]?.actorId))delete s.pendingCardChoice;
   if(s.pendingCrewAction&&!owns(user,s.ships[s.pendingCrewAction.shipId]?.actorId))delete s.pendingCrewAction.command;
   for(const ship of Object.values(s.ships)){
+    // Keep the count, never the future draw order, in any non-GM API snapshot.
+    // The authoritative world setting still needs a separate privacy/transport migration.
     ship.drawCount=ship.drawPile.length;
-    if(!owns(user,ship.actorId)){if(s.cardPlans)delete s.cardPlans[ship.id];ship.hand=[];ship.drawPile=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
+    ship.drawPile=[];
+    if(!owns(user,ship.actorId)){if(s.cardPlans)delete s.cardPlans[ship.id];ship.hand=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
   }
   if(!['cleanup','complete'].includes(s.phase))for(const key of ['log','roundEvents'])if(s[key])s[key]=s[key].filter(e=>e.detail?.kind!=="plan"||owns(user,s.ships[e.detail.shipId]?.actorId));
   delete s.complications.randomState;return s;
