@@ -1,6 +1,6 @@
 import { ALPHA_CARDS, ALPHA_STARTER_DECK } from "../alpha/cards.js";
 import { deriveAlphaProfile } from "../alpha/hulls.js";
-import { LIBRARY_COMMANDS, assertShipLibrary, createShipLibrary, changeShipLibrary, validateLibraryDeck, selectedLibraryDeck } from "../alpha/ship-library.js";
+import { LIBRARY_COMMANDS, assertShipLibrary, createShipLibrary, changeShipLibrary, validateLibraryDeck, selectedLibraryDeck, shipDeckCapacity } from "../alpha/ship-library.js";
 
 const MODULE = "arkflight-game", FLAG = "alphaLibrary";
 export const actorLibrary = actor => actor.flags?.[MODULE]?.[FLAG];
@@ -33,7 +33,7 @@ export function viewShipLibrary(actorId, user = game.user) {
   if (!permitted(actor, user)) throw new Error("You do not own this alpha ship.");
   const stored = actorLibrary(actor), data = stored ? structuredClone(assertShipLibrary(stored)) : seedFor(actor);
   const cards = Object.values(ALPHA_CARDS).filter(c => user.isGM || data.learned.includes(c.id));
-  return { actorId: actor.id, name: actor.name, initialized: Boolean(stored), ...data, revision: stored ? data.revision : 0, profile: deriveAlphaProfile(data.config), locked: libraryLock(actor.id), canGrant: user.isGM, catalog: structuredClone(cards), loadouts: data.loadouts.map(deck => ({ ...deck, active: deck.id === data.activeLoadoutId, issues: validateLibraryDeck(data, deck) })) };
+  return { actorId: actor.id, name: actor.name, initialized: Boolean(stored), ...data, deckCapacity:shipDeckCapacity(data), rewardOffer:data.rewards?.pending?{...data.rewards.pending,options:data.rewards.pending.options.map(id=>ALPHA_CARDS[id])}:null, revision: stored ? data.revision : 0, profile: deriveAlphaProfile(data.config), locked: libraryLock(actor.id), canGrant: user.isGM, catalog: structuredClone(cards), loadouts: data.loadouts.map(deck => ({ ...deck, active: deck.id === data.activeLoadoutId, issues: validateLibraryDeck(data, deck) })) };
 }
 export async function writeShipLibrary(actor, data) {
   assertShipLibrary(data);
@@ -45,13 +45,15 @@ export async function handleLibraryCommand(command, user) {
   if (!LIBRARY_COMMANDS.has(command.type)) throw new Error("Unknown library command.");
   const actor = shipActor(command.actorId);
   if (!permitted(actor, user)) throw new Error("You do not own this alpha ship.");
-  if (["library-initialize", "library-grant", "library-remove", "library-refit"].includes(command.type) && !user.isGM) throw new Error("Only the GM may grant/remove learned cards, adopt a ship or refit its profile.");
+  if (["library-initialize", "library-grant", "library-remove", "library-refit", "library-offer"].includes(command.type) && !user.isGM) throw new Error("Only the GM may grant/remove learned cards, adopt a ship or refit its profile.");
   const locked = libraryLock(actor.id); if (locked) throw new Error(locked);
   const stored = actorLibrary(actor);
   let next;
   if (command.type === "library-initialize") {
     if (stored || command.libraryRevision !== 0) throw new Error("The ship library changed. Reopen it before initializing.");
     next = seedFor(actor);
+    // Real ship adoption grants the first curated one-of-three offer. Test fixtures created at launch stay unaffected.
+    next=changeShipLibrary(next,{type:"library-offer",libraryRevision:next.revision,rewardId:"commission",kind:"commission"});
   } else {
     if (!stored) throw new Error("Ask the GM to initialize this ship's library first.");
     next = changeShipLibrary(stored, command);
