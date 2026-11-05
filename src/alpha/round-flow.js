@@ -87,7 +87,9 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
  if(cmd.type==='round'){if(s.phase!=='cleanup')throw Error('Complete this round first.');s.roundEvents=[];delete s.roundJournal;delete s.roundJournalError;refresh(s);s.phase=s.combatFlow===3?'planning':'draw';s.cardPlans={};s.cardLocks={};s.firingIndex=0;return revise();}
  if(['play','regroup','finish-card','begin-damage'].includes(cmd.type)&&!(cmd.type==='play'&&ALPHA_CARDS[ship?.instances[cmd.instanceId]]?.timing==='instant'))throw Error('Use the plan and resolution controls.');
  if(cmd.type==='move'){
+  if(s.combatFlow===3&&(!s.maneuverCountdown||(cmd.now??Date.now())<s.maneuverCountdown.deadline))throw Error('Wait for the synchronized five-second fleet countdown.');
   s=await legacy(s,cmd,services);
+  delete s.maneuverCountdown;
   if(!s.complete){
    s.cardPlans={};s.cardLocks={};
    if(s.combatFlow===3&&s.round>1){
@@ -106,5 +108,10 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   return revise();
  }
  if(cmd.type==='hold-order'&&s.phase==='firing'){if(s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Wait for this ship’s firing.');s=await stage('hold-order','targeting');s.phase='firing';return revise();}
- s=await legacy(s,cmd,services);return revise();
+ s=await legacy(s,cmd,services);
+ if(cmd.type==='lock'&&s.combatFlow===3&&s.phase==='planning'&&roundShips(s).every(x=>s.locked[x.id])){
+  const now=cmd.now??Date.now();
+  s.maneuverCountdown={startedAt:now,deadline:now+5000};
+ }
+ return revise();
 }
