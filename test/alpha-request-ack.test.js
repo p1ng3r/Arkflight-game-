@@ -7,6 +7,8 @@ const {ALPHA_REQUEST_ACCEPT_MS,ALPHA_REQUEST_PROCESS_MS}=await import("../src/fo
 test("GM acknowledges an incoming player command before returning its authoritative result",async()=>{
  const world=alphaWorld(),api=world.initialize();
  let s=await api.request({type:"start",roundFlow:2});
+ for(const id of Object.keys(s.ships))s=await api.request({type:"mulligan",shipId:id,encounterId:s.id,revision:s.revision,instances:[]});
+ assert.equal(s.phase,"planning");
  game.actors.get(s.ships["alpha-0"].actorId).ownership.player=3;
  const received=[];
  globalThis.ChatMessage={async create(data){
