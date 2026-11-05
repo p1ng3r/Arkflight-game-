@@ -13,6 +13,22 @@ test('two level-5 ships with ten real NPC station fixtures complete exactly thre
  assert.equal(s.guidedTest.status,'complete');assert.equal(s.round,3);assert.equal(s.complete,true);assert.ok(['opening','planning','card-planning','resolving','firing','response','damage','cleanup','draw'].every(p=>phases.has(p)));assert.equal(stations.size,5);assert.equal(game.journal.contents[0].pages.contents.length,3);assert.ok(w.counts.rolls>20);
  await assert.rejects(send(api,'guided-next'),/changed/);delete globalThis.JournalEntry;
 });
+test('guided round-2 routes adapt independently when a complication limits one ship to one turn',async()=>{
+ const w=alphaWorld(),api=w.initialize();journals();let s=await send(api,'guided-start');
+ s.round=2;s.complications.round=2;s.phase='planning';s.plans={};s.locked={};
+ s.complications.effects.push({kind:'restriction',rule:'max-turns',value:1,uses:1,id:'test-limited-turns',shipId:'guided-1',receiptId:'test',opponentId:null,createdRound:1,notBeforeRound:2,expiresRound:2});
+ w.values.set('alphaCombat',s);
+ const {legalHullManeuvers}=await import('../src/alpha/maneuvers.js');
+ const first=nextGuidedStep(s);assert.equal(first.command.type,'plan');assert.equal(first.command.shipId,'guided-0');assert.equal(first.command.maneuverId,'port-s-3');
+ s=await send(api,'guided-next');s=await send(api,'guided-next');assert.equal(s.locked['guided-0'],true);
+ const second=nextGuidedStep(s);assert.equal(second.command.type,'plan');assert.equal(second.command.shipId,'guided-1');assert.notEqual(second.command.maneuverId,'port-s-3');
+ const legal=legalHullManeuvers(s.ships['guided-1'],[{rule:'max-turns',value:1}]);
+ const chosen=legal.find(m=>m.id===second.command.maneuverId);
+ assert.ok(chosen);assert.ok(chosen.steps.filter(step=>step.kind==='turn').length<=1);assert.ok(chosen.ap<=s.ships['guided-1'].ap);
+ s=await send(api,'guided-next');assert.equal(s.plans['guided-1'],chosen.id);
+ s=await send(api,'guided-next');assert.equal(s.locked['guided-1'],true);assert.equal(nextGuidedStep(s).command.type,'move');
+ delete globalThis.JournalEntry;
+});
 test('guided fixtures reuse only marked test actors; stale Next and Stop preserve valid state',async()=>{
  const w=alphaWorld(),api=w.initialize();journals();const campaign=await Actor.create({name:'Campaign hero',type:'character',flags:{},system:{details:{level:{value:12}}}});const before=structuredClone(campaign.system);let s=await send(api,'guided-start'),old=s;
  s=await send(api,'guided-next');await assert.rejects(api.request({type:'guided-next',encounterId:old.id,revision:old.revision}),/changed/);s=await send(api,'guided-stop');assert.equal(s.guidedTest.status,'stopped');assert.equal(s.complete,true);const actors=game.actors.contents.length;s=await send(api,'guided-start');assert.equal(game.actors.contents.length,actors);assert.deepEqual(campaign.system,before);assert.equal(s.guidedTest.step,0);delete globalThis.JournalEntry;
