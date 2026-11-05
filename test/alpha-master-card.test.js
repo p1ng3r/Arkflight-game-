@@ -36,7 +36,7 @@ test("Owner-gated master rolls once, spends once, retains exact bonus receipt an
   const beforeRolls=w.counts.rolls,priorAP=ship.ap;
   authorizeAlphaCommand(api.state(),{type:"play",shipId:ship.id,instanceId:instance},game.user);
   game.user=game.users.get("gm");
-  const relayResult=await new Promise(resolve=>Hooks.callAll("createChatMessage",{author:{id:"player"},flags:{"arkflight-game":{alphaCommand:{requestId:"master-test",command:{type:"play",encounterId:s.id,revision:s.revision,shipId:ship.id,instanceId:instance,skill:"crafting"}}}},update:async changes=>resolve(changes["flags.arkflight-game.alphaResult"])},{},"player"));
+  const relayResult=await new Promise(resolve=>Hooks.callAll("createChatMessage",{author:{id:"player"},flags:{"arkflight-game":{alphaCommand:{requestId:"master-test",command:{type:"play",encounterId:s.id,revision:s.revision,shipId:ship.id,instanceId:instance,skill:"crafting"}}}},update:async changes=>{const result=changes["flags.arkflight-game.alphaResult"];if(result)resolve(result);}},{},"player"));
   assert.equal(relayResult.ok,true,relayResult.error);const next=api.state();
   const receipt=next.log.findLast(e=>e.detail?.instanceId===instance&&e.detail.kind==="check").detail;
   assert.equal(w.counts.rolls-beforeRolls,2);assert.equal(next.ships[ship.id].ap,priorAP-1);
