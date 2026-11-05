@@ -161,3 +161,15 @@ The two console warnings were: deprecated `Scene#background` getter (changed to 
 
 - [ ] **Immediate native acceptance:** pull build `alpha-recap-render-repair-20261105`, hard-refresh, rerun guided 3-round test, export a new debug report. Require `status=complete`, **zero `unhandledrejection`**, no movement mismatches, zero request timeouts, and rendered HUD/recap visible on rounds 1–3.
 - [ ] Once guided view is clean, test the separate new `combatFlow:3` with **two actual browser connections**. The guided script intentionally uses the older `combatFlow:2`; it cannot certify five-second auto move, two-card group reveal, 12-second AFK completion or free cycle in the new flow.
+
+
+### 5 November 2026 — Second live guided-test audit and PF2e encounter tracker startup
+
+Attached native debug file: `arkflight-guided-debug-2026-11-05T16-35-11-458Z.txt`, build `alpha-recap-render-repair-20261105`, Foundry `14.365`, PF2e `8.4.1`. The *actual native* report says **complete**, 349 entries, 86 commands, all three cleanup phases reached, six attacks, six damage resolutions, and **zero token q/r/rotation discrepancies** over the saved diagnostic snapshots.
+
+**Confirmed fix:** previous nine `Failed to render Application "arkflight-round-deck": ... e.fn is not a function` unhandled errors were **absent** in the new test. Only one `unhandledrejection` remains, at test startup: `EncounterTracker._onRender` `Cannot use 'in' operator to search for 'turn' in undefined` [PF2e 8.4.1], plus one `console.warn` immediately after the first mulligan: `Cannot change to combat movement, there is no active combat`. Both are outside attack/movement resolution. No native request timeout occurred.
+
+**New compatibility candidate (requires rerun):** when beginning a new guided test, deactivate the prior Arkflight combat with `render:false` so the EncounterTracker is not forced to render during the no-combat gap; delete the old same-scene combat with `render:false`; initialize a newly created Foundry combat at **round 1 and turn 0** (matching the Arkflight opening round) instead of round 0 and null turn. A new `test/alpha-tracker-startup.test.js` verifies the started tracker and deactivation options in stubs. Current build `alpha-tracker-startup-20261105` is a **candidate**, not proof that the PF2e tracker warning is gone.
+
+- [ ] Pull the new build and rerun the *same* three-round guided test. Require: status complete, 0 `unhandledrejection`, 0 `arkflight-round-deck` render errors, 0 token mismatches, and ideally no combat movement warning.
+- [ ] Next, test **manual combatFlow 3** separately with two real browser clients; current guided script uses legacy combatFlow 2 and cannot validate synchronized five-second locks, two-card reveal, multiplayer AFK fallback, and free cycling.
