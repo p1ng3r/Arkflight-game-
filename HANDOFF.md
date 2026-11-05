@@ -77,6 +77,16 @@ Post-audit P0 checkpoint: `alpha-private-draw-projection-20261104`. `alphaPlayer
 | Complication catalog/consumers | `src/content/ship-complications.js`, `src/combat/ship-complications.js` |
 | Loaded entry points | `module.json` |
 
+## First native automatic-run checkpoint — 5 November 2026
+
+The uploaded `arkflight-guided-debug-2026-11-05T07-20-29-464Z.txt` captures a **failed** live run (149 entries) with Foundry 14.365, PF2e 8.4.1 and build `alpha-private-draw-projection-20261104`. Round 1 completed, with native ship poses matching saved hexes; after moving to round 2, the runner attempted `port-s-3` for both ships. A round-1 critical-failure Complication gave Night Heron `max-turns:1` for round 2, making its two-turn S-curve illegal. The command was rejected at revision 34, without spending AP or advancing the pose.
+
+**Current follow-up build:** `alpha-native-test-repair-20261105`. `nextGuidedStep()` now chooses each ship's route from `legalHullManeuvers(ship,alphaComplications(...))` with AP and living-ship checks, preferring the round-2 S-curve when legal and falling back to a legal alternative. Added restricted-turn regression test.
+
+The same report logged three separate unhandled HUD render rejections: `Failed to render Application "arkflight-round-deck": ... e.fn is not a function`. The round deck's nine `eq` helper subexpressions have been replaced by explicit controller-supplied booleans to avoid reliance on an external helper's block signature. This is a **candidate template fix only**; live native confirmation remains outstanding. Other nonfatal warnings included deprecated `Scene#background` and a "no active combat" movement-mode warning. Do not infer that either caused the runner's failure.
+
+**Native acceptance still needed:** pull current branch, hard-refresh, restart the dedicated automatic 3-round test and export a new debug.txt; separately verify HUD rendering and GM/player click behavior. Do not claim three-round native success based on Node tests.
+
 ## Test and native acceptance boundary
 
 At the audit baseline, `npm test` passed 936 tests. Re-run after edits and report the actual count. Tests include rules, authorization, stale revisions, movement recovery, card flows and the automated driver using Foundry document doubles. Browser harness checks in earlier work were not live Foundry screenshots.
