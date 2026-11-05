@@ -143,3 +143,14 @@ Eligible Instant cards now rise 28px above the hand, gain a turquoise outline/gl
 Eligibility checks the current defending ship's response window, assigned station permission, AP, required Lifeveil, card restrictions and blocking choices/roll requests. Automated demonstrations do not invite manual responses. A folded hand temporarily appears while this client has a usable Instant; the saved folded preference is untouched, so it folds again after the response. Reduced-motion settings retain the static raised/glowing cue without pulsing.
 
 Validation: 936 tests pass, including eligibility changes for AP, station permissions, pending crew rolls, phase and Lifeveil. Live visual acceptance: fold Cards, receive an attack with an affordable Instant, check the raised/glowing card, click it, select a skill and roll, then verify the hand returns to the saved folded layout. With no AP or the wrong station owner, it must not glow.
+
+
+## First live three-round debug and repair candidate — 5 November 2026
+
+On build `alpha-private-draw-projection-20261104`, a real Foundry 14.365 / PF2e 8.4.1 automated run reached round 2 but failed its `plan` command for Night Heron. A round-1 Complication had imposed `max-turns:1` on Night Heron for round 2, while the automated driver prescribed `port-s-3` (two turns) for both ships. Normal command validation correctly refused the move and preserved the revision/poses.
+
+Build `alpha-native-test-repair-20261105` changes the **test driver's route choice only**: routes are evaluated separately against each hull's current complication restrictions and AP, with an affordable legal fallback. It does not waive complications, modify ship maneuver catalogs or change player movement authority. An explicit restricted-turn regression supplements the three-round tests.
+
+The report also captured three `arkflight-round-deck` unhandled render errors, `e.fn is not a function`. Nine conditional `eq` subexpressions in the current HUD template were replaced with booleans supplied by the controller. This removes a possible incompatibility with globally registered Handlebars equality helpers; **the native cause and resolution remain unconfirmed until retested**.
+
+Retest: update the branch, hard refresh the client, confirm the build label, then run **Run automated 3-round test** from `await game.arkflight.alphaCombat.guided.open();`. Verify the new run completes round 3 and download fresh debug.txt. Then open the current HUD in a separate GM/player manual walkthrough to verify live rendering, dotted targets and raised Instants.
