@@ -35,6 +35,20 @@
 {{#if guidedRunning}}<div class="round-guided-banner"><b>Guided test · Round {{s.round}} / 3 · Step {{guidedTest.step}}</b><button data-round-action="guided-test">Open Next Step controls</button><button data-round-action="download-debug">Download debug.txt</button></div>{{/if}}
 
 <aside class="hud-basic-actions"><b>WEAPONS &amp; SHIP COMMAND</b><button data-round-action="weapons">Fire Weapon · 1 AP</button><button data-round-action="sheet">Open Ship Sheet</button><small>Weapons fire during the Firing phase.</small>{{#if weaponsOpen}}<div>{{#each batteries}}<button data-round-action="arcs" data-battery-id="{{id}}" aria-pressed="{{arcVisible}}">{{name}} · {{#if arcVisible}}Hide arc / range{{else}}Show arc / range{{/if}}</button>{{/each}}</div>{{/if}}</aside></aside><button class="hud-crew-toggle" data-round-action="toggle-crew" aria-expanded="{{crewVisible}}">{{#if crewVisible}}Hide crew{{else}}Show crew{{/if}}</button>{{#if crewVisible}}<nav class="hud-crew-rail" aria-label="Crew character sheets"><strong>CREW · CHARACTER SHEETS</strong>{{#each crewRail}}<button data-round-action="crew-sheet" data-actor-id="{{actorId}}" class="{{#if pending}}is-pending{{/if}}" {{#unless actorId}}disabled{{/unless}} title="Open {{name}} character sheet">{{#if img}}<img src="{{img}}" alt="">{{/if}}<span>{{label}}<small>{{name}}</small></span></button>{{/each}}</nav>{{/if}}
+{{#if fleetDial.length}}
+<section class="arkflight-mini-fleet" aria-label="Fleet maneuver locks" role="status">
+  <header><i class="fa-solid fa-compass" aria-hidden="true"></i><strong>FLEET MANEUVERS</strong></header>
+  <div class="arkflight-mini-fleet-ships">
+    {{#each fleetDial}}
+      <div class="arkflight-mini-ship {{#if ready}}is-locked{{/if}}" title="{{name}} · {{label}}">
+        <i class="fa-solid fa-ship" aria-hidden="true"></i><span>{{name}}</span>
+        <i class="fa-solid {{#if ready}}fa-lock{{else}}fa-hourglass-half{{/if}}" aria-hidden="true"></i>
+      </div>
+    {{/each}}
+  </div>
+  {{#if fleetCountdown}}<div class="arkflight-fleet-clock"><b data-fleet-countdown>5</b><small>All ships locked · moving together</small></div>{{else}}<small>Awaiting fleet lock · enemy routes remain hidden</small>{{/if}}
+</section>
+{{/if}}
 {{#if drawReveal}}
 <section class="arkflight-draw-reveal" role="dialog" aria-label="Arkflight crew draw reveal" aria-live="polite">
   <header><small>ARKFLIGHT · SHARED DECK</small><h2>New Cards</h2><p>Each online crew member on this ship may confirm, or the countdown continues automatically.</p></header>
