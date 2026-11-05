@@ -20,7 +20,14 @@ const cardScenes={patch:"patch-hull",shield:"shield-pulse","all-hands":"all-hand
 
 export const alphaCardScene=card=>`modules/arkflight-game/assets/ui/canvas-hud/${cardScenes[card.id]??`${card.stations[0]}-scene`}.webp`;
 const labels={opening:'Opening hand',draw:'Draw',planning:'Maneuver','card-planning':'Plan cards',resolving:'Station rolls',firing:'Firing',response:'Instant response',retarget:'Retarget',damage:'Damage','draw-reveal':'Card reveal',cleanup:'Round recap',complete:'Encounter ended',boarding:'Boarding'};
-export function roundPhaseSteps(s){const phases=[s?.round===1?'opening':'draw','planning','card-planning','resolving','firing','cleanup'],current=phases.indexOf(['response','retarget','damage'].includes(s?.phase)?'firing':s?.phase);return phases.map((id,i)=>({id,label:labels[id],active:i===current,done:i<current,number:i+1}));}
+export function roundPhaseSteps(s){
+ if(s?.combatFlow===3){
+  const phases=['plan','execute','recover'],current=s.complete||s.phase==='cleanup'?2:['resolving','firing','response','retarget','damage'].includes(s.phase)?1:0;
+  return phases.map((id,i)=>({id,label:id.toUpperCase(),active:i===current,done:i<current,number:i+1}));
+ }
+ const phases=[s?.round===1?'opening':'draw','planning','card-planning','resolving','firing','cleanup'],current=phases.indexOf(['response','retarget','damage'].includes(s?.phase)?'firing':s?.phase);
+ return phases.map((id,i)=>({id,label:labels[id],active:i===current,done:i<current,number:i+1}));
+}
 export function fleetManeuverSummary(s){return Object.values(s.ships).filter(ship=>ship.resources.hull.value>0).map(ship=>{const id=s.plans[ship.id],route=legalHullManeuvers(ship,alphaComplications(s,ship.id)).find(r=>r.id===id);return {shipId:ship.id,name:ship.name,routeId:id,routeName:route?.name??'No legal saved route',description:route?.description??'Choose a template again',locked:!!s.locked[ship.id]};});}
 export class AlphaRoundDeckWindow extends AlphaCombatWindow{
  static DEFAULT_OPTIONS={id:'arkflight-round-deck',classes:['arkflight-alpha-combat','alpha-command-deck','arkflight-round-deck'],window:{title:'Arkflight · Canvas command HUD',frame:false,resizable:false},position:{width:960,height:450}};
@@ -73,6 +80,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
    canInspectCurrent:s&&api.ownsShip(s.turnOrder[s.turnIndex]),primary,allLocked:phase==='planning'&&roundReadiness(s).every(r=>r.ready),currentCardName:row&&s?ALPHA_CARDS[s.ships[s.turnOrder[s.turnIndex]].instances[row.instanceId]]?.name??'Enemy station action':'',
    phaseInstruction:followup?'Newly drawn cards may join your orders. Commit or keep them, then lock.':request?`Waiting for ${c.crewRequest.actorName} to roll.`:({opening:'Keep your hand or replace up to two cards.',draw:'Click the deck to draw this round’s card.',planning:'Choose a course. Movement waits until every ship locks.','card-planning':'Commit cards in order. Keep AP for firing and Instants.',resolving:`${s?.ships[s?.turnOrder?.[s?.turnIndex]]?.name??''} · resolve the next queued card.`,firing:`${s?.ships[firingShip]?.name??''} · choose weapons and targets.`,response:'Respond to incoming fire or pass.',damage:'The attack die is saved. Resolve damage without rerolling.',cleanup:'Discard overflow, review the round and start the next.'}[phase]??'Choose your ship.'),
    unsettled:!!s?.pendingCardChoice||!!s?.pendingDiscard||!!s?.pendingCrewAction||s?.complications?.choices.some(x=>x.status==='pending'),recapNarrative:s?.roundFlow===2?roundRecap(s).narrative:[],recapLines:(s?.roundEvents??s?.log??[]).filter(e=>e.round===s?.round),journal:s?.roundJournal,
+   fleetDial:phase==='planning'&&s?.combatFlow===3?roundReadiness(s):[],fleetCountdown:phase==='planning'&&!!s?.maneuverCountdown,fleetDeadline:s?.maneuverCountdown?.deadline??null,
    revealCards,drawReveal:phase==='draw-reveal',revealCanReady:!!reveal?.required?.includes(game.user.id)&&!reveal.ready.includes(game.user.id),revealReady:reveal?.ready.length??0,revealRequired:reveal?.required.length??0,revealDeadline:reveal?.deadline??null,revealWaiting:phase==='draw-reveal'&&!reveal,
    showHand:!!ship,drawCount:ship?.drawCount??ship?.drawPile.length??0};
   if(c.choices.length)for(const key of ['canResolve','canQueue','canAttack','canDamage','canFireNow','canFinishFiring','canLockCards','canInstant','canSubmitRoll'])context[key]=false;
@@ -92,6 +100,12 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   for(const el of root.querySelectorAll('[data-round-build]'))el.addEventListener('change',()=>{this.build[el.dataset.roundBuild]=['count','level'].includes(el.dataset.roundBuild)?Number(el.value):el.value;void this.render({force:true});});
   for(const [selector,key] of [['[data-alpha-battery]','batteryId'],['[data-alpha-adjustment]','adjustment'],['[data-alpha-target]','targetId']])root.querySelector(selector)?.addEventListener('change',e=>{this[key]=e.target.value;});
   const hand=root.querySelector('.round-hand');if(hand)hand.scrollLeft=this.restoreScroll?.hand??0;this.effectsEngine.update(root,c.s,c.ship?.id);
+  if(this.fleetTick){clearInterval(this.fleetTick);this.fleetTick=null;}
+  const fleetClock=root.querySelector('[data-fleet-countdown]');
+  if(fleetClock&&c.fleetDeadline){
+   const update=()=>{fleetClock.textContent=String(Math.max(0,Math.ceil((c.fleetDeadline-Date.now())/1000)));};
+   update();this.fleetTick=setInterval(update,250);
+  }
   if(this.revealTick){clearInterval(this.revealTick);this.revealTick=null;}
   const clock=root.querySelector('[data-draw-countdown]');
   if(clock&&c.revealDeadline){
