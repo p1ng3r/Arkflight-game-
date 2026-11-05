@@ -12,7 +12,7 @@ async function fixture() {
   await command(api, "end"); return { world, api, actorId, actor: game.actors.get(actorId) };
 }
 function playerRelay(api, input) {
-  return new Promise(resolve => Hooks.callAll("createChatMessage", { author: { id: "player" }, flags: { [M]: { alphaCommand: { requestId: "library-probe", command: input } } }, update: async changes => resolve(changes[`flags.${M}.alphaResult`]) }, {}, "player"));
+  return new Promise(resolve => Hooks.callAll("createChatMessage", { author: { id: "player" }, flags: { [M]: { alphaCommand: { requestId: "library-probe", command: input } } }, update: async changes => { const result=changes[`flags.${M}.alphaResult`]; if(result) resolve(result); } }, {}, "player"));
 }
 test("Actor-held libraries survive new battles and launch the selected named deck without mutating permanent cards", async () => {
   const { api, actorId, actor } = await fixture();
