@@ -62,3 +62,8 @@
 @keyframes arkflight-locked-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.6)}}
 @media(prefers-reduced-motion:reduce){.arkflight-mini-ship.is-locked>i:first-child{animation:none}}
 [data-alpha-motion="off"] .arkflight-mini-ship.is-locked>i:first-child{animation:none}
+
+.arkflight-mini-ship>img{width:24px;height:24px;object-fit:contain;flex:none;filter:drop-shadow(0 0 2px #4a8c8f)}
+.arkflight-mini-ship.is-locked>img{filter:drop-shadow(0 0 5px #52b2a0);animation:arkflight-locked-pulse 1.8s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.arkflight-mini-ship.is-locked>img{animation:none}}
+[data-alpha-motion="off"] .arkflight-mini-ship.is-locked>img{animation:none}
