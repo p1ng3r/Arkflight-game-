@@ -1,5 +1,6 @@
 import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS } from "../alpha/hulls.js";
 import { validateLibraryDeck } from "../alpha/ship-library.js";
+import {decoratedCard} from "../alpha/card-taxonomy.js";
 import { alphaCardArt } from "./alpha-combat-ui.js";
 import { cardBand, cardTheme, cardOutcomes } from "./alpha-combat-presentation.js";
 import { AlphaCombatEffects, alphaPreferences, alphaSound, bindAlphaPreferences, alphaWindowPosition } from "./alpha-combat-effects.js";
@@ -30,7 +31,7 @@ export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(Applicati
     const issues = validateLibraryDeck(view, this.draft), counts = new Map();
     for (const id of this.draft.cards) counts.set(id, (counts.get(id) ?? 0) + 1);
     const unavailable = [...counts].filter(([id]) => !view.learned.includes(id) || !view.catalog.some(c => c.id === id)).map(([id, count]) => ({ id, count }));
-    const catalog = view.catalog.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase())).map(c => {const count=counts.get(c.id)??0,max=c.unique?1:2,canEdit=editable&&view.learned.includes(c.id);return{ ...c, learned: view.learned.includes(c.id),count,max, art: alphaCardArt(c), editable:canEdit,canDecrease:canEdit&&count>0,canIncrease:canEdit&&count<max,band:cardBand(c),theme:cardTheme(c),outcomes:cardOutcomes(c) };});
+    const catalog = view.catalog.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase())).map(c => {const count=counts.get(c.id)??0,max=c.unique?1:2,canEdit=editable&&view.learned.includes(c.id);return{ ...decoratedCard(c), learned: view.learned.includes(c.id),count,max, art: alphaCardArt(c), editable:canEdit,canDecrease:canEdit&&count>0,canIncrease:canEdit&&count<max,band:cardBand(c),theme:cardTheme(c),outcomes:cardOutcomes(c) };});
     return { ...base, setupStep:this.setupStep,setupProfile:this.setupStep==="profile",setupDeck:this.setupStep==="deck",setupCrew:this.setupStep==="crew",setupReview:this.setupStep==="review",setupSteps:[{id:"profile",name:"1 · Hull & fittings"},{id:"deck",name:"2 · Combat deck"},{id:"crew",name:"3 · Crew & weapons"},{id:"review",name:"4 · Review"}].map(x=>({...x,selected:x.id===this.setupStep})),view, ships: ships.map(s => ({ ...s, selected: s.id === this.actorId })), gm: game.user.isGM, error: this.error, busy: this.busy, stale, editable, dirty: this.dirty || this.configDirty, locked, draft: this.draft, count: this.draft.cards.length, issues, unavailable, search: this.search, catalog,
       canInitialize: game.user.isGM && !view.initialized && !locked && !this.busy,
       canSaveDeck: editable && !this.configDirty, canRefit: editable && !this.dirty,
