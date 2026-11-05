@@ -176,7 +176,7 @@ async function handle(cmd,user){
     const next=await prepareAlphaFleet(cmd);if(guideStart){initializeGuidedTest(next,await prepareGuidedCrews(next),{manual:manualGuide});next.guidedTest.manual=manualGuide;}await saved(next);if(before?.pendingCrewAction){try{await finishCrewRequest(before.pendingCrewAction.id,true);}catch(error){console.warn("Arkflight | Cancelled crew chat",error);}}Hooks.callAll("arkflightAlphaChanged");return next;
   }
   if(!before?.id||cmd.encounterId!==before.id||cmd.revision!==before.revision)throw new Error("The alpha encounter changed; refresh before acting.");
-  if(["ready-draw","timeout-draw","lock","move"].includes(cmd.type))cmd={...cmd,userId:user.id,now:Date.now()};
+  if(["ready-draw","timeout-draw","lock","move","cycle-card"].includes(cmd.type))cmd={...cmd,userId:user.id,now:Date.now()};
   if(cmd.type==="retry-recap"){if(!["cleanup","complete"].includes(before.phase))throw Error("No completed round is ready.");await persistRoundRecap(before);Hooks.callAll("arkflightAlphaChanged");return before;}
   if(before.pendingCrewAction&&!['roll-crew','cancel-crew','end','reset'].includes(cmd.type))throw new Error("Waiting for the assigned station to choose a skill and roll.");
   if(cmd.type==="cancel-crew"){
@@ -230,6 +230,7 @@ async function handle(cmd,user){
     const job={id:foundry.utils.randomID(),before,next,start:expectedAlphaTokens(before),step:0,error:null};
     await game.settings.set(MODULE,JOURNAL,job);const result=await completeJournal(job);await showAlphaCardRolls(evaluated,{user});await publishReceipts(before,result,cmd,user,resolvingRequest,evaluated);return result;
   }
+  if(next.phase==="draw-reveal"&&next.drawReveal)configureDrawControllers(next,drawControllerMap(next),Date.now());
   const autoPrompt=stageNextCrewRequest(next);await saved(next);await announceNextCrew(next,autoPrompt);await persistRoundRecap(next);
   try{await syncAlphaTracker(next);}catch(error){console.error("Arkflight | Alpha tracker",error);ui.notifications.warn("Alpha action saved; native combat tracker synchronization will retry.");}
   await showAlphaCardRolls(evaluated,{user});
