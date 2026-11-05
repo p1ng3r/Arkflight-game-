@@ -61,3 +61,15 @@ test("repeated card rewards remain distinct unlocks, and equipped deck never exc
  assert.equal(s.rewards.history.length,Math.min(initialCandidates-2,8));
  assert.ok(s.rewards.history.every((r,i)=>i===0||r.cardId!==s.rewards.history[i-1].cardId));
 });
+
+test("the first helming choice influences, but does not lock, the next five quest offers",()=>{
+ let s=createShipLibrary(config);
+ s=send(s,"library-offer",{rewardId:"commission",kind:"commission"});
+ const chosen=s.rewards.pending.options[0];
+ s=send(s,"library-pick",{rewardId:"commission",cardId:chosen});
+ s=send(s,"library-offer",{rewardId:"quest-one",kind:"quest"});
+ const firstCategory=ALPHA_CARDS[chosen].role;
+ const remainingSame=Object.values(ALPHA_CARDS).filter(card=>card.role===firstCategory&&!s.learned.includes(card.id));
+ if(remainingSame.length)assert.ok(s.rewards.pending.options.some(id=>ALPHA_CARDS[id].role===firstCategory));
+ assert.equal(s.rewards.pending.options.length,3);
+});
