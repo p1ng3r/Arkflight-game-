@@ -14,6 +14,21 @@ import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePos
 
 export const ALPHA_BUILD="alpha-quest-crew-reveal-20261105";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
+export const ALPHA_REQUEST_ACCEPT_MS=30000;
+export const ALPHA_REQUEST_PROCESS_MS=120000;
+function pendingDeadline(requestId,phase){
+  const job=pending.get(requestId);
+  if(!job)return;
+  clearTimeout(job.timer);
+  const ms=phase==="accepted"?ALPHA_REQUEST_PROCESS_MS:ALPHA_REQUEST_ACCEPT_MS;
+  job.timer=setTimeout(()=>{
+    if(pending.get(requestId)!==job)return;
+    pending.delete(requestId);
+    const status=phase==="accepted"?"The GM received your request but did not return a result":"The GM did not acknowledge your request";
+    job.reject(new Error(`Arkflight request timed out: ${status}. It may have completed; check the ship's cards, AP, and phase before sending it again.`));
+  },ms);
+}
+
 let queue=Promise.resolve(),drawTimer=null,movementTimer=null;
 function scheduleDrawTimeout(value){
  if(drawTimer){clearTimeout(drawTimer);drawTimer=null;}
@@ -258,8 +273,13 @@ async function request(cmd){
   if(gm.id===game.user.id)return enqueue(cmd,game.user);
   const requestId=foundry.utils.randomID();
   return new Promise((resolve,reject)=>{
-    const timer=setTimeout(()=>{pending.delete(requestId);reject(new Error("Alpha request timed out. Reopen the HUD before retrying."));},30000);pending.set(requestId,{resolve,reject,timer});
-    ChatMessage.create({author:game.user.id,whisper:[gm.id],content:"Arkflight alpha request",flags:{[MODULE]:{alphaCommand:{requestId,command:cmd}}}}).catch(error=>{clearTimeout(timer);pending.delete(requestId);reject(error);});
+    pending.set(requestId,{resolve,reject,timer:null,accepted:false});
+    pendingDeadline(requestId,"created");
+    ChatMessage.create({author:game.user.id,whisper:[gm.id],content:"Arkflight alpha request",flags:{[MODULE]:{alphaCommand:{requestId,command:cmd}}}}).catch(error=>{
+      const job=pending.get(requestId);
+      if(!job)return;
+      clearTimeout(job.timer);pending.delete(requestId);reject(error);
+    });
   });
 }
 Hooks.once("init",()=>{
@@ -272,11 +292,20 @@ Hooks.on("createChatMessage",(message,_options,userId)=>{
   const input=message.flags?.[MODULE]?.alphaCommand;if(!input||primary()?.id!==game.user.id)return;
   const user=game.users.get(userId),author=message.author?.id??message.user?.id??message.user;
   if(!user?.active||author!==userId)return;
+  // Acknowledge receipt immediately; a native token move or journal save may outlast 30 seconds.
+  void message.update({[`flags.${MODULE}.alphaAccepted`]:{requestId:input.requestId}}).catch(error=>console.warn("Arkflight | Player request receipt unavailable",error));
   enqueue(input.command,user).then(()=>message.update({[`flags.${MODULE}.alphaResult`]:{requestId:input.requestId,ok:true},content:"Alpha request resolved"}),error=>message.update({[`flags.${MODULE}.alphaResult`]:{requestId:input.requestId,ok:false,error:error.message},content:"Alpha request rejected"})).catch(error=>console.error("Arkflight | Alpha relay",error));
 });
 Hooks.on("updateChatMessage",(message,_changes,_options,userId)=>{
-  if(!game.users.get(userId)?.isGM)return;const result=message.flags?.[MODULE]?.alphaResult,job=pending.get(result?.requestId);if(!job)return;
-  clearTimeout(job.timer);pending.delete(result.requestId);result.ok?job.resolve(alphaPlayerState()):job.reject(new Error(result.error));
+  if(!game.users.get(userId)?.isGM)return;
+  const result=message.flags?.[MODULE]?.alphaResult,receipt=message.flags?.[MODULE]?.alphaAccepted;
+  const job=pending.get(result?.requestId??receipt?.requestId);if(!job)return;
+  if(result){
+    clearTimeout(job.timer);pending.delete(result.requestId);
+    result.ok?job.resolve(alphaPlayerState()):job.reject(new Error(result.error));
+  }else if(receipt&&!job.accepted){
+    job.accepted=true;pendingDeadline(receipt.requestId,"accepted");
+  }
 });
 Hooks.on("renderChatMessageHTML",(message,html)=>{if(message.flags?.[MODULE]?.alphaCommand)html.style.display="none";});
 Hooks.on("updateSetting",setting=>{if([`${MODULE}.${STATE}`,`${MODULE}.${JOURNAL}`].includes(setting.key))Hooks.callAll("arkflightAlphaChanged");});
