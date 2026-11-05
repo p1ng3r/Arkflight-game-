@@ -1,5 +1,21 @@
 # Current Arkflight card-game contract
 
+## New experimental combatFlow 3 and quest card rewards (5 November 2026)
+
+**This section supersedes older numbers for newly started manual alpha battles**, which now request `roundFlow:2, combatFlow:3`; guided automated tests still use the previous `combatFlow:2` for comparison. This is not a production-ready native acceptance claim.
+
+- New hulls use a **20-card core starter deck**, and ship adoption through the Library Initialize action creates a one-of-three **commissioning card offer**. GM-issued subsequent three-card offers have unique quest references and can be selected by an owning crew member. One chosen playable card is permanently learned per offer.
+- The first commissioning pick biases the next **five quest offers** toward one matching primary category when available; it never forces the entire choice. Each reward may append to the selected deck if a slot is available; otherwise the chosen card remains in the persistent learned library. Earned rewards grant a +1 active deck slot up to an absolute **30-card ceiling**, with older level-based slots retained for compatibility. The other two saved decks are not silently rewritten.
+- The actual playable card catalog remains **26 distinct designs**, not the planned **125 additional designs**. Once fewer than three unlearned playable cards remain, an offer fails clearly rather than inventing or duplicating rewards.
+- Six explicit primary categories: Attack, Defense, Repair, Maneuver, Command and Utility. Additional tactical tags include Instant, Burn, Prepared, Coordinated, Ammo, Boarding, Ramming, Lifeveil, Strain, Morale, Hull, Supply, etc. Colored lower frame/band accents and readable tags are in the library/HUD; category is not timing.
+- The new manual battle uses **opening five cards** (mulligan before round-one maneuver), then **maneuver choice and lock for every ship**. All living ships locked starts a **GM-authoritative five-second countdown**; after its deadline native simultaneous movement is initiated automatically, resolving contacts before card strategy opens. The compact fleet HUD shows *lock status only*, with actual ship WebP images; opponent routes must remain concealed.
+- Later rounds **begin with maneuvering, not card draw**. After all movement resolves, each surviving ship draws **two cards** into a pending two-card reveal. Only the ship's active owning users (prioritizing assigned station actors) may confirm. Upon all confirmations, **or after 12 seconds**, pending cards enter the shared hand and Strategy unlocks. Non-player-controlled ships do not block. A free **once-per-ship-per-round card cycle** discards one uncommitted card, draws one replacement, and uses the same reveal without AP cost.
+- Presentation uses current bundled WebP card/ship art, CSS animations, sounds and client motion/volume controls. Timer completion is authoritative GM logic, not animation completion. Manual crew skill selection and PF2e checks, shared 4 base AP, attack card versus basic fire, and Instant AP payments remain unchanged.
+- **Important unfinished work:** live native GM/player confirmation, 125-card content authorship, automatic quest-completion integration, crew-wide reward voting, native direct world-setting/socket privacy, disconnect/GM migration during countdown, 5 station basics, all card uniqueness/balance, and full persistent campaign ship migration. A one-of-three quest offer is currently issued through the GM ship-library control, not automatically by every quest system. The existing HUD rendering repair also needs native acceptance.
+
+Older sections below document `combatFlow:2` / the 4 Nov snapshot unless a new note explicitly supersedes them.
+
+
 Audit snapshot: 4 November 2026. This describes the current implementation and latest direction; it does not declare a production release. Use the executable sources when a number conflicts with historical planning documents. Open design questions are listed explicitly in the work list.
 
 ## Identity and loop
