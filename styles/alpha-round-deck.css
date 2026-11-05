@@ -46,3 +46,19 @@
 @media(prefers-reduced-motion:reduce){.arkflight-reveal-card{animation:none}}
 [data-alpha-motion="off"] .arkflight-reveal-card{animation:none}
 @media(max-width:560px){.arkflight-draw-reveal{padding:12px;max-height:92vh}.arkflight-reveal-cards{gap:8px}.arkflight-reveal-card{width:47%;padding:6px}.arkflight-reveal-card img{height:78px}}
+
+/* Small fleet commitment instrument; public lock status never exposes maneuver choice. */
+.arkflight-mini-fleet{display:flex;flex-direction:column;gap:5px;margin:3px 10px;padding:6px 9px;border:1px solid #987e4b;border-radius:9px;background:linear-gradient(135deg,#183b44,#162833);color:#d7c79e;flex:none;max-height:115px;overflow:auto}
+.arkflight-mini-fleet header{display:flex;gap:8px;align-items:center;justify-content:center;font-size:10px;letter-spacing:.14em}
+.arkflight-mini-fleet-ships{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.arkflight-mini-ship{display:flex;gap:6px;align-items:center;min-width:0;padding:4px 6px;border:1px solid #8e7659;border-radius:7px;background:#1f303b;color:#b6b1a1;font-size:10px}
+.arkflight-mini-ship span{max-width:96px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arkflight-mini-ship.is-locked{border-color:#4aa798;color:#b9e3d3;box-shadow:inset 0 0 9px #2c937a44}
+.arkflight-mini-ship.is-locked>i:first-child{animation:arkflight-locked-pulse 1.8s ease-in-out infinite}
+.arkflight-mini-fleet>small{display:block;text-align:center;color:#b6c9c8;font-size:9px}
+.arkflight-fleet-clock{display:flex;align-items:center;justify-content:center;gap:9px;color:#f6d594}
+.arkflight-fleet-clock>b{font:700 22px Georgia,serif;min-width:24px;text-align:center}
+.arkflight-fleet-clock small{font-size:10px}
+@keyframes arkflight-locked-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.6)}}
+@media(prefers-reduced-motion:reduce){.arkflight-mini-ship.is-locked>i:first-child{animation:none}}
+[data-alpha-motion="off"] .arkflight-mini-ship.is-locked>i:first-child{animation:none}
