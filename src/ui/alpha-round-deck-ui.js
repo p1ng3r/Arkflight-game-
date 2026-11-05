@@ -118,6 +118,12 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   if(!this.resolutionOnly&&!c.guidedRunning&&c.primary&&c.allLocked&&c.s.combatFlow!==3&&!this.busy&&this.movePromptKey!==`${c.s.id}:${c.s.round}`){this.movePromptKey=`${c.s.id}:${c.s.round}`;queueMicrotask(()=>void this.roundAction('confirm-move'));}
   if(!this.resolutionOnly&&!c.autoTesting&&c.recap&&!c.unsettled&&c.s?.roundFlow===2&&this.recapKey!==`${c.s.id}:${c.s.round}`){this.recapKey=`${c.s.id}:${c.s.round}`;const journal=c.journal?`<p>Journal ${recapEscape(c.journal.journalId)} · Page ${recapEscape(c.journal.pageId)}</p>`:'<p>Journal pending; recap retained for retry.</p>';if(foundry.applications.api.DialogV2?.prompt)queueMicrotask(()=>void foundry.applications.api.DialogV2.prompt({window:{title:`Round ${c.s.round} · Ship’s log`},content:roundRecapHTML(c.s)+journal,ok:{label:'Return to battle'}}).catch(()=>{}));}
  }
+ async minimize(...args){this.clearRevealClocks();return super.minimize(...args);}
+ async close(options={}){this.clearRevealClocks();return super.close(options);}
+ clearRevealClocks(){
+  if(this.revealTick){clearInterval(this.revealTick);this.revealTick=null;}
+  if(this.fleetTick){clearInterval(this.fleetTick);this.fleetTick=null;}
+ }
  async roundAction(type,data={}){
   if(this.busy)return;const api=game.arkflight.alphaCombat,s=api.state(),ship=s?.ships[data.shipId??this.shipId];
   if(type==='toggle-panel'||type==='focus-layout'||type==='reset-layout'){const panels=hudPanelLayout(game.settings.get('arkflight-game','alphaHudPanels'));if(type==='toggle-panel'){if(!HUD_PANELS.includes(data.panel))return;panels[data.panel]=!panels[data.panel];}else for(const id of HUD_PANELS)panels[id]=type==='focus-layout';await game.settings.set('arkflight-game','alphaHudPanels',panels);await this.render({force:true});return;}
