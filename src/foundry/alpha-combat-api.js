@@ -12,7 +12,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker, ensureAlphaTestBackdrop } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-quest-crew-reveal-20261105";
+export const ALPHA_BUILD="alpha-relay-receipt-20261105";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 export const ALPHA_REQUEST_ACCEPT_MS=30000;
 export const ALPHA_REQUEST_PROCESS_MS=120000;
