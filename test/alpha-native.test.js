@@ -106,7 +106,7 @@ test("player HUD shows only owned ships and the assigned Navigator's legal hull 
 
 test("the GM relay rejects forged enemy plans and hull-incompatible routes without saving changes",async()=>{
   const w=alphaWorld(),api=w.initialize();await command(api,"start");const s=api.state();game.actors.get(s.ships["alpha-0"].actorId).ownership.player=3;
-  const relay=input=>new Promise(resolve=>Hooks.callAll("createChatMessage",{author:{id:"player"},flags:{[M]:{alphaCommand:{requestId:"permission-probe",command:{encounterId:api.state().id,revision:api.state().revision,...input}}}},update:async changes=>resolve(changes[`flags.${M}.alphaResult`])},{},"player"));
+  const relay=input=>new Promise(resolve=>Hooks.callAll("createChatMessage",{author:{id:"player"},flags:{[M]:{alphaCommand:{requestId:"permission-probe",command:{encounterId:api.state().id,revision:api.state().revision,...input}}}},update:async changes=>{const result=changes[`flags.${M}.alphaResult`];if(result)resolve(result);}},{},"player"));
   let result=await relay({type:"plan",shipId:"alpha-1",maneuverId:"hold"});assert.equal(result.ok,false);assert.match(result.error,/do not own/);assert.deepEqual(api.state(),s);
   result=await relay({type:"plan",shipId:"alpha-0",maneuverId:"skiff-quick-port"});assert.equal(result.ok,false);assert.match(result.error,/legal affordable hull maneuver/);assert.deepEqual(api.state(),s);
   result=await relay({type:"plan",shipId:"alpha-0",maneuverId:"straight-1"});assert.equal(result.ok,true);assert.equal(api.state().plans["alpha-0"],"straight-1");
