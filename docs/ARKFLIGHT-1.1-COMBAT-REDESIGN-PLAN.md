@@ -1,5 +1,14 @@
 # Arkflight 1.1 — Movement-first card combat redesign implementation plan
 
+## Approved override and implementation status (5 November 2026)
+
+**The proposed 25-card starter below was superseded:** the ship starts with **20 cards**. Upon ship-library initialization, show three new cards and choose one. Repeat a one-of-three card offer upon completing **each quest, not every combat**. The first pick biases one eligible candidate in each of the next five quest offers. Earned cards remain permanently learned; selected combat deck gains up to one slot per reward, capped at **30**, and later rewards can remain in the library for substitution. The original 15-card minimum remains a compatibility item to reconsider, not a newly approved rule. 125 additional unique playable card designs are a **future content target**, not current implementation. Only 26 distinct card designs are currently implemented.
+
+Implemented behind new manual battle `combatFlow:3` (with `roundFlow:2`): movement-template locks; GM-controlled five-second fleet countdown; simultaneous native movement; two-card draw after movement beginning in round two; drawn cards held pending confirmations from online owning/assigned crew of each ship or a 12-second timeout; one free card cycle per Strategy round; Plan/Execute/Recover visual stage labels; WebP fleet and central card presentation, sound preferences; six primary categories and tactical tags. Quest offers are manually initiated by the GM from the ship library; the quest-completion trigger is not connected yet. Existing guided smoke tests remain on combatFlow 2.
+
+The remaining tasks are **live Foundry GM/player acceptance, true private authoritative state, automatic quest integration, 125-card authoring, five station basics, card/battery targeting simplification, and campaign vessel integration**. A Foundry user owning a station Actor is an *eligible online ship controller*, not proof that a PC token is physically located aboard the ship. See the new top section of `CURRENT-CARD-GAME.md` and the new tasks in `CARD-GAME-TODO.md` for precedence. No 1.1.0 release or merge has occurred.
+
+
 Status: **design plan only; no rules or runtime changes in this document**. Drafted 5 November 2026 for `feat/1.1-complication-foundation`. Read [current card contract](CURRENT-CARD-GAME.md), [audit](CARD-GAME-AUDIT.md), [backlog](CARD-GAME-TODO.md), and [handoff](../HANDOFF.md) before implementation. Executable code remains authoritative until each milestone has tests and explicit rule approval.
 
 ## Approved player decisions (do not reopen casually)
