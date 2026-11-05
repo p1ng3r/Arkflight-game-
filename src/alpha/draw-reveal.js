@@ -20,10 +20,12 @@ export function createDrawReveal(shipDraws, now, timeout=DRAW_ACK_TIMEOUT_MS){
  }
  return {ships};
 }
-export function assignDrawControllers(state,shipId,controllers){
- const reveal=state?.drawReveal?.ships?.[shipId];if(!reveal)throw new Error("That ship has no pending draw.");
- reveal.required=[...new Set(controllers)].sort();
- return settleDrawReveals(state,Date.now());
+export function configureDrawControllers(state,controllerMap,now){
+ if(!state?.drawReveal)throw new Error("No cards are waiting to be revealed.");
+ for(const [shipId,reveal] of Object.entries(state.drawReveal.ships)){
+  reveal.required=[...new Set(controllerMap[shipId]??[])].sort();
+ }
+ return settleDrawReveals(state,now);
 }
 export function acknowledgeDraw(state,shipId,userId,now){
  const reveal=state?.drawReveal?.ships?.[shipId];
