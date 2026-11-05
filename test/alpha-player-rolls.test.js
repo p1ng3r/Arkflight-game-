@@ -6,7 +6,7 @@ import {actionReceiptContent} from "../src/foundry/alpha-crew-chat.js";
 installAlphaHooks();await import("../src/foundry/alpha-combat-api.js");
 const M="arkflight-game";
 const send=(api,type,data={})=>{const s=api.state();return api.request({type,encounterId:s?.id,revision:s?.revision,...data});};
-const relay=(api,command)=>new Promise(resolve=>{const s=api.state();Hooks.callAll("createChatMessage",{author:{id:"player"},flags:{[M]:{alphaCommand:{requestId:foundry.utils.randomID(),command:{encounterId:s.id,revision:s.revision,...command}}}},async update(changes){resolve(changes[`flags.${M}.alphaResult`]);}},{},"player");});
+const relay=(api,command)=>new Promise(resolve=>{const s=api.state();Hooks.callAll("createChatMessage",{author:{id:"player"},flags:{[M]:{alphaCommand:{requestId:foundry.utils.randomID(),command:{encounterId:s.id,revision:s.revision,...command}}}},async update(changes){const result=changes[`flags.${M}.alphaResult`];if(result)resolve(result);}},{},"player");});
 function chat(){const messages=[];globalThis.ChatMessage={async create(data){const message={...data,id:`message-${messages.length}`,async update(changes){Object.assign(this,changes);}};messages.push(message);return message;}};return messages;}
 async function setup(){
   const w=alphaWorld(),api=w.initialize();await send(api,"start");
