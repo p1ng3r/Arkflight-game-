@@ -1,5 +1,8 @@
 # Arkflight 1.1.0: phased deck combat foundation
 
+> Current feature handoff: [HANDOFF.md](../HANDOFF.md), [current card-game contract](CURRENT-CARD-GAME.md) and [ordered tasks](CARD-GAME-TODO.md). This document retains its historical scope; conflicting combat rules and branch status below are not the latest alpha contract.
+
+
 Recorded 21 October 2026, America/Los_Angeles. Status: accepted design foundation with explicitly identified proposals and tuning work. An opt-in phased combat alpha now implements the first playable slice; it is not a released ruleset. The Complication Lab remains available separately; see `ARKFLIGHT-1.1.0-IMPLEMENTATION-PLAN.md`.
 
 This document supersedes conflicting future-design choices in `ARKFLIGHT-1.1.0-CARD-COMBAT.md`, including a separate RP economy, a fixed equipped hand without random draws, General/Flux/Signature as mandatory recovery classes, move-fire-continue as the normal maneuver flow, and one undivided ship turn. The existing combat path still implements its earlier prototype. The separate alpha implements hulls, native movement, phases, deck lifecycle, a small card set and complication consumers. Production catalog expansion, campaign migration and cross-pillar integration remain unfinished. See `ARKFLIGHT-1.1.0-ALPHA-TESTING.md` for exact scope.

@@ -1,5 +1,6 @@
 import { createAlphaSession, dispatchAlphaCommand, alphaSuggestedStep } from "../src/alpha/combat.js";
 
+// Legacy flow-1 pacing probe; this is not current roundFlow=2 acceptance.
 // Deterministic rules-only pacing probe. No Foundry documents, forced hits or hidden-plan prediction.
 const samples = Number(process.argv[2] ?? 12);
 if (!Number.isInteger(samples) || samples < 1 || samples > 200) throw new Error("Choose 1–200 samples.");
@@ -26,10 +27,11 @@ for (let seed = 1; seed <= samples; seed++) {
   results.push({ seed, rounds: state.round, steps, hull: Object.fromEntries(Object.values(state.ships).map(s => [s.id, s.resources.hull.value])) });
 }
 console.log(JSON.stringify({
-  scenario: "Level-5 Brigantine versus Cutter; default decks; suggestion policy; seeds 1..N",
+  roundFlow: 1, legacy: true,
+  scenario: "Legacy alpha flow 1: Level-5 Brigantine versus Cutter; default decks; suggestion policy; seeds 1..N",
   samples, meanRounds: results.reduce((n, r) => n + r.rounds, 0) / samples,
   minimum: Math.min(...results.map(r => r.rounds)), maximum: Math.max(...results.map(r => r.rounds)),
   withinFourToSix: results.filter(r => r.rounds >= 4 && r.rounds <= 6).length,
-  limitation: "Rules-only probe of one policy and matchup; not live Foundry acceptance or proof of balance.",
+  limitation: "Legacy roundFlow=1 only. One policy/matchup; not current roundFlow=2 balance or live Foundry acceptance.",
   results
 }, null, 2));

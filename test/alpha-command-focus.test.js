@@ -8,7 +8,7 @@ test("response highlights require an eligible defender, AP, resources and statio
  const view=()=>commandFocus(s,ship,{canOperate:()=>true});assert.ok(view().instantIds.includes("test"));assert.equal(commandFocus(s,ship,{canOperate:()=>false}).instantIds.length,0);
  ship.ap=0;assert.equal(view().instantIds.length,0);ship.ap=4;ship.resources.lifeveil.value=0;assert.equal(view().instantIds.includes("test"),false);ship.resources.lifeveil.value=100;
  s.attacks[0].responses.a=true;assert.equal(view().instantIds.length,0);
- delete s.attacks[0].responses.a;s.pendingCrewAction={shipId:"a",name:"Check"};assert.equal(view().instantIds.length,0);
+ delete s.attacks[0].responses.a;s.pendingCardChoice={shipId:"a",kind:"survey",options:[]};assert.equal(view().instantIds.length,0);delete s.pendingCardChoice;s.pendingCrewAction={shipId:"a",name:"Check"};assert.equal(view().instantIds.length,0);
 });
 test("phase guidance shows authoritative committed shots and never alters encounter state",()=>{
  const s=fixture(),ship=s.ships.a;s.phase="cards";s.turnOrder=["a","b"];s.turnIndex=0;s.attacks=[{id:"shot",shipId:"a",batteryId:"starboard",targetId:null,formula:"4d6",resolved:false}];

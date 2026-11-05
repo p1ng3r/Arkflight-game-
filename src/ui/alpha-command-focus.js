@@ -1,3 +1,4 @@
+import {usableInstant} from "./alpha-instant-readiness.js";
 import { ALPHA_CARDS } from "../alpha/cards.js";
 
 /** UI guidance only: legal actions and all costs remain server-authoritative. */
@@ -21,9 +22,6 @@ export function commandFocus(s, ship, {canOperate=()=>false}={}) {
   else if(s.phase==="cleanup"||s.complete){title=s.complete?"Encounter complete":"Round complete";hint="Review the recorded rolls and damage. The GM starts the next round.";tab="log";}
   else if(s.phase==="boarding"){title="Boarding encounter";hint="Ship combat is paused. Continue on the prepared deck scene.";tab="ship";}
   const responding=s.phase==="response"&&attack?.targetId===ship.id&&!attack.responses?.[ship.id]&&!request&&!s.pendingDiscard&&!s.complications?.choices?.some(c=>c.status==="pending");
-  const instantIds=responding?ship.hand.filter(id=>{
-    const c=ALPHA_CARDS[ship.instances[id]];
-    return c?.timing==="instant"&&ship.ap>=c.ap&&(!(c.id==="shield")||ship.resources.lifeveil.value>=5)&&canOperate(ship.id,c.stations[0]);
-  }):[];
+  const instantIds=ship.hand.filter(id=>usableInstant(s,ship,ALPHA_CARDS[ship.instances[id]],{canOperate}));
   return {title,hint,tab,responding,instantIds,shots:(s.attacks??[]).filter(a=>a.shipId===ship.id&&!a.resolved).map(a=>({id:a.id,battery:ship.batteries.find(b=>b.id===a.batteryId)?.name??a.batteryId,target:s.ships[a.targetId]?.name??"Target next phase",formula:a.formula}))};
 }

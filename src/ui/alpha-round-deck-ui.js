@@ -1,8 +1,10 @@
+import {usableInstant} from "./alpha-instant-readiness.js";
+export {usableInstant} from "./alpha-instant-readiness.js";
 import {openHudTools} from './alpha-hud-tools.js';
 import {complicationCheckModifier} from "../combat/ship-complications.js";
 import {AlphaCombatWindow,alphaCardArt} from './alpha-combat-ui.js';
 import {ALPHA_CARDS,ALPHA_SKILLS} from '../alpha/cards.js';
-import {alphaActionBlockReason,alphaCardFor,alphaTargetLegal,alphaRangeBand,alphaComplications} from '../alpha/combat.js';
+import {alphaCardFor,alphaTargetLegal,alphaRangeBand,alphaComplications} from '../alpha/combat.js';
 import {legalHullManeuvers} from '../alpha/maneuvers.js';
 import {currentPlannedCard,roundReadiness} from '../alpha/round-flow.js';
 import {cardBand,cardTheme,cardOutcomes,stationName} from './alpha-combat-presentation.js';
@@ -10,11 +12,11 @@ import {alphaWindowPosition,bindAlphaPreferences,alphaSound} from './alpha-comba
 import {showAlphaBattery,showAlphaTargeting,showAlphaManeuver,clearAlphaOverlay,alphaBatteryVisible} from './alpha-combat-overlays.js';
 import {roundRecap,roundRecapHTML,recapEscape} from '../foundry/alpha-round-journal.js';
 const {ApplicationV2,HandlebarsApplicationMixin}=foundry.applications.api;
-let dock,tracker,portrait;
+let dock,portrait;
 export const HUD_PANELS=Object.freeze(['tracker','ship','hand','orders']);
 export function hudPanelLayout(value={}){return Object.fromEntries(HUD_PANELS.map(id=>[id,value?.[id]===true]));}
 const cardScenes={patch:"patch-hull",shield:"shield-pulse","all-hands":"all-hands-broadside"};
-export function usableInstant(s,ship,card,api){const attack=s?.attacks?.[s.attackIndex];return !!(ship&&card&&s.phase==='response'&&attack?.targetId===ship.id&&!attack.responses[ship.id]&&!s.pendingCrewAction&&!s.pendingDiscard&&!s.pendingCardChoice&&!s.complications.choices.some(c=>c.status==='pending')&&ship.resources.hull.value>0&&card.timing==='instant'&&ship.ap>=card.ap&&api.canOperate(ship.id,card.stations[0])&&(card.id!=='shield'||ship.resources.lifeveil.value>=5)&&!alphaActionBlockReason(s,ship.id,card)&&!(s.guidedTest?.status==='running'&&!s.guidedTest.manual));}
+
 export const alphaCardScene=card=>`modules/arkflight-game/assets/ui/canvas-hud/${cardScenes[card.id]??`${card.stations[0]}-scene`}.webp`;
 const labels={opening:'Opening hand',draw:'Draw',planning:'Maneuver','card-planning':'Plan cards',resolving:'Station rolls',firing:'Firing',response:'Instant response',retarget:'Retarget',damage:'Damage',cleanup:'Round recap',complete:'Encounter ended',boarding:'Boarding'};
 export function roundPhaseSteps(s){const phases=[s?.round===1?'opening':'draw','planning','card-planning','resolving','firing','cleanup'],current=phases.indexOf(['response','retarget','damage'].includes(s?.phase)?'firing':s?.phase);return phases.map((id,i)=>({id,label:labels[id],active:i===current,done:i<current,number:i+1}));}
@@ -83,7 +85,6 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   for(const el of root.querySelectorAll('[data-round-action]'))el.addEventListener('click',()=>void this.roundAction(el.dataset.roundAction,el.dataset));
   for(const el of root.querySelectorAll('[data-alpha-card]'))el.addEventListener('click',()=>{const id=el.dataset.alphaCard;if(c.opening&&c.canMulligan||c.pendingDiscard){if(c.pendingDiscard&&c.hand.find(h=>h.instanceId===id)?.queued)return;if(this.selections.has(id))this.selections.delete(id);else this.selections.add(id);alphaSound('select');void this.render({force:true});}else void openRoundCard(this.shipId,id);});
   root.querySelector('[data-round-skill]')?.addEventListener('change',e=>{if(c.requestId)this.pendingSkills[c.requestId]=e.target.value;else this.skills[c.card?.stations[0]??'battlewatch']=e.target.value;void this.render({force:true});});
-  for(const el of root.querySelectorAll('[data-round-order]'))el.addEventListener('change',()=>void this.roundAction('target',{attackId:el.dataset.roundOrder,targetId:el.value}));
   for(const el of root.querySelectorAll('[data-round-build]'))el.addEventListener('change',()=>{this.build[el.dataset.roundBuild]=['count','level'].includes(el.dataset.roundBuild)?Number(el.value):el.value;void this.render({force:true});});
   for(const [selector,key] of [['[data-alpha-battery]','batteryId'],['[data-alpha-adjustment]','adjustment'],['[data-alpha-target]','targetId']])root.querySelector(selector)?.addEventListener('change',e=>{this[key]=e.target.value;});
   const hand=root.querySelector('.round-hand');if(hand)hand.scrollLeft=this.restoreScroll?.hand??0;this.effectsEngine.update(root,c.s,c.ship?.id);
@@ -98,7 +99,6 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   if(type==='aim-order-canvas'){const order=s.attacks.find(a=>a.id===data.attackId&&a.shipId===ship.id&&!a.resolved);if(!order)return;showAlphaTargeting(s,ship.id,order.batteryId,{selectedTargetId:order.targetId,onTarget:targetId=>void this.roundAction('target',{attackId:order.id,targetId})});return;}
   if(type==='aim-canvas'){showAlphaTargeting(s,ship.id,data.batteryId,{selectedTargetId:this.weaponTargets[`${ship.id}:${data.batteryId}`],onTarget:targetId=>void this.roundAction('aim',{batteryId:data.batteryId,targetId})});await this.render({force:true});return;}
   if(type==='aim'){if(!ship||!alphaTargetLegal(s,ship.id,data.batteryId,data.targetId)){this.error='Choose a target inside this weapon’s arc and range.';await this.render({force:true});return;}this.weaponTargets[`${ship.id}:${data.batteryId}`]=data.targetId;showAlphaTargeting(s,ship.id,data.batteryId,{selectedTargetId:data.targetId,onTarget:targetId=>void this.roundAction('aim',{batteryId:data.batteryId,targetId})});await this.render({force:true});return;}
-  if(type==='respond-card'){await openRoundCard(ship.id,data.instanceId);return;}
   if(type==='open-complications'){await syncComplicationWindow(true);return;}
   if(type==='guided-test'){await api.guided.open();return;}if(type==='download-debug'){api.guided.download();return;}
   if(type==='inspect-attack'){const a=s.attacks[s.attackIndex];await openRoundCard(a.shipId,null,{attackId:a.id});return;}
@@ -139,13 +139,8 @@ export class AlphaRoundCardWindow extends AlphaRoundDeckWindow{
  resolutionOnly=true;constructor(o={}){super({...o,position:alphaWindowPosition(420,660,o.position)});}
 }
 export async function openRoundCard(shipId,instanceId,{hold=false,attackId=null}={}){portrait??=new AlphaRoundCardWindow();portrait.shipId=shipId;portrait.inspectId=instanceId;portrait.guidedHold=hold;portrait.guidedAttackId=attackId;await portrait.render({force:true});if(portrait.minimized)await portrait.maximize();portrait.bringToFront();return portrait;}
-export class AlphaRoundTrackerWindow extends HandlebarsApplicationMixin(ApplicationV2){
- static DEFAULT_OPTIONS={id:'arkflight-round-tracker',classes:['arkflight-alpha-combat','alpha-command-deck','round-tracker-window'],window:{title:'Arkflight · Round',resizable:true},position:{width:620,height:150,left:80,top:65}};
- static PARTS={main:{template:'modules/arkflight-game/templates/alpha-round-tracker.hbs'}};
- async _prepareContext(){const s=game.arkflight.alphaCombat.state();return{s,label:labels[s?.phase],steps:roundPhaseSteps(s),rows:s?.roundFlow===2?roundReadiness(s):[]};}
- async _onRender(){this.element.querySelector('[data-round-open]')?.addEventListener('click',()=>void openRoundDeck());}
-}
-export async function openRoundTracker(){if(tracker?.rendered)await tracker.close();return openRoundDeck(false);}
+/** Compatibility launcher: tracker macros use the current HUD, not a second window. */
+export async function openRoundTracker(){return openRoundDeck(false);}
 export async function focusRoundShip(id){if(dock&&id){dock.shipId=id;await dock.render({force:true});}return dock;}
 export async function foldRoundCard(){if(portrait?.rendered&&!portrait.minimized)await portrait.minimize();}
 export async function openRoundDeck(reveal=true){dock??=new AlphaRoundDeckWindow();if(reveal)dock.hudHidden=false;await dock.render({force:true});if(dock.minimized)await dock.maximize();dock.bringToFront();return dock;}
@@ -158,7 +153,7 @@ Hooks.once('ready',()=>{
  game.arkflight.openCombatConsole=openRoundDeck;game.arkflight.combatConsole=Object.freeze({open:openRoundDeck,get application(){return dock;}});
 });
 let lastPrompt;
-Hooks.on('arkflightAlphaChanged',()=>{void syncComplicationWindow();const state=game.arkflight?.alphaCombat?.state();if(state?.roundFlow===2&&!state.complete&&(!dock?.rendered))void openRoundDeck(false);if(state?.complete&&dock){dock.hudHidden=true;if(portrait?.rendered)void portrait.close();}for(const w of [dock,tracker,portrait])if(w?.rendered&&!w.busy)void w.render({force:true});const api=game.arkflight?.alphaCombat,s=api?.state(),r=s?.pendingCrewAction;if(s?.roundFlow===2&&r&&r.id!==lastPrompt&&api.canOperate(r.shipId,r.station)){lastPrompt=r.id;void openRoundCard(r.shipId,r.command.instanceId??null);}});
+Hooks.on('arkflightAlphaChanged',()=>{void syncComplicationWindow();const state=game.arkflight?.alphaCombat?.state();if(state?.roundFlow===2&&!state.complete&&(!dock?.rendered))void openRoundDeck(false);if(state?.complete&&dock){dock.hudHidden=true;if(portrait?.rendered)void portrait.close();}for(const w of [dock,portrait])if(w?.rendered&&!w.busy)void w.render({force:true});const api=game.arkflight?.alphaCombat,s=api?.state(),r=s?.pendingCrewAction;if(s?.roundFlow===2&&r&&r.id!==lastPrompt&&api.canOperate(r.shipId,r.station)){lastPrompt=r.id;void openRoundCard(r.shipId,r.command.instanceId??null);}});
 
 Hooks.on('renderTokenHUD',(hud,html)=>{
  const actor=hud.object?.actor??hud.object?.document?.actor;if(!actor?.flags?.['arkflight-game']?.alphaCombatShip&&!actor?.flags?.['arkflight-game']?.ship)return;

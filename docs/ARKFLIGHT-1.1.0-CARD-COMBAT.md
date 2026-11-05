@@ -1,5 +1,8 @@
 # Arkflight 1.1.0: card combat decisions and first implementation
 
+> Current feature handoff: [HANDOFF.md](../HANDOFF.md), [current card-game contract](CURRENT-CARD-GAME.md) and [ordered tasks](CARD-GAME-TODO.md). This document retains its historical scope; conflicting combat rules and branch status below are not the latest alpha contract.
+
+
 Recorded 17 October 2026. Target version: **1.1.0**. This is not a released version or a manifest version bump.
 
 **Later design direction:** [the phased deck-combat foundation](ARKFLIGHT-1.1.0-DECK-COMBAT-FOUNDATION.md) records the subsequently accepted random-deck, shared-AP, Standard/Instant and phased-combat rebuild. It supersedes conflicting future-design decisions here. The implementation descriptions below remain a record of the earlier prototype, not evidence that the new foundation is programmed.
