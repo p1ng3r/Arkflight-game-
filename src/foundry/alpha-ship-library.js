@@ -71,7 +71,7 @@ export async function prepareStoredShip(actor, spec, { useSavedShips = false } =
   }
   const deck = selectedLibraryDeck(data);
   if (!stored) await writeShipLibrary(actor, data);
-  return { ...spec, ...data.config, deck, learned: [...data.learned], libraryRevision: data.revision, loadoutId: data.activeLoadoutId };
+  return { ...spec, ...data.config, deck, deckCapacity:shipDeckCapacity(data), learned: [...data.learned], libraryRevision: data.revision, loadoutId: data.activeLoadoutId };
 }
 Hooks.on("preUpdateActor", (actor, changes) => {
   const touchesLibrary = Object.keys(changes).some(key => key === `flags.${MODULE}.${FLAG}` || key.startsWith(`flags.${MODULE}.${FLAG}.`) || key === `flags.${MODULE}` && Object.hasOwn(changes[key] ?? {}, FLAG) || key === "flags" && Object.hasOwn(changes.flags?.[MODULE] ?? {}, FLAG));
