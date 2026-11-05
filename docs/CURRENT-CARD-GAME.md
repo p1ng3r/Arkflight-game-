@@ -46,6 +46,8 @@ Same-type accuracy and AC bonuses generally use the strongest value. Prepared DR
 
 Marked alpha vehicle Actors store `flags.arkflight-game.alphaLibrary` (schema/revision/config, learned IDs, three saved loadouts), `alphaShip` and station assignments. Encounter state lives in the `alphaCombat` world setting; interrupted movement uses `alphaMovementJournal`. Native token positions are checked against saved hexes and headings.
 
+For non-GM callers, `alphaPlayerState()` returns a `drawCount` for each ship but no ordered `drawPile`; owned hands and authorized choices remain usable. This is only an API projection: authoritative encounter state and the movement journal still reside in world settings. Native setting/socket exposure has not been verified or remediated, so do **not** assume hidden information is secure from a client with direct setting access.
+
 Only marked alpha fixture ships are currently supported by the native encounter adapter. Campaign actor migration is explicitly rejected. The alpha battery factory derives three fixed batteries from hull/level rather than consuming the complete ship equipment system. Alpha resources are encounter state; a complete shared campaign vessel/resource authority across Events, travel, trade and combat is not implemented.
 
 This is the central unfinished integration task, not a reason to add more disconnected systems.
