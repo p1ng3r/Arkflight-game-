@@ -12,7 +12,7 @@ import { LIBRARY_COMMANDS } from "../alpha/ship-library.js";
 import { libraryShips, viewShipLibrary, handleLibraryCommand } from "./alpha-ship-library.js";
 import { prepareAlphaFleet, alphaCanvas, alphaObstacleTest, assertAlphaNativePositions, expectedAlphaTokens, alphaNativePose, runAlphaMovementJournal, restoreAlphaMovementJournal, syncAlphaTracker, ensureAlphaTestBackdrop } from "./alpha-combat-canvas.js";
 
-export const ALPHA_BUILD="alpha-native-test-repair-20261105";
+export const ALPHA_BUILD="alpha-quest-crew-reveal-20261105";
 const MODULE="arkflight-game", STATE="alphaCombat", JOURNAL="alphaMovementJournal", pending=new Map();
 let queue=Promise.resolve(),drawTimer=null,movementTimer=null;
 function scheduleDrawTimeout(value){
