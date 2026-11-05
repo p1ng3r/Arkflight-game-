@@ -4,3 +4,8 @@
 .alpha-library-shell .alpha-library-issue{color:#ffcf91;font-size:12px;padding-left:8px;border-left:2px solid #d8a461}
 .alpha-library-catalog{display:grid;gap:12px;margin:14px 0}.alpha-library-card{display:grid;grid-template-columns:72px 1fr;gap:12px;padding:12px;border:1px solid #6b989e;border-top:4px solid #83b9b2;border-radius:9px;background:linear-gradient(125deg,#1a3944,#122733)}
 .alpha-library-card>img{width:72px;height:72px;object-fit:contain;border:0}.alpha-library-card h3{margin:0 0 5px}.alpha-library-card p{font-size:12px}.alpha-library-card small{color:#bad0d5}.alpha-library-card input{max-width:72px}.alpha-library-card.is-unlearned{border-color:#4c6171;border-top-color:#5c637d}.alpha-library-card.is-unlearned h3{color:#bec7d0}
+
+/* Category border and descriptive tags for the learned-card browser. */
+.alpha-library-card{border-top-color:var(--alpha-category-accent,#83b9b2)}
+.alpha-library-tags{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0}
+.alpha-library-tags span{font-size:9px;line-height:1.1;padding:3px 5px;border:1px solid #50727a;border-radius:8px;color:#cadcda;background:#132e37}
