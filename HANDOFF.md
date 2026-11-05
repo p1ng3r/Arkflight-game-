@@ -51,6 +51,8 @@ Superseded combat ideas include separate RP, compulsory General/Flux/Signature c
 
 Last pre-audit runtime build: `alpha-instant-hand-20261104`. This audit changes documentation and removes redundancies without changing core numerical rules; see git history for its exact changed files.
 
+Post-audit P0 checkpoint: `alpha-private-draw-projection-20261104`. `alphaPlayerState()` now replaces future ordered draw piles with counts for **every non-GM client**, even the ship owner, and preserves legitimate owner hand/Survey data. `test/alpha-round-native.test.js` covers owner/opponent snapshots, repeat reads and unchanged GM state. **This is not a true secrecy fix yet**: `alphaCombat` and `alphaMovementJournal` remain world settings whose direct client visibility and socket transport must be probed in native Foundry before a GM-private authority migration. Do not close A03 or claim hidden-info security based on this projection. No combat economy/card rules changed in this checkpoint.
+
 ## Source map
 
 | Concern | Source |
