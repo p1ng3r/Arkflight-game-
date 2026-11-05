@@ -29,7 +29,7 @@ Acceptance: native evidence and reproduction steps for each failure; a three-rou
 ### 2. Define and enforce hidden-information boundaries (P0; A03)
 
 - [ ] Decide exactly what ship owners, station owners, unrelated players and GM can see, including prepared effects, discard, enemy plans and deck composition.
-- [ ] Remove ordered draw contents from public player state where not explicitly revealed; preserve draw counts and legitimate Survey choices.
+- [x] Redact ordered future draws from non-GM `alphaPlayerState()` snapshots (including owning crews), preserving `drawCount`, owned hand and legitimate Survey choices. This fixes the API projection only; world-setting/socket transport may still expose authoritative data.
 - [ ] Verify direct native setting/socket visibility. Move secret authoritative payload to GM-private storage/transport if the intended trust model requires it; migrate with backups/versioning.
 - [ ] Test snapshots, console API results and reconnect state—not only hidden HTML.
 
