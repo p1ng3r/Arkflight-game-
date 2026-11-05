@@ -160,6 +160,6 @@ const livingHull=ship=>ship.resources.hull.value>0;
 
 /** Decorate only dedicated alpha fixtures with no custom background. Never change their grid or tokens. */
 export async function ensureAlphaTestBackdrop(state){
- if(!game.user?.isGM)return false;const scene=game.scenes.get(state?.canvas?.sceneId);if(!scene||scene.flags?.[MODULE]?.alphaCombatScene!==true||scene.background?.src||typeof scene.update!=='function')return false;
+ if(!game.user?.isGM)return false;const scene=game.scenes.get(state?.canvas?.sceneId);if(!scene||scene.flags?.[MODULE]?.alphaCombatScene!==true||scene.firstLevel?.background?.src||typeof scene.update!=='function')return false;
  await scene.update({'background.src':'modules/arkflight-game/assets/ui/canvas-hud/test-starfield.webp','background.scaleX':(scene.width??3200)/1600,'background.scaleY':(scene.height??2600)/900,backgroundColor:'#081925'});return true;
 }
