@@ -4,6 +4,7 @@ import {openHudTools} from './alpha-hud-tools.js';
 import {complicationCheckModifier} from "../combat/ship-complications.js";
 import {AlphaCombatWindow,alphaCardArt} from './alpha-combat-ui.js';
 import {ALPHA_CARDS,ALPHA_SKILLS} from '../alpha/cards.js';
+import {decoratedCard} from '../alpha/card-taxonomy.js';
 import {alphaCardFor,alphaTargetLegal,alphaRangeBand,alphaComplications} from '../alpha/combat.js';
 import {legalHullManeuvers} from '../alpha/maneuvers.js';
 import {currentPlannedCard,roundReadiness} from '../alpha/round-flow.js';
@@ -33,7 +34,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   if(this.resolutionOnly&&!this.guidedHold&&s?.roundFlow===2){if(request&&api.ownsShip(request.shipId)){this.shipId=request.shipId;this.inspectId=request.command.instanceId??null;}else if(s.phase==='resolving'&&!s.cardFollowup&&row&&api.ownsShip(s.turnOrder[s.turnIndex])){this.shipId=s.turnOrder[s.turnIndex];this.inspectId=row.instanceId;}}
   const draftKey=`${s?.id??'none'}:${s?.round??0}`;if(this.maneuverDraftKey!==draftKey){this.maneuverDraftKey=draftKey;this.maneuvers={};}
   const c=await super._prepareContext(options),ship=c.ship,phase=s?.phase,plan=s?.cardPlans?.[ship?.id]??[],planned=new Set(plan.filter(r=>!r.resolved).map(r=>r.instanceId));
-  let card=c.card;if(this.resolutionOnly&&this.inspectId&&ship){const raw=alphaCardFor(ship,this.inspectId);if(raw)card={...raw,instanceId:this.inspectId,sceneArt:alphaCardScene(raw),art:alphaCardArt(raw),band:cardBand(raw),theme:cardTheme(raw),outcomes:cardOutcomes(raw),stationLabel:raw.stations.map(stationName).join(' + '),needsBattery:raw.role==='Attack'||raw.id==='work-guns',attackOnly:raw.role==='Attack'&&raw.stations.length===1,movementCard:['helm','ahead','breakaway'].includes(raw.id)};}
+  let card=c.card;if(this.resolutionOnly&&this.inspectId&&ship){const raw=alphaCardFor(ship,this.inspectId);if(raw)card={...decoratedCard(raw),instanceId:this.inspectId,sceneArt:alphaCardScene(raw),art:alphaCardArt(raw),band:cardBand(raw),theme:cardTheme(raw),outcomes:cardOutcomes(raw),stationLabel:raw.stations.map(stationName).join(' + '),needsBattery:raw.role==='Attack'||raw.id==='work-guns',attackOnly:raw.role==='Attack'&&raw.stations.length===1,movementCard:['helm','ahead','breakaway'].includes(raw.id)};}
   const station=request?.station??(this.guidedAttackId?'battlewatch':card?.stations[0])??'captain',chosen=request?this.pendingSkills[request.id]??'':this.skills[station]??'',actor=ship&&game.actors.get(ship.stationActors[station]);
   let breakdown;if((card||request||this.guidedAttackId)&&chosen&&ship){try{breakdown=await api.crewCheck(ship.id,station,chosen);}catch(e){breakdown={error:e.message};}}
   const pending=(this.guidedAttackId?s?.attacks?.find(a=>a.id===this.guidedAttackId):null)??s?.attacks?.[s.attackIndex],firingShip=s?.turnOrder?.[s.firingIndex],responding=phase==='response'&&pending?.targetId===ship?.id&&!pending.responses[ship.id],allowed=ship&&api.canOperate(ship.id,station);
