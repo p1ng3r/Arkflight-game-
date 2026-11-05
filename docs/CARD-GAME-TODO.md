@@ -142,3 +142,9 @@ Begin with work package 1, then 2 and 3; create the current-flow benchmark befor
 - [ ] Finish hidden opponent maneuver/deck secrecy by migrating authoritative world-setting data to verified GM-private storage and transport; current player API redaction alone is not enough.
 - [ ] Ensure card foley is audible and animation configurable for all motion settings. Validate quest/reveal screen scale and participant readiness when users become inactive mid-countdown.
 - [ ] Review repositioning card semantics and exact firing/damage ordering against the new movement-first Strategy phase.
+
+### 5 Nov 2026 — player-to-GM request timeout repair
+
+- [x] Player requests now receive a separate **GM-received** receipt before lengthy native movement and journal processing. A missing GM receipt times out after 30 seconds; an accepted request has a separate 120-second processing deadline. On an uncertain timeout the HUD warns players to inspect the current ship cards/AP/phase **before retrying**. See `test/alpha-request-ack.test.js`.
+- [x] Updated old GM relay mocks to await a final command result rather than mistaking the early received receipt for success/failure. Latest code checks pass; the feature build is `alpha-relay-receipt-20261105`.
+- [ ] **Native multiplayer validation still needed.** Test on separate GM and player browsers, including slow movement and the 12-second card reveal. If a player still sees a timeout, check which message occurs and capture GM/player console errors; unit tests do not prove Foundry chat delivery.
