@@ -1,4 +1,5 @@
 import {ALPHA_CARDS} from './cards.js';
+import {createDrawReveal,acknowledgeDraw,settleDrawReveals} from './draw-reveal.js';
 const copy=x=>structuredClone(x),alive=s=>s.resources.hull.value>0;
 export const roundShips=s=>Object.values(s.ships).filter(alive);
 export function currentPlannedCard(s){const ship=s?.ships[s.turnOrder[s.turnIndex]];return ship&&(s.cardPlans?.[ship.id]??[]).find(c=>!c.resolved);}
@@ -6,6 +7,7 @@ export function advanceCardResolution(s){while(s.turnIndex<s.turnOrder.length){c
 export function roundReadiness(s){return roundShips(s).map(ship=>{
  const active=s.turnOrder[s.turnIndex],attack=s.attacks[s.attackIndex];
  let ready=s.phase==='opening'?ship.mulliganDone:s.phase==='draw'?ship.drawnRound===s.round:s.phase==='planning'?!!s.locked[ship.id]:s.phase==='card-planning'?!!s.cardLocks?.[ship.id]:false,label=ready?'Ready':'Waiting';
+ if(s.phase==='draw-reveal'){ready=!s.drawReveal?.ships?.[ship.id];label=ready?'Draw confirmed':'Crew confirming drawn cards';}
  if(s.phase==='resolving'){ready=s.turnOrder.indexOf(ship.id)<s.turnIndex;label=ship.id===active?'Station roll':ready?'Resolved':'Waiting turn';}
  if(s.phase==='firing'){ready=s.turnOrder.indexOf(ship.id)<s.firingIndex;label=ship.id===s.turnOrder[s.firingIndex]?'Choose weapons':ready?'Firing complete':'Waiting turn';}
  if(['response','damage','retarget'].includes(s.phase)){ready=![attack?.shipId,attack?.targetId].includes(ship.id);label=ship.id===attack?.targetId?(attack.responses[ship.id]?'Response complete':'Response needed'):ship.id===attack?.shipId?(s.phase==='damage'?'Damage roll':'Attack roll'):'Standing by';}
@@ -46,6 +48,12 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   const count=ship.hand.length;draw(s,ship,ship.profile.roundDraw??1);ship.drawnRound=s.round;log(s,`${ship.name}: ${ship.hand.length-count} card(s) drawn${ship.hand.length===count?' — deck empty':''}.`);
   if(roundShips(s).every(x=>x.drawnRound===s.round))s.phase='planning';return revise();
  }
+ if(['ready-draw','timeout-draw'].includes(cmd.type)){
+  if(s.phase!=='draw-reveal'||s.combatFlow!==3)throw Error('No shared draw reveal is awaiting confirmation.');
+  if(cmd.type==='ready-draw')acknowledgeDraw(s,ship.id,cmd.userId,cmd.now??Date.now());
+  else settleDrawReveals(s,cmd.now??Date.now());
+  return revise();
+ }
  const followup=s.phase==='resolving'&&s.cardFollowup===ship?.id;
  if(['queue-card','unqueue-card','move-card','lock-cards'].includes(cmd.type)){
   if(followup){if(!['queue-card','lock-cards'].includes(cmd.type))throw Error('Only newly drawn cards can be added here.');if(cmd.type==='lock-cards'){delete s.cardFollowup;advanceCardResolution(s);return revise();}}
@@ -76,9 +84,27 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
  if(cmd.type==='target'){if(!s.attacks.some(a=>a.id===cmd.attackId&&a.shipId===ship?.id&&!a.resolved))throw Error('Choose an unresolved shot.');if(s.phase!=='firing'||s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Choose targets during this ship’s Firing phase.');s=await stage('target','targeting');s.phase='firing';return revise();}
  if(cmd.type==='finish-firing'){if(s.phase!=='firing'||s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Wait for this ship’s firing.');if(s.attacks.some(a=>a.shipId===ship.id&&!a.resolved&&!a.targetId))throw Error('Choose legal targets or hold the shots.');nextAttack(s);return revise();}
  if(cmd.type==='damage'){if(s.phase!=='damage'||s.attacks[s.attackIndex]?.shipId!==ship?.id)throw Error('No saved hit is waiting for damage.');s=await stage('attack','response');return revise();}
- if(cmd.type==='round'){if(s.phase!=='cleanup')throw Error('Complete this round first.');s.roundEvents=[];delete s.roundJournal;delete s.roundJournalError;refresh(s);s.phase='draw';s.cardPlans={};s.cardLocks={};s.firingIndex=0;return revise();}
+ if(cmd.type==='round'){if(s.phase!=='cleanup')throw Error('Complete this round first.');s.roundEvents=[];delete s.roundJournal;delete s.roundJournalError;refresh(s);s.phase=s.combatFlow===3?'planning':'draw';s.cardPlans={};s.cardLocks={};s.firingIndex=0;return revise();}
  if(['play','regroup','finish-card','begin-damage'].includes(cmd.type)&&!(cmd.type==='play'&&ALPHA_CARDS[ship?.instances[cmd.instanceId]]?.timing==='instant'))throw Error('Use the plan and resolution controls.');
- if(cmd.type==='move'){s=await legacy(s,cmd,services);if(!s.complete){s.phase='card-planning';s.cardPlans={};s.cardLocks={};}return revise();}
+ if(cmd.type==='move'){
+  s=await legacy(s,cmd,services);
+  if(!s.complete){
+   s.cardPlans={};s.cardLocks={};
+   if(s.combatFlow===3&&s.round>1){
+    const shipDraws={};
+    for(const current of roundShips(s)){
+     const prior=current.hand.length;
+     draw(s,current,current.profile.roundDraw??2);
+     const ids=current.hand.splice(prior);
+     current.drawnRound=s.round;
+     if(ids.length){current.pendingDraw=ids;shipDraws[current.id]=ids;}
+    }
+    if(Object.keys(shipDraws).length){s.drawReveal=createDrawReveal(shipDraws,cmd.now??Date.now());s.phase='draw-reveal';}
+    else s.phase='card-planning';
+   }else s.phase='card-planning';
+  }
+  return revise();
+ }
  if(cmd.type==='hold-order'&&s.phase==='firing'){if(s.turnOrder[s.firingIndex]!==ship?.id)throw Error('Wait for this ship’s firing.');s=await stage('hold-order','targeting');s.phase='firing';return revise();}
  s=await legacy(s,cmd,services);return revise();
 }
