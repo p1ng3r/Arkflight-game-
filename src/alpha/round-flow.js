@@ -48,6 +48,19 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   const count=ship.hand.length;draw(s,ship,ship.profile.roundDraw??1);ship.drawnRound=s.round;log(s,`${ship.name}: ${ship.hand.length-count} card(s) drawn${ship.hand.length===count?' — deck empty':''}.`);
   if(roundShips(s).every(x=>x.drawnRound===s.round))s.phase='planning';return revise();
  }
+ if(cmd.type==='cycle-card'){
+  if(s.combatFlow!==3||s.phase!=='card-planning'||!alive(ship)||s.cardLocks?.[ship.id])throw Error('Cycle only during unlocked Strategy.');
+  if(ship.cycledRound===s.round)throw Error('This ship already cycled one card this round.');
+  const id=cmd.instanceId;
+  if(!ship.hand.includes(id)||(s.cardPlans?.[ship.id]??[]).some(row=>row.instanceId===id))throw Error('Choose an uncommitted card from the hand to cycle.');
+  ship.hand=ship.hand.filter(entry=>entry!==id);
+  ship.discard.push(id);ship.cycledRound=s.round;
+  const previous=ship.hand.length;draw(s,ship,1);
+  const ids=ship.hand.splice(previous);
+  if(ids.length){ship.pendingDraw=ids;s.drawReveal=createDrawReveal({[ship.id]:ids},cmd.now??Date.now());s.phase='draw-reveal';}
+  log(s,`${ship.name} cycled one card without spending AP.`,{kind:'cycle',shipId:ship.id});
+  return revise();
+ }
  if(['ready-draw','timeout-draw'].includes(cmd.type)){
   if(s.phase!=='draw-reveal'||s.combatFlow!==3)throw Error('No shared draw reveal is awaiting confirmation.');
   if(cmd.type==='ready-draw')acknowledgeDraw(s,ship.id,cmd.userId,cmd.now??Date.now());
