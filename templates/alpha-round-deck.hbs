@@ -35,6 +35,26 @@
 {{#if guidedRunning}}<div class="round-guided-banner"><b>Guided test · Round {{s.round}} / 3 · Step {{guidedTest.step}}</b><button data-round-action="guided-test">Open Next Step controls</button><button data-round-action="download-debug">Download debug.txt</button></div>{{/if}}
 
 <aside class="hud-basic-actions"><b>WEAPONS &amp; SHIP COMMAND</b><button data-round-action="weapons">Fire Weapon · 1 AP</button><button data-round-action="sheet">Open Ship Sheet</button><small>Weapons fire during the Firing phase.</small>{{#if weaponsOpen}}<div>{{#each batteries}}<button data-round-action="arcs" data-battery-id="{{id}}" aria-pressed="{{arcVisible}}">{{name}} · {{#if arcVisible}}Hide arc / range{{else}}Show arc / range{{/if}}</button>{{/each}}</div>{{/if}}</aside></aside><button class="hud-crew-toggle" data-round-action="toggle-crew" aria-expanded="{{crewVisible}}">{{#if crewVisible}}Hide crew{{else}}Show crew{{/if}}</button>{{#if crewVisible}}<nav class="hud-crew-rail" aria-label="Crew character sheets"><strong>CREW · CHARACTER SHEETS</strong>{{#each crewRail}}<button data-round-action="crew-sheet" data-actor-id="{{actorId}}" class="{{#if pending}}is-pending{{/if}}" {{#unless actorId}}disabled{{/unless}} title="Open {{name}} character sheet">{{#if img}}<img src="{{img}}" alt="">{{/if}}<span>{{label}}<small>{{name}}</small></span></button>{{/each}}</nav>{{/if}}
+{{#if drawReveal}}
+<section class="arkflight-draw-reveal" role="dialog" aria-label="Arkflight crew draw reveal" aria-live="polite">
+  <header><small>ARKFLIGHT · SHARED DECK</small><h2>New Cards</h2><p>Each online crew member on this ship may confirm, or the countdown continues automatically.</p></header>
+  {{#if revealCards.length}}
+    <div class="arkflight-reveal-cards">{{#each revealCards}}
+      <article class="arkflight-reveal-card" style="--alpha-category-accent:{{categoryAccent}}">
+        <img src="{{sceneArt}}" alt="{{name}} artwork">
+        <strong>{{name}}</strong>
+        <small>{{categoryLabel}} · {{ap}} AP</small>
+        <p>{{text}}</p>
+      </article>
+    {{/each}}</div>
+    <div class="arkflight-reveal-footer">
+      <span>Confirmed {{revealReady}} / {{revealRequired}}</span>
+      <button class="round-primary" data-round-action="ready-draw" {{#unless revealCanReady}}disabled{{/unless}}>{{#if revealCanReady}}Ready · Send to hand{{else}}Waiting for crew{{/if}}</button>
+      <small>Auto-continue in <b data-draw-countdown>12</b>s</small>
+    </div>
+  {{else}}<p class="arkflight-reveal-wait">Your ship is ready. Other crews are finishing their card reveals.</p>{{/if}}
+</section>
+{{/if}}
 <main class="round-workspace">
 {{#if helpOpen}}<section class="hud-help"><h2>{{phaseLabel}}</h2><p>{{phaseInstruction}}</p><ol><li>Opening: keep five cards or replace up to two.</li><li>Maneuver: choose a hull template, then lock. The GM reveals the fleet.</li><li>Plan: commit cards or keep your hand; reserve AP for weapons and Instants.</li><li>Station rolls: open the action card, choose your crew skill, then roll.</li><li>Firing: choose a legal target for each ready weapon, then commit. Respond or pass when prompted.</li><li>Recap: resolve choices, discard overflow and begin the next round.</li></ol><button data-round-action="help">Got it · close help</button></section>{{/if}}
 {{#if cardChoice}}<section class="hud-card-choice"><h2>{{#if cardChoice.isSurvey}}Choose a charted card{{else}}Recover a discarded card{{/if}}</h2>{{#each cardChoice.options}}<button data-round-action="choose-card" data-instance-id="{{id}}"><img src="{{art}}" alt="">{{name}}</button>{{/each}}</section>{{/if}}
