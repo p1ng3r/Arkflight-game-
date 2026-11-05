@@ -15,6 +15,26 @@ test('player snapshots hide opposing card plans, commitment logs and hand instan
  const view=api.state();assert.equal(view.cardPlans['alpha-1'],undefined);assert.deepEqual(view.ships['alpha-1'].instances,{});assert.equal(view.log.some(e=>e.detail?.kind==='plan'&&e.detail.shipId==='alpha-1'),false);assert.equal(view.roundEvents.some(e=>e.detail?.kind==='plan'&&e.detail.shipId==='alpha-1'),false);
 });
 
+test('player snapshots show draw counts, never ordered future draws, without affecting the GM state',async()=>{
+ const w=alphaWorld(),api=w.initialize();await send(api,'start',{roundFlow:2});
+ const authoritative=api.state(),own=authoritative.ships['alpha-0'],enemy=authoritative.ships['alpha-1'];
+ assert.ok(own.drawPile.length>0);assert.ok(enemy.drawPile.length>0);
+ game.actors.get(own.actorId).ownership.player=3;game.user=game.users.get('player');
+ const view=api.state();
+ assert.equal(view.ships[own.id].drawCount,own.drawPile.length);
+ assert.deepEqual(view.ships[own.id].drawPile,[]);
+ assert.deepEqual(view.ships[own.id].hand,own.hand);
+ assert.deepEqual(view.ships[own.id].instances,own.instances);
+ assert.equal(view.ships[enemy.id].drawCount,enemy.drawPile.length);
+ assert.deepEqual(view.ships[enemy.id].drawPile,[]);
+ assert.deepEqual(view.ships[enemy.id].hand,[]);
+ assert.deepEqual(view.ships[enemy.id].instances,{});
+ assert.deepEqual(api.state().ships[own.id].drawPile,[]); // repeated reads / reconnect-style projection
+ game.user=game.users.get('gm');
+ assert.deepEqual(api.state().ships[own.id].drawPile,own.drawPile);
+ assert.deepEqual(api.state().ships[enemy.id].drawPile,enemy.drawPile);
+});
+
 test('private card offers and fresh-card windows are hidden from other crews and restricted to the assigned station owner',async()=>{
  const w=alphaWorld(),api=w.initialize();let s=await send(api,'start',{roundFlow:2});const a=s.ships['alpha-0'],b=s.ships['alpha-1'];game.actors.get(a.actorId).ownership.player=3;
  s.pendingCardChoice={shipId:b.id,station:'navigator',kind:'survey',options:['secret-offer']};s.cardFollowup=b.id;s.followupCards=['secret-fresh'];w.values.set('alphaCombat',s);game.user=game.users.get('player');assert.equal(api.state().pendingCardChoice,undefined);assert.equal(api.state().followupCards,undefined);
