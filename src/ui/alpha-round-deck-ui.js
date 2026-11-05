@@ -12,6 +12,7 @@ import {cardBand,cardTheme,cardOutcomes,stationName} from './alpha-combat-presen
 import {alphaWindowPosition,bindAlphaPreferences,alphaSound} from './alpha-combat-effects.js';
 import {showAlphaBattery,showAlphaTargeting,showAlphaManeuver,clearAlphaOverlay,alphaBatteryVisible} from './alpha-combat-overlays.js';
 import {roundRecap,roundRecapHTML,recapEscape} from '../foundry/alpha-round-journal.js';
+import {alphaRecapMarkup} from './alpha-recap-render.js';
 const {ApplicationV2,HandlebarsApplicationMixin}=foundry.applications.api;
 let dock,portrait;
 export const HUD_PANELS=Object.freeze(['tracker','ship','hand','orders']);
@@ -87,6 +88,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   if(c.choices.length)for(const key of ['canResolve','canQueue','canAttack','canDamage','canFireNow','canFinishFiring','canLockCards','canInstant','canSubmitRoll'])context[key]=false;
   if(guidedRunning)for(const key of ['canAssignCrew','canMulligan','canQueue','canLockCards','canPlan','canLock','canFireNow','canFinishFiring','canResolve','canSubmitRoll','canRespond','canAttack','canDamage','canSkip','canDraw'])context[key]=false;
   context.batteries=c.batteries.map(b=>{const selected=this.weaponTargets[`${ship.id}:${b.id}`],targets=Object.values(s?.ships??{}).filter(t=>alphaTargetLegal(s,ship.id,b.id,t.id)).map(t=>{const r=alphaRangeBand(s,ship.id,b.id,t.id);return{id:t.id,name:t.name,distance:r.distance,penalty:r.penalty,selected:t.id===selected};}),target=targets.find(t=>t.selected),hasLegalTarget=targets.length>0;return {...b,targets,target,arcVisible:alphaBatteryVisible(s,ship.id,b.id),hasLegalTarget,canCommit:!!context.canFireNow&&b.ready&&!!target};});
+  context.recapMarkup=alphaRecapMarkup(s,{gm:game.user.isGM,complete:!!s?.complete,unsettled:context.unsettled,journal:s?.roundJournal,results:context.results??[]});
   context.eligibleInstants=context.hand.filter(h=>h.respondable);
   return context;
  }
