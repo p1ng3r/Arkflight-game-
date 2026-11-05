@@ -128,3 +128,17 @@ Acceptance: a new GM creates a usable campaign ship and launches a legal encount
 ## Suggested next chat assignment
 
 Begin with work package 1, then 2 and 3; create the current-flow benchmark before balancing. If native access/debug reports are unavailable, continue useful repository work on the benchmark or target-validator consolidation and clearly label the missing native evidence. Keep every task small enough to test and review, update this list and HANDOFF.md, and publish checkpoints to the current feature branch.
+
+## 5 November 2026 movement-first card redesign checkpoint
+
+**Implemented and passing Node tests, live Foundry acceptance pending:** six card color categories and tags; 20-card ship starter retained; a commissioning and GM-issued per-quest choose-one-of-three reward mechanism; affinity shaping the next five offers; earned active-deck slots capped at 30; 5-second synchronized movement locks; two-card draw *after* movement; player-owned ship Ready confirmations with 12-second AFK completion; one free discard-and-replace per ship per Strategy round; WebP fleet lock badges and center card reveal with optional foley.
+
+**Remaining:**
+- [ ] Live native Foundry v14 test of all new mechanics and UI with GM, two players and an NPC ship. Capture build `alpha-quest-crew-reveal-20261105`, debug and actual clicks. Verify pause/reconnect/GM handoff and accidental multi-clicks.
+- [ ] Hook completed quests into the commission/quest reward authority. Quest rewards currently require a GM to enter a unique quest reference, then ship owner picks the card. Confirm reward permissions and whether crew should vote.
+- [ ] Author and implement **125 additional distinct playable cards**, with rules effects, categories/tags, category-balanced rarity, equipment/faction requirements, art, tests, and no duplicate tactical job. Current catalog is only 26 card designs; pending offers correctly refuse when fewer than three new designs remain.
+- [ ] Finalize minimum combat deck size (legacy minimum 15), earned slots versus level slots, swap/replace UI at the 30-card limit, and a current-flow pacing/balance benchmark before balancing numbers.
+- [ ] Implement and test one simple shared-AP basic action for each of five stations, while preserving manual skill/rolls and normal weapon fire.
+- [ ] Finish hidden opponent maneuver/deck secrecy by migrating authoritative world-setting data to verified GM-private storage and transport; current player API redaction alone is not enough.
+- [ ] Ensure card foley is audible and animation configurable for all motion settings. Validate quest/reveal screen scale and participant readiness when users become inactive mid-countdown.
+- [ ] Review repositioning card semantics and exact firing/damage ordering against the new movement-first Strategy phase.
