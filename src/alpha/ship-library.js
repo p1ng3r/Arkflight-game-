@@ -14,7 +14,7 @@ export function libraryConfig(value) {
   deriveAlphaProfile(config);
   return config;
 }
-const rewardRef=value=>typeof value==="string" && value.trim().length>0 && value.trim().length<=80 && /^[\\w .:-]+$/.test(value);
+const rewardRef = value => typeof value === 'string' && value.length > 0 && value.length <= 80 && value.trim() === value && [...value].every(ch => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ .:-'.includes(ch));
 function title(value) {
   if (typeof value !== "string" || !value.trim() || value.trim().length > 48) throw new Error("Name the loadout using 1–48 characters.");
   return value.trim();
