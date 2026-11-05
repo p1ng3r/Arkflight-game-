@@ -141,8 +141,8 @@ export async function prepareAlphaFleet(command){
   const obsolete=scene.tokens.contents.filter(t=>t.flags?.[MODULE]?.[FLAG]&&!retained.has(t.id));
   if(obsolete.length)await scene.deleteEmbeddedDocuments("Token",obsolete.map(t=>t.id));
   let combat=game.combats.contents.find(c=>c.flags?.[MODULE]?.alphaCombat===true&&c.scene?.id===scene.id);
-  if(combat)await combat.delete({arkflightAlpha:true});
-  combat=await Combat.create({scene:scene.id,active:true,round:0,turn:null,combatants:entries.map(e=>({actorId:e.actorId,tokenId:state.ships[e.id].tokenIds[0],name:e.name})),flags:{[MODULE]:{alphaCombat:true,alphaSessionId:state.id}}},{render:false});
+  if(combat)await combat.delete({arkflightAlpha:true,render:false});
+  combat=await Combat.create({scene:scene.id,active:true,round:1,turn:0,combatants:entries.map(e=>({actorId:e.actorId,tokenId:state.ships[e.id].tokenIds[0],name:e.name})),flags:{[MODULE]:{alphaCombat:true,alphaSessionId:state.id}}},{render:false});
   state.canvas.combatId=combat.id;assertAlphaNativePositions(state);return state;
 }
 export async function syncAlphaTracker(state){
