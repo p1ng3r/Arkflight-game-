@@ -1,5 +1,6 @@
 import { ALPHA_CARDS, ALPHA_STARTER_DECK } from "./cards.js";
 import { deriveAlphaProfile } from "./hulls.js";
+import {cardCategory} from "./card-taxonomy.js";
 
 export const LIBRARY_COMMANDS = new Set(["library-initialize", "library-save", "library-select", "library-grant", "library-remove", "library-refit", "library-offer", "library-pick"]);
 const slots = ["deck-1", "deck-2", "deck-3"];
