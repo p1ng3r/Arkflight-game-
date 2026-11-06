@@ -114,6 +114,22 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   for(const el of root.querySelectorAll('[data-alpha-assign]'))el.addEventListener('change',()=>void this.roundAction('assign-station',{station:el.dataset.alphaAssign,actorId:el.value}));
   root.querySelector('[data-alpha-ship]')?.addEventListener('change',e=>{this.shipId=e.target.value;clearAlphaOverlay();this.inspectId=null;this.selections.clear();void this.render({force:true});});
   for(const el of root.querySelectorAll('[data-round-action]'))el.addEventListener('click',()=>void this.roundAction(el.dataset.roundAction,el.dataset));
+  if(c.fourBeat&&c.maneuverStep&&c.ship&&c.canPlan){
+   const routes=legalHullManeuvers(c.ship,alphaComplications(c.s,c.ship.id));
+   const restore=()=>{
+    const saved=this.maneuvers[c.ship.id]??c.s.plans[c.ship.id];
+    const original=routes.find(r=>r.id===saved);
+    if(original)showAlphaManeuver(c.s,c.ship.id,original);else clearAlphaOverlay();
+   };
+   for(const el of root.querySelectorAll('.four-maneuver-choice[data-route]')){
+    const preview=()=>{if(el.disabled)return;const route=routes.find(r=>r.id===el.dataset.route);if(route)showAlphaManeuver(c.s,c.ship.id,route);};
+    el.addEventListener('pointerenter',preview);
+    el.addEventListener('focus',preview);
+    el.addEventListener('pointerleave',restore);
+    el.addEventListener('blur',restore);
+   }
+  }
+
   for(const el of root.querySelectorAll('[data-alpha-card]'))el.addEventListener('click',()=>{const id=el.dataset.alphaCard;if(c.opening&&c.canMulligan||c.pendingDiscard){if(c.pendingDiscard&&c.hand.find(h=>h.instanceId===id)?.queued)return;if(this.selections.has(id))this.selections.delete(id);else this.selections.add(id);alphaSound('select');void this.render({force:true});}else void openRoundCard(this.shipId,id);});
   root.querySelector('[data-round-skill]')?.addEventListener('change',e=>{if(c.requestId)this.pendingSkills[c.requestId]=e.target.value;else this.skills[c.card?.stations[0]??'battlewatch']=e.target.value;void this.render({force:true});});
   for(const el of root.querySelectorAll('[data-round-build]'))el.addEventListener('change',()=>{this.build[el.dataset.roundBuild]=['count','level'].includes(el.dataset.roundBuild)?Number(el.value):el.value;void this.render({force:true});});
