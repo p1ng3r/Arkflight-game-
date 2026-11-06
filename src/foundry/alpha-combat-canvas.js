@@ -142,7 +142,10 @@ export async function prepareAlphaFleet(command){
   if(obsolete.length)await scene.deleteEmbeddedDocuments("Token",obsolete.map(t=>t.id));
   let combat=game.combats.contents.find(c=>c.flags?.[MODULE]?.alphaCombat===true&&c.scene?.id===scene.id);
   if(combat)await combat.delete({arkflightAlpha:true,render:false});
-  combat=await Combat.create({scene:scene.id,active:true,round:1,turn:0,combatants:entries.map(e=>({actorId:e.actorId,tokenId:state.ships[e.id].tokenIds[0],name:e.name})),flags:{[MODULE]:{alphaCombat:true,alphaSessionId:state.id}}},{render:false});
+  // Foundry 14/PF2e turn lifecycle must not run inside Combat._onCreate while the document is still initializing.
+  // Create as an unstarted, inactive encounter; activate and start in a separate document update.
+  combat=await Combat.create({scene:scene.id,active:false,round:0,turn:null,combatants:entries.map(e=>({actorId:e.actorId,tokenId:state.ships[e.id].tokenIds[0],name:e.name})),flags:{[MODULE]:{alphaCombat:true,alphaSessionId:state.id}}},{render:false});
+  await combat.update({active:true,round:1,turn:0},{arkflightAlpha:true,render:false});
   state.canvas.combatId=combat.id;assertAlphaNativePositions(state);return state;
 }
 export async function syncAlphaTracker(state){
