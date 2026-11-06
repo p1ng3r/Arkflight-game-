@@ -1,0 +1,157 @@
+/* Arkflight Four-Beat prototype. Opt-in per encounter; older HUD remains unchanged. */
+#arkflight-round-deck[data-four-beat="true"]{
+ --four-ink:#dff6ef;--four-brass:#e7bf78;--four-cyan:#71e7d7;--four-panel:#092731ed;--four-edge:#80623b;
+}
+#arkflight-round-deck[data-four-beat="true"] .hud-phase-bar{
+ background:linear-gradient(100deg,#071a27f6,#0a3b47f6 42%,#102932f6);
+ border-color:#d4a95b;box-shadow:0 0 0 1px #173c45,0 8px 30px #041118aa,inset 0 0 35px #3d899929;
+}
+#arkflight-round-deck[data-four-beat="true"] .hud-phase-badge{
+ position:relative;isolation:isolate;min-width:94px;padding:10px 7px;
+ font:700 13px/1.15 Georgia,serif;letter-spacing:.04em;
+ transition:filter .3s ease,background .3s ease,color .3s ease;
+}
+#arkflight-round-deck[data-four-beat="true"] .hud-phase-badge.active{
+ color:#ffe9ad;background:linear-gradient(160deg,#255866,#0d2e3a);
+ filter:drop-shadow(0 0 5px #82f6e8);animation:four-beat-glint 2.6s ease-in-out infinite;
+}
+#arkflight-round-deck[data-four-beat="true"] .hud-phase-badge.done{
+ color:#a4d6c7;background:linear-gradient(#1a3f42,#0c2c34);
+}
+#arkflight-round-deck[data-four-beat="true"] .round-workspace{pointer-events:none}
+#arkflight-round-deck[data-four-beat="true"] .round-workspace>*{pointer-events:auto}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver,
+#arkflight-round-deck[data-four-beat="true"] .four-crew-calls{
+ position:fixed;z-index:3;left:var(--hud-left,62px);top:215px;width:min(286px,30vw);
+ max-height:calc(100dvh - 310px);overflow:auto;overscroll-behavior:contain;
+ box-sizing:border-box;border:1px solid #ae8653;border-radius:12px;
+ background:linear-gradient(155deg,#163640f8,#072531f6 58%,#0a1c2ef6);
+ padding:14px 12px 13px;color:var(--four-ink);
+ box-shadow:0 12px 28px #00131bc0,inset 0 0 0 2px #46615e41,0 0 18px #245c6533;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-panel-title{margin-bottom:12px}
+#arkflight-round-deck[data-four-beat="true"] .four-panel-title>span,
+#arkflight-round-deck[data-four-beat="true"] .four-crew-calls>header>span{
+ display:block;margin:0 0 5px;color:var(--four-cyan);
+ letter-spacing:.19em;font-weight:800;font-size:9px;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-panel-title h2,
+#arkflight-round-deck[data-four-beat="true"] .four-crew-calls>header h2{
+ color:#f6d79b;margin:0 0 5px;font:700 20px/1.15 Georgia,serif;
+ text-shadow:0 2px 8px #0009;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-panel-title p,
+#arkflight-round-deck[data-four-beat="true"] .four-crew-calls>header small{font-size:10px;line-height:1.4;color:#b9cdd0}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-shortlist{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:2px 1px;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice{
+ position:relative;display:grid;grid-template-columns:44px 1fr;grid-template-rows:1fr auto;
+ gap:1px 7px;align-items:center;text-align:left;min-height:70px!important;
+ border:1px solid #527b78!important;border-radius:7px!important;
+ background:linear-gradient(145deg,#183e4d,#0b2630)!important;
+ color:#f3e9d4!important;padding:6px 5px!important;
+ transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice .four-route-glyph{
+ grid-row:span 2;display:grid;place-items:center;width:44px;height:50px;
+ color:var(--four-cyan);background:#092c38a6;border-radius:5px;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-route-glyph svg{max-width:38px;max-height:45px}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice strong{font-size:11px;line-height:1.15}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice small{font-size:9px;color:#b2d9d6}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice:is(:hover,:focus-visible):not(:disabled){
+ transform:translateY(-4px) scale(1.025);border-color:var(--four-cyan)!important;
+ box-shadow:0 6px 17px #08161dd9,0 0 13px #60d9ce7a;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice.is-selected{
+ border-color:var(--four-brass)!important;box-shadow:inset 0 0 0 1px #b99961,0 0 14px #e3c48266;
+ background:linear-gradient(145deg,#385453,#15303a)!important;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice.is-selected:after{
+ content:'✓';position:absolute;top:2px;right:5px;font-size:11px;color:#ffe1a1;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-more-routes{margin-top:10px}
+#arkflight-round-deck[data-four-beat="true"] .four-more-routes summary{
+ font-size:11px;font-weight:700;cursor:pointer;color:#d7ddcc;border-top:1px solid #5b7472;padding:10px 3px;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-more-routes[open] summary{color:#f0d093}
+#arkflight-round-deck[data-four-beat="true"] .four-stage-footer{
+ margin-top:12px;border-top:1px solid #4b6a68;padding-top:10px;display:grid;gap:9px;font-size:11px;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-stage-buttons{display:flex;gap:6px}
+#arkflight-round-deck[data-four-beat="true"] .four-stage-buttons button{flex:1;font-size:11px;padding:8px 4px}
+#arkflight-round-deck[data-four-beat="true"] .four-primary,
+#arkflight-round-deck[data-four-beat="true"] .four-crew-station .four-crew-options button:hover:enabled{
+ border-color:#e4c27b!important;background:linear-gradient(130deg,#ae7e31,#6a5434)!important;
+ color:#fff4d9!important;box-shadow:0 0 13px #e4b65c55!important;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-permission{
+ background:#3b271e;border:1px solid #d29a50;border-radius:7px;
+ padding:10px;font-size:11px;line-height:1.4;color:#ffdfa7;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-crew-calls{width:min(340px,32vw)}
+#arkflight-round-deck[data-four-beat="true"] .four-crew-grid{display:grid;gap:7px;margin-top:13px}
+#arkflight-round-deck[data-four-beat="true"] .four-crew-station{
+ border:1px solid #426970;border-radius:7px;padding:8px;background:#092935a8;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-station-head{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ color:#e2d5b7;font-size:11px;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-station-head small{
+ color:#7fe3c9;font-size:9px;font-weight:800;letter-spacing:.12em;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-crew-options{
+ display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-crew-options button{
+ padding:5px 6px!important;min-height:26px;font-size:10px!important;
+ transition:transform .15s ease,box-shadow .15s ease;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-crew-options button:hover:enabled{transform:translateY(-2px)}
+#arkflight-round-deck[data-four-beat="true"] .four-crew-station.is-spent{
+ border-color:#418d77;background:#12383280;
+}
+#arkflight-round-deck[data-four-beat="true"] .four-confirmed{font-size:10px;color:#a6ebc9;max-width:65%;text-align:right}
+#arkflight-round-deck[data-four-beat="true"] .four-free-note{
+ border-top:1px solid #3c676e;padding-top:9px;margin:11px 0 0;color:#a5c7c7;font-size:10px;
+}
+#arkflight-round-deck[data-four-beat="true"] .round-hand-card:is(:hover,:focus-visible):not(:disabled){
+ transform:translateY(-17px) rotate(0deg) scale(1.05)!important;
+ z-index:12;box-shadow:0 18px 28px #000c,0 0 18px #6fd8cb88;
+ border-color:var(--alpha-category-accent,#e9ce93);
+}
+#arkflight-round-deck[data-four-beat="true"] .round-hand-card.is-respondable{
+ animation:four-beat-instant-glow 1.7s ease-in-out infinite;
+}
+#arkflight-round-deck[data-four-beat="true"] .arkflight-mini-ship.is-locked{
+ box-shadow:0 0 8px #60e7c97d,inset 0 0 7px #46b69655;
+}
+#arkflight-round-deck[data-four-beat="true"] .round-resolution-wait,
+#arkflight-round-deck[data-four-beat="true"] .round-response-bar{
+ box-shadow:0 0 30px #3fc7cc50;
+}
+#arkflight-round-deck[data-four-beat="true"] .arkflight-draw-reveal{
+ border:2px solid #f0c578;box-shadow:0 0 32px #83ead07a,0 24px 80px #000d;
+}
+@keyframes four-beat-glint{0%,100%{filter:drop-shadow(0 0 2px #83e0d0)}50%{filter:drop-shadow(0 0 9px #a4fff1)}}
+@keyframes four-beat-instant-glow{0%,100%{filter:drop-shadow(0 0 2px #64bdce)}50%{filter:drop-shadow(0 0 10px #b6ffff)}}
+@media(max-width:1050px){
+ #arkflight-round-deck[data-four-beat="true"] .four-maneuver,
+ #arkflight-round-deck[data-four-beat="true"] .four-crew-calls{left:var(--hud-left,45px);width:min(250px,38vw);top:178px;max-height:calc(100dvh - 320px)}
+ #arkflight-round-deck[data-four-beat="true"] .four-crew-calls{width:min(300px,40vw)}
+}
+@media(max-height:700px){
+ #arkflight-round-deck[data-four-beat="true"] .four-maneuver,
+ #arkflight-round-deck[data-four-beat="true"] .four-crew-calls{top:156px;max-height:calc(100dvh - 265px)}
+}
+@media(prefers-reduced-motion:reduce){
+ #arkflight-round-deck[data-four-beat="true"] .hud-phase-badge.active,
+ #arkflight-round-deck[data-four-beat="true"] .round-hand-card.is-respondable{animation:none!important}
+ #arkflight-round-deck[data-four-beat="true"] .four-maneuver-choice,
+ #arkflight-round-deck[data-four-beat="true"] .round-hand-card{transition:none!important}
+}
+#arkflight-round-deck[data-four-beat="true"][data-alpha-motion="off"] .hud-phase-badge.active,
+#arkflight-round-deck[data-four-beat="true"][data-alpha-motion="off"] .round-hand-card.is-respondable{animation:none!important}
+#arkflight-round-deck[data-four-beat="true"][data-alpha-motion="off"] .four-maneuver-choice{transition:none!important}
