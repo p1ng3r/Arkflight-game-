@@ -1,6 +1,21 @@
 # Arkflight Game
 
-A clean Foundry VTT / PF2e rebuild of the Arkflight ship-encounter game.
+A cooperative tactical ship card game for Foundry VTT / PF2e, alongside the existing Event, voyage and ship-management pillars.
+
+## Current development — read these first
+
+- **[HANDOFF.md](HANDOFF.md)** — new-chat continuation, source map, branch, update commands and validation limits.
+- **[Current card-game contract](docs/CURRENT-CARD-GAME.md)** — the current shared-AP/random-deck rules and unresolved decisions.
+- **[System audit](docs/CARD-GAME-AUDIT.md)** — verified gaps, redundancy cleanup and card-game comparisons.
+- **[Ordered task list](docs/CARD-GAME-TODO.md)** — priorities and acceptance criteria.
+- **[Current HUD / test guide](docs/ARKFLIGHT-CANVAS-HUD-ALPHA.md)** — live Foundry walkthrough and automated test instructions.
+
+Current feature branch: `feat/1.1-complication-foundation`. Target 1.1.0 remains an alpha; the package version has not been promoted. The ship is the persistent shared character; crew play cards and make PF2e skill checks on a native hex battlefield.
+
+### Earlier Event / station design notes
+
+The material below preserves the earlier Event/station design and roadmap. It is not authority to restore separate RP, Flux cooldown decks or the earlier combat loop over the current card game. See the current contract above for precedence.
+
 
 For the station ability redesign, installation commands, and Foundry playtest steps, see [Station Ability Redesign](docs/STATION-ABILITY-REDESIGN.md).
 
@@ -45,4 +60,7 @@ The playable loop is the product. Infrastructure exists only to support it.
 The first milestone is one complete encounter that is enjoyable in Foundry from planning through closeout. Large persistence, replay, recovery, provenance, and campaign subsystems are not prerequisites for proving the game.
 
 See [GAME-DESIGN.md](GAME-DESIGN.md) for the core game loop and [docs/SHIP-CONDITION-STRAIN-CONTRACT.md](docs/SHIP-CONDITION-STRAIN-CONTRACT.md) for the authoritative persistent ship-damage rules.
-\n## Content Pack Authoring\n\nArkflight adventures and external Event Manager 2.0 packages should follow [docs/CONTENT-PACK-AUTHORING-GUIDE.md](docs/CONTENT-PACK-AUTHORING-GUIDE.md). Use [docs/CONTENT-PACK-RELEASE-CHECKLIST.md](docs/CONTENT-PACK-RELEASE-CHECKLIST.md) before release and [examples/content-pack-starter/](examples/content-pack-starter/) as the copyable starting point.\n
+
+## Content Pack Authoring
+
+Arkflight adventures and external Event Manager 2.0 packages should follow [docs/CONTENT-PACK-AUTHORING-GUIDE.md](docs/CONTENT-PACK-AUTHORING-GUIDE.md). Use [docs/CONTENT-PACK-RELEASE-CHECKLIST.md](docs/CONTENT-PACK-RELEASE-CHECKLIST.md) before release and [examples/content-pack-starter/](examples/content-pack-starter/) as the copyable starting point.

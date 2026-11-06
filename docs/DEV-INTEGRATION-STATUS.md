@@ -1,5 +1,8 @@
 # Arkflight Dev Integration Status
 
+> Current feature handoff: [HANDOFF.md](../HANDOFF.md), [current card-game contract](CURRENT-CARD-GAME.md) and [ordered tasks](CARD-GAME-TODO.md). This document retains its historical scope; conflicting combat rules and branch status below are not the latest alpha contract.
+
+
 ## Branch policy
 
 - `dev` is the active integration branch.

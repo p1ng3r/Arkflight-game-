@@ -1,0 +1,9 @@
+<section class="hud-tools-body">
+{{#if denied}}<p role="alert">Choose a ship you own to use these tools.</p>{{else}}
+<h2>{{ship.name}} · {{#if art}}Choose your ship’s appearance{{else}}Combat deck{{/if}}</h2>
+{{#if art}}<p>Cosmetic choice only. Saves the ship portrait, prototype token and current primary ship token. Hull markers and statistics stay intact.</p><label>Filter by hull or faction<input type="search" data-art-filter value="{{filter}}" placeholder="Try Grelkin, Frigate or Stormglass"></label>
+<div class="hud-art-grid">{{#each choices}}<article><img src="{{src}}" alt="{{label}}" loading="lazy"><b>{{label}}</b><small>{{hull}} · {{faction}}</small><button data-art-apply="{{id}}" {{#if @root.busy}}disabled{{/if}}>{{#if current}}Selected · Apply again{{else}}Use this artwork{{/if}}</button></article>{{else}}<p>No illustrations match this filter.</p>{{/each}}</div>
+{{else}}<nav aria-label="Combat piles">{{#each tabs}}<button data-pile-tab="{{id}}" aria-pressed="{{selected}}">{{name}}</button>{{/each}}</nav><h3>{{pileName}} · {{pile.count}}</h3>
+{{#if pile.hidden}}<p>The draw pile’s contents and order stay hidden. Draw cards through the round’s deck button.</p>{{else}}<div class="hud-pile-grid">{{#each pile.cards}}<article><small>{{timing}} · {{ap}} AP{{#if burn}} · Burn{{/if}}{{#if delayed}} · Prepared{{/if}}</small><h3>{{name}}</h3><b>{{station}}</b><p>{{text}}</p></article>{{else}}<p>This pile is empty.</p>{{/each}}</div>{{/if}}{{/if}}
+{{#if message}}<p role="status">{{message}}</p>{{/if}}{{#if error}}<p role="alert">{{error}}</p>{{/if}}{{/if}}
+</section>

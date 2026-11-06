@@ -1,0 +1,109 @@
+import { ALPHA_HULLS, ALPHA_UPGRADES, ALPHA_TALENTS } from "../alpha/hulls.js";
+import { validateLibraryDeck } from "../alpha/ship-library.js";
+import {decoratedCard,CARD_TAG_LABELS} from "../alpha/card-taxonomy.js";
+import { alphaCardArt } from "./alpha-combat-ui.js";
+import { cardBand, cardTheme, cardOutcomes } from "./alpha-combat-presentation.js";
+import { AlphaCombatEffects, alphaPreferences, alphaSound, bindAlphaPreferences, alphaWindowPosition } from "./alpha-combat-effects.js";
+
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+let instance;
+export class AlphaShipLibraryWindow extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = { id: "arkflight-alpha-library", classes: ["arkflight-alpha-combat", "arkflight-alpha-library"], window: { title: "Arkflight — Ship Library & Decks", icon: "fa-solid fa-book-open", resizable: true }, position: { width: 820, height: 680 } };
+  static PARTS = { main: { template: "modules/arkflight-game/templates/alpha-ship-library.hbs" } };
+  setupStep = "deck"; actorId = null; loadoutId = null; draft = null; baseRevision = null; configDraft = null; dirty = false; configDirty = false; busy = false; error = ""; search = ""; rewardId = "";
+  effectsEngine = new AlphaCombatEffects();
+  constructor(options = {}) { super({ ...options, position: alphaWindowPosition(820,680,options.position) }); }
+  resetDraft() { this.draft = null; this.configDraft = null; this.baseRevision = null; this.dirty = false; this.configDirty = false; }
+  async _prepareContext(options) {
+    const base = {...await super._prepareContext(options),preferences:alphaPreferences()}, api = game.arkflight.alphaCombat.library, ships = api.ships();
+    if (!ships.some(s => s.id === this.actorId)) { this.actorId = ships[0]?.id ?? null; this.loadoutId = null; this.resetDraft(); }
+    if (!this.actorId) return { ...base, ships: [], error: this.error, gm: game.user.isGM };
+    let view;
+    try { view = api.view(this.actorId); } catch (error) { return { ...base, ships: ships.map(s => ({ ...s, selected: s.id === this.actorId })), error: error.message, gm: game.user.isGM }; }
+    this.loadoutId ??= view.activeLoadoutId;
+    const saved = view.loadouts.find(d => d.id === this.loadoutId) ?? view.loadouts[0];
+    this.loadoutId = saved.id;
+    if (!this.draft || !this.dirty && !this.configDirty && this.baseRevision !== view.revision) {
+      this.draft = { id: saved.id, name: saved.name, cards: [...saved.cards] };
+      this.baseRevision = view.revision; this.configDraft = structuredClone(view.config);
+    }
+    const stale = this.baseRevision !== view.revision, locked = Boolean(view.locked), editable = view.initialized && !locked && !stale && !this.busy;
+    const issues = validateLibraryDeck(view, this.draft), counts = new Map();
+    for (const id of this.draft.cards) counts.set(id, (counts.get(id) ?? 0) + 1);
+    const unavailable = [...counts].filter(([id]) => !view.learned.includes(id) || !view.catalog.some(c => c.id === id)).map(([id, count]) => ({ id, count }));
+    const catalog = view.catalog.filter(c => c.name.toLowerCase().includes(this.search.toLowerCase())).map(c => {const count=counts.get(c.id)??0,max=c.unique?1:2,canEdit=editable&&view.learned.includes(c.id);return{ ...decoratedCard(c),tagLabels:decoratedCard(c).tags.map(t=>CARD_TAG_LABELS[t]??t.replaceAll("-", " ")), learned: view.learned.includes(c.id),count,max, art: alphaCardArt(c), editable:canEdit,canDecrease:canEdit&&count>0,canIncrease:canEdit&&count<max,band:cardBand(c),theme:cardTheme(c),outcomes:cardOutcomes(c) };});
+    const rewardOffer=view.rewardOffer;
+    const rewardOptions=(rewardOffer?.options??[]).map(card=>({...decoratedCard(card),art:alphaCardArt(card),outcomes:cardOutcomes(card)}));
+    return { ...base, rewardOffer, rewardOptions, rewardId:this.rewardId, rewardHistory:view.rewards?.history??[],canOffer:game.user.isGM&&editable&&!rewardOffer&&!this.dirty&&!this.configDirty,canPick:editable&&!this.dirty&&!this.configDirty,setupStep:this.setupStep,setupProfile:this.setupStep==="profile",setupDeck:this.setupStep==="deck",setupCrew:this.setupStep==="crew",setupReview:this.setupStep==="review",setupSteps:[{id:"profile",name:"1 · Hull & fittings"},{id:"deck",name:"2 · Combat deck"},{id:"crew",name:"3 · Crew & weapons"},{id:"review",name:"4 · Review"}].map(x=>({...x,selected:x.id===this.setupStep})),view, ships: ships.map(s => ({ ...s, selected: s.id === this.actorId })), gm: game.user.isGM, error: this.error, busy: this.busy, stale, editable, dirty: this.dirty || this.configDirty, locked, draft: this.draft, count: this.draft.cards.length, issues, unavailable, search: this.search, catalog,
+      canInitialize: game.user.isGM && !view.initialized && !locked && !this.busy,
+      canSaveDeck: editable && !this.configDirty, canRefit: editable && !this.dirty,
+      canSelect: editable && !this.dirty && !this.configDirty && issues.length === 0 && saved.id !== view.activeLoadoutId,
+      canGrant: game.user.isGM && editable && !this.dirty && !this.configDirty, config: this.configDraft,
+      loadouts: view.loadouts.map(d => ({ ...d, selected: d.id === saved.id, invalid: d.issues.length > 0 })),
+      hulls: Object.values(ALPHA_HULLS).map(h => ({ ...h, selected: h.id === this.configDraft.hullId })),
+      upgrades: Object.entries(ALPHA_UPGRADES).map(([id, item]) => ({ id, ...item, checked: this.configDraft.upgrades.includes(id) })),
+      talents: Object.entries(ALPHA_TALENTS).map(([id, item]) => ({ id, ...item, checked: this.configDraft.talents.includes(id) })) };
+  }
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const root = this.element;
+    bindAlphaPreferences(root,()=>this.render({force:true}));
+    for(const button of root.querySelectorAll("[data-library-slot]"))button.addEventListener("click",()=>{this.loadoutId=button.dataset.librarySlot;this.resetDraft();this.error="";alphaSound("open");void this.render({force:true});});
+    for(const button of root.querySelectorAll("[data-library-adjust]"))button.addEventListener("click",()=>{const id=button.dataset.cardId,view=game.arkflight.alphaCombat.library.view(this.actorId),card=view.catalog.find(c=>c.id===id);if(view.locked||!view.learned.includes(id)||!card)return;const count=Math.max(0,Math.min(card.unique?1:2,this.draft.cards.filter(c=>c===id).length+Number(button.dataset.libraryAdjust)));this.draft.cards=[...this.draft.cards.filter(c=>c!==id),...Array(count).fill(id)];this.dirty=true;alphaSound("select");void this.render({force:true});});
+    root.querySelector("[data-library-ship]")?.addEventListener("change", e => { this.actorId = e.target.value; this.loadoutId = null; this.resetDraft(); this.error = ""; void this.render({ force: true }); });
+    root.querySelector("[data-library-loadout]")?.addEventListener("change", e => { this.loadoutId = e.target.value; this.resetDraft(); this.error = ""; void this.render({ force: true }); });
+    root.querySelector("[data-library-name]")?.addEventListener("input", e => { this.draft.name = e.target.value; this.dirty = true; });
+    root.querySelector("[data-library-name]")?.addEventListener("change", () => void this.render({ force: true }));
+    root.querySelector("[data-library-search]")?.addEventListener("change", e => { this.search = e.target.value; void this.render({ force: true }); });
+    for (const input of root.querySelectorAll("[data-library-count]")) input.addEventListener("change", e => {
+      const id = e.target.dataset.libraryCount, n = Number(e.target.value);
+      if (!Number.isInteger(n) || n < 0 || n > 2) { e.target.value = this.draft.cards.filter(c => c === id).length; return; }
+      this.draft.cards = [...this.draft.cards.filter(c => c !== id), ...Array(n).fill(id)]; this.dirty = true; void this.render({ force: true });
+    });
+    for (const input of root.querySelectorAll("[data-library-config]")) input.addEventListener("change", e => { const key = e.target.dataset.libraryConfig; this.configDraft[key] = key === "level" ? Number(e.target.value) : e.target.value; this.configDirty = true; void this.render({force:true}); });
+    for (const input of root.querySelectorAll("[data-library-fitting]")) input.addEventListener("change", e => { const key = e.target.dataset.libraryFitting; this.configDraft[key] = [...root.querySelectorAll(`[data-library-fitting="${key}"]:checked`)].map(i => i.value); this.configDirty = true; void this.render({force:true}); });
+    root.querySelector("[data-library-reward-id]")?.addEventListener("input",e=>{this.rewardId=e.target.value;});
+    for (const button of root.querySelectorAll("[data-library-action]")) button.addEventListener("click", () => void this.act(button.dataset.libraryAction, button.dataset));
+  }
+  async act(action, data = {}) {
+    if (this.busy) return;
+    if(action==="setup-step"){if(["profile","deck","crew","review"].includes(data.step))this.setupStep=data.step;await this.render({force:true});return;}
+    if(action==="open-sheet"){await game.actors.get(this.actorId)?.sheet.render(true);return;}
+    if(action==="setup-crew"){const api=game.arkflight.alphaCombat,s=api.state(),ship=Object.values(s?.ships??{}).find(x=>x.actorId===this.actorId);if(!ship){this.error="Place this ship in an encounter to assign its combat stations.";await this.render({force:true});return;}const {openRoundDeck}=await import('./alpha-round-deck-ui.js');const hud=await openRoundDeck();hud.shipId=ship.id;hud.crewPanel=true;await hud.render({force:true});return;}
+    if (action === "reload") { this.resetDraft(); this.error = ""; await this.render({ force: true }); return; }
+    if (action === "remove-unavailable") { this.draft.cards = this.draft.cards.filter(id => id !== data.cardId); this.dirty = true; await this.render({ force: true }); return; }
+    if (action === "minimize") { await this.minimize(); return; }
+    this.busy = true; this.error = ""; await this.render({ force: true });
+    try {
+      if ((["grant", "remove", "refit", "reward-offer", "reward-pick"].includes(action) && this.dirty) || (["save", "select", "grant", "remove", "reward-offer", "reward-pick"].includes(action) && this.configDirty)) throw new Error("Save or reload your current draft before this operation.");
+      const command = { actorId: this.actorId, libraryRevision: this.baseRevision };
+      if (action === "initialize") command.type = "library-initialize";
+      else if (action === "reward-offer") Object.assign(command,{type:"library-offer",rewardId:this.rewardId.trim(),kind:"quest"});
+      else if (action === "reward-pick") Object.assign(command,{type:"library-pick",rewardId:game.arkflight.alphaCombat.library.view(this.actorId).rewardOffer?.rewardId,cardId:data.cardId});
+      else if (action === "save") Object.assign(command, { type: "library-save", loadoutId: this.loadoutId, name: this.draft.name, cards: [...this.draft.cards] });
+      else if (action === "select") Object.assign(command, { type: "library-select", loadoutId: this.loadoutId });
+      else if (["grant", "remove"].includes(action)) Object.assign(command, { type: `library-${action}`, cardId: data.cardId });
+      else if (action === "refit") Object.assign(command, { type: "library-refit", config: structuredClone(this.configDraft) });
+      else throw new Error("Unknown library action.");
+      await game.arkflight.alphaCombat.request(command);
+      alphaSound(["grant","initialize","reward-pick"].includes(action)?"ready":"lock");
+      if(action==="reward-offer")this.rewardId="";
+      this.resetDraft();
+    } catch (error) { this.error = error.message; alphaSound("failure"); }
+    finally { this.busy = false; if (this.rendered) await this.render({ force: true }); }
+  }
+  async minimize(...args){this.effectsEngine.clear(false);return super.minimize(...args);}
+  async close(options={}){this.effectsEngine.clear();return super.close(options);}
+}
+Hooks.once("init", () => game.settings.registerMenu("arkflight-game", "alphaLibraryWindow", { name: "Arkflight Ship Library", label: "Open Ship Library", hint: "Learned cards and three saved combat loadouts.", icon: "fa-solid fa-book-open", type: AlphaShipLibraryWindow, restricted: false }));
+Hooks.once("ready", () => {
+  const api = game.arkflight.alphaCombat, descriptors = Object.getOwnPropertyDescriptors(api);
+  descriptors.library = { value: Object.freeze({ ...api.library, async open(actorId) {
+    instance ??= new AlphaShipLibraryWindow();
+    if (actorId && actorId !== instance.actorId) { instance.actorId = actorId; instance.loadoutId = null; instance.resetDraft(); }
+    await instance.render({ force: true }); if (instance.minimized) await instance.maximize(); instance.bringToFront(); return instance;
+  } }), enumerable: true };
+  game.arkflight.alphaCombat = Object.freeze(Object.defineProperties({}, descriptors));
+});
+Hooks.on("arkflightAlphaChanged", () => { if (instance?.rendered && !instance.busy) void instance.render({ force: true }); });
+Hooks.on("arkflightAlphaPresentationChanged",()=>{if(instance?.rendered){instance.effectsEngine.clear(false);void instance.render({force:true});}});

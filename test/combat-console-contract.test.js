@@ -28,7 +28,8 @@ const LEGACY_STYLES = [
 ];
 
 test("Arkflight Command HUD is the single registered canvas combat presentation", () => {
-  assert.ok(moduleJson.esmodules.includes("src/ui/combat-console-ui.js"));
+  assert.equal(moduleJson.esmodules.includes("src/ui/combat-console-ui.js"),false);
+  assert.ok(moduleJson.esmodules.includes("src/ui/alpha-round-deck-ui.js"));
   assert.ok(moduleJson.esmodules.includes("src/ui/arkflight-command-hud-ui.js"));
   assert.ok(moduleJson.styles.includes("styles/arkflight-command-hud.css"));
   assert.ok(moduleJson.styles.includes("styles/arkflight-command-hud-actions.css"));

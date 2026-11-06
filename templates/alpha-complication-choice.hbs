@@ -1,0 +1,6 @@
+<section class="complication-choice-body" role="alert">
+{{#if choice}}<div class="hud-complication-seal" aria-hidden="true">⚠</div><small>COMBAT IS WAITING FOR THIS CHOICE</small><h2>{{ship}} · Complication</h2><h3>{{receipt.title}}</h3><p>{{receipt.text}}</p><p>Choose one consequence to continue. Closing this window does not resolve it; use the HUD reminder to reopen.</p>
+{{#each options}}<button data-complication-option="{{id}}" data-choice-id="{{../choice.id}}" data-ship-id="{{../choice.shipId}}" {{#if @root.busy}}disabled{{/if}} {{#unless available}}disabled{{/unless}}>{{label}}</button>{{/each}}
+{{else}}<p>No pending Complication remains.</p>{{/if}}
+{{#if error}}<p role="alert">{{error}}</p>{{/if}}
+</section>

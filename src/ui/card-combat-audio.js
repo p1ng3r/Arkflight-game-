@@ -13,6 +13,7 @@ export function cardSoundSamples(kind) { return SAMPLE_CUES[kind] ?? []; }
 const tone = (frequency, end, duration, gain, delay = 0, wave = "sine") => ({ frequency, end, duration, gain, delay, wave });
 const noise = (duration, gain, cutoff, delay = 0) => ({ noise: true, duration, gain, cutoff, delay });
 const RECIPES = Object.freeze({
+  commit: [noise(.08,.23,1800),noise(.2,.2,450,.04),tone(60,28,.2,.15,.03,"triangle")],
   fire: [noise(.09, .4, 4800), noise(.42, .36, 550, .025), tone(110, 32, .48, .42, 0, "triangle")],
   incoming: [tone(570, 570, .11, .18), tone(760, 760, .18, .16, .16)],
   reaction: [noise(.07, .2, 1800), tone(460, 820, .18, .16)],

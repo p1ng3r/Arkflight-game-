@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
+    "alpha:simulate": "node scripts/alpha-combat-simulation.mjs",
     "combat:gauntlet": "node scripts/combat-build-gauntlet.mjs --matrix",
     "combat:gauntlet:single": "node scripts/combat-build-gauntlet.mjs",
     "combat:build-lab": "node scripts/combat-build-lab.mjs"

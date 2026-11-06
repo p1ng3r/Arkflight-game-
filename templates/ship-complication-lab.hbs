@@ -1,0 +1,23 @@
+<section class="complication-lab-shell">
+  <header><small>1.1.0 PROTOTYPE · SAMPLE SHIPS</small><h2>Ship Complications</h2><p>24 cards · 6 outcomes each · draws only on critical failure</p></header>
+  <div class="complication-lab-body">
+    <p class="complication-lab-note">This lab changes sample ships only. Combat integration, maneuver execution and boarding are still being built.</p>
+    {{#if error}}<p role="alert" class="complication-lab-error">{{error}}</p>{{/if}}
+    {{#if message}}<p role="status" class="complication-lab-message">{{message}}</p>{{/if}}
+    <div class="complication-lab-controls">
+      <label>Scenario<select data-lab-scenario {{#if busy}}disabled{{/if}}>{{#each scenarios}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+      <label>Final check result<select data-lab-degree {{#if busy}}disabled{{/if}}>{{#each degrees}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+    </div>
+    <button type="button" class="complication-lab-primary" data-lab-command="resolve" {{#if busy}}disabled{{/if}}>Resolve test check</button>
+    <p class="complication-lab-counts">Round {{state.round}} · Draw pile {{drawCount}} · Discard {{discardCount}}</p>
+    {{#each choices}}<section class="complication-lab-choice"><b>Crew decision</b>{{#each options}}<button type="button" data-lab-command="choose" data-choice-id="{{../id}}" data-option-id="{{id}}" {{#unless available}}disabled{{/unless}} {{#if @root.busy}}disabled{{/if}}>{{label}}{{#unless available}} — unavailable{{/unless}}</button>{{/each}}</section>{{/each}}
+    {{#if card}}<article class="complication-card"><div class="complication-card-band">COMPLICATION · {{card.scenario}}</div><h3>{{card.name}}</h3><h4>{{card.title}}</h4><p>{{card.text}}</p>{{#if card.options}}<ul>{{#each card.options}}<li>{{this}}</li>{{/each}}</ul>{{/if}}<small>Temporary effects expire after the following round if unused. Resource losses need normal recovery.</small><details data-lab-full {{#if showFull}}open{{/if}}><summary>Expand all six outcomes</summary>{{#each card.entries}}<section class="{{#if selected}}is-selected{{/if}}"><b>{{scenario}} · {{title}}</b><p>{{text}}</p>{{#if options}}<ul>{{#each options}}<li>{{this}}</li>{{/each}}</ul>{{/if}}</section>{{/each}}</details></article>{{/if}}
+    <label class="complication-lab-browser">Inspect any card (does not draw)<select data-lab-browse {{#if busy}}disabled{{/if}}><option value="">Show latest draw</option>{{#each catalog}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+    <details><summary>Sample resources and effects</summary><div class="complication-lab-resources">{{#each resources}}<span><b>{{name}}</b> {{value}} / {{max}}</span>{{/each}}</div><p>Sparring Cutter: {{opponentAP}} AP available</p>
+      {{#each effects}}<section class="complication-lab-effect"><b>{{label}}</b><small>{{#if scheduled}}Starts R{{notBeforeRound}} · {{/if}}Expires after R{{expiresRound}}{{#if claimed}} · Claimed by opponent{{/if}}</small>
+      {{#if active}}{{#if isOpportunity}}{{#unless claimed}}<button type="button" data-lab-command="exploit" data-effect-id="{{id}}" {{#if @root.busy}}disabled{{/if}}>Opponent claims · 1 AP</button>{{/unless}}{{/if}}<button type="button" data-lab-command="consume" data-effect-id="{{id}}" {{#if @root.busy}}disabled{{/if}}>Simulate matching action · clear effect</button>{{/if}}</section>{{/each}}
+    </details>
+    {{#if history}}<details><summary>Recent draws</summary>{{#each history}}<p><b>R{{round}} · {{name}}</b> · {{scenario}}{{#if selectedOption}}<br>{{selectedOption}}{{/if}}{{#if changes}}<br>{{changes}}{{/if}}</p>{{/each}}</details>{{/if}}
+  </div>
+  <footer><button type="button" data-lab-command="round" {{#if busy}}disabled{{/if}}>Next round</button><button type="button" data-lab-command="reset" {{#if busy}}disabled{{/if}}>Reset samples</button><button type="button" data-lab-minimize>Minimize</button></footer>
+</section>
