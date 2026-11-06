@@ -173,3 +173,15 @@ Attached native debug file: `arkflight-guided-debug-2026-11-05T16-35-11-458Z.txt
 
 - [ ] Pull the new build and rerun the *same* three-round guided test. Require: status complete, 0 `unhandledrejection`, 0 `arkflight-round-deck` render errors, 0 token mismatches, and ideally no combat movement warning.
 - [ ] Next, test **manual combatFlow 3** separately with two real browser clients; current guided script uses legacy combatFlow 2 and cannot validate synchronized five-second locks, two-card reveal, multiplayer AFK fallback, and free cycling.
+
+
+### 5 November 2026 — Third live guided-test audit; staged Foundry tracker initialization
+
+User log: `arkflight-guided-debug-2026-11-06T00-01-12-074Z.txt`, build `alpha-tracker-startup-20261105`, Foundry 14.365 / PF2e 8.4.1. Status complete, **352 entries**, **87 evaluated combat commands**, full 3-round completion, **6 attacks + 6 damage resolutions**, **zero native token-position mismatches** and no card-HUD render errors, `console.warn` entries or request timeouts.
+
+The only unhandled rejection occurred at `guided-start` **inside `EncounterPF2e._onCreate`**, with `Cannot read properties of undefined (reading 'round')` at `#triggerTurnEvents`. The previous change created a combat already `active:true,round:1,turn:0`, invoking Foundry 14 turn lifecycle while the document was still being created. The old combat movement warning was absent. Combat results and round journals were unaffected.
+
+**Patch now pushed:** in `prepareAlphaFleet`, create `Combat` with `active:false, round:0, turn:null`, suppressing premature start-of-turn events, then `await combat.update({active:true,round:1,turn:0},{arkflightAlpha:true,render:false})` after the Combat document exists. `test/alpha-tracker-startup.test.js` now models an exception if a created Combat is already started and asserts the unstarted-create → started-update order. GitHub Actions **959 tests pass**, but this is a regression **candidate until native testing confirms it**. Build: `alpha-tracker-staged-20261105`.
+
+- [ ] With the new staged build, launch the guided test and confirm no error in `EncounterPF2e._onCreate`. If an exception persists, capture it before attempting another workaround; do not suppress PF2e hooks or silently swallow errors.
+- [ ] Once tracker startup is clean, prioritize live GM+player **combatFlow 3** test: 5-second all-ships-lock maneuver countdown, collision, 2-card after-move reveal, online crew readiness/12-second timeout, free cycle and reward library visibility. Automated guided fixture still uses **combatFlow 2** and cannot validate those features.
