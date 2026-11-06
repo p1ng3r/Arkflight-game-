@@ -8,6 +8,7 @@ import {decoratedCard} from '../alpha/card-taxonomy.js';
 import {alphaCardFor,alphaTargetLegal,alphaRangeBand,alphaComplications} from '../alpha/combat.js';
 import {legalHullManeuvers} from '../alpha/maneuvers.js';
 import {currentPlannedCard,roundReadiness} from '../alpha/round-flow.js';
+import {FOUR_BEAT_EXPERIENCE,fourBeatModel,crewCallView} from '../alpha/four-beat.js';
 import {cardBand,cardTheme,cardOutcomes,stationName} from './alpha-combat-presentation.js';
 import {alphaWindowPosition,bindAlphaPreferences,alphaSound} from './alpha-combat-effects.js';
 import {showAlphaBattery,showAlphaTargeting,showAlphaManeuver,clearAlphaOverlay,alphaBatteryVisible} from './alpha-combat-overlays.js';
@@ -22,6 +23,7 @@ const cardScenes={patch:"patch-hull",shield:"shield-pulse","all-hands":"all-hand
 export const alphaCardScene=card=>`modules/arkflight-game/assets/ui/canvas-hud/${cardScenes[card.id]??`${card.stations[0]}-scene`}.webp`;
 const labels={opening:'Opening hand',draw:'Draw',planning:'Maneuver','card-planning':'Plan cards',resolving:'Station rolls',firing:'Firing',response:'Instant response',retarget:'Retarget',damage:'Damage','draw-reveal':'Card reveal',cleanup:'Round recap',complete:'Encounter ended',boarding:'Boarding'};
 export function roundPhaseSteps(s){
+ if(s?.experience===FOUR_BEAT_EXPERIENCE)return fourBeatModel(s).steps;
  if(s?.combatFlow===3){
   const phases=['plan','execute','recover'],current=s.complete||s.phase==='cleanup'?2:['resolving','firing','response','retarget','damage'].includes(s.phase)?1:0;
   return phases.map((id,i)=>({id,label:id.toUpperCase(),active:i===current,done:i<current,number:i+1}));
@@ -63,8 +65,22 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   const choice=s?.pendingCardChoice,canChoose=choice&&choice.shipId===ship?.id&&api.canOperate(ship.id,choice.station);
   const reveal=s?.phase==='draw-reveal'?s.drawReveal?.ships?.[ship?.id]:null;
   const revealCards=(reveal?.ids??[]).map(id=>{const raw=ALPHA_CARDS[ship.instances[id]];return {...decoratedCard(raw),instanceId:id,art:alphaCardArt(raw),sceneArt:alphaCardScene(raw)};});
+  const fourBeat=s?.experience===FOUR_BEAT_EXPERIENCE;
+  const priority=["hold","straight-2","straight-1","port-s-3","starboard-s-3","port-hard","starboard-hard"];
+  const ranked=[...c.routes].sort((a,b)=>{
+   const ia=priority.indexOf(a.id),ib=priority.indexOf(b.id);return (ia<0?100:ia)-(ib<0?100:ib);
+  });
+  let featuredRoutes=ranked.slice(0,5);
+  if(fourBeat&&selectedManeuver&&!featuredRoutes.some(r=>r.id===selectedManeuver)){
+   const selected=c.routes.find(r=>r.id===selectedManeuver);if(selected)featuredRoutes=[...featuredRoutes.slice(0,4),selected];
+  }
+  const extraRoutes=c.routes.filter(r=>!featuredRoutes.some(f=>f.id===r.id));
+  const navigatorActor=ship&&game.actors.get(ship.stationActors.navigator);
+  const navigatorHint=ship&&!api.canOperate(ship.id,"navigator")?
+   api.ownsShip(ship.id)?`Navigator assigned to ${navigatorActor?.name??"another crewmate"} · ask the GM to assign your character or Ship baseline.`:"You do not control this ship.":null;
+  const crewCalls=crewCallView(s,ship,station=>api.canOperate(ship?.id,station));
   const panels=hudPanelLayout(game.settings.get('arkflight-game','alphaHudPanels'));
-  const context={...c,gunnery,layoutIllustrated:c.preferences?.layout==='illustrated',layoutMinimalist:c.preferences?.layout==='minimalist',soundFull:c.preferences?.preference==='full',soundSubtle:c.preferences?.preference==='subtle',soundOff:c.preferences?.preference==='off',buildFour:c.build?.count===4,panels,autoTesting:api.guided?.auto?.status()?.active??false,panelButtons:HUD_PANELS.map(id=>({id,label:({tracker:'Phases',ship:'Ship',hand:'Cards',orders:'Orders'})[id],collapsed:panels[id],expanded:!panels[id]})),helpOpen:this.helpOpen,activeEffects:ship?[...ship.effects.map(e=>({label:e.kind,amount:e.amount,until:`through round ${e.expiresRound}`,uses:e.uses})),...ship.prepared.map(e=>({label:`Prepared ${e.kind}`,amount:e.amount,until:`round ${e.start}–${e.end}`})),...c.effects.map(e=>({label:e.label,amount:e.amount??e.value,until:`through round ${e.expiresRound}`,uses:e.uses}))]:[],crewVisible:game.settings.get('arkflight-game','alphaCrewVisible')??false,shipArt:game.actors.get(ship?.actorId)?.img,
+  const context={...c,fourBeat,beat:fourBeat?fourBeatModel(s):null,featuredRoutes,extraRoutes,navigatorHint,crewCalls,crewCallCount:crewCalls.filter(x=>x.selected).length,gunnery,layoutIllustrated:c.preferences?.layout==='illustrated',layoutMinimalist:c.preferences?.layout==='minimalist',soundFull:c.preferences?.preference==='full',soundSubtle:c.preferences?.preference==='subtle',soundOff:c.preferences?.preference==='off',buildFour:c.build?.count===4,panels,autoTesting:api.guided?.auto?.status()?.active??false,panelButtons:HUD_PANELS.map(id=>({id,label:({tracker:'Phases',ship:'Ship',hand:'Cards',orders:'Orders'})[id],collapsed:panels[id],expanded:!panels[id]})),helpOpen:this.helpOpen,activeEffects:ship?[...ship.effects.map(e=>({label:e.kind,amount:e.amount,until:`through round ${e.expiresRound}`,uses:e.uses})),...ship.prepared.map(e=>({label:`Prepared ${e.kind}`,amount:e.amount,until:`round ${e.start}–${e.end}`})),...c.effects.map(e=>({label:e.label,amount:e.amount??e.value,until:`through round ${e.expiresRound}`,uses:e.uses}))]:[],crewVisible:game.settings.get('arkflight-game','alphaCrewVisible')??false,shipArt:game.actors.get(ship?.actorId)?.img,
    meters:c.meters.map(m=>({...m,icon:({hull:'fa-shield-halved',lifeveil:'fa-droplet',morale:'fa-flag',strain:'fa-bolt',supplies:'fa-boxes-stacked'})[m.name],segments:Array.from({length:10},(_,i)=>({filled:i<Math.ceil(m.percent/10)}))})),
    routes:c.routes.map(r=>({...r,selected:r.id===selectedManeuver})),route:selectedManeuver?c.route:null,canLock:c.canLock&&!!selectedManeuver,followup,hudHidden:this.hudHidden??false,phaseSteps:roundPhaseSteps(s),readiness:s?roundReadiness(s):[],crewRail,cardChoice:canChoose?{...choice,isSurvey:choice.kind==='survey',options:choice.options.map(id=>({id,name:ALPHA_CARDS[ship.instances[id]].name,art:alphaCardArt(ALPHA_CARDS[ship.instances[id]])}))}:null,guidedRunning,guidedTest:s?.guidedTest,crewPanel:this.crewPanel??false,canAssignCrew:game.user.isGM&&['opening','planning','card-planning','cleanup'].includes(phase),card:card&&{...card,isBoarding:card.id==='boarding'},panelOnly:this.resolutionOnly,roundFlow:s?.roundFlow===2,phaseLabel:labels[phase]??'Take command',
    hand:c.hand.map((h,i)=>({...h,isInstant:h.timing==='instant',sceneArt:alphaCardScene(h),tilt:Math.max(-4,Math.min(4,(i-(c.hand.length-1)/2)*1.25)),queued:planned.has(h.instanceId),respondable:usableInstant(s,ship,h,api)})),
@@ -93,7 +109,7 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   return context;
  }
  async _onRender(c){
-  const root=this.element;if(!this.resolutionOnly){const side=document.querySelector('#sidebar')?.getBoundingClientRect(),tools=document.querySelector('#controls')?.getBoundingClientRect();root.style.setProperty('--hud-right',`${Math.max(18,side?.width?innerWidth-side.left+14:18)}px`);root.style.setProperty('--hud-left',`${Math.max(16,(tools?.right??54)+12)}px`);for(const id of HUD_PANELS)root.dataset[`fold${id[0].toUpperCase()+id.slice(1)}`]=String(c.panels[id]);root.dataset.instantReady=String(c.eligibleInstants.length>0);root.dataset.crewOpen=String(!!c.crewVisible);root.classList.toggle('hud-is-hidden',!!this.hudHidden);root.dataset.hudPhase=c.s?.phase??'welcome';}
+  const root=this.element;root.dataset.fourBeat=String(Boolean(c.fourBeat));if(!this.resolutionOnly){const side=document.querySelector('#sidebar')?.getBoundingClientRect(),tools=document.querySelector('#controls')?.getBoundingClientRect();root.style.setProperty('--hud-right',`${Math.max(18,side?.width?innerWidth-side.left+14:18)}px`);root.style.setProperty('--hud-left',`${Math.max(16,(tools?.right??54)+12)}px`);for(const id of HUD_PANELS)root.dataset[`fold${id[0].toUpperCase()+id.slice(1)}`]=String(c.panels[id]);root.dataset.instantReady=String(c.eligibleInstants.length>0);root.dataset.crewOpen=String(!!c.crewVisible);root.classList.toggle('hud-is-hidden',!!this.hudHidden);root.dataset.hudPhase=c.s?.phase??'welcome';}
   bindAlphaPreferences(root,()=>this.render({force:true}));
   for(const el of root.querySelectorAll('[data-alpha-assign]'))el.addEventListener('change',()=>void this.roundAction('assign-station',{station:el.dataset.alphaAssign,actorId:el.value}));
   root.querySelector('[data-alpha-ship]')?.addEventListener('change',e=>{this.shipId=e.target.value;clearAlphaOverlay();this.inspectId=null;this.selections.clear();void this.render({force:true});});
@@ -116,6 +132,13 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
    update();this.revealTick=setInterval(update,250);
    const key=`${c.s?.id}:${c.s?.round}:${c.ship?.id}`;
    if(this.lastRevealKey!==key){this.lastRevealKey=key;alphaSound('open');}
+  }
+  if(c.fourBeat&&this.lastBeat!==c.beat?.active){
+   this.lastBeat=c.beat?.active;alphaSound("ready");
+   const rail=root.querySelector(".hud-phase-bar");
+   if(rail&&root.dataset.alphaMotion!=="off"&&typeof rail.animate==="function"){
+    rail.animate([{filter:"brightness(1.5)"},{filter:"brightness(1)"}],{duration:700,easing:"ease-out"});
+   }
   }
   if(!this.resolutionOnly&&!c.guidedRunning&&c.primary&&c.allLocked&&c.s.combatFlow!==3&&!this.busy&&this.movePromptKey!==`${c.s.id}:${c.s.round}`){this.movePromptKey=`${c.s.id}:${c.s.round}`;queueMicrotask(()=>void this.roundAction('confirm-move'));}
   if(!this.resolutionOnly&&!c.autoTesting&&c.recap&&!c.unsettled&&c.s?.roundFlow===2&&this.recapKey!==`${c.s.id}:${c.s.round}`){this.recapKey=`${c.s.id}:${c.s.round}`;const journal=c.journal?`<p>Journal ${recapEscape(c.journal.journalId)} · Page ${recapEscape(c.journal.pageId)}</p>`:'<p>Journal pending; recap retained for retry.</p>';if(foundry.applications.api.DialogV2?.prompt)queueMicrotask(()=>void foundry.applications.api.DialogV2.prompt({window:{title:`Round ${c.s.round} · Ship’s log`},content:roundRecapHTML(c.s)+journal,ok:{label:'Return to battle'}}).catch(()=>{}));}
@@ -151,10 +174,11 @@ export class AlphaRoundDeckWindow extends AlphaCombatWindow{
   this.busy=true;this.error='';
   try{
    let command={type,shipId:ship?.id??this.shipId};
-   if(type==='start')command={type,roundFlow:2,combatFlow:3,...this.build};if(type==='reset')command={type,roundFlow:2,combatFlow:s?.combatFlow??2};
+   if(type==='start')command={type,roundFlow:2,combatFlow:3,experience:FOUR_BEAT_EXPERIENCE,...this.build};if(type==='reset')command={type,roundFlow:2,combatFlow:s?.combatFlow??2,experience:s?.experience??null};
    if(type==='lock'&&api.canOperate(ship.id,'navigator')){if(!(this.maneuvers[ship.id]??s.plans[ship.id]))throw Error('Choose a maneuver template for this ship this round before locking.');const a=api.state();await api.request({type:'plan',shipId:ship.id,encounterId:a.id,revision:a.revision,maneuverId:this.maneuvers[ship.id]??s.plans[ship.id]??'hold'});}
    if(type==='plan'){command.maneuverId=this.maneuvers[ship.id]??s.plans[ship.id];if(!command.maneuverId)throw Error('Choose a maneuver template for this ship this round.');}if(['mulligan','discard'].includes(type))command.instances=[...this.selections];
    if(type==='ready-draw')command.shipId=ship.id;
+   if(type==='crew-call')Object.assign(command,{station:data.station,choice:data.choice,targetId:data.targetId});
    if(type==='cycle-card')command.instanceId=this.inspectId;
    if(type==='queue-card')Object.assign(command,{instanceId:this.inspectId,batteryId:this.batteryId,adjustment:this.adjustment,targetId:this.targetId});
    if(['unqueue-card','move-card','hold-order','target'].includes(type))Object.assign(command,{instanceId:data.instanceId,direction:Number(data.direction),attackId:data.attackId,targetId:data.targetId});
