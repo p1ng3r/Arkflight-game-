@@ -75,7 +75,8 @@ export function authorizeAlphaCommand(s,cmd,user){
   else if(cmd.type==="cancel-crew")station="captain";
   else if(["play","resolve-card"].includes(cmd.type))station=ALPHA_CARDS[ship.instances[cmd.instanceId]]?.stations[0];
   else if(["fire","attack","damage"].includes(cmd.type))station="battlewatch";
-  else if(cmd.type==="plan")station="navigator";
+  else if(cmd.type==="crew-call")station=cmd.station;
+   else if(cmd.type==="plan")station="navigator";
   else if(["lock","finish-card","lock-cards","finish-firing","skip-card"].includes(cmd.type))station="captain";
   if(station&&ship.stationActors[station]&&!owns(user,ship.stationActors[station]))throw new Error(`The assigned ${station} player executes this contribution.`);
   if(["attack","damage"].includes(cmd.type)&&s.attacks[s.attackIndex]?.shipId!==ship.id)throw new Error("Only the attacking crew may resolve its attack.");
@@ -94,6 +95,7 @@ export function alphaPlayerState(user=game.user){
     ship.drawPile=[];
     if(!owns(user,ship.actorId)){delete ship.pendingDraw;if(s.drawReveal?.ships)delete s.drawReveal.ships[ship.id];}
     if(!owns(user,ship.actorId)){if(s.cardPlans)delete s.cardPlans[ship.id];ship.hand=[];ship.instances={};ship.library=[];if(s.phase==="planning")delete s.plans[ship.id];}
+   if(!owns(user,ship.actorId)&&["opening","planning","card-planning","draw-reveal"].includes(s.phase))delete ship.crewCalls;
   }
   if(!['cleanup','complete'].includes(s.phase))for(const key of ['log','roundEvents'])if(s[key])s[key]=s[key].filter(e=>e.detail?.kind!=="plan"||owns(user,s.ships[e.detail.shipId]?.actorId));
   delete s.complications.randomState;return s;
