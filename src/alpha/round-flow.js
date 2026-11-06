@@ -51,6 +51,7 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
  }
  if(cmd.type==='crew-call'){
    const chosen=applyCrewCall(s,ship,cmd);
+   const companion=s.complications?.ships?.find(r=>r.id===ship.id);if(companion)companion.resources=copy(ship.resources);
    log(s,`${ship.name} · ${chosen.station} called ${chosen.choice.replaceAll("-"," ")} (free).`,{kind:"crew-call",shipId:ship.id,station:chosen.station,choice:chosen.choice});
    return revise();
  }
