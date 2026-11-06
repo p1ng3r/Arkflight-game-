@@ -78,7 +78,8 @@
     "styles/alpha-master-card.css",
     "styles/alpha-round-deck.css",
     "styles/alpha-canvas-hud.css",
-    "styles/alpha-ornate-hud.css"
+    "styles/alpha-ornate-hud.css",
+    "styles/alpha-four-beat.css"
   ],
   "esmodules": [
     "src/foundry/arkflight.js",
