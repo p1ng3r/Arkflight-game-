@@ -1,5 +1,6 @@
 import {ALPHA_CARDS} from './cards.js';
 import {createDrawReveal,acknowledgeDraw,settleDrawReveals} from './draw-reveal.js';
+import {applyCrewCall} from "./four-beat.js";
 const copy=x=>structuredClone(x),alive=s=>s.resources.hull.value>0;
 export const roundShips=s=>Object.values(s.ships).filter(alive);
 export function currentPlannedCard(s){const ship=s?.ships[s.turnOrder[s.turnIndex]];return ship&&(s.cardPlans?.[ship.id]??[]).find(c=>!c.resolved);}
@@ -47,6 +48,11 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   if(s.phase!=='draw'||!alive(ship)||ship.drawnRound===s.round)throw Error('This round’s draw is already complete or unavailable.');
   const count=ship.hand.length;draw(s,ship,ship.profile.roundDraw??1);ship.drawnRound=s.round;log(s,`${ship.name}: ${ship.hand.length-count} card(s) drawn${ship.hand.length===count?' — deck empty':''}.`);
   if(roundShips(s).every(x=>x.drawnRound===s.round))s.phase='planning';return revise();
+ }
+ if(cmd.type==='crew-call'){
+   const chosen=applyCrewCall(s,ship,cmd);
+   log(s,`${ship.name} · ${chosen.station} called ${chosen.choice.replaceAll("-"," ")} (free).`,{kind:"crew-call",shipId:ship.id,station:chosen.station,choice:chosen.choice});
+   return revise();
  }
  if(cmd.type==='cycle-card'){
   if(s.combatFlow!==3||s.phase!=='card-planning'||!alive(ship)||s.cardLocks?.[ship.id])throw Error('Cycle only during unlocked Strategy.');
