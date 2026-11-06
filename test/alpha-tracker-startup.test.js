@@ -32,3 +32,28 @@ test("starting a guided session deactivates the old encounter without intermedia
  assert.equal(current.started,true);
  assert.equal(current.turn,0);
 });
+
+
+test("PF2e never receives started turn events inside Combat.create; activation happens after creation",async()=>{
+ const world=alphaWorld(),api=world.initialize();
+ const originalCreate=Combat.create.bind(Combat),events=[];
+ Combat.create=async (source,options)=>{
+  events.push({stage:"create",active:source.active,round:source.round,turn:source.turn,render:options?.render});
+  // Model the Foundry v14 error: calling #triggerTurnEvents during an already-started _onCreate.
+  if(source.round>0||source.turn!==null||source.active!==false)throw new Error("PF2e _onCreate turn lifecycle ran before initialization.");
+  const created=await originalCreate(source);
+  const originalUpdate=created.update.bind(created);
+  created.update=async(changes,settings)=>{
+   events.push({stage:"update",active:changes.active,round:changes.round,turn:changes.turn,render:settings?.render,arkflightAlpha:settings?.arkflightAlpha});
+   return originalUpdate(changes,settings);
+  };
+  return created;
+ };
+ const s=await api.request({type:"start",roundFlow:2});
+ const combat=game.combats.get(s.canvas.combatId);
+ assert.ok(combat.started);
+ assert.deepEqual(events.slice(0,2),[
+  {stage:"create",active:false,round:0,turn:null,render:false},
+  {stage:"update",active:true,round:1,turn:0,render:false,arkflightAlpha:true}
+ ]);
+});
