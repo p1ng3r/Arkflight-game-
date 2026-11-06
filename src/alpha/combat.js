@@ -1,4 +1,5 @@
 import {dispatchRoundCommand} from "./round-flow.js";
+import {FOUR_BEAT_EXPERIENCE,consumeCrewCheckBonus,consumeCrewHitProtection} from "./four-beat.js";
 import { ALPHA_DIRECTIONS, deriveAlphaProfile } from "./hulls.js";
 import { ALPHA_CARDS, ALPHA_SKILLS, ALPHA_STARTER_DECK } from "./cards.js";
 import { hullManeuvers, legalHullManeuvers, previewManeuver, resolveManeuvers, occupiedHexes, hexDistance } from "./maneuvers.js";
@@ -45,9 +46,10 @@ async function check(s,ship,station,skill,services,{dc=ship.profile.dc,batteryId
   const die=await roll(s,"1d20",services,{shipId:ship.id,station});if(!Number.isInteger(die)||die<1||die>20)throw new Error("A check requires a d20 result.");
   const morale=!save&&ALPHA_SKILLS[station]?(ship.resources.morale.value<=25?-2:ship.resources.morale.value<=50?-1:0):0;
   const penalty=Math.min(modifier.amount,morale);
-  const total=die+base+penalty+bonus;
+  const crewBonus=!save?consumeCrewCheckBonus(s,ship,station,{targetId:station==="battlewatch"?s.attacks[s.attackIndex]?.targetId??null:null}):0;
+  const total=die+base+penalty+bonus+crewBonus;
   consume(s,ship.id,modifier.effectIds);
-  const result={die,modifier:base+penalty+bonus,total,dc,degree:degreeOfSuccess(total,die,dc),skill:skill??ALPHA_SKILLS[station]?.[0]??null,cardId,instanceId,components:[...components,{label:"Morale / complication (strongest)",value:penalty},{label:"Action bonus",value:bonus}]};
+  const result={die,modifier:base+penalty+bonus+crewBonus,total,dc,degree:degreeOfSuccess(total,die,dc),skill:skill??ALPHA_SKILLS[station]?.[0]??null,cardId,instanceId,components:[...components,{label:"Morale / complication (strongest)",value:penalty},{label:"Action bonus",value:bonus},...(s.experience===FOUR_BEAT_EXPERIENCE?[{label:"Free crew contributions",value:crewBonus}]:[])]};
   log(s,`${ship.name} · ${station}: d20 ${die} ${result.modifier>=0?"+":""}${result.modifier} = ${total} vs ${dc} (${["critical failure","failure","success","critical success"][result.degree+1]}).`,{kind:"check",shipId:ship.id,targetId:station==="battlewatch"&&batteryId?s.attacks[s.attackIndex]?.targetId??null:null,station,batteryId,...result});
   return result;
 }
@@ -68,7 +70,7 @@ function batteries(profile){
     {id:"fore",name:"Fore Swivel",mount:"fore",arc:180,range:4,formula:`${Math.max(2,power-1)}d6+6`,reload:1,readyRound:1,firedRound:0}
   ];
 }
-export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTIONS,headings=[0,60,120,180,240,300],basis={q:{x:1.5,y:Math.sqrt(3)/2},r:{x:0,y:Math.sqrt(3)}},roundFlow=1,combatFlow=2}={}){
+export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTIONS,headings=[0,60,120,180,240,300],basis={q:{x:1.5,y:Math.sqrt(3)/2},r:{x:0,y:Math.sqrt(3)}},roundFlow=1,combatFlow=2,experience=null}={}){
   if(!isId(id)||!Number.isSafeInteger(seed)||seed<1||seed>0xffffffff)throw new Error("Provide an encounter ID and nonzero 32-bit seed.");
   if(!Array.isArray(entries)||entries.length<2||entries.length>8||new Set(entries.map(e=>e.id)).size!==entries.length||new Set(entries.map(e=>e.team)).size<2)throw new Error("Choose two to eight distinct ships on opposing teams.");
   const s={schemaVersion:1,id,revision:0,round:1,phase:"planning",ships:{},plans:{},locked:{},turnOrder:[],turnIndex:0,attacks:[],attackIndex:0,damage:[],serial:0,actionSerial:0,actions:[],complicationQueue:[],pendingDiscard:null,log:[],movement:null,boarding:[],directions:copy(directions),headings:[...headings],basis:copy(basis),randomState:seed,complete:false};
@@ -77,11 +79,11 @@ export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTION
     const profile=deriveAlphaProfile(e);if(roundFlow===2&&combatFlow===3)profile.roundDraw=2;if(e.deckCapacity!==undefined){if(!Number.isInteger(e.deckCapacity)||e.deckCapacity<profile.deck||e.deckCapacity>30)throw Error('Invalid earned deck capacity.');profile.deck=e.deckCapacity;}if(roundFlow===2)profile.maneuverSetVersion=2;const pose=e.pose??{q:i%2?4:0,r:Math.floor(i/2)*4,heading:i%2?5:2};
     if(![pose.q,pose.r,pose.heading].every(Number.isSafeInteger)||pose.heading<0||pose.heading>5)throw new Error("Invalid starting hex/facing.");
     const deck=starter(e.deck,profile), instances=Object.fromEntries(deck.map((c,n)=>[`${c}-${n}`,c]));
-    const ship={id:e.id,name:e.name,team:e.team,actorId:e.actorId??null,stationActors:copy(e.stationActors??{}),profile,pose:{...pose},resources:{hull:{value:profile.maxHull,max:profile.maxHull},lifeveil:{value:100,max:100},morale:{value:100,max:100},strain:{value:0,max:profile.strain},supplies:{value:20,max:20}},ap:profile.ap,instances,library:[...new Set(e.learned??deck)],loadoutId:e.loadoutId??null,libraryRevision:e.libraryRevision??null,drawPile:shuffle(s,Object.keys(instances)),hand:[],discard:[],burned:[],prepared:[],effects:[],batteries:batteries(profile),ammo:{chainshot:2},mulliganDone:false,drPlayedRound:0,regroupRound:0,bonusTravel:0,bonusTurns:0};
+    const ship={id:e.id,name:e.name,team:e.team,actorId:e.actorId??null,stationActors:copy(e.stationActors??{}),profile,pose:{...pose},resources:{hull:{value:profile.maxHull,max:profile.maxHull},lifeveil:{value:100,max:100},morale:{value:100,max:100},strain:{value:0,max:profile.strain},supplies:{value:20,max:20}},ap:profile.ap,instances,library:[...new Set(e.learned??deck)],loadoutId:e.loadoutId??null,libraryRevision:e.libraryRevision??null,drawPile:shuffle(s,Object.keys(instances)),hand:[],discard:[],burned:[],prepared:[],effects:[],batteries:batteries(profile),ammo:{chainshot:2},mulliganDone:false,crewCalls:{},drPlayedRound:0,regroupRound:0,bonusTravel:0,bonusTurns:0};
     s.ships[e.id]=ship;draw(s,ship,profile.opening);
   }
   s.complications=createComplicationEncounter({id,ships:Object.values(s.ships).map(ship=>({id:ship.id,name:ship.name,team:ship.team,resources:ship.resources,ap:ship.ap,batteries:ship.batteries})),seed:seed===0xffffffff?1:seed+1});
-  if(roundFlow===2){s.roundFlow=2;s.combatFlow=combatFlow;s.roundEvents=[];s.phase="opening";s.cardPlans={};s.cardLocks={};s.firingIndex=0;}
+  if(roundFlow===2){s.roundFlow=2;s.combatFlow=combatFlow;if(experience===FOUR_BEAT_EXPERIENCE&&combatFlow===3)s.experience=FOUR_BEAT_EXPERIENCE;s.roundEvents=[];s.phase="opening";s.cardPlans={};s.cardLocks={};s.firingIndex=0;}
   log(s,"Alpha encounter ready. Choose opening mulligans and hull maneuvers.");return s;
 }
 export function activeAlphaShip(s){return s.turnOrder[s.turnIndex]??null;}
@@ -293,7 +295,9 @@ async function resolveAttack(s,services){
   const raw=result.degree===2?rolled*2:rolled;
   const drGap=Math.max(0,...opportunities.filter(e=>e.rule==="dr-gap").map(e=>e.value)), resistanceGap=Math.max(0,...opportunities.filter(e=>e.rule==="resistance-gap").map(e=>e.value));
   const dr=Math.max(0,...target.prepared.filter(p=>p.kind==="dr"&&p.start<=s.round&&p.end>=s.round).map(p=>p.amount));
-  const damage=Math.max(0,raw-Math.max(0,(order.resistance??0)-resistanceGap)-Math.max(0,dr-drGap-(order.penetration??0)));
+  const unshielded=Math.max(0,raw-Math.max(0,(order.resistance??0)-resistanceGap)-Math.max(0,dr-drGap-(order.penetration??0)));
+  const crewProtection=consumeCrewHitProtection(s,target,unshielded);
+  const damage=Math.max(0,unshielded-crewProtection);
   if(order.ammo)attacker.ammo[order.ammo]--;else track(attacker,"supplies",-1);
   const extraReload=Math.max(0,...restrictions.filter(e=>e.rule==="extra-reload").map(e=>e.value));
   b.readyRound=s.round+b.reload+extraReload;b.firedRound=s.round;
@@ -308,7 +312,7 @@ function refresh(s){
   compIn(s);s.complications=advanceComplicationRound(s.complications);s.round++;
   s.phase="planning";s.plans={};s.locked={};s.attacks=[];s.damage=[];s.attackIndex=0;s.turnOrder=[];s.turnIndex=0;s.actions=[];
   for(const ship of Object.values(s.ships)){
-    delete ship.initiative;ship.effects=ship.effects.filter(e=>e.expiresRound>=s.round);ship.bonusTravel=0;ship.bonusTurns=0;
+    delete ship.initiative;ship.crewCalls={};ship.effects=ship.effects.filter(e=>e.expiresRound>=s.round);ship.bonusTravel=0;ship.bonusTurns=0;
     ship.ap=ship.profile.ap+Math.min(2,ship.prepared.filter(p=>p.kind==="ap"&&p.start===s.round).reduce((n,p)=>n+p.amount,0));
     const ended=ship.prepared.filter(p=>p.kind==="ap"&&p.start===s.round||p.end<s.round||p.used);
     for(const p of ended)ship.discard.push(p.instance);ship.prepared=ship.prepared.filter(p=>!ended.includes(p));
