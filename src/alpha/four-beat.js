@@ -88,7 +88,7 @@ export function crewCallView(s,ship,canOperate=()=>false){
   const call=ship.crewCalls?.[station],allowed=crewCallAllowed(s,ship,station)&&canOperate(station);
   return {station,label:({captain:"Captain",engineer:"Engineer",battlewatch:"Battle Watch",veilwarden:"Lifeveil Warden"})[station],
    selected:call?CREW_CALLS[station].find(x=>x.id===call.id)?.label:null,used:!!call?.used,
-   available:allowed,options:CREW_CALLS[station].map(x=>({...x,available:allowed,selected:call?.id===x.id})),
+   available:allowed,options:CREW_CALLS[station].map(x=>({...x,available:allowed&&(station!=="battlewatch"||Object.values(s.ships).some(t=>t.team!==ship.team&&t.resources.hull.value>0)),selected:call?.id===x.id})),
    targets:station==="battlewatch"?Object.values(s.ships).filter(t=>t.team!==ship.team&&t.resources.hull.value>0).map(t=>({id:t.id,name:t.name,selected:call?.targetId===t.id})):[]
   };
  });
