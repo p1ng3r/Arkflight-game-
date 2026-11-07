@@ -8,7 +8,7 @@ The existing `feat/1.1-complication-foundation` branch is frozen for this experi
 
 ### 1 — Maneuver
 
-Show five recommended maneuvers and put the others under **All maneuvers**. Hovering or keyboard-focusing an option previews that exact legal route on the map; clicking selects it, Stage sends the route to GM authority, and Lock commits it. Route secrecy and existing five-second fleet movement countdown remain. **Navigator is the free fifth-station contribution**: selecting a route does not require a dice roll. If the player owns the ship but not the assigned Navigator, explain the permission issue instead of claiming there are zero legal routes.
+Show five recommended maneuvers and put the others under **All maneuvers**. Hovering or keyboard-focusing an option previews that exact legal route on the map; clicking selects it, Stage sends the route to GM authority, and Lock commits it. Route secrecy and existing five-second fleet movement countdown remain. **Navigator is the fifth-station contribution**: choosing a route adds no separate station action or dice roll; specially priced hull routes still use their printed maneuver AP costs. If the player owns the ship but not the assigned Navigator, explain the permission issue instead of claiming there are zero legal routes.
 
 ### 2 — Strategy
 
@@ -25,7 +25,7 @@ After movement, from round two onward two cards fly from the deck to a shared re
 | Battle Watch | Mark Target | +1 on first gun check against the designated enemy |
 | Lifeveil Warden | Brace Veil | Reduce first positive incoming Hull hit by 1 |
 | Lifeveil Warden | Attune Veil | +1 on first Lifeveil Warden check |
-| Navigator | Choose hull route | Existing free maneuver choice; no new action |
+| Navigator | Choose hull route | No extra contribution action or roll; special routes retain their printed AP cost |
 
 All free calls are **optional** and cannot be repeated within a round. Their benefits use existing PF2e skill rolls and attack resolution; they never add a second roll or spend AP. Station Actor ownership is enforced in the GM relay. The free-signal bonus may stack with a second distinct station's +1 in appropriate circumstances; that is deliberately visible and should be evaluated in playtesting before balancing.
 
