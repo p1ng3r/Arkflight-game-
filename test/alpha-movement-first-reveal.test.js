@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {createAlphaSession,dispatchAlphaCommand} from "../src/alpha/combat.js";
 import {activeShipCrewUsers,configureDrawControllers,createDrawReveal,acknowledgeDraw,settleDrawReveals,DRAW_ACK_TIMEOUT_MS} from "../src/alpha/draw-reveal.js";
+import {FOUR_BEAT_EXPERIENCE} from "../src/alpha/four-beat.js";
 const session=()=>createAlphaSession([
  {id:"a",name:"Player frigate",team:"party",hullId:"brigantine",actorId:"shipA",pose:{q:0,r:0,heading:0}},
  {id:"b",name:"Enemy cutter",team:"enemy",hullId:"cutter",actorId:"shipB",pose:{q:7,r:0,heading:3}}
@@ -63,6 +64,32 @@ test("movement-first flow starts with a five-second lock gate and no draw before
  assert.equal(s.phase,"card-planning");
  await assert.rejects(send(s,"cycle-card","a",{instanceId:s.ships.a.hand[0],now:20003}),/already cycled/);
 });
+test("four-beat opening waits for maneuver, then deck click deals five before Strategy",async()=>{
+ let s=createAlphaSession([
+  {id:"a",name:"Player frigate",team:"party",hullId:"brigantine",actorId:"shipA",pose:{q:0,r:0,heading:0}},
+  {id:"b",name:"Enemy cutter",team:"enemy",hullId:"cutter",actorId:"shipB",pose:{q:7,r:0,heading:3}}
+ ],{id:"four-beat-deal",roundFlow:2,combatFlow:3,experience:FOUR_BEAT_EXPERIENCE,seed:17});
+ assert.equal(s.phase,"planning");
+ assert.equal(s.ships.a.hand.length,0);
+ assert.equal(s.ships.b.hand.length,0);
+ s=await maneuver(s,1000);
+ assert.equal(s.phase,"draw");
+ assert.equal(s.ships.a.hand.length,0);
+ s=await send(s,"draw-round","a",{now:7000});
+ assert.equal(s.phase,"draw-reveal");
+ assert.equal(s.ships.a.pendingDraw.length,5);
+ assert.equal(s.ships.a.hand.length,0);
+ assert.equal(s.drawReveal.cinematic,true);
+ configureDrawControllers(s,{a:["user1"]},7000);
+ s=await send(s,"timeout-draw",null,{now:9600});
+ assert.equal(s.phase,"draw");
+ assert.equal(s.ships.a.hand.length,5);
+ s=await send(s,"draw-round","b",{now:9700});
+ configureDrawControllers(s,{b:[]},9700);
+ assert.equal(s.phase,"card-planning");
+ assert.equal(s.ships.b.hand.length,5);
+});
+
 test("AFK countdown unblocks a ship even if another controller never clicks Ready",async()=>{
  const s={phase:"draw-reveal",ships:{a:{hand:["existing"],pendingDraw:["new1","new2"]}},drawReveal:createDrawReveal({a:["new1","new2"]},1000)};
  assert.equal(DRAW_ACK_TIMEOUT_MS,12000);
