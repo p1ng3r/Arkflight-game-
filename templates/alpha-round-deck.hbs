@@ -52,7 +52,7 @@
 {{/if}}
 {{#if drawReveal}}
 <section class="arkflight-draw-reveal" role="dialog" aria-label="Arkflight crew draw reveal" aria-live="polite">
-  <header><small>ARKFLIGHT · SHARED DECK</small><h2>New Cards</h2><p>Each online crew member on this ship may confirm, or the countdown continues automatically.</p></header>
+  <header><small>ARKFLIGHT · SHARED DECK</small><h2>{{#if dealCinematic}}Cards on the Wind{{else}}New Cards{{/if}}</h2><p>{{#if dealCinematic}}The shared deck is dealing into your hand. Strategy begins when the final card lands.{{else}}Each online crew member on this ship may confirm, or the countdown continues automatically.{{/if}}</p></header>
   {{#if revealCards.length}}
     <div class="arkflight-reveal-cards">{{#each revealCards}}
       <article class="arkflight-reveal-card" style="--alpha-category-accent:{{categoryAccent}}">
@@ -63,9 +63,14 @@
       </article>
     {{/each}}</div>
     <div class="arkflight-reveal-footer">
-      <span>Confirmed {{revealReady}} / {{revealRequired}}</span>
-      <button class="round-primary" data-round-action="ready-draw" {{#unless revealCanReady}}disabled{{/unless}}>{{#if revealCanReady}}Ready · Send to hand{{else}}Waiting for crew{{/if}}</button>
-      <small>Auto-continue in <b data-draw-countdown>12</b>s</small>
+      {{#if dealCinematic}}
+        <span>Dealing {{revealCards.length}} card(s)…</span>
+        <small>Strategy opens automatically.</small>
+      {{else}}
+        <span>Confirmed {{revealReady}} / {{revealRequired}}</span>
+        <button class="round-primary" data-round-action="ready-draw" {{#unless revealCanReady}}disabled{{/unless}}>{{#if revealCanReady}}Ready · Send to hand{{else}}Waiting for crew{{/if}}</button>
+        <small>Auto-continue in <b data-draw-countdown>12</b>s</small>
+      {{/if}}
     </div>
   {{else}}<p class="arkflight-reveal-wait">Your ship is ready. Other crews are finishing their card reveals.</p>{{/if}}
 </section>
