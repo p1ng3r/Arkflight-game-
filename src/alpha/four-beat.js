@@ -12,7 +12,7 @@ export const FOUR_BEATS = Object.freeze([
 ]);
 const BEAT_BY_PHASE=Object.freeze({
   opening:"maneuver",planning:"maneuver",
-  "draw-reveal":"strategy","card-planning":"strategy",
+  draw:"strategy","draw-reveal":"strategy","card-planning":"strategy",
   resolving:"resolve",firing:"resolve",response:"resolve",retarget:"resolve",damage:"resolve",boarding:"resolve",
   cleanup:"recover",complete:"recover"
 });
