@@ -26,14 +26,17 @@
 .arkflight-round-deck .round-art-card{border-bottom:5px solid var(--alpha-category-accent,#ad8e65)}
 
 /* A brief center-screen reveal that stages drawn cards before they enter the shared hand. */
-.arkflight-draw-reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:11000;width:min(640px,88vw);max-height:85vh;overflow:auto;box-sizing:border-box;padding:20px 23px;background:linear-gradient(145deg,#102c3a,#0a1d28 65%,#233442);border:2px solid #d3ad67;border-radius:15px;box-shadow:0 16px 52px #000b,0 0 30px #419ea455;color:#f2e0bc}
+.arkflight-draw-reveal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:11000;width:min(980px,92vw);max-height:85vh;overflow:auto;box-sizing:border-box;padding:20px 23px;background:linear-gradient(145deg,#102c3a,#0a1d28 65%,#233442);border:2px solid #d3ad67;border-radius:15px;box-shadow:0 16px 52px #000b,0 0 30px #419ea455;color:#f2e0bc}
 .arkflight-draw-reveal>header{text-align:center}
 .arkflight-draw-reveal header small{font-size:9px;letter-spacing:.2em;color:#9bcdd1}
 .arkflight-draw-reveal h2{margin:4px 0;font:600 24px Georgia,serif;color:#f0cc84}
 .arkflight-draw-reveal header p{margin:5px auto 13px;font-size:11px;color:#bfcecf;max-width:470px}
-.arkflight-reveal-cards{display:flex;justify-content:center;align-items:stretch;gap:18px}
-.arkflight-reveal-card{width:min(230px,43%);box-sizing:border-box;background:#132e39;border:1px solid #6b929e;border-bottom:5px solid var(--alpha-category-accent);padding:11px;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:7px;animation:arkflight-draw-fly .72s cubic-bezier(.16,.8,.2,1) both}
+.arkflight-reveal-cards{display:flex;justify-content:center;align-items:stretch;gap:14px;flex-wrap:wrap}
+.arkflight-reveal-card{flex:1 1 120px;max-width:160px;min-width:108px;box-sizing:border-box;background:#132e39;border:1px solid #6b929e;border-bottom:5px solid var(--alpha-category-accent);padding:11px;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:7px;animation:arkflight-draw-fly .72s cubic-bezier(.16,.8,.2,1) both}
 .arkflight-reveal-card:nth-child(2){animation-delay:.18s}
+.arkflight-reveal-card:nth-child(3){animation-delay:.36s}
+.arkflight-reveal-card:nth-child(4){animation-delay:.54s}
+.arkflight-reveal-card:nth-child(5){animation-delay:.72s}
 .arkflight-reveal-card img{height:110px;max-width:100%;object-fit:contain}
 .arkflight-reveal-card strong{font:600 16px Georgia,serif;text-align:center}
 .arkflight-reveal-card small{color:var(--alpha-category-accent);font-size:10px;font-weight:bold}
