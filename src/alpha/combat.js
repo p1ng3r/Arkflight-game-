@@ -73,6 +73,7 @@ function batteries(profile){
 export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTIONS,headings=[0,60,120,180,240,300],basis={q:{x:1.5,y:Math.sqrt(3)/2},r:{x:0,y:Math.sqrt(3)}},roundFlow=1,combatFlow=2,experience=null}={}){
   if(!isId(id)||!Number.isSafeInteger(seed)||seed<1||seed>0xffffffff)throw new Error("Provide an encounter ID and nonzero 32-bit seed.");
   if(!Array.isArray(entries)||entries.length<2||entries.length>8||new Set(entries.map(e=>e.id)).size!==entries.length||new Set(entries.map(e=>e.team)).size<2)throw new Error("Choose two to eight distinct ships on opposing teams.");
+  const delayedOpening=roundFlow===2&&combatFlow===3&&experience===FOUR_BEAT_EXPERIENCE;
   const s={schemaVersion:1,id,revision:0,round:1,phase:"planning",ships:{},plans:{},locked:{},turnOrder:[],turnIndex:0,attacks:[],attackIndex:0,damage:[],serial:0,actionSerial:0,actions:[],complicationQueue:[],pendingDiscard:null,log:[],movement:null,boarding:[],directions:copy(directions),headings:[...headings],basis:copy(basis),randomState:seed,complete:false};
   for(const [i,e] of entries.entries()){
     if(!isId(e.id)||typeof e.name!=="string"||!e.name.trim()||!isId(e.team))throw new Error("Provide valid ship IDs, names and teams.");
@@ -80,11 +81,11 @@ export function createAlphaSession(entries,{id,seed=1,directions=ALPHA_DIRECTION
     if(![pose.q,pose.r,pose.heading].every(Number.isSafeInteger)||pose.heading<0||pose.heading>5)throw new Error("Invalid starting hex/facing.");
     const deck=starter(e.deck,profile), instances=Object.fromEntries(deck.map((c,n)=>[`${c}-${n}`,c]));
     const ship={id:e.id,name:e.name,team:e.team,actorId:e.actorId??null,stationActors:copy(e.stationActors??{}),profile,pose:{...pose},resources:{hull:{value:profile.maxHull,max:profile.maxHull},lifeveil:{value:100,max:100},morale:{value:100,max:100},strain:{value:0,max:profile.strain},supplies:{value:20,max:20}},ap:profile.ap,instances,library:[...new Set(e.learned??deck)],loadoutId:e.loadoutId??null,libraryRevision:e.libraryRevision??null,drawPile:shuffle(s,Object.keys(instances)),hand:[],discard:[],burned:[],prepared:[],effects:[],batteries:batteries(profile),ammo:{chainshot:2},mulliganDone:false,crewCalls:{},drPlayedRound:0,regroupRound:0,bonusTravel:0,bonusTurns:0};
-    s.ships[e.id]=ship;draw(s,ship,profile.opening);
+    s.ships[e.id]=ship;if(delayedOpening)ship.mulliganDone=true;else draw(s,ship,profile.opening);
   }
   s.complications=createComplicationEncounter({id,ships:Object.values(s.ships).map(ship=>({id:ship.id,name:ship.name,team:ship.team,resources:ship.resources,ap:ship.ap,batteries:ship.batteries})),seed:seed===0xffffffff?1:seed+1});
-  if(roundFlow===2){s.roundFlow=2;s.combatFlow=combatFlow;if(experience===FOUR_BEAT_EXPERIENCE&&combatFlow===3)s.experience=FOUR_BEAT_EXPERIENCE;s.roundEvents=[];s.phase="opening";s.cardPlans={};s.cardLocks={};s.firingIndex=0;}
-  log(s,"Alpha encounter ready. Choose opening mulligans and hull maneuvers.");return s;
+  if(roundFlow===2){s.roundFlow=2;s.combatFlow=combatFlow;if(experience===FOUR_BEAT_EXPERIENCE&&combatFlow===3)s.experience=FOUR_BEAT_EXPERIENCE;s.roundEvents=[];s.phase=delayedOpening?"planning":"opening";s.cardPlans={};s.cardLocks={};s.firingIndex=0;}
+  log(s,delayedOpening?"Alpha encounter ready. Lock the opening maneuver, then click the deck to deal five cards.":"Alpha encounter ready. Choose opening mulligans and hull maneuvers.");return s;
 }
 export function activeAlphaShip(s){return s.turnOrder[s.turnIndex]??null;}
 export function alphaAlongside(s,a,b){return occupiedHexes(s.ships[a].pose,s.ships[a].profile.footprint,s.directions).some(x=>occupiedHexes(s.ships[b].pose,s.ships[b].profile.footprint,s.directions).some(y=>hexDistance(x,y)===1));}

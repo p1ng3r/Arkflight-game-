@@ -44,6 +44,12 @@ export function settleDrawReveals(state,now){
   ship.hand.push(...ship.pendingDraw);delete ship.pendingDraw;
   delete state.drawReveal.ships[shipId];changed=true;
  }
- if(!Object.keys(state.drawReveal.ships).length){delete state.drawReveal;if(state.phase==="draw-reveal")state.phase="card-planning";}
+ if(!Object.keys(state.drawReveal.ships).length){
+  delete state.drawReveal;
+  if(state.phase==="draw-reveal"){
+   const alive=Object.values(state.ships??{}).filter(ship=>ship?.resources?.hull?.value>0);
+   state.phase=alive.length&&alive.some(ship=>ship.drawnRound!==state.round)?"draw":"card-planning";
+  }
+ }
  return changed;
 }
