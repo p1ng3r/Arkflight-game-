@@ -46,8 +46,18 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
  }
  if(cmd.type==='draw-round'){
   if(s.phase!=='draw'||!alive(ship)||ship.drawnRound===s.round)throw Error('This round’s draw is already complete or unavailable.');
-  const count=ship.hand.length;draw(s,ship,ship.profile.roundDraw??1);ship.drawnRound=s.round;log(s,`${ship.name}: ${ship.hand.length-count} card(s) drawn${ship.hand.length===count?' — deck empty':''}.`);
-  if(roundShips(s).every(x=>x.drawnRound===s.round))s.phase='planning';return revise();
+  const beforeCount=ship.hand.length,dealCount=s.experience==='four-beat'&&s.round===1&&beforeCount===0?(ship.profile.opening??5):(ship.profile.roundDraw??1);
+  draw(s,ship,dealCount);ship.drawnRound=s.round;
+  if(s.experience==='four-beat'){
+   const ids=ship.hand.splice(beforeCount);
+   if(ids.length){ship.pendingDraw=ids;s.drawReveal=createDrawReveal({[ship.id]:ids},cmd.now??Date.now(),2600);s.drawReveal.cinematic=true;s.phase='draw-reveal';}
+   else if(roundShips(s).every(x=>x.drawnRound===s.round))s.phase='card-planning';
+   log(s,`${ship.name}: ${ids.length} card(s) dealt from the shared deck${ids.length?'':' — deck empty'}.`);
+  }else{
+   log(s,`${ship.name}: ${ship.hand.length-beforeCount} card(s) drawn${ship.hand.length===beforeCount?' — deck empty':''}.`);
+   if(roundShips(s).every(x=>x.drawnRound===s.round))s.phase='planning';
+  }
+  return revise();
  }
  if(cmd.type==='crew-call'){
    const chosen=applyCrewCall(s,ship,cmd);
@@ -112,7 +122,8 @@ export async function dispatchRoundCommand(before,cmd,services,deps){
   delete s.maneuverCountdown;
   if(!s.complete){
    s.cardPlans={};s.cardLocks={};
-   if(s.combatFlow===3&&s.round>1){
+   if(s.experience==='four-beat'&&s.combatFlow===3)s.phase='draw';
+   else if(s.combatFlow===3&&s.round>1){
     const shipDraws={};
     for(const current of roundShips(s)){
      const prior=current.hand.length;
